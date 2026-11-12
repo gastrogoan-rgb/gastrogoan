@@ -146,6 +146,7 @@ echo
 node "$RAIZ/test/emulador/bucle-sync.mjs" || SALIDA=1
 echo
 node "$RAIZ/test/emulador/aparato-nuevo.mjs" || SALIDA=1
+node "$RAIZ/test/emulador/qr-mesa-nube.mjs" || SALIDA=1
 echo
 node "$RAIZ/test/emulador/reglas-asistente.mjs" || SALIDA=1
 rm -rf "$RAIZ/__sdk"

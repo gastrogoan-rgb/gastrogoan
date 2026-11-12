@@ -609,7 +609,7 @@ function printProtocolo(type){
   const title = type==='apertura' ? t('title.openingProtocol') : t('title.closingProtocol');
   const body = `
     ${printReportHeaderHtml(title)}
-    <ul class="pr-steps">${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>
+    ${printChecklistHtml(pasos)}
   `;
   printReportWindow(title, body);
 }
@@ -618,7 +618,7 @@ function printManosProtocolo(){
   const title = t('title.handWashingProtocol');
   const body = `
     ${printReportHeaderHtml(title)}
-    <ul class="pr-steps">${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>
+    ${printChecklistHtml(pasos, {sinTurno: true})}
   `;
   printReportWindow(title, body);
 }
@@ -2728,13 +2728,13 @@ function printGiftVoucher(id){
   const win = window.open('', '_blank', 'width=760,height=560');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   const bizName = (DB.business && DB.business.name) || 'GastroGoan';
-  const accent = (DB.business && DB.business.brandColor) || '#4A5D4E';
+  const accent = ggAcentoSobreOscuro((DB.business && DB.business.brandColor) || '#4A5D4E');
   const logo = DB.business && DB.business.logo;
   const mainLabel = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
   const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString(localeActual(), {day:'numeric', month:'long', year:'numeric'});
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.giftVouchers')} — ${escapeHtml(v.code)}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      ${ggFuentesImpresionCss()}
       *{box-sizing:border-box}
       body{margin:0;padding:30px;background:#F1EFE9;font-family:'Schibsted Grotesk',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .voucher{
@@ -2771,18 +2771,19 @@ function printGiftVoucher(id){
       .v-barcode i{display:block;width:2px;background:#181512}
       .v-date{font-size:11px;color:#8f8779;line-height:1.5}
       .v-note{font-size:9.5px;color:#a89f92;font-style:italic;max-width:150px;line-height:1.4}
+      /* Papel: apaisado, el vale a todo lo ancho de la hoja y centrado (antes salía pequeño en una esquina de una hoja vertical). */
       @media print{
-        body{background:#fff;padding:0;min-height:auto}
-        .voucher{box-shadow:none;border:1px solid #ddd}
-        @page{size:auto;margin:12mm}
+        html,body{height:100%}
+        body{background:#fff;padding:0;min-height:100vh;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .voucher{box-shadow:none;border:0;transform:scale(1.28);transform-origin:center center}
+        @page{size:A4 landscape;margin:8mm}
       }
     </style>
     </head><body>
       <div class="voucher">
         <div class="v-main">
           <div class="v-brand">
-            ${logo ? `<img class="v-logo" src="${logo}">` : ''}
-            <div class="v-biz">${escapeHtml(bizName)}</div>
+            ${logo ? `<img class="v-logo" src="${logo}">` : `<div class="v-biz">${escapeHtml(bizName)}</div>`}
           </div>
           <div class="v-kicker">${t('title.giftVouchers')}</div>
           ${v.tipo === 'experiencia'
@@ -2800,9 +2801,9 @@ function printGiftVoucher(id){
           <div class="v-note">${t('msg.voucherPrintNote')}</div>
         </div>
       </div>
-      <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);
   win.document.close();
+  ggEsperarYImprimir(win);
 }
 
 // Fusionar dos fichas de cliente duplicadas: saveClient() ya avisa si el
@@ -4216,7 +4217,9 @@ function printPromoMes(year, month){
     items.forEach(p => {
       const resp = p.responsableId ? DB.employees.find(e=>e.id===p.responsableId) : null;
       const done = !!(promoDoneInfo(p, ds)||{}).done;
-      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'✓':'—'}</td></tr>`);
+      // La fecha se lee como una fecha («jue 12 nov»), no como 2026-11-12, y «Hecho» es una casilla (marcada si ya se hizo) para tachar a mano en el papel.
+      const fechaLeible = new Date(year, month, day).toLocaleDateString(localeActual(), {weekday:'short', day:'numeric', month:'short'});
+      rows.push(`<tr><td style="white-space:nowrap"><strong>${escapeHtml(fechaLeible)}</strong></td><td><strong>${escapeHtml(p.titulo)}</strong></td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td style="text-align:center"><span style="display:inline-block;width:15px;height:15px;border:1.5px solid #1C1A17;line-height:12px;font-size:13px;font-weight:700">${done?'✓':''}</span></td></tr>`);
     });
   }
   const printTitle = t('promo.print.title').replace('${month}', monthFull(month)).replace('${year}', year);
@@ -6386,12 +6389,12 @@ function plan360PrintContract(){
   const win = window.open('', '_blank', 'width=700,height=800');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
-    <style>@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap'); @page{margin:18mm 16mm} body{font-family:'Schibsted Grotesk',Arial,sans-serif;color:#1C1A17;white-space:pre-wrap;line-height:1.65;font-size:13px;padding:0 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact} .firma{margin-top:28px;padding:14px 16px;border:1px solid #D5CFC4;border-top:3px solid #1C1A17;background:#FAF8F4;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;white-space:normal;break-inside:avoid}</style>
-    </head><body>${escapeHtml(texto)}
+    <style>${ggFuentesImpresionCss()} ${GG_BARRA_IMPRESION_CSS} @page{margin:18mm 16mm} body{font-family:'Schibsted Grotesk',Arial,sans-serif;color:#1C1A17;white-space:pre-wrap;line-height:1.65;font-size:13px;padding:0 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact} .firma{margin-top:28px;padding:14px 16px;border:1px solid #D5CFC4;border-top:3px solid #1C1A17;background:#FAF8F4;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;white-space:normal;break-inside:avoid}</style>
+    </head><body>${ggBarraImpresionHtml()}${escapeHtml(texto)}
     <div class="firma">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(c.signedName)} (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}</div>
-    <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);
   win.document.close();
+  ggEsperarYImprimir(win);
 }
 // El precio y la forma de pago NO se tocan desde aquí: los pacta el coach,
 // no se editan desde la app del negocio (solo se ven, en gris). Se cambian
@@ -6848,8 +6851,9 @@ function plan360ImprimirHtml(titulo, cuerpo){
   const estilos = [...document.querySelectorAll('style')].map(x => x.outerHTML).join('');
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title>${estilos}
     <style>@page{size:A4;margin:12mm}html,body{overflow:visible!important;height:auto!important;display:block!important;background:#fff!important;padding:0!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head>
-    <body>${cuerpo}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+    <body>${cuerpo}</body></html>`);
   win.document.close();
+  ggEsperarYImprimir(win);
 }
 function renderPlan360StaffVoice(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);

@@ -444,10 +444,11 @@ function showClosureWarningsModal(warnings){
 
 function printCashClosure(closure){
   const diffLabel = closure.diferencia===0 ? t('label.exactCash') : closure.diferencia>0 ? t('label.cashSurplus') : t('label.cashShortage');
+  // El efectivo va en una tabla (etiqueta a la izquierda, importe a la derecha), como el resto de bloques: antes eran líneas sueltas en mono.
+  const diffColor = closure.diferencia === 0 ? '#1C1A17' : closure.diferencia > 0 ? '#1a7a3c' : '#b3261e';
   const diffHtml = closure.efectivoContado === null ? '' : `
-    <div class="pr-meta">${t('label.cashCounted')}: <strong>${fmtMoney(closure.efectivoContado)}</strong></div>
-    <div class="pr-meta">${t('label.difference')}: <strong style="color:${closure.diferencia===0?'#111':closure.diferencia>0?'#1a7a3c':'#b3261e'}">${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}</strong> (${diffLabel})</div>
-  `;
+    <tr><td>${t('label.cashCounted')}</td><td class="pr-num">${fmtMoney(closure.efectivoContado)}</td></tr>
+    <tr class="pr-total-row"><td>${t('label.difference')} · ${diffLabel}</td><td class="pr-num" style="color:${diffColor}">${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}</td></tr>`;
   const discountsHtml = (closure.descuentos||[]).length ? `
     <h2>${t('title.discountsAppliedThisPeriod')}</h2>
     <table><thead><tr><th>${t('common.time')}</th><th>${t('label.table')}</th><th>${t('common.responsible')}</th><th class="pr-num">%</th><th class="pr-num">${t('common.amount')}</th></tr></thead>
@@ -474,10 +475,16 @@ function printCashClosure(closure){
     </table>
     ${discountsHtml}${voidsHtml}${platformSalesHtml}
     <h2>${t('label.cash')}</h2>
-    <div class="pr-meta">${t('label.initialFund')}: <strong>${fmtMoney(closure.fondoInicial)}</strong></div>
-    <div class="pr-meta">${t('label.expectedCash')}: <strong>${fmtMoney(closure.efectivoEsperado)}</strong></div>
-    ${diffHtml}
-    ${closure.notas ? `<div class="pr-divider"></div><div class="pr-meta"><strong>${t('common.notes')}:</strong> ${escapeHtml(closure.notas)}</div>` : ''}
+    <table><tbody>
+      <tr><td>${t('label.initialFund')}</td><td class="pr-num">${fmtMoney(closure.fondoInicial)}</td></tr>
+      <tr><td>${t('label.expectedCash')}</td><td class="pr-num">${fmtMoney(closure.efectivoEsperado)}</td></tr>
+      ${diffHtml}
+    </tbody></table>
+    ${closure.notas ? `<h2>${t('common.notes')}</h2><p style="white-space:pre-wrap">${escapeHtml(closure.notas)}</p>` : ''}
+    <table style="margin-top:8px;break-inside:avoid"><tr>
+      <td style="width:50%;height:28px;vertical-align:bottom;border-bottom:none"><div style="border-top:1px solid #1C1A17;padding-top:4px;font-size:11px;color:#716C65">${gl({es:'Firma de quien cierra la caja', ca:'Signatura de qui tanca la caixa', en:'Signature of the person closing the till'})}</div></td>
+      <td style="width:50%;height:28px;vertical-align:bottom;border-bottom:none"><div style="border-top:1px solid #1C1A17;padding-top:4px;font-size:11px;color:#716C65">${gl({es:'Revisado por', ca:'Revisat per', en:'Reviewed by'})}</div></td>
+    </tr></table>
   `;
   printReportWindow(t('title.cashClosureReceipt'), body);
 }
@@ -2409,7 +2416,7 @@ function buildPedidoPrintHtml(o){
   const contacto = [prov && prov.contacto ? escapeHtml(prov.contacto) : '', prov && prov.tel ? escapeHtml(prov.tel) : '', prov && prov.email ? escapeHtml(prov.email) : ''].filter(Boolean).join(' · ');
   const meta = [
     [t('common.supplier'), `<b>${escapeHtml(o.supplier || '—')}</b>${contacto ? `<small>${contacto}</small>` : ''}`],
-    [t('label.deliveryDate'), `<b>${escapeHtml(o.date || '—')}</b>${prov && prov.horaEntrega ? `<small>${escapeHtml(prov.horaEntrega)} ${t('label.hoursApprox')}</small>` : ''}`],
+    [t('label.deliveryDate'), `<b>${escapeHtml(fechaImpresaLegible(o.date) || '—')}</b>${prov && prov.horaEntrega ? `<small>${escapeHtml(prov.horaEntrega)} ${t('label.hoursApprox')}</small>` : ''}`],
     [gl({es:'Artículos', ca:'Articles', en:'Items'}), `<b>${lineas.length}</b>`],
   ].map(([et, v]) => `<div class="pp-meta"><span>${escapeHtml(et)}</span>${v}</div>`).join('');
   return `
@@ -2429,6 +2436,9 @@ function buildPedidoPrintHtml(o){
       .pp-ck{width:60px;text-align:center}
       .pp-ck span{display:inline-block;width:13px;height:13px;border:1.4px solid #1C1A17}
       .pp-notas{margin-top:20px;border:1px solid #1C1A17;padding:10px 14px;break-inside:avoid}
+      .pp-pie{display:flex;gap:18px;margin-top:34px;break-inside:avoid}
+      .pp-pie div{flex:1;border-bottom:1.5px solid #1C1A17;min-height:44px}
+      .pp-pie span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
       .pp-notas b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#716C65;margin-bottom:4px}
     </style>
     ${printReportHeaderHtml(t('label.orderTo')+' '+o.supplier)}
@@ -2436,6 +2446,7 @@ function buildPedidoPrintHtml(o){
     <table class="pp-t"><thead><tr><th>#</th><th>${t('common.item')}</th><th class="pr-num">${t('common.qty')}</th><th style="text-align:center">${gl({es:'Recibido', ca:'Rebut', en:'Received'})}</th></tr></thead>
     <tbody>${rows || `<tr><td colspan="4" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
     ${o.notas ? `<div class="pp-notas"><b>${t('common.notes')}</b>${escapeHtml(o.notas)}</div>` : ''}
+    <div class="pp-pie"><div><span>${gl({es:'Recibido por', ca:'Rebut per', en:'Received by'})}</span></div><div><span>${gl({es:'Fecha de recepción', ca:'Data de recepció', en:'Date received'})}</span></div><div><span>${gl({es:'Firma', ca:'Signatura', en:'Signature'})}</span></div></div>
   `;
 }
 

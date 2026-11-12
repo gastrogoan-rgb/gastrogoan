@@ -7,6 +7,40 @@
 // negocio, tipografía cuidada y una cabecera con presencia, para que lo
 // que se entrega a un proveedor, un empleado o una inspección tenga un
 // aspecto profesional, no de borrador.
+/* ═══ IMPRESIÓN (12/11, pedido del dueño: «la foto no sale y se ve todo fatal») ═══
+   La ventana de impresión se escribía y se mandaba a imprimir EN EL MISMO INSTANTE: la foto (un data: de varios MB) y las
+   fuentes aún no estaban cargadas y el papel salía sin foto y con Arial. Ahora TODAS las ventanas de impresión pasan por
+   `ggEsperarYImprimir`: esperan a que las imágenes estén decodificadas y a las fuentes (con un tope de 6 s para que nunca
+   se quede colgada) y solo entonces imprimen. Las fuentes de la marca se piden a la propia app (carpeta fonts/), no a
+   Google: así también salen con mala cobertura y la ventana no depende de una web externa. La ventana lleva una barra
+   «Imprimir / Guardar PDF» (que NO sale en el papel) por si se cierra el diálogo y se quiere volver a abrir. */
+function ggFuentesImpresionCss(){
+  let base = '';
+  try{ base = new URL('fonts/', location.href).href; }catch(e){}
+  const f = (fam, peso, arch) => `@font-face{font-family:'${fam}';font-weight:${peso};font-style:normal;font-display:swap;src:url('${base}${arch}.woff2') format('woff2')}`;
+  return [f('Schibsted Grotesk',400,'schibsted-grotesk-400-normal'), f('Schibsted Grotesk',500,'schibsted-grotesk-500-normal'),
+    f('Schibsted Grotesk',600,'schibsted-grotesk-600-normal'), f('Schibsted Grotesk',700,'schibsted-grotesk-700-normal'),
+    f('IBM Plex Mono',400,'ibm-plex-mono-400-normal'), f('IBM Plex Mono',500,'ibm-plex-mono-500-normal')].join('');
+}
+// CSS de la barra de la ventana (no se imprime) y su HTML.
+const GG_BARRA_IMPRESION_CSS = '.pr-barra{position:sticky;top:0;z-index:5;display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;background:#1C1A17}.pr-barra button{font:600 13px "Schibsted Grotesk",Arial,sans-serif;padding:9px 16px;border:1px solid #F1EFE9;background:#F1EFE9;color:#1C1A17;cursor:pointer}.pr-barra button.sec{background:none;color:#F1EFE9}@media print{.pr-barra{display:none!important}}';
+function ggBarraImpresionHtml(){
+  return `<div class="pr-barra"><button type="button" class="sec" onclick="window.close()">${gl({es:'Cerrar', ca:'Tancar', en:'Close'})}</button><button type="button" onclick="window.print()">${gl({es:'Imprimir / Guardar PDF', ca:'Imprimir / Desar PDF', en:'Print / Save as PDF'})}</button></div>`;
+}
+function ggEsperarYImprimir(win, opts){
+  opts = opts || {};
+  const esperar = () => {
+    const doc = win.document || {};
+    const imgs = [...(doc.images || [])].map(im => (im.complete && im.naturalWidth) ? (im.decode ? im.decode().catch(() => {}) : null)
+      : new Promise(r => { im.addEventListener('load', () => r()); im.addEventListener('error', () => r()); }));
+    const fuentes = (doc.fonts && doc.fonts.ready) ? doc.fonts.ready.catch(() => {}) : null;
+    return Promise.race([Promise.all([...imgs, fuentes]), new Promise(r => setTimeout(r, 6000))]);
+  };
+  return esperar().then(() => new Promise(r => setTimeout(r, opts.retardo || 0))).then(() => {
+    if(window.__ggSinImprimir) return;
+    try{ win.focus(); win.print(); }catch(e){ if(opts.error) opts.error(e); }
+  });
+}
 function printReportWindow(title, bodyHtml, opts={}){
   const win = window.open('', '_blank', opts.winSize || 'width=760,height=860');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
@@ -19,7 +53,8 @@ function printReportWindow(title, bodyHtml, opts={}){
   // franja de color a modo de "plantilla de SaaS".
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      ${ggFuentesImpresionCss()}
+      ${GG_BARRA_IMPRESION_CSS}
       *{box-sizing:border-box}
       body{font-family:'Schibsted Grotesk',Arial,Helvetica,sans-serif;color:#1C1A17;margin:0;padding:0;font-size:13px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .pr-page{max-width:${opts.landscape ? '1000px' : '720px'};margin:0 auto;padding:26px 6px 30px}
@@ -29,7 +64,7 @@ function printReportWindow(title, bodyHtml, opts={}){
       h1{font-size:28px;margin:0 0 4px;font-weight:700;letter-spacing:-.03em;line-height:1.1;color:#1C1A17}
       .pr-subtitle{font-size:13px;color:#716C65;margin-top:2px}
       .pr-meta{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:#716C65;letter-spacing:.03em}
-      h2{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${accent};font-weight:600;margin:26px 0 9px;padding-bottom:6px;border-bottom:1px solid #E7E2D9;break-after:avoid}
+      h2{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${accent};font-weight:600;margin:20px 0 8px;padding-bottom:5px;border-bottom:1px solid #E7E2D9;break-after:avoid}
       h3{font-size:16px;font-weight:700;margin:22px 0 10px;color:#1C1A17;letter-spacing:-.01em;break-after:avoid}
       .pr-page p{margin:0 0 10px}
       .pr-page ul{margin:0 0 12px 18px}
@@ -37,7 +72,7 @@ function printReportWindow(title, bodyHtml, opts={}){
       table{width:100%;border-collapse:collapse;margin-bottom:8px}
       tr{break-inside:avoid}
       thead{display:table-header-group}
-      th,td{padding:8px 6px;text-align:left;font-size:12.5px;vertical-align:top}
+      th,td{padding:7px 6px;text-align:left;font-size:12.5px;vertical-align:top}
       th{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:500;border-bottom:1px solid #1C1A17;text-transform:uppercase;font-size:10px;color:#716C65;letter-spacing:.07em}
       td{border-bottom:1px solid #EFEBE3}
       .pr-num{text-align:right;white-space:nowrap;font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:500}
@@ -52,20 +87,23 @@ function printReportWindow(title, bodyHtml, opts={}){
       .manual-step .st{font-size:12.5px;line-height:1.5}
       .manual-tip,.manual-warning{background:#FAF8F4;border-left:3px solid ${accent};border-radius:0 3px 3px 0;padding:9px 13px;margin:12px 0;font-size:12px;break-inside:avoid}
       .manual-detail h4{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:#716C65;text-transform:uppercase;letter-spacing:.07em;margin:20px 0 8px}
-      .pr-footer{margin-top:34px;padding-top:10px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:#716C65;letter-spacing:.04em}
+      .pr-footer{margin-top:16px;padding-top:8px;border-top:1px solid #E7E2D9;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:#716C65;letter-spacing:.04em}
       @media print{
-        .pr-page{padding:0 4mm 10mm}
-        @page{${opts.landscape ? 'size:A4 landscape;' : ''}margin:15mm 14mm 18mm;@bottom-right{content:counter(page) " / " counter(pages);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#716C65}}
+        .pr-page{padding:0 2mm 0}
+        .pr-footer{display:none}
+        @page{${opts.landscape ? 'size:A4 landscape;' : ''}margin:12mm 12mm 16mm;@bottom-right{content:counter(page) " / " counter(pages);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#716C65}@bottom-left{content:"${fechaGen.replace(/"/g, '')}";font-family:'IBM Plex Mono',monospace;font-size:9px;color:#716C65}}
       }
     </style>
     </head><body>
+      ${ggBarraImpresionHtml()}
       <div class="pr-page">
         ${bodyHtml}
         <div class="pr-footer">${escapeHtml(fechaGen)}</div>
       </div>
     </body></html>`);
   win.document.close();
-  win.print();
+  ggEsperarYImprimir(win);
+  return win;
 }
 // Cabecera común (membrete del negocio + título del informe + subtítulo
 // opcional) para reutilizar en todos los printX() que usan printReportWindow.
@@ -76,7 +114,7 @@ function printReportHeaderHtml(title, subtitle){
   const biz = DB.business || {};
   const bizName = biz.name || '';
   return `
-    ${bizName ? `<div class="pr-letterhead"><span>${escapeHtml(bizName)}</span></div>` : ''}
+    ${bizName && !biz.logo ? `<div class="pr-letterhead"><span>${escapeHtml(bizName)}</span></div>` : ''}
     <div class="pr-header">
       <div style="min-width:0">
         <h1>${escapeHtml(title)}</h1>
@@ -85,6 +123,58 @@ function printReportHeaderHtml(title, subtitle){
       ${biz.logo ? `<img class="pr-logo" src="${biz.logo}">` : ''}
     </div>
   `;
+}
+
+// «2026-11-10» → «mar, 10 nov 2026»: una fecha impresa se lee como una fecha, no como la guarda la base de datos.
+function fechaImpresaLegible(ds){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ds || '');
+  if(!m) return ds || '';
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(localeActual(), {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+}
+// Un color de marca oscuro (el verde oliva, un granate…) no se lee sobre fondo negro: se aclara hacia el blanco hasta tener contraste suficiente.
+function ggAcentoSobreOscuro(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if(!m) return '#E9D9A6';
+  let [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16));
+  const lum = (r, g, b) => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(r) + .7152 * f(g) + .0722 * f(b); };
+  const fondo = lum(28, 26, 23);
+  for(let k = 0; k <= 1; k += .05){
+    const rr = Math.round(r + (255 - r) * k), gg = Math.round(g + (255 - g) * k), bb = Math.round(b + (255 - b) * k);
+    if((lum(rr, gg, bb) + .05) / (fondo + .05) >= 5.5) return '#' + [rr, gg, bb].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+  return '#F1EFE9';
+}
+// Lista de comprobación imprimible (protocolos de apertura/cierre, lavado de manos…): una fila por paso con su casilla, para tenerla
+// en la pared o en una carpeta y marcarla a mano. Con fecha/responsable arriba, iniciales por paso y observaciones + firma al pie.
+function printChecklistHtml(pasos, opts){
+  opts = opts || {};
+  const lbl = {
+    fecha: gl({es:'Fecha', ca:'Data', en:'Date'}), resp: gl({es:'Responsable', ca:'Responsable', en:'Person in charge'}), turno: gl({es:'Turno', ca:'Torn', en:'Shift'}),
+    paso: gl({es:'Paso', ca:'Pas', en:'Step'}), ini: gl({es:'Iniciales', ca:'Inicials', en:'Initials'}),
+    obs: gl({es:'Observaciones', ca:'Observacions', en:'Notes'}), firma: gl({es:'Firma de quien revisa', ca:'Signatura de qui revisa', en:'Reviewer signature'})
+  };
+  return `
+  <style>
+    .cl-meta{display:flex;gap:18px;margin:14px 0 18px}
+    .cl-meta div{flex:1;border-bottom:1.5px solid #1C1A17;padding-bottom:2px;min-height:30px}
+    .cl-meta span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
+    .cl-cab,.cl-fila{display:grid;grid-template-columns:22px 26px minmax(0,1fr) 72px;gap:0 12px;align-items:center}
+    .cl-cab{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65;border-bottom:1px solid #1C1A17;padding-bottom:6px}
+    .cl-cab span:last-child{text-align:center}
+    .cl-fila{padding:${opts.compacto ? '9px' : (pasos.length <= 9 ? '16px' : '12px')} 0;border-bottom:1px solid #E7E2D9;break-inside:avoid}
+    .cl-box{width:18px;height:18px;border:1.6px solid #1C1A17;display:block}
+    .cl-n{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#716C65;text-align:right}
+    .cl-t{font-size:${pasos.length <= 9 ? '16px' : '15px'};line-height:1.4}
+    .cl-ini{height:22px;border-bottom:1px solid #1C1A17;display:block}
+    .cl-pie{display:flex;gap:22px;margin-top:26px;break-inside:avoid}
+    .cl-pie div{flex:1}
+    .cl-pie span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65;display:block;margin-bottom:4px}
+    .cl-lin{height:26px;border-bottom:1px solid #1C1A17}
+  </style>
+  <div class="cl-meta"><div><span>${lbl.fecha}</span></div><div><span>${lbl.resp}</span></div>${opts.sinTurno ? '' : `<div><span>${lbl.turno}</span></div>`}</div>
+  <div class="cl-cab"><span></span><span></span><span>${lbl.paso}</span><span>${lbl.ini}</span></div>
+  ${pasos.map((p, i) => `<div class="cl-fila"><span class="cl-box"></span><span class="cl-n">${i + 1}</span><span class="cl-t">${escapeHtml(p)}</span><span class="cl-ini"></span></div>`).join('')}
+  <div class="cl-pie"><div style="flex:2"><span>${lbl.obs}</span><div class="cl-lin"></div><div class="cl-lin"></div></div><div><span>${lbl.firma}</span><div class="cl-lin" style="height:52px"></div></div></div>`;
 }
 
 /* ============== Tour virtual de bienvenida ==============
