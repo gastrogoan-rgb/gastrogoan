@@ -209,7 +209,7 @@ for(const ancho of [1280, 360]){
     await q((a, m) => setPedidoHistorialPeriodo(a, m), hoy2.a, hoy2.m);
   });
 
-  await caso(`Historial: tarjetas por pedido con estado, entrega, artículos y total; lo pendiente se ve siempre (${ancho}px)`, async () => {
+  await caso(`Historial: tarjetas por pedido con estado, entrega, artículos y total; lo pendiente del periodo se ve (${ancho}px)`, async () => {
     await q(() => { setPedidoHistorialPeriodo(new Date().getFullYear(), new Date().getMonth()); }); await esperar(300);
     const r = await q(() => ({tarjetas: [...document.querySelectorAll('#pedido-results .pe-ped')].map(c => c.innerText.replace(/\s+/g,' ')), tabla: !!document.querySelector('#pedido-results table')}));
     assert.ok(!r.tabla);
@@ -221,6 +221,28 @@ for(const ancho of [1280, 360]){
     await q(() => { pedidoHistorialSupplierFilter = 'Verduras Ca la Rosa'; renderPedidoList(); }); await esperar(250);
     assert.ok(await q(() => !!document.querySelector('.pe-aviso')), 'avisa de los de otros meses');
     await q(() => { pedidoHistorialSupplierFilter = ''; renderPedidoList(); });
+  });
+
+  await caso(`Historial: la fecha filtra TODOS los pedidos (también borradores y enviados) y «Ver todos» los enseña sin periodo (${ancho}px)`, async () => {
+    // Un enviado de hace tres meses: antes salía siempre y por eso cambiar de mes «no cambiaba nada».
+    await q(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); DB.purchaseOrders.push({id:91, supplier:'Carnes Antiguas', date:dateStr(d), estado:'ENVIADO', enviadoEn:dateStr(d), area:'cocina', items:[], notas:''}); setPedidoHistorialPeriodo(new Date().getFullYear(), new Date().getMonth()); }); await esperar(300);
+    const mes = await q(() => ({proveedores: [...document.querySelectorAll('#pedido-results .pe-ped')].map(c => c.innerText), aviso: (document.querySelector('#pedido-results .pe-aviso') || {}).innerText || ''}));
+    assert.ok(!mes.proveedores.some(t => /Carnes Antiguas/.test(t)), 'el enviado de hace 3 meses NO sale en este mes');
+    assert.ok(/1/.test(mes.aviso) && /pendiente/i.test(mes.aviso), 'avisa de que hay pendientes en otros periodos: ' + mes.aviso);
+    // Cambiar de mes lo MUESTRA
+    await q(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); setPedidoHistorialPeriodo(d.getFullYear(), d.getMonth()); }); await esperar(300);
+    assert.ok(await q(() => [...document.querySelectorAll('#pedido-results .pe-ped')].some(c => /Carnes Antiguas/.test(c.innerText))), 'cambiando de mes sale el pedido de ese mes');
+    assert.ok(!(await q(() => [...document.querySelectorAll('#pedido-results .pe-ped')].some(c => /Pescados Martínez/.test(c.innerText) && /BORRADOR/.test(c.innerText)))), 'y el borrador de este mes ya no');
+    // Ver todos: sin periodo
+    await q(() => setPedidoHistorialPeriodo(new Date().getFullYear(), new Date().getMonth())); await esperar(200);
+    await q(() => [...document.querySelectorAll('#pedidos-list button')].find(b => /Ver todos/.test(b.innerText) && b.closest('.pe-barra')).click()); await esperar(300);
+    const todos = await q(() => ({n: document.querySelectorAll('#pedido-results .pe-ped').length, tot: DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea()).length, secs: [...document.querySelectorAll('#pedido-results .pe-seccion')].map(x => x.innerText.replace(/\s+/g, ' ')).join(' | '), pulsado: [...document.querySelectorAll('#pedidos-list .pe-barra button')].some(b => /Ver todos/.test(b.innerText) && b.getAttribute('aria-pressed') === 'true')}));
+    assert.equal(todos.n, todos.tot, 'Ver todos enseña TODOS los pedidos: ' + JSON.stringify(todos));
+    assert.ok(todos.pulsado && /todos los periodos/i.test(todos.secs), JSON.stringify(todos));
+    // Elegir un mes apaga «Ver todos»
+    await q(() => setPedidoHistorialPeriodo(new Date().getFullYear(), new Date().getMonth())); await esperar(200);
+    assert.equal(await q(() => pedidoHistorialTodos), false);
+    await q(() => { DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== 91); renderPedidoList(); });
   });
 
   await caso(`Historial: filtrar por estado con los botones y el menú de cada tarjeta (${ancho}px)`, async () => {
