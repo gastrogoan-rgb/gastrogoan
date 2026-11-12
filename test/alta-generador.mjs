@@ -20,6 +20,10 @@ const r = await p.evaluate(async()=>{
 await p.screenshot({path:'/tmp/claude-0/alta2.png'});
 await b.close();
 const fallos=[];
+import fs from 'node:fs';
+// Lo que se publica en admin.gastrogoan.com/app.html TIENE que ser el generador actual: hubo dos copias y la publicada se quedó vieja.
+if(fs.readFileSync('deploy/admin/public/app.html','utf8') !== fs.readFileSync('generador-licencias.html','utf8')) fallos.push('deploy/admin/public/app.html no coincide con generador-licencias.html: falta bash deploy/actualizar.sh');
+if(fs.existsSync('admin-panel/app.html')) fallos.push('admin-panel/app.html no debe existir (única fuente: generador-licencias.html)');
 if(r.antes!=='5/28') fallos.push('antes: '+r.antes);
 if(r.des!=='6/28') fallos.push('marcar un paso manual no suma: '+r.des);
 if(!r.w) fallos.push('la ventana desborda en 390 px');

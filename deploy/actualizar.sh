@@ -24,6 +24,11 @@ rm -rf deploy/app/public/fonts && cp -r fonts deploy/app/public/fonts
 # sitio público — ni buscado en Google, ni citado en la app). Emite
 # licencias (app.html) y gestiona el Plan 360º de cada cliente (plan360.html).
 cp -f admin-panel/*.html deploy/admin/public/
+# ⚠️ app.html (licencias, alta paso a paso, forma jurídica…) NO vive en admin-panel/:
+# su única fuente es generador-licencias.html. Había DOS copias y la publicada
+# se quedó vieja (sin forma jurídica obligatoria, sin enlace de reservas fijado,
+# sin el alta paso a paso). Una sola fuente evita que vuelva a pasar.
+cp -f generador-licencias.html deploy/admin/public/app.html
 rm -rf deploy/admin/public/fonts && cp -r fonts deploy/admin/public/fonts
 mkdir -p deploy/admin/public/css
 cp -f css/tabler-icons.min.css deploy/admin/public/css/
