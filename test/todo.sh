@@ -192,6 +192,7 @@ lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
 lanzar; node test/economia-real.mjs > "$SALIDA/economiareal.txt" 2>&1 & P186=$!
 lanzar; node test/reglas-asistente.mjs > "$SALIDA/reglasasistente.txt" 2>&1 & P187=$!
 lanzar; node test/alta-generador.mjs > "$SALIDA/altagenerador.txt" 2>&1 & P188=$!
+lanzar; node test/tpv-menu-pasos.mjs > "$SALIDA/tpvmenupasos.txt" 2>&1 & P189=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -414,5 +415,6 @@ espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide
 espera $P186 "Cuenta de Resultados › «Lo que te queda de verdad» (cuentas a mano: préstamo 10.000 € a 24 × 450 €), sin tocar el resultado oficial, en móvil y sin inversiones" "$SALIDA/economiareal.txt" "todos los casos pasaron"
 espera $P187 "Asistente «Actualizar mis reglas»: 6 pasos exactos (portada de Firebase, cuenta y proyecto, Realtime Database → Reglas, copiar, borrar todo, pegar, Publicar), comprobación automática, campana solo del propietario, tres idiomas y móvil" "$SALIDA/reglasasistente.txt" "todos los casos pasaron"
 espera $P188 "Generador de licencias: alta de cliente paso a paso (automáticos, manuales, progreso, mensaje de bienvenida, móvil)" "$SALIDA/altagenerador.txt" "^OK alta paso a paso"
+espera $P189 "TPV · el menú se pide paso a paso (un apartado cada vez, avanza solo salvo con extras, Atrás, total en el botón final y lo guardado no cambia)" "$SALIDA/tpvmenupasos.txt" "el menú por pasos del TPV funciona"
 
 exit $FALLOS

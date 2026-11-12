@@ -1425,62 +1425,134 @@ function isSeccionBebida(secId){
   return false;
 }
 
-function openMenuConfigModal(orderId, menuId){
+/* MENÚ PASO A PASO EN EL TPV (12/11, pedido del dueño: «como en la web de pedidos»). Antes salían TODOS los apartados de golpe, en el
+   estilo viejo. Ahora se elige un apartado cada vez —primeros, segundos, postres…— con barra de progreso; elegir una opción avanza solo,
+   «Atrás» corrige y el último botón dice «Añadir al pedido · total». Se pintan todos los apartados y se muestra uno (confirmAddMenuToOrder
+   sigue leyendo los radios de todos, así que no cambia nada de lo que se guarda).
+   ⚠️ Una opción CON extras (modificadores) NO avanza sola: el camarero tiene que poder marcarlos; ahí manda «Siguiente».
+   ⚠️ Nada viene marcado por defecto salvo que solo haya UNA opción disponible: con el primero preseleccionado, un toque distraído en
+   «Siguiente» servía un plato que nadie había pedido. */
+let tpvMenuPaso = null;   // {orderId, menuId, idx, picks:{grupoId: opcionId}}
+function openMenuConfigModal(orderId, menuId, conservar){
   const m = DB.menus.find(x=>x.id===menuId);
   if(!m) return;
+  const grupos = m.grupos || [];
+  const previo = (conservar && tpvMenuPaso && tpvMenuPaso.orderId === orderId && tpvMenuPaso.menuId === menuId) ? tpvMenuPaso : null;
+  tpvMenuPaso = {orderId, menuId, idx: previo ? previo.idx : 0, picks: previo ? previo.picks : {}};
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-list-details"></i> ${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}</h3>
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
-    ${(m.grupos||[]).map(g => `
-      <div class="field">
-        <label>${escapeHtml(tItem(g))}</label>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${(() => {
-            // Marcar una opción como agotada tiene que impedir pedirla, no solo
-            // avisar: se deshabilita, y la primera marcada por defecto es la
-            // primera DISPONIBLE (si no, el radio preseleccionado podía ser
-            // justo el plato que se acaba de terminar).
-            const primeraLibre = (g.opciones||[]).findIndex(o => o.disponible !== false);
-            return (g.opciones||[]).map((o,i) => `
-            <label style="display:flex;align-items:center;gap:8px;${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
-              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
-              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--ink);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}${o.disponible===false ? ` <span class="badge badge-red txt-xs"><i class="ti ti-flame-off"></i> ${t('common.unavailable')}</span>` : ''}
-              <i class="ti ti-info-circle" style="color:var(--muted);cursor:pointer" title="${t('label.dishInfo')}" onclick="event.preventDefault();event.stopPropagation();openDishInfoModal(${o.recipeId||'null'}, '${escapeJsAttr(tItem(o))}', '', 'openMenuConfigModal(${orderId}, ${menuId})')"></i>
+    <div class="tp-mp-cab"><div class="tp-mp-eye" id="tp-mp-eye"></div><div class="tp-mp-prog" aria-hidden="true"><i id="tp-mp-prog-i"></i></div></div>
+    ${grupos.map((g, gi) => {
+      /* Marcar una opción como agotada tiene que impedir pedirla, no solo avisar: se deshabilita. */
+      const libres = (g.opciones||[]).filter(o => o.disponible !== false);
+      const pick = tpvMenuPaso.picks[g.id];
+      return `
+      <fieldset class="tp-mp-g" data-step="${gi}" ${gi === tpvMenuPaso.idx ? '' : 'hidden'}>
+        <legend>${escapeHtml(tItem(g))}</legend>
+        ${(g.opciones||[]).map(o => {
+          const marcada = o.disponible !== false && (pick != null ? pick === o.id : libres.length === 1);
+          return `
+          <div class="tp-mp-fila${o.disponible===false?' off':''}">
+            <label class="tp-mp-opt">
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${marcada?'checked':''} ${o.disponible===false?'disabled':''} onchange="tpvMenuElegida(${gi}, ${g.id}, ${o.id})">
+              <span class="tp-mp-n">${escapeHtml(tItem(o))}</span>
+              ${o.suplemento ? `<span class="tp-mp-p">+${fmtMoney(o.suplemento)}</span>` : ''}${o.disponible===false ? ` <span class="badge badge-red txt-xs"><i class="ti ti-flame-off"></i> ${t('common.unavailable')}</span>` : ''}
             </label>
-            ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id}" style="margin-left:28px;display:${i===0?'block':'none'}">
-              ${o.modificadores.map(mod => `
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
-                  <input type="checkbox" class="menu-mod-${g.id}" data-opcion="${o.id}" data-mod-id="${mod.id}" style="width:auto">
-                  ${escapeHtml(tItem(mod))}${mod.precio ? ` <span style="color:var(--ink);font-weight:600">+${fmtMoney(mod.precio)}</span>` : ''}
-                </label>
-              `).join('')}
-            </div>` : ''}
-          `).join('');
-          })()}
-        </div>
-      </div>
-    `).join('')}
+            <button type="button" class="tp-mp-i" data-tip="${t('label.dishInfo')}" aria-label="${t('label.dishInfo')}" onclick="event.preventDefault();event.stopPropagation();openDishInfoModal(${o.recipeId||'null'}, '${escapeJsAttr(tItem(o))}', '', 'openMenuConfigModal(${orderId}, ${menuId}, true)')"><i class="ti ti-info-circle"></i></button>
+          </div>
+          ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id} tp-mp-extras" style="display:${marcada?'block':'none'}">
+            ${o.modificadores.map(mod => `
+              <label class="tp-mp-mod">
+                <input type="checkbox" class="menu-mod-${g.id}" data-opcion="${o.id}" data-mod-id="${mod.id}" onchange="tpvMenuRefrescar()">
+                ${escapeHtml(tItem(mod))}${mod.precio ? ` <span class="tp-mp-p">+${fmtMoney(mod.precio)}</span>` : ''}
+              </label>
+            `).join('')}
+          </div>` : ''}`;
+        }).join('')}
+      </fieldset>`;
+    }).join('')}
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddMenuToOrder(${orderId}, ${menuId})"><i class="ti ti-plus"></i> ${t("btn.addToOrder")}</button>
+      <button class="btn" id="tp-mp-atras" onclick="tpvMenuAtras(${orderId})"></button>
+      <button class="btn btn-primary" id="tp-mp-sig" onclick="tpvMenuSiguiente()"></button>
     </div>
   `);
+  tpvMenuIr(tpvMenuPaso.idx);
 }
 
-function toggleMenuExtras(grupoId){
-  const selected = document.querySelector(`input[name="menu-grupo-${grupoId}"]:checked`);
-  if(!selected) return;
-  const selId = selected.value;
-  document.querySelectorAll(`[class^="menu-extras-${grupoId}-"]`).forEach(el => el.style.display = 'none');
-  const extrasDiv = document.querySelector(`.menu-extras-${grupoId}-${selId}`);
-  if(extrasDiv) extrasDiv.style.display = 'block';
-  document.querySelectorAll(`.menu-mod-${grupoId}`).forEach(el => {
-    if(el.dataset.opcion !== selId) el.checked = false;
+function tpvMenuMenu(){ return tpvMenuPaso ? DB.menus.find(x => x.id === tpvMenuPaso.menuId) : null; }
+// Un apartado está resuelto si hay algo marcado, o si no tiene ninguna opción disponible (no se puede atascar a nadie en él).
+function tpvMenuGrupoResuelto(g){
+  if(!g) return true;
+  if(!(g.opciones||[]).some(o => o.disponible !== false)) return true;
+  return !!document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`);
+}
+function tpvMenuIr(i){
+  const m = tpvMenuMenu(); if(!m) return;
+  const grupos = m.grupos || [], n = grupos.length;
+  if(!n) return;
+  tpvMenuPaso.idx = Math.max(0, Math.min(n - 1, i));
+  document.querySelectorAll('.tp-mp-g').forEach(f => { f.hidden = +f.dataset.step !== tpvMenuPaso.idx; });
+  const modal = document.getElementById('modal-box'); if(modal) modal.scrollTop = 0;
+  tpvMenuRefrescar();
+}
+function tpvMenuRefrescar(){
+  const m = tpvMenuMenu(); if(!m) return;
+  const grupos = m.grupos || [], n = grupos.length, i = tpvMenuPaso.idx, g = grupos[i];
+  const eye = document.getElementById('tp-mp-eye');
+  if(eye) eye.textContent = gl({es:`Paso ${i+1} de ${n}`, ca:`Pas ${i+1} de ${n}`, en:`Step ${i+1} of ${n}`}) + ' · ' + tItem(g);
+  const bar = document.getElementById('tp-mp-prog-i'); if(bar) bar.style.width = ((i + 1) / n * 100) + '%';
+  const atras = document.getElementById('tp-mp-atras');
+  if(atras) atras.textContent = i === 0 ? t('common.cancel') : gl({es:'Atrás', ca:'Enrere', en:'Back'});
+  // Total con suplementos y extras de lo elegido hasta ahora (lo que llevará el botón del último paso)
+  let extra = 0;
+  grupos.forEach(gr => {
+    const sel = document.querySelector(`input[name="menu-grupo-${gr.id}"]:checked`);
+    const o = sel && (gr.opciones||[]).find(x => x.id === parseInt(sel.value));
+    if(!o) return;
+    extra += o.suplemento || 0;
+    document.querySelectorAll(`.menu-mod-${gr.id}:checked`).forEach(el => {
+      if(parseInt(el.dataset.opcion) !== o.id) return;
+      const mod = (o.modificadores||[]).find(x => x.id === parseInt(el.dataset.modId));
+      if(mod) extra += mod.precio || 0;
+    });
   });
+  const sig = document.getElementById('tp-mp-sig');
+  if(sig){
+    const ultimo = i >= n - 1;
+    sig.disabled = !tpvMenuGrupoResuelto(g);
+    sig.innerHTML = ultimo
+      ? `<i class="ti ti-plus"></i> ${t('btn.addToOrder')} · ${fmtMoney((m.precio||0) + extra)}`
+      : `${gl({es:'Siguiente', ca:'Següent', en:'Next'})}: ${escapeHtml(tItem(grupos[i + 1]))} <i class="ti ti-arrow-right"></i>`;
+  }
 }
-
+function tpvMenuElegida(gi, grupoId, opcionId){
+  const m = tpvMenuMenu(); if(!m) return;
+  tpvMenuPaso.picks[grupoId] = opcionId;
+  const g = (m.grupos||[])[gi], o = g && (g.opciones||[]).find(x => x.id === opcionId);
+  // Los extras solo se ven (y solo cuentan) en la opción elegida
+  document.querySelectorAll(`[class*="menu-extras-${grupoId}-"]`).forEach(el => el.style.display = 'none');
+  const extrasDiv = document.querySelector(`.menu-extras-${grupoId}-${opcionId}`); if(extrasDiv) extrasDiv.style.display = 'block';
+  document.querySelectorAll(`.menu-mod-${grupoId}`).forEach(el => { if(parseInt(el.dataset.opcion) !== opcionId) el.checked = false; });
+  tpvMenuRefrescar();
+  // Avanza solo, salvo en el último apartado (ahí está «Añadir») y cuando la opción lleva extras que marcar
+  if(gi >= (m.grupos||[]).length - 1 || (o && (o.modificadores||[]).length)) return;
+  clearTimeout(tpvMenuElegida._t);
+  tpvMenuElegida._t = setTimeout(() => { if(tpvMenuPaso && tpvMenuPaso.idx === gi) tpvMenuIr(gi + 1); }, 260);
+}
+function tpvMenuAtras(orderId){
+  if(!tpvMenuPaso || tpvMenuPaso.idx === 0){ tpvMenuPaso = null; renderTableOrderModal(orderId); return; }
+  tpvMenuIr(tpvMenuPaso.idx - 1);
+}
+function tpvMenuSiguiente(){
+  const m = tpvMenuMenu(); if(!m) return;
+  const g = (m.grupos||[])[tpvMenuPaso.idx];
+  if(!tpvMenuGrupoResuelto(g)) return;
+  if(tpvMenuPaso.idx >= (m.grupos||[]).length - 1){ const o = tpvMenuPaso.orderId, mi = tpvMenuPaso.menuId; tpvMenuPaso = null; confirmAddMenuToOrder(o, mi); }
+  else tpvMenuIr(tpvMenuPaso.idx + 1);
+}
 function confirmAddMenuToOrder(orderId, menuId){
   const order = DB.tpvOrders.find(o=>o.id===orderId);
   const m = DB.menus.find(x=>x.id===menuId);

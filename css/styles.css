@@ -4454,6 +4454,28 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-plato-acc button:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
 .tp-plato-menos{color:#8A3B2E !important}
 .tp-menu-ficha{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;background:#fff;border:1px solid var(--hair);border-radius:4px}
+
+/* Menú paso a paso en el TPV (12/11): un apartado cada vez, filas grandes para el pulgar. */
+.tp-mp-cab{margin:2px 0 12px}
+.tp-mp-eye{font-family:var(--mono,'IBM Plex Mono',monospace);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.tp-mp-prog{height:4px;background:var(--border)}
+.tp-mp-prog>i{display:block;height:100%;width:0;background:var(--olive);transition:width .2s ease}
+.tp-mp-g{border:0;padding:0;margin:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.tp-mp-g[hidden]{display:none}
+.tp-mp-g legend{font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;padding:0}
+.tp-mp-fila{display:flex;align-items:stretch;gap:8px}
+.tp-mp-opt{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 14px;background:#fff;border:1px solid var(--border);cursor:pointer;font-size:15px;font-weight:600;color:var(--text);margin:0}
+.tp-mp-opt:hover{background:var(--cream);border-color:var(--olive)}
+.tp-mp-opt:has(input:checked){background:var(--green-l,#EDF1EC);border-color:var(--olive);box-shadow:inset 3px 0 0 var(--olive)}
+.tp-mp-opt input{width:20px;height:20px;flex:none;accent-color:var(--olive)}
+.tp-mp-n{flex:1;min-width:0;overflow-wrap:break-word}
+.tp-mp-p{font-family:var(--mono,monospace);font-weight:600;color:var(--olive);white-space:nowrap}
+.tp-mp-fila.off .tp-mp-opt{opacity:.5;cursor:not-allowed}
+.tp-mp-i{flex:none;width:52px;min-height:52px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:18px}
+.tp-mp-i:hover{background:var(--cream);color:var(--text)}
+.tp-mp-extras{margin:0 0 4px 12px;padding:8px 12px;border-left:3px solid var(--olive);background:var(--cream)}
+.tp-mp-mod{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;cursor:pointer;margin:0;color:var(--text)}
+.tp-mp-mod input{width:20px;height:20px;accent-color:var(--olive)}
 .tp-menu-nom{font-size:17px}
 .tp-menu-pre{font-family:var(--mono);font-size:22px;font-weight:600;color:#33523A}
 /* La comanda */
