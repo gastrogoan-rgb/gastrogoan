@@ -6519,3 +6519,10 @@ small{font-size:max(.8333em, 11px)}
   .av-bt{width:100%;justify-content:flex-start;padding-left:30px}
   .avisos-panel{right:10px;width:calc(100vw - 20px)}
 }
+
+/* Cabecera en 320 px: con la campana de avisos ya no cabían los ocho controles en una fila y «Cerrar sesión» bajaba a una segunda (58 → 68 px).
+   Se quita el filete que separa el chat del cierre de sesión y se aprietan los huecos; en 360 px o más no cambia nada. */
+@media (max-width:340px){
+  .app-header .hdr-divider{display:none}
+  .app-header{column-gap:2px}
+}
