@@ -999,6 +999,9 @@
     .card:has(#nps-scale) #nps-scale button{animation:wzRise .35s cubic-bezier(.2,.8,.2,1) both}
     #nps-scale button:nth-child(n+4){animation-delay:.04s} #nps-scale button:nth-child(n+7){animation-delay:.08s} #nps-scale button:nth-child(n+10){animation-delay:.12s}
   }
+  /* Mientras carga no se enseña la cabecera genérica con el nombre «Reservas y Pedidos»: aparece ya con el nombre y el logo del local. */
+  body:has(#app-loading) header{display:none}
+  body:has(#app-loading) #app{min-height:60vh;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -1013,6 +1016,12 @@
 <div class="wrap" id="app">
   <div class="empty" id="app-loading"><div class="spinner"></div>Cargando…</div>
 </div>
+<script>
+/* Pantalla de carga (12/11): antes salía la cabecera genérica «Reservas y Pedidos» (el diseño antiguo) y un «Cargando…» siempre en
+   castellano mientras se descargaba el negocio. Ahora la cabecera no se pinta hasta que hay datos del local (la oculta `body:has(#app-loading)`,
+   en el CSS) y el texto sale en el idioma del móvil. */
+(function(){ try{ var l = String(navigator.language || 'es').slice(0, 2), m = {es:'Cargando…', ca:'Carregant…', en:'Loading…'}, e = document.getElementById('app-loading'); if(e && e.lastChild) e.lastChild.nodeValue = m[l] || m.es; }catch(x){} })();
+</script>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>

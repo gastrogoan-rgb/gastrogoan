@@ -7246,8 +7246,11 @@ async function comprobarEspejoEnNubePropia(){
       // negocio al que SOLO le faltara este permiso se quedaba con
       // reglasAntiguas=false (todo lo demás sí pasaba) y nunca veía ningún
       // aviso de que le faltaba, aunque la búsqueda de reserva no funcionara.
-      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').set(true);
-      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba').remove();
+      /* ⚠️ El hijo mide 12+ caracteres: las reglas actuales exigen `$token.length >= 12` en este nodo. Con `_prueba` (8) la sonda
+         FALLABA JUSTO CON LAS REGLAS NUEVAS y la app decía «Firebase todavía tiene las reglas antiguas» a quien las acababa de pegar
+         bien (12/11). Lo vigila test/emulador/sonda-reglas.mjs contra las reglas reales. */
+      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba_de_sonda').set(true);
+      await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba_de_sonda').remove();
       // Carta por QR (7/10): su nodo `mesaQr` y los tipos 'pedido_mesa' y
       // 'pago_mesa'. Solo se prueba si el negocio la tiene activada: a quien
       // no la usa no se le pide pegar reglas nuevas por ella.
