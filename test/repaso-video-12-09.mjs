@@ -161,8 +161,9 @@ await caso('Historial de Pedidos: entra por el mes en curso, con selector de añ
   // HOY también termina en "-05" — se compara con la fecha completa del
   // "otro mes" de verdad, no con un sufijo que puede coincidir por casualidad.
   assert.ok(!r.inicial.some(x=>x.includes(r.otroMes) && /RECIBIDO/.test(x)), 'un recibido de otro mes no: ' + JSON.stringify(r.inicial));
-  // Pero un pedido ENVIADO sin recibir es trabajo pendiente: se ve siempre.
-  assert.ok(r.inicial.some(x=>/ENVIADO/.test(x)), 'lo pendiente no desaparece al cambiar de mes: ' + JSON.stringify(r.inicial));
+  // 12/11 (pedido del dueño): la fecha filtra TODOS los estados. Un ENVIADO de otro mes ya no sale en este mes (antes salía siempre y
+  // cambiar de mes «no cambiaba nada»); se avisa de que hay pendientes fuera y «Ver todos» los enseña (lo vigila test/pedidos.mjs).
+  assert.ok(!r.inicial.some(x=>/ENVIADO/.test(x) && x.includes(r.otroMes)), 'el pendiente de otro mes no sale en este mes: ' + JSON.stringify(r.inicial));
   assert.ok(r.anioAnterior.some(x=>/RECIBIDO/.test(x)), 'el año anterior sigue accesible: ' + JSON.stringify(r.anioAnterior));
   assert.equal(r.guardados, 3, 'no se ha borrado nada, solo se enseña un mes cada vez');
 });
