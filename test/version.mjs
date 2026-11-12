@@ -301,6 +301,38 @@ await caso('Pero NUNCA a media faena: ahí pregunta', async ()=>{
   return 'con un modal abierto, texto sin guardar o la pantalla ya tocada: pregunta';
 });
 
+await caso('Freno contra el bucle de recargas: si ya intentó actualizarse sola a ESA versión hace poco, no recarga otra vez (sale la barra)', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    const originalFetch = window.fetch, aplicarReal = window.aplicarVersionNueva;
+    const probar = async (marca) => {
+      document.getElementById('gg-version-nueva')?.remove();
+      window.GG_BUILD = '01/01/2026 00:00'; window.ggHuboInteraccion = false;
+      let recargado = false;
+      window.fetch = async (u) => String(u).includes('version.json') ? {ok:true, json: async () => ({build:'VERSION NUEVA'})} : originalFetch(u);
+      window.aplicarVersionNueva = async () => { recargado = true; };
+      if(marca) localStorage.setItem('gastrogoan_auto_actualizacion', JSON.stringify(marca)); else localStorage.removeItem('gastrogoan_auto_actualizacion');
+      localStorage.removeItem('gastrogoan_version_comprobada');
+      await comprobarVersionPublicada(true); await new Promise(r => setTimeout(r, 120));
+      const out = {recargado, barra: !!document.getElementById('gg-version-nueva')};
+      document.getElementById('gg-version-nueva')?.remove(); return out;
+    };
+    const out = {
+      sinIntento: await probar(null),
+      intentoReciente: await probar({build: 'VERSION NUEVA', ts: Date.now() - 60000}),
+      intentoViejo: await probar({build: 'VERSION NUEVA', ts: Date.now() - 11 * 60000}),
+      otraVersion: await probar({build: 'OTRA', ts: Date.now() - 60000}),
+    };
+    window.fetch = originalFetch; window.aplicarVersionNueva = aplicarReal; localStorage.removeItem('gastrogoan_auto_actualizacion');
+    return out;
+  });
+  assert.equal(r.sinIntento.recargado, true, 'sin intento previo, se actualiza sola: ' + JSON.stringify(r));
+  assert.equal(r.intentoReciente.recargado, false, 'con un intento hace 1 min NO debe recargar: ' + JSON.stringify(r));
+  assert.equal(r.intentoReciente.barra, true, 'debe enseñar la barra');
+  assert.equal(r.intentoViejo.recargado, true, 'pasados 10 min vuelve a intentarlo');
+  assert.equal(r.otraVersion.recargado, true, 'otra versión distinta sí se intenta');
+  return 'una sola recarga automática por versión cada 10 min; el resto, barra';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|sin red/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
