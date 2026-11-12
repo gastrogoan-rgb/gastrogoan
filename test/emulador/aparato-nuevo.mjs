@@ -30,7 +30,9 @@ async function aparato(nombre){
   page.on('request', req => {
     const m = req.url().match(/gstatic\.com\/firebasejs\/[\d.]+\/(firebase-[a-z-]+\.js)/);
     if(m) return req.continue({url: 'http://localhost:8951/__sdk/' + m[1]});
-    if(/googleapis|raw.githubusercontent|qrserver/.test(req.url())) return req.abort();
+    // Solo se bloquea lo EXTERNO: la ruta del emulador de autenticación (127.0.0.1:9099/identitytoolkit.googleapis.com/…) también contiene «googleapis».
+    let host = ''; try{ host = new URL(req.url()).hostname; }catch(e){}
+    if(host !== '127.0.0.1' && host !== 'localhost' && /googleapis|raw.githubusercontent|qrserver/.test(req.url())) return req.abort();
     req.continue();
   });
   page.on('console', m => { if(m.type() === 'error' && !/ERR_|Failed to load resource|favicon/.test(m.text())) errs.push(nombre + ' [consola]: ' + m.text()); });
