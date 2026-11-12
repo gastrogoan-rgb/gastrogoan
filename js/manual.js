@@ -3328,14 +3328,14 @@ const MANUAL_CHAPTERS = [
 <h4>Carta por QR en la mesa</h4>
 <p>Además del QR de tu web, cada mesa puede tener <strong>su propio QR</strong>: el comensal ve la carta con alérgenos y pide desde su móvil. Tú eliges cómo se cobra: en la mesa o al hacer el pedido. Viene <strong>desactivado</strong>. Se configura en <strong>Mi Negocio → QR auto pedido</strong>:</p>
 <div class="manual-step"><div class="sn">1</div><div class="st">Marca <strong>Activar la carta por QR en las mesas</strong>. Cada mesa recibe su código.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">En <strong>Cómo cobras lo pedido por QR</strong> elige: <strong>En la mesa, al camarero (el QR solo sirve para pedir)</strong>, o <strong>Al hacer el pedido, con tarjeta (llega a cocina ya pagado)</strong>. La segunda necesita Stripe conectado; sin él no se puede elegir y el QR funciona como «en la mesa».</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">En <strong>Cómo cobras lo pedido por QR</strong> marca una opción o las dos: <strong>En el local, al camarero</strong> y/o <strong>Con tarjeta al hacer el pedido (llega a cocina ya pagado)</strong>. No hay ninguna marcada de partida y no se puede activar el QR sin elegir. La tarjeta necesita Stripe conectado; sin él no se puede marcar. Con las dos marcadas, el comensal elige al pedir.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">En <strong>Cuando llega un pedido desde el QR</strong> elige: <strong>Lo acepta el camarero antes de ir a cocina</strong> o <strong>Entra directo en cocina</strong>.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Pulsa el botón de cada mesa para ver su QR y <strong>Descargar QR</strong>, o usa <strong>Imprimir los QR de todas las mesas</strong> (una tarjeta por mesa, para recortar).</div></div>
 <ul>
   <li>Si los pedidos requieren camarero, salen arriba del TPV en <strong>Pedidos desde el QR de la mesa</strong> con <strong>Aceptar y marchar</strong> y <strong>Rechazar</strong>. Aceptar los pasa a la comanda de esa mesa y a cocina.</li>
   <li>Si alguien se lleva o fotografía un QR, usa <strong>Cambiar QR</strong> en esa mesa: el impreso deja de funcionar y hay que imprimir el nuevo.</li>
   <li><strong>Cobrar al pedir:</strong> el comensal paga con tarjeta al enviar el pedido y este solo entra en cocina cuando Stripe confirma el cobro (el camarero no tiene que aceptarlo). Lo pagado no se vuelve a cobrar al cerrar la mesa: el cobro del TPV lo descuenta. Si paga de menos, el pedido no entra y queda en el TPV para el camarero, con un aviso, y lo pagado aparece en «Pagos sin pedido» para devolverlo; si paga de más, lo que sobra también va ahí.</li>
-  <li><strong>Cobrar en la mesa:</strong> el comensal solo pide; la cuenta la pide al camarero como siempre.</li>
+  <li><strong>Cobrar en el local:</strong> el comensal solo pide; la cuenta la pide al camarero como siempre. Si el pedido llega sin pagar con las dos formas marcadas, es un pedido normal.</li>
 </ul>
 <div class="manual-warning"><i class="ti ti-alert-triangle"></i>La carta por QR necesita que las <strong>reglas de tu base de datos</strong> estén actualizadas. Si activas el QR y los pedidos no llegan, revisa el aviso de reglas desactualizadas en la app y pega las reglas nuevas en tu Firebase.</div>
 
@@ -3426,14 +3426,14 @@ const MANUAL_CHAPTERS = [
 <h4>Carta per QR a la taula</h4>
 <p>A més del QR de la teva web, cada taula pot tenir <strong>el seu propi QR</strong>: el comensal veu la carta amb al·lèrgens i demana des del seu mòbil. Tu tries com es cobra: a la taula o en fer la comanda. Ve <strong>desactivada</strong>. Es configura a <strong>El Meu Negoci → QR autocomanda</strong>:</p>
 <div class="manual-step"><div class="sn">1</div><div class="st">Marca <strong>Activar la carta per QR a les taules</strong>. Cada taula rep el seu codi.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">A <strong>Com cobres el que es demana per QR</strong> tria: <strong>A la taula, al cambrer (el QR només serveix per demanar)</strong>, o <strong>En fer la comanda, amb targeta (arriba a cuina ja pagada)</strong>. La segona necessita Stripe connectat; sense ell no es pot triar i el QR funciona com «a la taula».</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">A <strong>Com cobres el que es demana per QR</strong> marca una opció o les dues: <strong>Al local, al cambrer</strong> i/o <strong>Amb targeta en fer la comanda (arriba a cuina ja pagada)</strong>. No n'hi ha cap de marcada de partida i no es pot activar el QR sense triar. La targeta necessita Stripe connectat; sense ell no es pot marcar. Amb les dues marcades, el comensal tria en demanar.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">A <strong>Quan arriba una comanda des del QR</strong> tria: <strong>L'accepta el cambrer abans d'anar a cuina</strong> o <strong>Entra directament a cuina</strong>.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Prem el botó de cada taula per veure'n el QR i <strong>Descarregar QR</strong>, o fes servir <strong>Imprimir els QR de totes les taules</strong> (una targeta per taula, per retallar).</div></div>
 <ul>
   <li>Si les comandes requereixen cambrer, surten a dalt del TPV a <strong>Comandes des del QR de la taula</strong> amb <strong>Acceptar i marxar</strong> i <strong>Rebutjar</strong>. Acceptar les passa a la comanda d'aquella taula i a cuina.</li>
   <li>Si algú s'endú o fotografia un QR, fes servir <strong>Canviar QR</strong> en aquella taula: l'imprès deixa de funcionar i cal imprimir el nou.</li>
   <li><strong>Cobrar en demanar:</strong> el comensal paga amb targeta en enviar la comanda i aquesta només entra a cuina quan Stripe confirma el cobrament (el cambrer no l'ha d'acceptar). El que s'ha pagat no es torna a cobrar en tancar la taula: el cobrament del TPV ho descompta. Si paga de menys, la comanda no entra i queda al TPV per al cambrer, amb un avís, i el que s'ha pagat apareix a «Pagaments sense comanda» per retornar-ho; si paga de més, el que sobra també hi va.</li>
-  <li><strong>Cobrar a la taula:</strong> el comensal només demana; el compte el demana al cambrer com sempre.</li>
+  <li><strong>Cobrar al local:</strong> el comensal només demana; el compte el demana al cambrer com sempre. Si la comanda arriba sense pagar amb les dues formes marcades, és una comanda normal.</li>
 </ul>
 <div class="manual-warning"><i class="ti ti-alert-triangle"></i>La carta per QR necessita que les <strong>regles de la teva base de dades</strong> estiguin actualitzades. Si actives el QR i les comandes no arriben, revisa l'avís de regles desactualitzades a l'app i enganxa les regles noves al teu Firebase.</div>
 
@@ -3524,14 +3524,14 @@ const MANUAL_CHAPTERS = [
 <h4>QR menu at the table</h4>
 <p>Besides your website's QR, each table can have <strong>its own QR</strong>: the diner sees the menu with allergens and orders from their phone. You choose how it is paid: at the table or when the order is placed. It's <strong>off</strong> by default. Set it up in <strong>My Business → Self-order QR</strong>:</p>
 <div class="manual-step"><div class="sn">1</div><div class="st">Tick <strong>Turn on the QR menu at the tables</strong>. Each table gets its code.</div></div>
-<div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>How you charge what is ordered by QR</strong> choose: <strong>At the table, to the waiter (the QR is only for ordering)</strong>, or <strong>When ordering, by card (it reaches the kitchen already paid)</strong>. The second needs Stripe connected; without it you cannot pick it and the QR works as "at the table".</div></div>
+<div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>How you charge what is ordered by QR</strong> tick one option or both: <strong>At the venue, to the waiter</strong> and/or <strong>By card when ordering (it reaches the kitchen already paid)</strong>. Nothing is ticked to start with and the QR cannot be turned on without choosing. Card needs Stripe connected; without it you cannot tick it. With both ticked, the diner chooses when ordering.</div></div>
 <div class="manual-step"><div class="sn">3</div><div class="st">Under <strong>When an order arrives from the QR</strong> choose: <strong>A waiter accepts it before it goes to the kitchen</strong> or <strong>It goes straight to the kitchen</strong>.</div></div>
 <div class="manual-step"><div class="sn">4</div><div class="st">Press each table's button to see its QR and <strong>Download QR</strong>, or use <strong>Print the QR codes for all tables</strong> (one card per table, to cut out).</div></div>
 <ul>
   <li>If orders need a waiter, they appear at the top of the POS under <strong>Orders from table QR codes</strong> with <strong>Accept and send</strong> and <strong>Reject</strong>. Accepting moves them onto that table's order and to the kitchen.</li>
   <li>If someone takes or photographs a QR, use <strong>Change QR</strong> on that table: the printed one stops working and you need to print the new one.</li>
   <li><strong>Charge when ordering:</strong> the diner pays by card when sending the order, and it only reaches the kitchen once Stripe confirms the payment (no waiter needs to accept it). What was paid isn't charged again when the table closes: the POS deducts it. If they pay too little, the order doesn't go through; it stays in the POS for the waiter with a warning, and what was paid shows under "Payments without an order" so you can refund it; if they pay too much, the excess goes there too.</li>
-  <li><strong>Charge at the table:</strong> the diner only orders; they ask the waiter for the bill as usual.</li>
+  <li><strong>Charge at the venue:</strong> the diner only orders; they ask the waiter for the bill as usual. If an order arrives unpaid with both options ticked, it is a normal order.</li>
 </ul>
 <div class="manual-warning"><i class="ti ti-alert-triangle"></i>The QR menu needs your <strong>database rules</strong> to be up to date. If you turn on the QR and orders don't arrive, check the outdated-rules notice in the app and paste the new rules into your Firebase.</div>
 
@@ -4661,7 +4661,7 @@ const MANUAL_CHAPTERS = [
 <p>Aparece cuando tienes mesas y el servicio <em>En mesa</em> activo, y exige licencia y nube conectada. Cada mesa tiene su QR: el comensal ve la carta con alérgenos, pide a su mesa y tú eliges cómo se cobra: en la mesa, al camarero, o al hacer el pedido con tarjeta (Stripe).</p>
 <ul>
 <li>Marca <strong>Activar la carta por QR en las mesas</strong>. Viene desactivado.</li>
-<li><strong>Cómo cobras lo pedido por QR</strong>: <em>en la mesa, al camarero</em> (el QR solo sirve para pedir) o <em>al hacer el pedido, con tarjeta</em> (llega a cocina ya pagado; necesita Stripe conectado).</li>
+<li><strong>Cómo cobras lo pedido por QR</strong>: marca <em>en el local, al camarero</em>, <em>con tarjeta al hacer el pedido</em> (llega a cocina ya pagado; necesita Stripe conectado) o las dos (el comensal elige). No hay ninguna de partida.</li>
 <li><strong>Cuando llega un pedido desde el QR</strong>: <em>lo acepta el camarero antes de ir a cocina</em> (aparece arriba en el TPV) o <em>entra directo en cocina</em>.</li>
 <li>Pulsa el nombre de una mesa para ver su QR y <strong>Descargar QR</strong>. <strong>Imprimir los QR de todas las mesas</strong> saca una hoja con uno por tarjeta.</li>
 <li><strong>Cambiar QR</strong> genera uno nuevo y anula el impreso en esa mesa; úsalo si alguien se lo ha llevado o fotografiado.</li>
@@ -4826,7 +4826,7 @@ const MANUAL_CHAPTERS = [
 <p>Apareix quan tens taules i el servei <em>A taula</em> actiu, i exigeix llicència i núvol connectat. Cada taula té el seu QR: el comensal veu la carta amb al·lèrgens, demana a la seva taula i tu tries com es cobra: a la taula, al cambrer, o en fer la comanda amb targeta (Stripe).</p>
 <ul>
 <li>Marca <strong>Activar la carta per QR a les taules</strong>. Ve desactivat.</li>
-<li><strong>Com cobres el que es demana per QR</strong>: <em>a la taula, al cambrer</em> (el QR només serveix per demanar) o <em>en fer la comanda, amb targeta</em> (arriba a cuina ja pagada; necessita Stripe connectat).</li>
+<li><strong>Com cobres el que es demana per QR</strong>: marca <em>al local, al cambrer</em>, <em>amb targeta en fer la comanda</em> (arriba a cuina ja pagada; necessita Stripe connectat) o les dues (el comensal tria). No n'hi ha cap de partida.</li>
 <li><strong>Quan arriba una comanda des del QR</strong>: <em>l'accepta el cambrer abans d'anar a cuina</em> (apareix a dalt al TPV) o <em>entra directament a cuina</em>.</li>
 <li>Prem el nom d'una taula per veure'n el QR i <strong>Descarregar QR</strong>. <strong>Imprimir els QR de totes les taules</strong> treu un full amb un per targeta.</li>
 <li><strong>Canviar QR</strong> en genera un de nou i anul·la l'imprès en aquella taula; fes-ho servir si algú se l'ha endut o fotografiat.</li>
@@ -4991,7 +4991,7 @@ const MANUAL_CHAPTERS = [
 <p>It appears when you have tables and the <em>Dine-in</em> service on, and requires a licence and connected cloud. Each table has its own QR: diners see the menu with allergens, order to their table and you choose how it is paid: at the table, to the waiter, or when ordering by card (Stripe).</p>
 <ul>
 <li>Tick <strong>Turn on the QR menu at the tables</strong>. It is off by default.</li>
-<li><strong>How you charge what is ordered by QR</strong>: <em>at the table, to the waiter</em> (the QR is only for ordering) or <em>when ordering, by card</em> (it reaches the kitchen already paid; needs Stripe connected).</li>
+<li><strong>How you charge what is ordered by QR</strong>: tick <em>at the venue, to the waiter</em>, <em>by card when ordering</em> (it reaches the kitchen already paid; needs Stripe connected) or both (the diner chooses). Nothing is ticked to start with.</li>
 <li><strong>When an order arrives from the QR</strong>: <em>a waiter accepts it before it goes to the kitchen</em> (it shows at the top of the POS) or <em>it goes straight to the kitchen</em>.</li>
 <li>Tap a table's name to see its QR and <strong>Download QR</strong>. <strong>Print the QR codes for all tables</strong> produces a sheet with one per card.</li>
 <li><strong>Change QR</strong> generates a new one and cancels the one printed on that table; use it if someone took or photographed it.</li>

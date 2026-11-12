@@ -7769,14 +7769,26 @@ function nuevoTokenMesaQr(){
 }
 function qrMesaConfig(){
   const q = (DB && DB.business && DB.business.qrMesa) || {};
-  // cobro: 'mesa' (se paga al camarero, como siempre) o 'pedido' (se paga al enviar el pedido, con Stripe). Por defecto 'mesa':
-  // el pago desde el móvil ya no se ofrece solo por tener Stripe conectado, lo elige el negocio.
-  return {activo: q.activo === true, aceptaCamarero: q.aceptaCamarero !== false, cobro: q.cobro === 'pedido' ? 'pedido' : 'mesa'};
+  // Cómo se cobra lo pedido por QR: lo ELIGE el negocio (sin valor por defecto) y puede marcar las dos. `local` = al camarero en el local;
+  // `tarjeta` = con Stripe al hacer el pedido. Con las dos, el comensal elige en la web. Un negocio que ya tenía el QR activo antes de
+  // existir esta elección (`sinElegir`) sigue cobrando en el local —no se le rompe el servicio— y la tarjeta le pide elegir.
+  let local = q.cobroLocal, tarjeta = q.cobroTarjeta;
+  if(local === undefined && tarjeta === undefined){
+    if(q.cobro === 'pedido'){ local = false; tarjeta = true; }
+    else if(q.cobro === 'mesa'){ local = true; tarjeta = false; }
+  }
+  local = local === true; tarjeta = tarjeta === true;
+  return {activo: q.activo === true, aceptaCamarero: q.aceptaCamarero !== false, local, tarjeta, sinElegir: !local && !tarjeta};
 }
-// ¿Se cobra al enviar el pedido? Hace falta que lo haya elegido el negocio Y que Stripe esté conectado: sin Stripe no hay
-// con qué cobrar, y dejar el pedido esperando un pago imposible dejaría la mesa sin servicio.
-function qrMesaCobraAlPedir(){
-  return qrMesaConfig().cobro === 'pedido' && pagoOnlineActivo === true;
+// ¿Se puede pagar con tarjeta al pedir? Hace falta que el negocio lo haya marcado Y que Stripe esté conectado: sin Stripe no hay con qué
+// cobrar, y dejar el pedido esperando un pago imposible dejaría la mesa sin servicio.
+function qrMesaTarjetaDisponible(){
+  return qrMesaConfig().tarjeta && pagoOnlineActivo === true;
+}
+// ¿Se puede pedir sin pagar (cobrar en el local)? Si solo está marcada la tarjeta y Stripe no está, también: el QR no se queda sin servicio.
+function qrMesaLocalDisponible(){
+  const c = qrMesaConfig();
+  return c.local || c.sinElegir || !qrMesaTarjetaDisponible();
 }
 function asegurarTokenMesa(tbl){
   if(!tbl) return null;
@@ -7895,7 +7907,7 @@ function recibirPedidoMesaQr(req){
   // COBRO AL PEDIR. El negocio quiere el dinero ANTES de cocina: el pedido no entra hasta que Stripe confirme el pago (se
   // PREGUNTA, igual que el resto de cobros: comprobarPagosTarjeta → aplicarPagoPedidoMesaQr). El importe que vale es el
   // recalculado aquí con la carta del negocio, no el que mandó el móvil.
-  if(qrMesaCobraAlPedir()){
+  if(qrMesaTarjetaDisponible()){
     const ref = typeof req.clientRef === 'string' ? req.clientRef.slice(0, 120) : '';
     if(req.pagoAlPedir === true && ref.length >= 8){
       p.estado = 'esperando-pago';
@@ -7905,11 +7917,14 @@ function recibirPedidoMesaQr(req){
       esperarPagoTarjeta(ref, p.totalEsperado);
       return null;   // todavía no es un pedido: no suena ni avisa hasta que el banco lo confirme
     }
-    // Llegó SIN pagar (una página antigua guardada en el móvil, o alguien saltándose la web): nunca entra solo en cocina.
-    // Queda para que el camarero lo mire y, si lo acepta, cobre en la mesa.
-    p.sinPago = true;
-    DB.pedidosMesaQr.push(p);
-    return p;
+    // Llegó SIN pagar. Si el negocio también cobra en el local, es un pedido normal (el comensal eligió pagar al camarero).
+    // Si SOLO cobra con tarjeta (una página antigua guardada en el móvil, o alguien saltándose la web): nunca entra solo en cocina;
+    // queda para que el camarero lo mire y, si lo acepta, cobre en la mesa.
+    if(!qrMesaLocalDisponible()){
+      p.sinPago = true;
+      DB.pedidosMesaQr.push(p);
+      return p;
+    }
   }
   DB.pedidosMesaQr.push(p);
   if(!cfg.aceptaCamarero) aceptarPedidoMesaQr(p.id, true);
@@ -10459,7 +10474,22 @@ function renderTableQrCard(){
   const link = getPublicClientLink();
   if(!link) return '';
   const cfg = qrMesaConfig();
+  const cobroAyuda = cfg.tarjeta && !pagoOnlineActivo ? t('qrMesa.mn.cobroTarjetaSinStripe')
+    : (cfg.local && cfg.tarjeta ? t('qrMesa.mn.cobroAmbosAyuda') : (cfg.tarjeta ? t('qrMesa.mn.cobroPedidoAyuda') : (cfg.local ? t('qrMesa.mn.cobroMesaAyuda') : '')));
   const ajustes = `
+    <fieldset class="mn-cobro" style="border:0;padding:0;margin:0 0 10px">
+      <legend style="font-weight:700;padding:0;margin-bottom:4px">${t('qrMesa.mn.cobro')}</legend>
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;min-height:44px">
+        <input type="checkbox" id="mn-qrmesa-local" style="width:auto;margin-top:3px" ${cfg.local ? 'checked' : ''} onchange="saveQrMesaConfig()">
+        <span>${t('qrMesa.mn.cobroLocal')}</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;min-height:44px;${pagoOnlineActivo || cfg.tarjeta ? '' : 'opacity:.6'}">
+        <input type="checkbox" id="mn-qrmesa-tarjeta" style="width:auto;margin-top:3px" ${cfg.tarjeta ? 'checked' : ''} ${pagoOnlineActivo || cfg.tarjeta ? '' : 'disabled'} onchange="saveQrMesaConfig()">
+        <span>${t('qrMesa.mn.cobroTarjeta')}</span>
+      </label>
+      ${cobroAyuda ? `<p class="txt-xs" style="color:var(--muted);margin:2px 0 0"><i class="ti ti-credit-card"></i> ${cobroAyuda}</p>` : (pagoOnlineActivo ? '' : `<p class="txt-xs" style="color:var(--muted);margin:2px 0 0"><i class="ti ti-credit-card"></i> ${t('qrMesa.mn.sinStripe')}</p>`)}
+      ${cfg.activo && cfg.sinElegir ? `<p class="txt-xs" style="color:var(--red);margin:6px 0 0;font-weight:600"><i class="ti ti-alert-triangle"></i> ${t('qrMesa.mn.eligeAviso')}</p>` : ''}
+    </fieldset>
     <label style="display:flex;align-items:flex-start;gap:8px;font-weight:600;cursor:pointer;min-height:44px">
       <input type="checkbox" id="mn-qrmesa-activo" style="width:auto;margin-top:3px" ${cfg.activo ? 'checked' : ''} onchange="saveQrMesaConfig()">
       <span>${t('qrMesa.mn.activar')}</span>
@@ -10471,15 +10501,7 @@ function renderTableQrCard(){
         <option value="camarero" ${cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.aceptaCamarero')}</option>
         <option value="cocina" ${!cfg.aceptaCamarero ? 'selected' : ''}>${t('qrMesa.mn.directoCocina')}</option>
       </select>
-    </div>
-    <div class="field" style="margin-top:6px">
-      <label for="mn-qrmesa-cobro">${t('qrMesa.mn.cobro')}</label>
-      <select id="mn-qrmesa-cobro" onchange="saveQrMesaConfig()">
-        <option value="mesa" ${cfg.cobro === 'mesa' ? 'selected' : ''}>${t('qrMesa.mn.cobroMesa')}</option>
-        <option value="pedido" ${cfg.cobro === 'pedido' ? 'selected' : ''} ${pagoOnlineActivo || cfg.cobro === 'pedido' ? '' : 'disabled'}>${t('qrMesa.mn.cobroPedido')}</option>
-      </select>
-    </div>
-    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px"><i class="ti ti-credit-card"></i> ${cfg.cobro === 'pedido' ? (pagoOnlineActivo ? t('qrMesa.mn.cobroPedidoAyuda') : t('qrMesa.mn.cobroPedidoSinStripe')) : (pagoOnlineActivo ? t('qrMesa.mn.cobroMesaAyuda') : t('qrMesa.mn.sinStripe'))}</p>` : ''}`;
+    </div>` : ''}`;
   if(!cfg.activo){
     return `
       <div class="card" id="mn-card-qr-mesa">
@@ -10528,17 +10550,32 @@ function openQrMesasModal(){
 function saveQrMesaConfig(){
   const chk = document.getElementById('mn-qrmesa-activo');
   const sel = document.getElementById('mn-qrmesa-acepta');
+  const chkL = document.getElementById('mn-qrmesa-local'), chkT = document.getElementById('mn-qrmesa-tarjeta');
   const antes = qrMesaConfig();
-  const activo = chk ? chk.checked : antes.activo;
-  const cobroSel = document.getElementById('mn-qrmesa-cobro');
-  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero, cobro: cobroSel ? (cobroSel.value === 'pedido' ? 'pedido' : 'mesa') : antes.cobro};
+  let activo = chk ? chk.checked : antes.activo;
+  const local = chkL ? chkL.checked : antes.local, tarjeta = chkT ? chkT.checked : antes.tarjeta;
+  // No hay forma de cobro por defecto: para activar el QR (o seguir con él activo) hay que haber elegido al menos una. Un negocio que
+  // ya lo tenía activo de antes y aún no ha elegido conserva el servicio (cobra en el local) hasta que lo haga.
+  let aviso = null;
+  if(activo && !local && !tarjeta && !(antes.activo && antes.sinElegir)){
+    if(antes.activo){
+      // Quitó la última forma de cobro con el QR activo: se queda como estaba.
+      showToast(t('qrMesa.msg.eligeCobro'));
+      if(typeof renderMiNegocio === 'function') renderMiNegocio();
+      return;
+    }
+    activo = false;   // intentó activarlo sin elegir cómo cobra
+    aviso = t('qrMesa.msg.eligeCobro');
+  }
+  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero, cobroLocal: local, cobroTarjeta: tarjeta};
   // Al activarlo, cada mesa recibe su token (el QR impreso no cambia
   // mientras no se rote a mano).
   if(activo) (DB.tables || []).forEach(asegurarTokenMesa);
   saveDB();
   if(typeof syncPublicMirror === 'function') syncPublicMirror();
   if(typeof renderMiNegocio === 'function') renderMiNegocio();
-  showToast(activo ? t('qrMesa.msg.activado') : t('qrMesa.msg.desactivado'));
+  if(aviso) showToast(aviso);
+  else if(activo !== antes.activo) showToast(activo ? t('qrMesa.msg.activado') : t('qrMesa.msg.desactivado'));
 }
 /* El QR se dibuja AQUÍ (js/qr.js), ya no se pide a un servicio externo: así sale igual con o sin internet y no depende de nadie (antes, si
    api.qrserver.com fallaba, el QR del ticket salía roto sobre un papel ya impreso). Devuelve un data:image/png listo para <img src>. */

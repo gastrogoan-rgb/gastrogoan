@@ -60,7 +60,7 @@ await app.evaluate(() => {
   ]}]}];
   DB.activeCartaIds = [1];
   DB.tpvOrders = []; DB.sales = []; DB.pedidosMesaQr = [];
-  DB.business.qrMesa = {activo: true};       // por defecto: lo acepta el camarero
+  DB.business.qrMesa = {activo: true, cobroLocal: true};       // por defecto: lo acepta el camarero · se cobra en el local
   // Una nube de mentira: guarda lo que se publica y reparte lo que se empuja.
   window.__nube = {};
   window.__borrado = [];
@@ -143,7 +143,7 @@ const pintarPublica = async (cuenta, stripe, cobro) => pub.evaluate(({cuenta, st
   })};
   publicId = 'pubqrmesa1';
   qrMesaListener = false; qrMesaCuenta = undefined;
-  DB = {business: {name: 'Casa QR', tiposServicio: {mesa: true, takeaway: true, delivery: true}, qrMesa: {activo: true, cobro: cobro || 'mesa'}},
+  DB = {business: {name: 'Casa QR', tiposServicio: {mesa: true, takeaway: true, delivery: true}, qrMesa: Object.assign({activo: true}, {mesa: {cobroLocal: true, cobroTarjeta: false}, pedido: {cobroLocal: false, cobroTarjeta: true}, ambos: {cobroLocal: true, cobroTarjeta: true}}[cobro || 'mesa'])},
     cartas: [{id: 1, nombre: 'Carta', secciones: [{id: 10, nombre: 'Principales', platos: [
       {id: 100, nombre: 'Hamburguesa', precio: 12, disponible: true}, {id: 101, nombre: 'Ensalada', precio: 9, disponible: true}]}]}],
     activeCartaIds: [1], menus: [], activeMenuIds: [], reservasResumen: {}, mesasOcupadas: {}, pedidosResumen: {}, cocinaCargaActiva: 0,
@@ -206,7 +206,7 @@ await caso('El pedido entra con los precios de la carta y espera a que sala lo a
 await caso('Configurado "directo a cocina", entra sin esperar; un token falso, rotado o con el QR apagado no entra', async () => {
   const r = await app.evaluate(async t => {
     const linea = {platoId: 101, name: 'Ensalada', price: 1, qty: 1};
-    DB.business.qrMesa = {activo: true, aceptaCamarero: false};
+    DB.business.qrMesa = {activo: true, aceptaCamarero: false, cobroLocal: true};
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [linea], createdAt: new Date().toISOString()});
     const directo = getOpenOrderForTable(1).items.filter(l => l.platoId === 101).map(l => [l.price, l.estado]);
     const n0 = getOpenOrderForTable(1).items.length;
@@ -218,7 +218,7 @@ await caso('Configurado "directo a cocina", entra sin esperar; un token falso, r
     await __empujar({type: 'pedido_mesa', mesaToken: viejo, items: [linea], createdAt: new Date().toISOString()});
     DB.business.qrMesa = {activo: false};
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [linea], createdAt: new Date().toISOString()});
-    DB.business.qrMesa = {activo: true};
+    DB.business.qrMesa = {activo: true, cobroLocal: true};
     // Un plato que no está en la carta no entra (no hay precio de confianza).
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [{platoId: 999, name: 'Langosta', price: 0.5, qty: 1}], createdAt: new Date().toISOString()});
     return {directo, n0, n1: getOpenOrderForTable(1).items.length, mesa2: !!getOpenOrderForTable(2),
@@ -308,7 +308,7 @@ await caso('Aviso de pago del resto de una página antigua: cierra la mesa sola,
 
 await caso('Un pago que llega con la mesa ya cobrada queda para devolver, no se pierde', async () => {
   const r = await app.evaluate(async t => {
-    DB.business.qrMesa = {activo: true, aceptaCamarero: false};
+    DB.business.qrMesa = {activo: true, aceptaCamarero: false, cobroLocal: true};
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [{platoId: 101, name: 'Ensalada', price: 9, qty: 1}], createdAt: new Date().toISOString()});
     await __empujar({type: 'pago_mesa', mesaToken: t, clientRef: 'REFtarde00001', importe: 9, createdAt: new Date().toISOString()});
     const o = getOpenOrderForTable(1);
@@ -326,7 +326,7 @@ await caso('Un pago que llega con la mesa ya cobrada queda para devolver, no se 
 const pedidoQr = (extra = {}) => Object.assign({type: 'pedido_mesa', mesaToken: TOKEN, clienteNombre: 'Luis',
   items: [{platoId: 100, name: 'Hamburguesa', price: 0.01, qty: 2}], createdAt: new Date().toISOString()}, extra);
 const ponerCobro = (cobro, stripe, acepta) => app.evaluate(({cobro, stripe, acepta}) => {
-  DB.business.qrMesa = {activo: true, aceptaCamarero: acepta, cobro};
+  DB.business.qrMesa = Object.assign({activo: true, aceptaCamarero: acepta}, {mesa: {cobroLocal: true, cobroTarjeta: false}, pedido: {cobroLocal: false, cobroTarjeta: true}, ambos: {cobroLocal: true, cobroTarjeta: true}}[cobro]);
   pagoOnlineActivo = stripe;
   DB.pedidosMesaQr = []; DB.tpvOrders = []; DB.sales = []; DB.unmatchedOnlinePayments = []; DB.paymentAmountMismatches = []; DB.pagosTarjetaEsperados = [];
   window.__pagos = {};
@@ -337,24 +337,42 @@ const estadoMesa1 = () => app.evaluate(() => { const o = getOpenOrderForTable(1)
   cuenta: o ? cuentaMesaQr(o) : null, status: o && o.status, devolver: (DB.unmatchedOnlinePayments || []).map(u => u.amount),
   descuadres: (DB.paymentAmountMismatches || []).length, espera: (DB.pagosTarjetaEsperados || []).length }; });
 
-await caso('Mi Negocio: el selector «cómo cobras» se guarda, y «al pedir» no se puede elegir sin Stripe', async () => {
+await caso('Mi Negocio: SIN forma de cobro por defecto; hay que marcar local, tarjeta o las dos; la tarjeta no se puede marcar sin Stripe', async () => {
   const r = await app.evaluate(() => {
-    const sel = (stripe, cobro) => { pagoOnlineActivo = stripe; DB.business.qrMesa = {activo: true, aceptaCamarero: true, cobro}; const d = document.createElement('div'); d.innerHTML = renderTableQrCard(); return d; };
-    const sinStripe = sel(false, 'mesa'); const conStripe = sel(true, 'mesa');
-    const o1 = sinStripe.querySelector('#mn-qrmesa-cobro option[value=pedido]'), o2 = conStripe.querySelector('#mn-qrmesa-cobro option[value=pedido]');
-    // Guardar lo elegido.
+    const pintar = (stripe, q) => { pagoOnlineActivo = stripe; DB.business.qrMesa = q; const d = document.createElement('div'); d.innerHTML = renderTableQrCard(); return d; };
+    const sinStripe = pintar(false, {activo: false});
+    const conStripe = pintar(true, {activo: false});
+    const marca = (local, tarjeta, activo) => {
+      const host = document.createElement('div');
+      host.innerHTML = `<input type="checkbox" id="mn-qrmesa-local" ${local ? 'checked' : ''}><input type="checkbox" id="mn-qrmesa-tarjeta" ${tarjeta ? 'checked' : ''}><input type="checkbox" id="mn-qrmesa-activo" ${activo ? 'checked' : ''}><select id="mn-qrmesa-acepta"><option value="camarero" selected></option></select>`;
+      document.body.prepend(host); saveQrMesaConfig(); host.remove();
+      return JSON.parse(JSON.stringify(DB.business.qrMesa));
+    };
     pagoOnlineActivo = true;
-    const host = document.createElement('div'); host.innerHTML = '<input type="checkbox" id="mn-qrmesa-activo" checked><select id="mn-qrmesa-acepta"><option value="camarero" selected></option></select><select id="mn-qrmesa-cobro"><option value="mesa"></option><option value="pedido" selected></option></select>';
-    document.body.appendChild(host); saveQrMesaConfig(); host.remove();
-    const guardado = JSON.parse(JSON.stringify(DB.business.qrMesa));
-    const defecto = (() => { DB.business.qrMesa = {activo: true}; return qrMesaConfig().cobro; })();
-    return {deshabilitada: !!(o1 && o1.disabled), habilitada: !!(o2 && !o2.disabled), guardado, defecto};
+    DB.business.qrMesa = {activo: false};
+    const defecto = qrMesaConfig();
+    const intentoSinElegir = marca(false, false, true);        // activar sin haber elegido: NO se activa
+    const soloLocal = marca(true, false, true);
+    const ambos = marca(true, true, true);
+    const quitaLaUltima = (() => { DB.business.qrMesa = {activo: true, cobroLocal: true, cobroTarjeta: false}; return marca(false, false, true); })();   // con el QR activo no se puede dejar sin ninguna
+    // Un negocio que ya lo tenía activo de antes de esta elección sigue funcionando (cobra en el local) y se le avisa.
+    DB.business.qrMesa = {activo: true};
+    const heredado = {cfg: qrMesaConfig(), local: (pagoOnlineActivo = true, qrMesaLocalDisponible()), tarjeta: qrMesaTarjetaDisponible(), aviso: /Todavía no has elegido|Encara no has triat|haven't chosen/.test((() => { const d = document.createElement('div'); d.innerHTML = renderTableQrCard(); return d.innerText || d.textContent; })())};
+    return {sinStripeDeshab: !!sinStripe.querySelector('#mn-qrmesa-tarjeta').disabled, conStripeHab: !conStripe.querySelector('#mn-qrmesa-tarjeta').disabled,
+      marcadasPorDefecto: ['#mn-qrmesa-local', '#mn-qrmesa-tarjeta'].map(q => conStripe.querySelector(q).checked),
+      defecto: {local: defecto.local, tarjeta: defecto.tarjeta, sinElegir: defecto.sinElegir}, intentoSinElegir, soloLocal, ambos, quitaLaUltima, heredado};
   });
-  assert.equal(r.deshabilitada, true, 'sin Stripe se puede elegir cobrar al pedir');
-  assert.equal(r.habilitada, true);
-  assert.equal(r.guardado.cobro, 'pedido');
-  assert.equal(r.defecto, 'mesa', 'por defecto debe ser cobrar en la mesa');
-  return 'por defecto «en la mesa» · «al pedir» solo con Stripe';
+  assert.equal(r.sinStripeDeshab, true, 'sin Stripe se puede marcar la tarjeta');
+  assert.equal(r.conStripeHab, true);
+  assert.deepEqual(r.marcadasPorDefecto, [false, false], 'hay una forma de cobro marcada por defecto');
+  assert.deepEqual(r.defecto, {local: false, tarjeta: false, sinElegir: true});
+  assert.equal(r.intentoSinElegir.activo, false, 'se activó el QR sin elegir cómo cobrar');
+  assert.equal(r.soloLocal.activo, true); assert.equal(r.soloLocal.cobroLocal, true); assert.equal(r.soloLocal.cobroTarjeta, false);
+  assert.equal(r.ambos.cobroLocal, true); assert.equal(r.ambos.cobroTarjeta, true);
+  assert.equal(r.quitaLaUltima.cobroLocal, true, 'se pudo quitar la última forma de cobro con el QR activo');
+  assert.equal(r.heredado.local, true, 'un negocio con el QR activo de antes se queda sin servicio'); assert.equal(r.heredado.tarjeta, false);
+  assert.ok(r.heredado.aviso, 'no se le pide elegir');
+  return 'sin defecto · activar exige elegir · heredados siguen cobrando en el local con aviso';
 });
 
 await caso('Web, cobro al pedir: el botón lleva el total, se pide el pago al Worker y el pedido viaja con su referencia de pago', async () => {
@@ -484,6 +502,56 @@ await caso('Cobro en la mesa: aunque la web mande un «pagoAlPedir», no se espe
   const r = await estadoMesa1();
   assert.equal(r.esperando, 0); assert.equal(r.espera, 0); assert.equal(r.pend, 1);
   return 'pendiente normal, sin esperar banco';
+});
+
+await caso('Web con las DOS formas de cobro: el comensal elige tarjeta ahora o pagar en el local, y el botón cambia', async () => {
+  await pintarPublica({mesa: 'Mesa 1', abierta: false, total: 0, pagado: 0, pendiente: 0}, true, 'ambos');
+  const r = await pub.evaluate(() => {
+    const llamadas = [];
+    window.fetch = async (u, o) => { llamadas.push(JSON.parse(o.body)); return new Response(JSON.stringify({url: '#stripe'})); };
+    menuOpenSection = '1:10'; renderTabContent();
+    cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 12, qty: 2}];
+    renderCartSummary();
+    const radios = [...document.querySelectorAll('input[name="m-pago-qr"]')].map(x => x.value + (x.checked ? '*' : ''));
+    const botonTarjeta = document.getElementById('o-submit').textContent.trim();
+    document.querySelector('input[name="m-pago-qr"][value="local"]').click();
+    const botonLocal = document.getElementById('o-submit').textContent.trim();
+    document.getElementById('o-privacy-consent').checked = true; submittingRequest = false;
+    const n = __empujados.length;
+    submitMesaQrOrder();
+    return new Promise(ok => setTimeout(() => {
+      const reqLocal = __empujados.slice(n)[0] || null; const llamLocal = llamadas.length;
+      document.querySelector('input[name="m-pago-qr"][value="tarjeta"]').click();
+      cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 12, qty: 2}]; renderCartSummary();
+      document.getElementById('o-privacy-consent').checked = true;   // enviar el primero repintó el formulario
+      submittingRequest = false;
+      const m = __empujados.length;
+      submitMesaQrOrder();
+      setTimeout(() => ok({radios, botonTarjeta, botonLocal, reqLocal, llamLocal, reqTarjeta: __empujados.slice(m)[0] || null, llamTarjeta: llamadas.length}), 400);
+    }, 400));
+  });
+  assert.deepEqual(r.radios, ['tarjeta*', 'local'], 'no hay selector de forma de pago, o no arranca en tarjeta');
+  assert.match(r.botonTarjeta, /24[.,]00/); assert.ok(!/€/.test(r.botonLocal), 'con «pagar en el local» el botón sigue enseñando un importe a pagar');
+  assert.equal(r.llamLocal, 0, 'eligió pagar en el local y se pidió un pago'); assert.equal(r.reqLocal.pagoAlPedir, undefined);
+  assert.equal(r.llamTarjeta, 1); assert.equal(r.reqTarjeta.pagoAlPedir, true);
+  return 'tarjeta ↔ local';
+});
+
+await caso('App con las DOS formas: un pedido sin pagar es normal (lo acepta el camarero), uno pagado espera al banco', async () => {
+  await ponerCobro('ambos', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr());
+  const a = await estadoMesa1();
+  assert.equal(a.pend, 1, 'el pedido «pagar en el local» no queda para el camarero'); assert.equal(a.esperando, 0);
+  const html = await app.evaluate(() => renderQrMesaPendientes());
+  assert.ok(!/sin pagar|sense pagar|unpaid/i.test(html), 'se marca como «sin pagar» un pedido que el comensal eligió pagar en el local');
+  await ponerCobro('ambos', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFambos00006'}));
+  const b = await estadoMesa1();
+  assert.equal(b.esperando, 1); assert.equal(b.lineas, null);
+  await app.evaluate(async () => { __pagos['PEDREFambos00006'] = {amount: 24}; await comprobarPagosTarjeta(); });
+  const c = await estadoMesa1();
+  assert.equal(c.lineas.length, 1); assert.equal(c.cuenta.pendiente, 0);
+  return 'local → pendiente normal · tarjeta → espera y entra pagado';
 });
 
 await caso('La pantalla de la mesa cabe en 320 y 360 px sin scroll lateral', async () => {
