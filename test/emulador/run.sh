@@ -130,6 +130,11 @@ if [ "${db:-}" != "200" ] || [ "${au:-}" != "200" ]; then
 fi
 echo "→ emuladores listos (database:9000, auth:9099)"
 
+# SOLO=aparato-nuevo.mjs bash test/emulador/run.sh  → corre solo ese (para ir rápido al depurar)
+if [ -n "${SOLO:-}" ]; then
+  node "$RAIZ/test/emulador/$SOLO"; SALIDA=$?
+  rm -rf "$RAIZ/__sdk"; exit $SALIDA
+fi
 node "$RAIZ/test/emulador/sync-real.mjs"
 SALIDA=$?
 echo

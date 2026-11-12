@@ -36,7 +36,7 @@ async function aparato(nombre){
   page.on('console', m => { if(m.type() === 'error' && !/ERR_|Failed to load resource|favicon/.test(m.text())) errs.push(nombre + ' [consola]: ' + m.text()); });
   await page.goto('http://localhost:8951/index.html', {waitUntil: 'domcontentloaded'});
   await page.evaluate(() => (typeof dbReadyPromise !== 'undefined') ? dbReadyPromise : null).catch(() => {});
-  return {page, errs, nombre};
+  return {page, errs, nombre, ctx};
 }
 const asistentes = d => d.page.evaluate(() => ['netlify-gate','license-gate','firebase-gate','extconn-gate','revoked-gate','comprobando-negocio'].filter(id => document.getElementById(id))
   .concat(document.querySelector('.tour-bubble, #tour-overlay') ? ['tour'] : [])
@@ -48,7 +48,7 @@ const authKey = await tmp.page.evaluate(([u, p]) => ggOwnerAuthKey(u, p), [USER,
 const tenant = await tmp.page.evaluate(c => ggBizTenantId(c), CODE1);
 const tenant2 = await tmp.page.evaluate(c => ggBizTenantId(c), CODE2);
 const tenant3 = await tmp.page.evaluate(c => ggBizTenantId(c), CODE3);
-await tmp.page.context().close();
+await tmp.ctx.close();
 await rest(NS_PLAT, `gastrogoan/ownerNames/${USER}`, 'PUT', {ts: 1});
 await rest(NS_PLAT, `gastrogoan/ownerAuth/${authKey}`, 'PUT', {user: USER, createdAt: 1});
 for(const c of [CODE1, CODE2, CODE3]) await rest(NS_PLAT, `gastrogoan/issuedCodes/${c}`, 'PUT', {issuedAt: 1});
