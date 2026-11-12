@@ -184,6 +184,7 @@ lanzar; node test/panel-v2.mjs > "$SALIDA/panelv2.txt" 2>&1 & P177=$!
 lanzar; node test/chat-ayuda.mjs > "$SALIDA/chatayuda.txt" 2>&1 & P178=$!
 lanzar; node test/gestion-scroll.mjs > "$SALIDA/gestionscroll.txt" 2>&1 & P179=$!
 lanzar; node test/ge-prevision-caja.mjs > "$SALIDA/previsioncaja.txt" 2>&1 & P180=$!
+lanzar; node test/chat-avisos.mjs > "$SALIDA/chatavisos.txt" 2>&1 & P181=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -398,5 +399,6 @@ espera $P177 "Panel de Control v2: equilibrio destacado, reservas/ventas/gastos/
 espera $P178 "Chat interno (mis mensajes no avisan, áreas separadas, fijar, urgente, directo) y Ayuda (cada tema se encuentra en los tres idiomas)" "$SALIDA/chatayuda.txt" "todos los casos pasaron"
 espera $P179 "Gestión Económica: repintar una pestaña o cambiar un reparto/periodo no devuelve la página arriba del todo" "$SALIDA/gestionscroll.txt" "todos los casos pasaron"
 espera $P180 "Previsión de caja a 30/60/90 días: ritmo de caja, sin doble descuento de gastos periódicos y modelos del trimestre anterior (cuentas a mano)" "$SALIDA/previsioncaja.txt" "casos pasaron"
+espera $P181 "Chat: un mensaje de otro aparato enciende el aviso, se resalta como Nuevo (también con el panel abierto), se quita al entrar y aguanta relojes adelantados" "$SALIDA/chatavisos.txt" "todos los casos pasaron"
 
 exit $FALLOS

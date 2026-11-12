@@ -906,6 +906,15 @@ td.wrap{white-space:normal}
 .help-msg.other{align-self:flex-start;background:var(--ink);color:#fff;border-bottom-left-radius:2px}
 .help-msg .chat-meta{display:block;font-size:10.5px;opacity:.7;margin-bottom:2px;font-weight:600}
 .chat-msg-urgent{border:2px solid var(--red)!important}
+/* Lo que llega al chat: el mensaje nuevo va con aro verde y etiqueta, y el botón del chat se marca mientras haya algo sin leer. */
+.help-msg.chat-msg-new{outline:2px solid var(--olive-l);outline-offset:2px}
+.chat-new-tag{display:inline-block;background:var(--olive-l);color:#1d2a20;border-radius:4px;padding:0 6px;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:1}
+.app-header #chat-fab.chat-con-aviso{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
+#chat-fab .chat-badge{min-width:18px;height:18px;font-size:11px}
+@media (prefers-reduced-motion:no-preference){
+  .app-header #chat-fab.chat-con-aviso{animation:chat-latido 1.8s ease-in-out infinite}
+}
+@keyframes chat-latido{0%,100%{box-shadow:0 0 0 2px rgba(138,74,59,.38)}50%{box-shadow:0 0 0 7px rgba(138,74,59,.08)}}
 .chat-pinned-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--amber-l);border-bottom:1px solid var(--border);font-size:12.5px}
 @media (max-width:480px){
   .help-panel{right:10px;width:calc(100vw - 20px)}

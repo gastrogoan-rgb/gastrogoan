@@ -6565,6 +6565,7 @@ function updateSyncBadge(state){
 
 function refreshAfterRemoteChange(){
   renderHeader();
+  if(typeof chatAlLlegarDeLaNube === 'function') chatAlLlegarDeLaNube();
   renderModuleBadges();
   const overlay = document.getElementById('modal-overlay');
   if(overlay && overlay.classList.contains('active')){

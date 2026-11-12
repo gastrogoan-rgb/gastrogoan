@@ -1457,6 +1457,7 @@ function toggleChatPanel(){
   if(opening){
     applyChatAreaRestrictions();
     populateChatAuthorSelect();
+    chatRecordarLeido(currentChatChannel);
     renderChatMessages();
     markChatRead(currentChatChannel);
     updateChatBadge();
@@ -1466,6 +1467,7 @@ function switchChatTab(channel){
   currentChatChannel = channel;
   CHAT_CHANNELS.forEach(c => document.getElementById('chat-tab-btn-'+c).classList.toggle('active', c===channel));
   populateChatAuthorSelect();
+  chatRecordarLeido(channel);
   renderChatMessages();
   markChatRead(channel);
   updateChatBadge();
@@ -1474,9 +1476,12 @@ function renderChatMessages(){
   const box = document.getElementById('chat-messages');
   const author = getChatAuthor();
   const msgs = (DB.chatMessages||[]).filter(m => m.channel === currentChatChannel);
+  chatPintados = (DB.chatMessages||[]).length;
+  const leido = chatLeidoAlEntrar[currentChatChannel];
+  const esNuevo = m => leido !== undefined && String(m.authorId) !== String(author) && (!leido || m.ts > leido);
   box.innerHTML = msgs.map(m => `
-    <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}">
-      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
+    <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}${esNuevo(m)?' chat-msg-new':''}">
+      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}</span>
       ${escapeHtml(m.text)}
       <button class="btn btn-sm txt-xs" style="margin-top:4px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
     </div>
@@ -1550,8 +1555,25 @@ function sendUrgentHelpAlert(){
   showToast(t('chat.urgentSent'));
   if(currentChatChannel !== 'general'){ switchChatTab('general'); } else { renderChatMessages(); }
 }
+/* «Leído hasta» = lo MÁS TARDÍO entre ahora y el último mensaje del canal. Con solo la hora de este aparato, un mensaje
+   enviado desde otro con el reloj unos minutos adelantado tenía una hora FUTURA y se quedaba «sin leer» para siempre:
+   se abría el chat y el aviso no se quitaba. */
 function markChatRead(channel){
-  localStorage.setItem('chatLastRead_'+channel, new Date().toISOString());
+  let hasta = new Date().toISOString();
+  (DB.chatMessages || []).forEach(m => { if(m.channel === channel && m.ts > hasta) hasta = m.ts; });
+  localStorage.setItem('chatLastRead_'+channel, hasta);
+}
+/* Lo que ya estaba leído al ENTRAR en cada canal: lo posterior se pinta resaltado («Nuevo») mientras dure esta visita,
+   también lo que llegue con el panel abierto. Al volver a entrar ya cuenta como leído. */
+const chatLeidoAlEntrar = {};
+function chatRecordarLeido(channel){ chatLeidoAlEntrar[channel] = localStorage.getItem('chatLastRead_'+channel) || ''; }
+let chatPintados = -1;
+/* Llega algo de la nube: el contador se recalcula SIN que nadie toque nada y, si el chat está abierto, se pinta lo nuevo. */
+function chatAlLlegarDeLaNube(){
+  const n = (DB.chatMessages || []).length;
+  const panel = document.getElementById('chat-panel');
+  if(panel && panel.classList.contains('active') && n !== chatPintados) renderChatMessages();
+  updateChatBadge();
 }
 function updateChatBadge(){
   const badge = document.getElementById('chat-badge');
@@ -1568,6 +1590,8 @@ function updateChatBadge(){
     const count = (DB.chatMessages||[]).filter(m => m.channel===c && String(m.authorId) !== String(yo) && (!lastRead || m.ts > lastRead)).length;
     unread += count;
   });
+  const fab = document.getElementById('chat-fab');
+  if(fab) fab.classList.toggle('chat-con-aviso', unread > 0);
   if(unread > 0){
     badge.style.display = 'flex';
     badge.textContent = unread > 9 ? '9+' : String(unread);
