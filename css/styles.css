@@ -5769,6 +5769,24 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-st.mal .dp-eq-st-v{color:#B4432F} .dp-eq-st.bien .dp-eq-st-v{color:var(--olive)}
 .dp-eq-nota{color:var(--muted);margin:10px 0 0;display:flex;gap:6px}
 .dp-eq-vacio{margin:6px 0 14px;color:var(--muted)}
+/* (12/11) Título de cada tarjeta y selector de periodo EN LA MISMA FILA (antes el selector caía debajo, a la derecha, y dejaba un hueco). Solo en PC y
+   tablet: en móvil el título es la cabecera plegable y el selector va debajo, a todo ancho. El contenedor interior se «disuelve» (display:contents)
+   para que el título y `.dp-cab` sean celdas de la misma rejilla; todo lo demás ocupa la fila entera. */
+@media (min-width:761px){
+  .dp-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:14px;align-items:center}
+  .dp-card > h3{grid-column:1;grid-row:1;margin:0 0 12px}
+  .dp-card > div[id]{display:contents}
+  .dp-card > div[id] > *{grid-column:1 / -1}
+  .dp-card > div[id] > .dp-cab{grid-column:2;grid-row:1;margin:0 0 12px;justify-content:flex-end}
+}
+.dp-eq-graf{margin-top:38px}
+.dp-eq-como{margin-top:12px;border-top:1px solid var(--hair);padding-top:8px}
+.dp-eq-como summary{cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-height:36px;display:flex;align-items:center}
+.dp-eq-tabla{width:100%;border-collapse:collapse;margin:6px 0;font-size:13.5px}
+.dp-eq-tabla td{padding:6px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+.dp-eq-tabla td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:12px}
+.dp-eq-tabla tr.t td{border-bottom-color:var(--ink)}
+.dp-eq-como p{color:var(--muted);margin:6px 0 0}
 .dp-eq-graf{margin-top:16px;position:relative;height:120px;border-bottom:1px solid var(--hair)}
 .dp-eq-graf svg{width:100%;height:100%;display:block;overflow:visible}
 .dp-eq-g-meta{stroke:var(--hair);stroke-dasharray:3 4;fill:none}

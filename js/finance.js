@@ -738,6 +738,35 @@ function geVariacionExistenciasMes(year, month){
   return ini - fin;
 }
 
+// --- Punto de equilibrio del mes, con las cifras REALES (12/11) ---------------------------------------------------------
+// UNA sola cuenta para el Panel de Control. Separa lo que NO depende de lo que se vende (fijos) de lo que SÍ (variable), con
+// la misma contabilidad que la Cuenta de Resultados, de modo que «has superado el equilibrio» ⇔ «el resultado del mes ≥ 0»:
+//   resultado = ventas + otros ingresos − variable − fijos        (idéntico a geResultadoAntesImpMes: lo vigila test/panel-equilibrio.mjs)
+//   · FIJOS    = personal + gastos fijos (sin la retribución del titular si es persona física) + amortización + intereses − otros ingresos
+//   · VARIABLE = compras (gasto variable) + variación de existencias + comisiones de plataformas → %, sobre las ventas netas
+// ⚠️ Antes los fijos eran «ventas − variables − resultado», que metía en los fijos las comisiones y la variación de existencias
+// (suben y bajan con las ventas y con la foto del almacén) y inflaba el equilibrio. Con pocos datos (menos de 7 días del mes o sin
+// ventas) el % variable real es ruido —una factura grande entrada el día 2 lo dispara—: se usa el objetivo del negocio
+// (food cost objetivo + «otros costes variables» de Punto de equilibrio) y se dice.
+function geEquilibrioMes(year, month, diaDelMes){
+  const S = geFacturacionNetaMes(year, month);
+  const compras = geTotalVariablesNetoMes(year, month), exis = geVariacionExistenciasMes(year, month), comis = geComisionesMes(year, month);
+  const otrosIng = geOtrosIngresosNetoMes(year, month);
+  const fijosOp = geFijosDeduciblesForMonth(year, month);
+  const personal = Math.min(fijosOp, Math.max(0, gePersonalDeducibleForMonth(year, month)));
+  const amort = geAmortizacionMes(year, month), intereses = geInteresesMes(year, month);
+  const fijos = Math.max(0, fijosOp + amort + intereses - otrosIng);
+  const variable = compras + exis + comis;
+  const vReal = S > 0 ? Math.max(0, variable / S) : null;
+  const fcObj = geFoodCostObjPct() / 100, otrosPct = ((DB.ge.config || {}).peOtrosPct || 0) / 100;
+  const vObjetivo = Math.min(0.95, fcObj + otrosPct);
+  const dia = diaDelMes != null ? diaDelMes : 31;
+  const suficientes = vReal != null && dia >= 7;
+  const v = suficientes ? Math.min(0.95, vReal) : vObjetivo;
+  return {S, compras, exis, comis, otrosIng, personal, gastosFijos: fijosOp - personal, amort, intereses, fijos, variable, vReal, vObjetivo, v, suficientes,
+    cuotasBanco: geCapexCuotaMes(year, month), resultado: S + otrosIng - variable - fijosOp - amort - intereses};
+}
+
 // Resultado antes de impuestos de un mes — misma fórmula que GE → Cuenta
 // de Resultados (resultadoAntesImpMes, js/hr.js), para que el Panel diga
 // lo mismo.

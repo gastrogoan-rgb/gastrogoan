@@ -272,10 +272,8 @@ DP_BLOQUES.forEach(k => { window['panelMesCb_' + k] = (a, m) => { dpInicializar(
    cada euro vendido. Ventas netas (sin IVA) necesarias = fijos / (1 − % variable). */
 function dpEquilibrioDatos(){
   const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth(), dm = new Date(y, m + 1, 0).getDate(), dt = hoy.getDate();
-  const S = geFacturacionNetaMes(y, m), V = geTotalVariablesNetoMes(y, m), R = geResultadoAntesImpMes(y, m);
-  const F = Math.max(0, S - V - R);
-  const fcObj = geFoodCostObjPct() / 100;
-  const v = Math.min(0.95, S > 0 ? V / S : fcObj);
+  const E = geEquilibrioMes(y, m, dt);
+  const S = E.S, V = E.variable, R = E.resultado, F = E.fijos, v = E.v;
   const objetivo = F / (1 - v);
   const ritmo = S / dt, proyeccion = ritmo * dm;
   const esperado = objetivo * dt / dm;
@@ -287,7 +285,7 @@ function dpEquilibrioDatos(){
   // Acumulado de ventas netas día a día, para la gráfica.
   const acum = []; let ac = 0;
   for(let d = 1; d <= dt; d++){ ac += dpNetoDia(y + '-' + dpMes2(m) + '-' + String(d).padStart(2, '0')); acum.push(ac); }
-  return {y, m, dm, dt, S, V, R, F, v, objetivo, ritmo, proyeccion, esperado, falta, diasRest, ritmoNec, tickets, ticketNeto, acum};
+  return {y, m, dm, dt, S, V, R, F, v, objetivo, ritmo, proyeccion, esperado, falta, diasRest, ritmoNec, tickets, ticketNeto, acum, E};
 }
 function dpEquilibrioHtml(){
   const D = dpEquilibrioDatos();
@@ -328,8 +326,34 @@ function dpEquilibrioHtml(){
     </div>
     ${diaEq != null ? `<p class="dp-eq-nota txt-xs"><i class="ti ti-calendar-event"></i> ${escapeHtml(diaEq <= D.dm ? gl({es: 'A este ritmo llegarás al equilibrio hacia el día ' + diaEq + '.', ca: 'A aquest ritme arribaràs a l\'equilibri cap al dia ' + diaEq + '.', en: 'At this pace you will reach break-even around day ' + diaEq + '.'}) : gl({es: 'A este ritmo no llegarás al equilibrio este mes.', ca: 'A aquest ritme no arribaràs a l\'equilibri aquest mes.', en: 'At this pace you will not reach break-even this month.'}))}</p>` : ''}
     ${dpEquilibrioGrafica(D)}
-    <p class="dp-eq-nota txt-xs">${escapeHtml(gl({es: `Costes que no dependen de lo que vendes: ${fmtMoney(D.F)} al mes (personal, gastos fijos, cuotas). De cada euro vendido, ${Math.round(D.v * 100)} céntimos se van en compras y costes variables.`, ca: `Costos que no depenen del que vens: ${fmtMoney(D.F)} al mes (personal, despeses fixes, quotes). De cada euro venut, ${Math.round(D.v * 100)} cèntims se'n van en compres i costos variables.`, en: `Costs that don't depend on sales: ${fmtMoney(D.F)} a month (staff, fixed costs, instalments). Of every euro sold, ${Math.round(D.v * 100)} cents go on purchases and variable costs.`}))}</p>
+    ${dpEquilibrioComoHtml(D)}
   </div>`;
+}
+// «¿Cómo se calcula?»: cada cifra con su origen, para poder contrastarla con la Cuenta de Resultados y con Gestión Económica →
+// Punto de equilibrio. Las dos usan lo mismo salvo una cosa que se dice: aquí los préstamos entran como amortización e intereses
+// (contable, para que cuadre con el Resultado), allí como la cuota que sale del banco (caja).
+function dpEquilibrioComoHtml(D){
+  const E = D.E, f = fmtMoney;
+  const fila = (et, val, fuerte) => `<tr${fuerte ? ' class="t"' : ''}><td>${et}</td><td class="n">${val}</td></tr>`;
+  const inv = E.amort + E.intereses;
+  const pctV = Math.round(D.v * 100);
+  const origenV = E.suficientes
+    ? gl({es: 'real de este mes (compras, existencias y comisiones sobre las ventas)', ca: 'real d\'aquest mes (compres, existències i comissions sobre les vendes)', en: 'actual this month (purchases, stock and fees over sales)'})
+    : gl({es: 'estimado con tu objetivo (food cost + otros costes variables): aún hay pocos datos este mes', ca: 'estimat amb el teu objectiu (food cost + altres costos variables): encara hi ha poques dades aquest mes', en: 'estimated from your target (food cost + other variable costs): not enough data yet this month'});
+  return `<details class="dp-eq-como">
+    <summary>${escapeHtml(gl({es: '¿Cómo se calcula?', ca: 'Com es calcula?', en: 'How is it worked out?'}))}</summary>
+    <table class="dp-eq-tabla"><tbody>
+      ${fila(escapeHtml(gl({es: 'Personal', ca: 'Personal', en: 'Staff'})), f(E.personal))}
+      ${fila(escapeHtml(gl({es: 'Gastos fijos', ca: 'Despeses fixes', en: 'Fixed costs'})), f(E.gastosFijos))}
+      ${inv > 0.004 ? fila(escapeHtml(gl({es: 'Inversiones (amortización e intereses)', ca: 'Inversions (amortització i interessos)', en: 'Investments (depreciation and interest)'})), f(inv)) : ''}
+      ${E.otrosIng > 0.004 ? fila(escapeHtml(gl({es: 'Menos otros ingresos', ca: 'Menys altres ingressos', en: 'Less other income'})), '−' + f(E.otrosIng)) : ''}
+      ${fila('<b>' + escapeHtml(gl({es: 'Costes fijos del mes', ca: 'Costos fixos del mes', en: 'Fixed costs this month'})) + '</b>', '<b>' + f(D.F) + '</b>', true)}
+      ${fila(escapeHtml(gl({es: 'Por cada euro vendido se van en compras, existencias y comisiones', ca: 'Per cada euro venut se\'n van en compres, existències i comissions', en: 'Of every euro sold, goes on purchases, stock and fees'})), pctV + ' %')}
+      ${fila('<b>' + escapeHtml(gl({es: 'Equilibrio = fijos ÷ (1 − ' + pctV + ' %)', ca: 'Equilibri = fixos ÷ (1 − ' + pctV + ' %)', en: 'Break-even = fixed ÷ (1 − ' + pctV + ' %)'})) + '</b>', '<b>' + f(D.objetivo) + '</b>', true)}
+    </tbody></table>
+    <p class="txt-xs">${escapeHtml(gl({es: 'El % variable es ' + origenV + '.', ca: 'El % variable és ' + origenV + '.', en: 'The variable % is ' + origenV + '.'}))}</p>
+    <p class="txt-xs">${escapeHtml(gl({es: 'Es la misma cuenta que tu Resultado del mes: superar el equilibrio es tener resultado positivo. En Gestión Económica → Punto de equilibrio los costes fijos usan la cuota que pagas al banco' + (E.cuotasBanco > 0.004 ? ' (' + f(E.cuotasBanco) + ' este mes)' : '') + ' en vez de la amortización y los intereses, y el simulador trabaja con tu ticket medio y tus cubiertos.', ca: 'És el mateix compte que el teu Resultat del mes: superar l\'equilibri és tenir resultat positiu. A Gestió Econòmica → Punt d\'equilibri els costos fixos fan servir la quota que pagues al banc' + (E.cuotasBanco > 0.004 ? ' (' + f(E.cuotasBanco) + ' aquest mes)' : '') + ' en lloc de l\'amortització i els interessos, i el simulador treballa amb el teu tiquet mitjà i els teus coberts.', en: 'It is the same sum as your monthly Result: passing break-even means a positive result. In Financial Management → Break-even the fixed costs use the instalment you pay the bank' + (E.cuotasBanco > 0.004 ? ' (' + f(E.cuotasBanco) + ' this month)' : '') + ' instead of depreciation and interest, and the simulator works with your average ticket and covers.'}))}</p>
+  </details>`;
 }
 // Ventas netas acumuladas del mes frente a la recta que lleva al equilibrio (y la previsión a ritmo actual).
 function dpEquilibrioGrafica(D){
