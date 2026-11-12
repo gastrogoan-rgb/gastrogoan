@@ -1,0 +1,30 @@
+import puppeteer from 'puppeteer-core';
+const b = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox'],headless:true});
+const p = await b.newPage(); await p.setViewport({width:390,height:800});
+const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+await p.setRequestInterception(true); p.on('request',r=>/gstatic|googleapis/.test(r.url())?r.abort():r.continue());
+await p.goto('http://localhost:8950/generador-licencias.html');
+const r = await p.evaluate(async()=>{
+  sales.length=0;
+  sales.push({id:'a',kind:'cuenta',value:'casapaco',pin:'AB12CD',owner:'casapaco',phone:'+34600111222',date:'2026-11-12'},
+             {id:'b',kind:'negocio',value:'XYZ12345',owner:'casapaco',name:'Casa Paco',fiscal:{formaJuridica:'sociedad'},proximoPago:'2027-11-12',date:'2026-11-12'});
+  document.getElementById('login-gate').classList.add('hidden');document.getElementById('panel').classList.remove('hidden');
+  renderFolders(); openAlta('casapaco');
+  const m=document.querySelector('.modal-alta');
+  const antes=altaCuenta('casapaco');
+  [...document.querySelectorAll('.alta-paso input:not([disabled])')].find(x=>!x.checked && x.closest('.alta-paso').textContent.includes('Cobro recibido')).click();
+  await new Promise(r=>setTimeout(r,200));
+  const des=altaCuenta('casapaco');
+  return {antes:antes.ok+'/'+antes.tot, des:des.ok+'/'+des.tot, w:m.scrollWidth<=m.clientWidth, pastilla:document.querySelector('.folder-pastilla').textContent, msg:altaBienvenidaTexto('casapaco').slice(0,120)};
+});
+await p.screenshot({path:'/tmp/claude-0/alta2.png'});
+await b.close();
+const fallos=[];
+if(r.antes!=='5/28') fallos.push('antes: '+r.antes);
+if(r.des!=='6/28') fallos.push('marcar un paso manual no suma: '+r.des);
+if(!r.w) fallos.push('la ventana desborda en 390 px');
+if(!/Alta 6\/28/.test(r.pastilla)) fallos.push('la pastilla de la carpeta no muestra el progreso');
+if(!/Usuario: casapaco/.test(r.msg)||!/PIN: AB12CD/.test(r.msg)) fallos.push('el mensaje de bienvenida no lleva usuario/PIN');
+if(errs.length) fallos.push('errores JS: '+errs.join('|'));
+console.log(fallos.length?'FALLO '+fallos.join('; '):'OK alta paso a paso del generador: automáticos, manuales, progreso, mensaje y móvil');
+process.exit(fallos.length?1:0);

@@ -43,7 +43,6 @@ await page.evaluate(async ([code, dburl]) => {
 }, [CODE, DB_NEGOCIO]);
 await page.reload({waitUntil: 'domcontentloaded'}); await w(9000);
 
-console.log('DEBUG', JSON.stringify(await page.evaluate(async () => { let r = {}; try{ r.publicId = getPublicId(); r.cfg = !!getCloudConfig(); r.app = !!firebase.app(); r.badge = lastSyncBadgeState; r.err = String(lastSyncErrorCode || ''); r.sonda = await comprobarEspejoEnNubePropia(); }catch(e){ r.excepcion = String(e); } r.viejas = reglasAntiguas; r.espejo = espejoEnNubePropia; return r; })));
 await caso('Con las reglas VIEJAS en Firebase, la app lo detecta SOLA (sonda real) y la campana avisa al propietario', async () => {
   const r = await page.evaluate(() => ({viejas: reglasAntiguas, espejo: espejoEnNubePropia}));
   assert.equal(r.viejas, true, 'no detectó las reglas viejas: ' + JSON.stringify(r));
