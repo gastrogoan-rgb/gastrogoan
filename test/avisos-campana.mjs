@@ -83,9 +83,30 @@ await caso('Lo informativo (cumpleaños) se puede marcar como «Visto» y no vue
   await page.evaluate(() => { saveDB(); }); await w(900); assert.ok(!(await filas(page)).some(f => /Cumpleaños/.test(f)), 'vuelve a salir tras repintar');
 });
 await caso('Un empleado NO ve las aprobaciones ni lo que es del dueño', async () => {
-  await page.evaluate(() => { DB.vacationRequests.push({id: 777005, employeeId: DB.employees[0].id, fromDate: '2026-12-20', toDate: '2026-12-22', status: 'pending', createdAt: new Date().toISOString()}); DB.reservations.push({id: 777006, date: todayStr(), name: 'Eva', pax: 2, status: 'pendiente'}); window.isOwnerSession = () => false; saveDB(); });
+  await page.evaluate(() => { DB.vacationRequests.push({id: 777005, employeeId: DB.employees[0].id, fromDate: '2026-12-20', toDate: '2026-12-22', status: 'pending', createdAt: new Date().toISOString()}); DB.reservations.push({id: 777006, date: todayStr(), name: 'Eva', pax: 2, status: 'pendiente'}); window.isOwnerSession = () => false; window.getAccessSession = () => ({type: 'employee', area: 'sala', employeeId: 1, ts: Date.now()}); saveDB(); });
   await w(900); await abrir(page); await page.evaluate(() => avisosRenderPanel());
   const f = await filas(page); assert.ok(f.some(x => /Reservas por confirmar/.test(x)), 'el empleado sí debe ver las reservas: ' + JSON.stringify(f)); assert.ok(!f.some(x => /Aceptar/.test(x) || /Cumpleaños/.test(x)), 'el empleado ve cosas del dueño: ' + JSON.stringify(f));
+});
+await caso('Stock bajo de SALA sale aunque estés en Cocina, y «Ver» abre el stock de Sala', async () => {
+  await page.evaluate(() => { window.isOwnerSession = () => true; DB.reservations = []; DB.vacationRequests = []; currentFolder = 'cocina';
+    DB.ingredients.push({id: 888001, name: 'Lima prueba', area: 'sala', activo: true, unit: 'ud', price: 1}); DB.stock[888001] = {qty: 0, min: 5}; saveDB(); });
+  await w(900); await abrir(page); await page.evaluate(() => avisosRenderPanel());
+  const f = await filas(page); assert.ok(f.some(x => /Stock bajo mínimo · Sala/.test(x)), JSON.stringify(f));
+  await page.evaluate(() => [...document.querySelectorAll('#avisos-cuerpo .av-fila')].find(r => /Stock bajo mínimo · Sala/.test(r.innerText)).querySelector('button').click()); await w(600);
+  assert.equal(await page.evaluate(() => currentFolder), 'sala');
+});
+await caso('Un empleado de COCINA no ve avisos de Sala (reservas, TPV, stock de Sala) y uno de SALA sí', async () => {
+  await page.evaluate(() => { window.isOwnerSession = () => false; DB.reservations.push({id: 777020, date: todayStr(), name: 'Eva', pax: 2, status: 'pendiente'}); window.getAccessSession = () => ({type: 'employee', area: 'cocina', employeeId: 1, ts: Date.now()}); saveDB(); });
+  await w(900); await abrir(page); await page.evaluate(() => avisosRenderPanel());
+  let f = await filas(page); assert.ok(!f.some(x => /Reservas por confirmar|· Sala/.test(x)), 'cocina ve cosas de sala: ' + JSON.stringify(f));
+  await page.evaluate(() => { window.getAccessSession = () => ({type: 'employee', area: 'sala', employeeId: 1, ts: Date.now()}); avisosRenderPanel(); }); await w(200);
+  f = await filas(page); assert.ok(f.some(x => /Reservas por confirmar/.test(x)) && f.some(x => /· Sala/.test(x)), 'sala no ve lo suyo: ' + JSON.stringify(f));
+  assert.ok(!f.some(x => /Cierre de caja|Facturas|Aceptar/.test(x)), 'sala ve lo del dueño: ' + JSON.stringify(f));
+});
+await caso('A un empleado le llega la petición de cambio de turno de un compañero, con Aceptar y Rechazar', async () => {
+  await page.evaluate(() => { const [a, b] = DB.employees; window.loggedInEmployeeId = () => b.id; DB.turnoSwapRequests.push({id: 777021, fromEmployeeId: a.id, fromTurnoId: (DB.turnos || [])[0] ? DB.turnos[0].id : 1, toEmployeeId: b.id, status: 'pending_peer', createdAt: new Date().toISOString()}); saveDB(); });
+  await w(900); await abrir(page); await page.evaluate(() => avisosRenderPanel());
+  const f = await filas(page); assert.ok(f.some(x => /Aceptar/.test(x) && /Rechazar/.test(x)), JSON.stringify(f));
 });
 await caso('Escape y pulsar fuera cierran el panel', async () => {
   await abrir(page); await page.keyboard.press('Escape'); await w(150); assert.equal(await page.evaluate(() => avisosPanelAbierto()), false);
