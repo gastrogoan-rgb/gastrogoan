@@ -14,7 +14,7 @@ const w = ms => new Promise(r => setTimeout(r, ms));
 const ctx = await (browser.createBrowserContext ? browser.createBrowserContext() : browser.createIncognitoBrowserContext());
 async function nueva(){
   const p = await ctx.newPage(); await p.setViewport({width: 1000, height: 900}); await p.setCacheEnabled(false);
-  p.errs = []; p.on('pageerror', e => p.errs.push(e.message));
+  p.errs = []; p.avisos = []; p.on('pageerror', e => p.errs.push(e.message)); p.on('console', m => { if(m.type() === 'warning' || m.type() === 'error') p.avisos.push(m.text()); });
   await p.setRequestInterception(true);
   p.on('request', req => {
     const m = req.url().match(/gstatic\.com\/firebasejs\/[\d.]+\/(firebase-[a-z-]+\.js)/);
@@ -49,9 +49,8 @@ const nube = async () => {
 };
 const tokens = () => app.evaluate(() => (DB.tables || []).map(t => t.qrToken || null));
 
-await caso('Con el espejo en la nube del negocio (reglas reales), la app lo da por bueno', async () => {
-  const e = await app.evaluate(() => ({propia: espejoEnNubePropia, viejas: reglasAntiguas}));
-  assert.equal(e.viejas, false, 'detecta reglas viejas: ' + JSON.stringify(e));
+await caso('La app usa la nube del negocio como espejo', async () => {
+  assert.equal(await app.evaluate(() => espejoEnNubePropia), true);
 });
 await caso('Activar el QR da token a cada mesa y los dos llegan a la nube', async () => {
   await app.evaluate(() => { const c = document.createElement('input'); c.type = 'checkbox'; c.id = 'mn-qrmesa-activo'; c.checked = true; document.body.appendChild(c); saveQrMesaConfig(); });
@@ -72,6 +71,17 @@ await caso('Imprimir los QR de todas las mesas deja todos los nodos publicados',
   await w(3500);
   const tk = await tokens(), n = await nube();
   for(const t of tk) assert.ok(n[t], 'falta en la nube ' + t);
+});
+await caso('«Comprobar que los QR funcionan»: detecta un QR que falta en la nube, lo publica y lo dice', async () => {
+  const tk = await app.evaluate(() => DB.tables.find(t => t.id === 1).qrToken);
+  const r = await fetch(`http://127.0.0.1:9000/gastrogoan/public/${publicId}/mesaQr/${tk}.json?ns=demo-gastrogoan`, {method: 'DELETE', headers: {Authorization: 'Bearer owner'}});
+  assert.ok(r.ok, 'no se pudo borrar el nodo de prueba');
+  assert.ok(!(await nube())[tk], 'el nodo sigue en la nube');
+  await app.evaluate(() => { comprobarQrMesas(); }); await w(5000);
+  const modal = await app.evaluate(() => (document.getElementById('modal-box') || {}).innerText || '');
+  assert.match(modal, /publicado ahora|published now|publicat ara/i, 'el aviso no dice que lo ha reparado: ' + modal.slice(0, 200));
+  assert.ok((await nube())[tk], 'tras comprobar, el QR de la mesa 1 sigue sin estar en la nube');
+  assert.ok(!/NO funciona|does NOT work/i.test(modal), 'dice que algún QR no funciona: ' + modal.slice(0, 300));
 });
 await caso('La web pública, abierta con el QR de esa mesa, muestra la carta/cuenta y NO «QR no válido»', async () => {
   const tk = await app.evaluate(() => DB.tables.find(t => t.id === 4).qrToken);

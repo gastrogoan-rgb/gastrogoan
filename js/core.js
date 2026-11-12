@@ -10423,6 +10423,7 @@ function renderTableQrCard(){
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
         <button class="btn btn-primary" style="min-height:44px" onclick="openQrMesasModal()"><i class="ti ti-qrcode"></i> ${escapeHtml(gl({es:'Ver el QR de cada mesa', ca:'Veure el QR de cada taula', en:'See each table\'s QR'}))} (${nMesas})</button>
         <button class="btn" style="min-height:44px" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button>
+        <button class="btn" style="min-height:44px" onclick="comprobarQrMesas()"><i class="ti ti-circle-check"></i> ${escapeHtml(gl({es:'Comprobar que los QR funcionan', ca:'Comprovar que els QR funcionen', en:'Check that the QRs work'}))}</button>
       </div>
     </div>
   `;
@@ -10495,6 +10496,49 @@ async function rotarTokenMesa(tableId){
   if(typeof syncPublicMirror === 'function') syncPublicMirror();
   showToast(t('qrMesa.msg.rotado'));
   showTableQr(tableId);
+}
+/* «Comprobar que los QR funcionan» (12/11): al escanear un QR la web lee `mesaQr/{token}` en la nube; si ese nodo no está, el comensal
+   ve «este código QR ya no es válido». Aquí se mira, mesa a mesa, que cada QR esté de verdad en la nube; lo que falte se PUBLICA al
+   momento (y se vuelve a leer para confirmarlo), y si la nube lo rechaza se dice por qué (casi siempre: reglas antiguas). */
+async function comprobarQrMesas(){
+  if(!qrMesaConfig().activo){ showToast(gl({es:'Activa antes la carta por QR', ca:'Activa abans la carta per QR', en:'Turn on the QR menu first'})); return; }
+  const publicId = getPublicId();
+  const mesas = (DB.tables || []).filter(Boolean);
+  if(!publicId || !mesas.length){ showToast(gl({es:'No hay mesas que comprobar', ca:'No hi ha taules per comprovar', en:'No tables to check'})); return; }
+  const sinToken = mesas.some(tb => !tb.qrToken);
+  mesas.forEach(tb => asegurarTokenMesa(tb));
+  if(sinToken) saveDB();
+  openModal(`<div class="modal-header"><h3><i class="ti ti-circle-check"></i> ${escapeHtml(gl({es:'Comprobando los QR…', ca:'Comprovant els QR…', en:'Checking the QRs…'}))}</h3></div><div class="empty"><div class="spinner"></div></div>`);
+  let app = null;
+  try{ app = await getPublicMirrorApp(); }catch(e){}
+  const filas = [];
+  for(const tb of mesas){
+    let estado = 'ok', detalle = '';
+    try{
+      if(!app) throw new Error('sin-nube');
+      const ref = app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + tb.qrToken);
+      let snap = await ref.once('value');
+      if(!snap.exists()){
+        const data = cuentaPublicaMesa(tb);
+        await ref.set(sinIndefinidos(data));
+        mesaQrPublicado[tb.qrToken] = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
+        snap = await ref.once('value');
+        estado = snap.exists() ? 'reparado' : 'fallo';
+      }
+    }catch(e){ estado = 'fallo'; detalle = (e && (e.code || e.message)) || ''; }
+    filas.push({nombre: tb.name || '', estado, detalle});
+  }
+  const hayFallo = filas.some(f => f.estado === 'fallo');
+  const reglas = hayFallo && filas.some(f => /permission|denied/i.test(f.detalle) || f.detalle === 'sin-nube');
+  const ico = {ok: '<i class="ti ti-circle-check" style="color:#2d7a4a"></i>', reparado: '<i class="ti ti-tool" style="color:#8A7440"></i>', fallo: '<i class="ti ti-circle-x" style="color:#b3261e"></i>'};
+  const txt = {ok: gl({es:'funciona', ca:'funciona', en:'works'}), reparado: gl({es:'no estaba: publicado ahora', ca:'no hi era: publicat ara', en:'was missing: published now'}), fallo: gl({es:'NO funciona', ca:'NO funciona', en:'does NOT work'})};
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-circle-check"></i> ${escapeHtml(gl({es:'Estado de los QR de tus mesas', ca:'Estat dels QR de les teves taules', en:'Status of your table QRs'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="display:flex;flex-direction:column">${filas.map(f => `<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)"><span>${ico[f.estado]}</span><strong style="flex:1">${escapeHtml(f.nombre)}</strong><span style="font-size:13px;color:var(--muted)">${escapeHtml(txt[f.estado])}</span></div>`).join('')}</div>
+    ${hayFallo ? `<div class="warn" style="margin-top:14px;padding:10px 12px;border-left:3px solid #b3261e;background:#F5EBE7;font-size:13px">${escapeHtml(reglas
+      ? gl({es:'La nube de tu negocio no deja guardar los QR: lo normal es que tengas las reglas de seguridad antiguas. Actualízalas (2 minutos) y vuelve a comprobar.', ca:'El núvol del teu negoci no deixa desar els QR: el normal és que tinguis les regles de seguretat antigues. Actualitza-les (2 minuts) i torna a comprovar.', en:'Your business cloud will not store the QRs: most likely your security rules are out of date. Update them (2 minutes) and check again.'})
+      : gl({es:'No se ha podido comprobar ahora mismo. Revisa la conexión y vuelve a probar.', ca:'No s\'ha pogut comprovar ara mateix. Revisa la connexió i torna-ho a provar.', en:'It could not be checked right now. Check the connection and try again.'}))}</div>` : `<p style="margin:14px 0 0;font-size:13px;color:var(--muted)">${escapeHtml(gl({es:'Todos los QR están en la nube: al escanearlos, el comensal ve su mesa.', ca:'Tots els QR són al núvol: en escanejar-los, el comensal veu la seva taula.', en:'Every QR is in the cloud: when scanned, the guest sees their table.'}))}</p>`}
+    <div class="modal-footer">${reglas && typeof abrirAsistenteReglas === 'function' ? `<button class="btn btn-primary" onclick="closeModal();abrirAsistenteReglas()">${escapeHtml(gl({es:'Actualizar mis reglas', ca:'Actualitzar les meves regles', en:'Update my rules'}))}</button>` : ''}<button class="btn" onclick="closeModal()">${escapeHtml(t('common.close'))}</button></div>`);
 }
 // Hoja para imprimir con el QR de todas las mesas (uno por tarjeta, para
 // recortar). Sin scripts dentro: imprime el propio navegador al cargar.
