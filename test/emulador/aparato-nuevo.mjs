@@ -10,7 +10,10 @@ const DB_NEGOCIO = 'http://127.0.0.1:9000/?ns=demo-gastrogoan';
 const NS_PLAT = 'demo-plataforma', NS_NEG = 'demo-gastrogoan';
 const CODE1 = 'EMUOWN01', CODE2 = 'EMUOWN02', CODE3 = 'EMUOWN03';
 const USER = 'casapaco', PIN = 'clave1234';
-const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:true});
+// La app se abre desde un NOMBRE DE DOMINIO (como app.gastrogoan.com), no desde localhost: en localhost la app se cree «archivo local» y enseña el aviso de
+// alojamiento, que en la web real no sale. app.test apunta a 127.0.0.1 solo dentro de este Chromium.
+const BASE = 'http://app.test:8951';
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox', '--host-resolver-rules=MAP app.test 127.0.0.1'], headless:true});
 let fallos = 0;
 async function caso(n, fn){ try{ await fn(); console.log('✅ ' + n); }catch(e){ fallos++; console.log('❌ ' + n + '\n   ⤷ ' + e.message); } }
 const w = ms => new Promise(r => setTimeout(r, ms));
@@ -36,7 +39,8 @@ async function aparato(nombre){
     req.continue();
   });
   page.on('console', m => { if(m.type() === 'error' && !/ERR_|Failed to load resource|favicon/.test(m.text())) errs.push(nombre + ' [consola]: ' + m.text()); });
-  await page.goto('http://localhost:8951/index.html', {waitUntil: 'domcontentloaded'});
+  await page.evaluateOnNewDocument(() => { try{ localStorage.setItem('gastrogoan_backup_reminder_day', new Date().toISOString().slice(0,10)); }catch(e){} });   // el recordatorio diario de copia de seguridad es otra cosa
+  await page.goto(BASE + '/index.html', {waitUntil: 'domcontentloaded'});
   await page.evaluate(() => (typeof dbReadyPromise !== 'undefined') ? dbReadyPromise : null).catch(() => {});
   return {page, errs, nombre, ctx};
 }
