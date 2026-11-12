@@ -896,7 +896,7 @@ td.wrap{white-space:normal}
 .help-topic-item{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:9px 4px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit}
 .help-topic-item:hover{color:var(--ink)}
 .help-topic-item:last-child{border-bottom:none}
-#chat-fab .chat-badge{
+#chat-fab .chat-badge, #avisos-fab .chat-badge{
   position:absolute;top:-2px;right:-2px;background:#8A4A3B;color:#fff;font-size:10px;font-weight:700;
   border-radius:50%;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;
 }
@@ -910,7 +910,7 @@ td.wrap{white-space:normal}
 .help-msg.chat-msg-new{outline:2px solid var(--olive-l);outline-offset:2px}
 .chat-new-tag{display:inline-block;background:var(--olive-l);color:#1d2a20;border-radius:4px;padding:0 6px;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:1}
 .app-header #chat-fab.chat-con-aviso{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
-#chat-fab .chat-badge{min-width:18px;height:18px;font-size:11px}
+#chat-fab .chat-badge, #avisos-fab .chat-badge{min-width:18px;height:18px;font-size:11px}
 @media (prefers-reduced-motion:no-preference){
   .app-header #chat-fab.chat-con-aviso{animation:chat-latido 1.8s ease-in-out infinite}
 }
@@ -6489,4 +6489,33 @@ small{font-size:max(.8333em, 11px)}
   .tp-linea{gap:4px 6px}
   .tp-linea-pre{font-size:13px}
   .tp-ac-mas{width:36px !important;height:36px !important;min-width:36px}
+}
+
+
+/* ═══ AVISOS (campana) ═══ */
+.app-header #avisos-fab.avisos-con{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
+.avisos-panel{display:none;position:fixed;top:calc(var(--header-h) + 10px);right:20px;width:400px;max-width:calc(100vw - 32px);max-height:calc(100dvh - var(--header-h) - 30px);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden}
+.avisos-panel.active{display:flex}
+.av-cab{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--ink);color:#fff}
+.av-cab h4{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;margin:0}
+.av-cab .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.av-cuerpo{overflow-y:auto;padding:4px 0}
+.av-fila{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)}
+.av-fila:last-child{border-bottom:0}
+.av-fila>i{font-size:20px;color:var(--muted);flex-shrink:0}
+.av-fila.av-warn>i{color:#8A4A3B}
+.av-txt{flex:1;min-width:0;font-size:13px;line-height:1.35;overflow-wrap:break-word}
+.av-bt{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.av-vacio{display:flex;flex-direction:column;align-items:center;gap:4px;padding:30px 16px;text-align:center;color:var(--muted);font-size:13px}
+.av-vacio i{font-size:32px;color:var(--olive)}
+.av-vacio strong{color:var(--ink);font-size:14px}
+@media (prefers-reduced-motion:no-preference){
+  .app-header #avisos-fab.avisos-nuevo i{animation:av-campana .9s ease-in-out 1;transform-origin:50% 10%}
+}
+@keyframes av-campana{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}35%{transform:rotate(-14deg)}55%{transform:rotate(9deg)}75%{transform:rotate(-5deg)}}
+@media (max-width:560px){
+  .av-fila{flex-wrap:wrap}
+  .av-bt{width:100%;justify-content:flex-start;padding-left:30px}
+  .avisos-panel{right:10px;width:calc(100vw - 20px)}
 }

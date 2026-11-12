@@ -1117,14 +1117,10 @@ function dashTrendPintar(){
     ${dashSerieHtml(serie, {id:'dt-anual', cadaEtiqueta: 1})}`;
 }
 
-function renderDashboard(){
-  plan360ActualizarKpis();
+/* Lista de avisos de la app (la usan el Panel, en «Hoy — Atención», y la campana de la cabecera). */
+function avisosDeLaApp(){
   const today = new Date();
   const todayDate = todayStr();
-  const hasAnySales = DB.sales.length > 0;
-  const year = today.getFullYear();
-  const month = today.getMonth();
-
   /* ---------- Hoy — Atención (acciones a un vistazo) ---------- */
   const openOrders = DB.tpvOrders.filter(o => o.status==='abierta').length;
   const clockedIn = DB.employees.filter(e => getOpenFichaje(e.id)).length;
@@ -1204,6 +1200,31 @@ function renderDashboard(){
     {count: pendingReservations, icon:'ti-calendar-event', label: t('dash.att.pendingReservations'), onclick: `navigate('reservas')`},
     {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
   ];
+
+  /* Qué pasa de cada aviso en la CAMPANA de la cabecera (js/panel.js, «AVISOS»): c = sale en la campana, d = solo el propietario,
+     o = informativo (se puede marcar como visto). Lo que no está aquí (mesas abiertas, repartos, fichados, reservas de hoy y de
+     mañana, y los turnos/vacaciones, que la campana pinta uno a uno con sus botones) es ESTADO del Panel, no una novedad. */
+  const META = {
+    'ti-world': {id:'web', c:1}, 'ti-calendar-question': {id:'reservas', c:1}, 'ti-message-exclamation': {id:'incidencias', c:1},
+    'ti-temperature': {id:'temperaturas', c:1}, 'ti-truck-delivery': {id:'pedidosProv', c:1}, 'ti-alert-triangle': {id:'stock', c:1},
+    'ti-tool': {id:'mantenimiento', c:1}, 'ti-bug': {id:'plagas', c:1},
+    'ti-cake': {id:'cumples', c:1, d:1, o:1}, 'ti-credit-card-off': {id:'pagosSinCasar', c:1, d:1}, 'ti-trending-up': {id:'subidas', c:1, d:1},
+    'ti-trending-down': {id:'bajadas', c:1, d:1, o:1}, 'ti-calendar-repeat': {id:'coach', c:1, d:1}, 'ti-file-invoice': {id:'facturas', c:1, d:1},
+    'ti-cash-register': {id:'caja', c:1, d:1}
+  };
+  attentionItems.forEach(i => { const m = META[i.icon]; if(m){ i.id = m.id; i.campana = !!m.c; i.soloDueno = !!m.d; i.ocultable = !!m.o; } });
+  return attentionItems;
+}
+
+function renderDashboard(){
+  plan360ActualizarKpis();
+  const today = new Date();
+  const todayDate = todayStr();
+  const hasAnySales = DB.sales.length > 0;
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  const attentionItems = avisosDeLaApp();
   const anyAttention = attentionItems.some(i => i.count > 0);
   // Lo que pide atención va delante, con su cifra; lo que está a cero no se
   // esconde (sigue siendo un acceso directo) pero baja a una línea tranquila.

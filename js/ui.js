@@ -2476,6 +2476,7 @@ function renderView(view){
   return typeof conVentasEnCache === 'function' ? conVentasEnCache(() => renderViewSinCache(view)) : renderViewSinCache(view);
 }
 function renderViewSinCache(view){
+  if(typeof avisosProgramar === 'function') avisosProgramar(1200);   // cada pantalla que se pinta refresca la campana (los datos del arranque llegan escalonados)
   if(isGestionLocked(view)){ denyGestionAccess(); return; }
   // Última barrera antes de pintar, por si se llega aquí saltándose
   // navigate() (p.ej. renderView('escandallo') a mano desde la consola de

@@ -8241,6 +8241,7 @@ async function removeLogo(){
 }
 
 function renderHeader(){
+  if(typeof avisosProgramar === 'function') avisosProgramar();
   const b = DB.business || {};
   const icon = document.getElementById('app-logo-icon');
   icon.innerHTML = `<img src="${b.logo || GASTROGOAN_LOGO_URI}" alt="Logo">`;
@@ -9323,6 +9324,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateAutoActiveMenu();
   setInterval(() => {
     updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders();
+    if(typeof avisosPintar === 'function') avisosPintar();   // cambia el día: cumpleaños, mantenimientos vencidos…
     if(typeof marcharPedidosProgramadosQueYaTocan === 'function') marcharPedidosProgramadosQueYaTocan();
   }, 60000);
 

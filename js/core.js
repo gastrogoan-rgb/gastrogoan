@@ -11469,6 +11469,7 @@ function saveDB(){
     setTimeout(() => idbSet(DB_KEY, DB).catch(e2 => console.error('Reintento de guardado local también falló', e2)), 3000);
   });
   scheduleCloudSync();
+  if(typeof avisosProgramar === 'function') avisosProgramar();   // la campana de avisos se recalcula tras cada cambio
   return guardado;
 }
 

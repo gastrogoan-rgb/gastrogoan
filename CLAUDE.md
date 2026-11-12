@@ -1598,3 +1598,11 @@ modelo de licencias. Decisión del dueño pendiente.
 
 - Sesión falsificable desde las devtools (inherente a no tener servidor). El modelo de seguridad asume que el dispositivo del negocio es de confianza, como cualquier TPV offline-first.
 - `tenants/$tenantId` sin identidad revocable (ver arriba).
+
+
+## Rendimiento, chat y campana de avisos (12/11)
+
+- **Por qué se trababa** (medido con 19.600 ventas y CPU ×4): `sales` es el 98 % de los datos y cada cobro sube y baja la lista ENTERA; al recibirla, `applyRemoteBlock` la pasaba a texto 4 veces (3,1 s congelada). Ahora `sonIgualesRapido` + saltar la 2.ª pasada (1,5 s), guardado local coalescido (`guardarLocalDB`: el primero al instante, las ráfagas en uno; se vuelca al ocultar/cerrar), `activeSales` con caché SOLO durante un repintado (`conVentasEnCache`), peso de la DB diferido, y el espejo público ya no reenvía lo igual ni repasa candados de fechas pasadas.
+  ⚠️ **Pendiente de fondo**: partir `sales` por meses en la nube (cada ticket sigue enviando todo el historial). Pide prueba con el emulador de dos aparatos. `canonicalStringify` ya está cerca del suelo en JS puro: no gastar tiempo en reescribirla (se probaron 3 variantes).
+- **Chat** (`test/chat-avisos.mjs`): el contador se recalcula al llegar datos de la nube (`chatAlLlegarDeLaNube`), lo nuevo sale con aro y «Nuevo», y `markChatRead` usa el mensaje más tardío (relojes adelantados).
+- **Campana de avisos** (js/panel.js, «AVISOS»; `test/avisos-campana.mjs`): la lista sale de `avisosDeLaApp()` (js/finance.js), la MISMA del Panel. Se calculan, no se guardan: desaparecen al resolverse. Vacaciones y cambios de turno salen uno a uno con Aceptar/Rechazar. Solo los informativos (`ocultable`) se marcan «Visto» (localStorage por aparato). El empleado no ve `soloDueno`. Un aviso nuevo se añade a `avisosDeLaApp()` con su icono en `META`.
