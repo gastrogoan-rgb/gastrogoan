@@ -190,6 +190,7 @@ lanzar; node test/avisos-empleado.mjs > "$SALIDA/avisosempleado.txt" 2>&1 & P183
 lanzar; node test/acceso-empleado-codigo.mjs > "$SALIDA/accempcodigo.txt" 2>&1 & P184=$!
 lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
 lanzar; node test/economia-real.mjs > "$SALIDA/economiareal.txt" 2>&1 & P186=$!
+lanzar; node test/reglas-asistente.mjs > "$SALIDA/reglasasistente.txt" 2>&1 & P187=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -410,5 +411,6 @@ espera $P183 "Avisos al empleado (respuesta a vacaciones y cambios de turno, men
 espera $P184 "Acceso de empleados: el código de negocio se recuerda y se ve (relleno + botones con el nombre, Otro negocio, móvil)" "$SALIDA/accempcodigo.txt" "todos los casos pasaron"
 espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide asistentes en un aparato nuevo, sin conexión no pregunta nada, los borrados llegan a todos (lápida + cola de reintentos) y el PIN ya cambiado no se vuelve a ofrecer" "$SALIDA/syncnegocios.txt" "todos los casos pasaron"
 espera $P186 "Cuenta de Resultados › «Lo que te queda de verdad» (cuentas a mano: préstamo 10.000 € a 24 × 450 €), sin tocar el resultado oficial, en móvil y sin inversiones" "$SALIDA/economiareal.txt" "todos los casos pasaron"
+espera $P187 "Asistente «Actualizar mis reglas»: 6 pasos exactos (portada de Firebase, cuenta y proyecto, Realtime Database → Reglas, copiar, borrar todo, pegar, Publicar), comprobación automática, campana solo del propietario, tres idiomas y móvil" "$SALIDA/reglasasistente.txt" "todos los casos pasaron"
 
 exit $FALLOS
