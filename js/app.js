@@ -7814,12 +7814,26 @@ async function deleteTableFromConfig(id){
 /* ============================================================
    MANTENIMIENTO DE DATOS — copia de seguridad y archivado
    ============================================================ */
+/* Pesar el negocio es convertirlo ENTERO a texto: 100-400 ms en un móvil con un historial grande, cada vez
+   que se abre o se repinta Mi Negocio. Es un dato orientativo («tu negocio ocupa X MB»), así que vale el de
+   hace medio minuto. */
+let dbSizeCache = {ts: 0, db: null, kb: 0};
 function getDBSizeKB(){
-  return Math.round(JSON.stringify(DB).length / 1024 * 10) / 10;
+  const c = dbSizeCache;
+  if(c.db === DB && Date.now() - c.ts < 30000) return c.kb;
+  const kb = Math.round(JSON.stringify(DB).length / 1024 * 10) / 10;
+  dbSizeCache = {ts: Date.now(), db: DB, kb};
+  return kb;
 }
 
 function renderDataMaintenanceCard(){
-  const sizeKB = getDBSizeKB();
+  /* El peso se calcula DESPUÉS de pintar (convertir el negocio entero a texto tarda 100-400 ms en un móvil y
+     bloqueaba la apertura de Mi Negocio). Mientras llega, el hueco enseña «…». */
+  const sizeKB = dbSizeCache.db === DB && Date.now() - dbSizeCache.ts < 30000 ? dbSizeCache.kb : null;
+  if(sizeKB === null) setTimeout(() => {
+    const kb = getDBSizeKB();
+    document.querySelectorAll('.mn-data-size').forEach(el => { el.textContent = kb + ' KB'; });
+  }, 60);
   const ventasAntiguas = DB.sales.filter(s => s.date && s.date < dataMaintenanceCutoff()).length;
   const reservasAntiguas = DB.reservations.filter(r => r.date && r.date < dataMaintenanceCutoff() && (r.status==='completada'||r.status==='cancelada')).length;
   const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
@@ -7827,7 +7841,7 @@ function renderDataMaintenanceCard(){
   return `
     <div class="card">
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB + ' KB')}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', '<span class="mn-data-size">' + (sizeKB === null ? '…' : sizeKB + ' KB') + '</span>')}</p>
       <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
       <div style="font-size:12px;color:${daysSinceLastBackup()>=BACKUP_REMINDER_DAYS?'var(--red)':'var(--muted)'};margin-top:6px">
         ${daysSinceLastBackup()===Infinity ? t('mn.data.neverBackedUp') : t('mn.data.lastBackup').replace('${n}', daysSinceLastBackup())}

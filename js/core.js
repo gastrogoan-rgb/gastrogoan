@@ -1979,6 +1979,42 @@ async function idbSet(key, value){
 }
 
 /* ============================================================
+   GUARDADO LOCAL COALESCIDO
+   Cada guardado escribe el negocio ENTERO en IndexedDB, y para escribirlo el navegador lo
+   copia entero (structuredClone, en el hilo principal): con 20.000 ventas son 60-130 ms en un
+   PC y varios cientos en un móvil. Una ráfaga de toques (sumar 10 platos, + + + en Stock, los
+   bloques que llegan de la nube al arrancar) hacía diez copias seguidas, y esa es la sensación
+   de «se queda colgada unos segundos».
+   Ahora: la PRIMERA petición escribe al instante (igual que antes) y las que lleguen mientras
+   hay una escritura en marcha, o en los 250 ms siguientes, se juntan en UNA. Quien espera la
+   promesa la recibe cuando su cambio ya está escrito. Si la pestaña se oculta o se cierra, lo
+   pendiente se vuelca en el acto. */
+const IDB_JUNTAR_MS = 250;
+const idbLocal = {enCurso: false, timer: null, ultimo: 0, esperan: []};
+function volcarLocalDB(){
+  clearTimeout(idbLocal.timer); idbLocal.timer = null;
+  if(idbLocal.enCurso || !idbLocal.esperan.length) return;
+  const lote = idbLocal.esperan.splice(0);
+  idbLocal.enCurso = true;
+  idbSet(DB_KEY, DB).then(() => lote.forEach(w => w.resolve()), e => lote.forEach(w => w.reject(e))).then(() => {
+    idbLocal.enCurso = false; idbLocal.ultimo = Date.now();
+    if(idbLocal.esperan.length && !idbLocal.timer) idbLocal.timer = setTimeout(volcarLocalDB, IDB_JUNTAR_MS);
+  });
+}
+function guardarLocalDB(){
+  return new Promise((resolve, reject) => {
+    idbLocal.esperan.push({resolve, reject});
+    if(idbLocal.enCurso || idbLocal.timer) return;   // ya hay una escritura en marcha o programada: esta viaja en la siguiente
+    const espera = Math.max(0, idbLocal.ultimo + IDB_JUNTAR_MS - Date.now());
+    if(espera === 0) volcarLocalDB(); else idbLocal.timer = setTimeout(volcarLocalDB, espera);
+  });
+}
+if(typeof window !== 'undefined' && typeof document !== 'undefined'){
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') volcarLocalDB(); });
+  window.addEventListener('pagehide', () => volcarLocalDB());
+}
+
+/* ============================================================
    NUBE — Configuración de Firebase (proyecto propio de cada negocio)
    Cada negocio configura su propio proyecto Firebase gratuito
    (ver showFirebaseSetupGate / getCloudConfig). Dentro de ese proyecto,
@@ -5873,20 +5909,56 @@ function mergeCartaStock(localCartas, mergedCartas, lastSyncedCartasJson){
 // "Cannot access before initialization" — un `const` no se iza como una
 // función, y esto no es un fallo que enseñe node -c, solo se ve al
 // ejecutar). Ver el comentario completo junto a su declaración real.
+/* Igualdad profunda SIN construir texto. Solo sirve para CONFIRMAR que dos valores
+   son iguales: si dice «sí», canonicalStringify daría el mismo texto; si dice «no»
+   (o duda: NaN, undefined frente a null…) quien llama sigue con la comparación de
+   siempre, así que nunca cambia un resultado, solo ahorra trabajo.
+   Por qué existe: preferLocalWhenRemoteStale convertía a texto CADA venta dos veces
+   (la de aquí y la de la nube) cada vez que llegaba un cambio de otro aparato. Con
+   20.000 ventas eran ~2 s de app congelada en un móvil, para descubrir que casi
+   todas eran idénticas. */
+function sonIgualesRapido(a, b){
+  if(a === b) return true;
+  if(a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if(Array.isArray(a)){
+    if(!Array.isArray(b) || a.length !== b.length) return false;
+    for(let i = 0; i < a.length; i++) if(!sonIgualesRapido(a[i], b[i])) return false;
+    return true;
+  }
+  if(Array.isArray(b)) return false;
+  const ka = Object.keys(a);
+  if(ka.length !== Object.keys(b).length) return false;
+  for(let i = 0; i < ka.length; i++){
+    const k = ka[i];
+    if(!Object.prototype.hasOwnProperty.call(b, k) || !sonIgualesRapido(a[k], b[k])) return false;
+  }
+  return true;
+}
+
 function preferLocalWhenRemoteStale(local, merged, baselineJson){
   if(!Array.isArray(local) || !Array.isArray(merged)) return merged;
-  let baseline = [];
-  if(baselineJson){ try{ baseline = JSON.parse(baselineJson) || []; }catch(e){ baseline = []; } }
-  const baseMap = new Map(baseline.filter(x => x && x.id != null).map(x => [x.id, x]));
+  /* La foto de lo último enviado (varios MB en las ventas) solo se lee si alguna
+     fila difiere de verdad; casi nunca. Antes se leía siempre, y se montaba además
+     un Map con ella entera. */
+  let baseMap = null;
+  const baseDe = id => {
+    if(baseMap === null){
+      let baseline = [];
+      if(baselineJson){ try{ baseline = JSON.parse(baselineJson) || []; }catch(e){ baseline = []; } }
+      baseMap = new Map(baseline.filter(x => x && x.id != null).map(x => [x.id, x]));
+    }
+    return baseMap.get(id);
+  };
   const localMap = new Map(local.filter(x => x && x.id != null).map(x => [x.id, x]));
   return merged.map(item => {
     if(!item || item.id == null) return item;
     const loc = localMap.get(item.id);
     if(!loc) return item;
+    if(loc === item || sonIgualesRapido(loc, item)) return item; // ya coinciden, no hay nada que decidir
     const remoteStr = canonicalStringify(item);
     const localStr = canonicalStringify(loc);
-    if(localStr === remoteStr) return item; // ya coinciden, no hay nada que decidir
-    const base = baseMap.get(item.id);
+    if(localStr === remoteStr) return item;
+    const base = baseDe(item.id);
     const baseStr = base ? canonicalStringify(base) : null;
     if(baseStr !== null && remoteStr === baseStr && localStr !== baseStr) return loc;
     return item;
@@ -8371,6 +8443,8 @@ function limpiarHolds(app, publicId, rama, fecha){
   }).catch(e => console.error('No se pudieron leer los holds', rama, fecha, e));
 }
 
+let espejoUltimoEnvio = {huella: '', ts: 0};
+const ESPEJO_REPASO_MS = 10 * 60 * 1000;
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
@@ -8405,12 +8479,28 @@ function syncPublicMirror(){
       // Mismo motivo que en las subidas del negocio: un solo `undefined` en
       // cualquier rincón (la carta, un menú, una mesa) tumbaría el envío
       // entero y la web pública se quedaría con datos viejos.
-      app.database().ref('gastrogoan/public/' + publicId + '/info').set(sinIndefinidos(data)).catch(e => {
-        console.error('Error publicando el espejo público', e);
-        if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
-      });
-      // Cuenta de cada mesa con QR (carta por QR, ver publicarMesasQr).
+      /* ⚠️ Esto se ejecutaba tras CADA guardado de la app (sumar un plato, un «+» en Stock…):
+         reenviaba la carta entera y, además, leía DOS veces cada fecha en que ha habido alguna
+         reserva (todas las del historial) más los pedidos. Con un año de reservas eran cientos
+         de consultas a la nube por cada toque, y es de lo que la app se queda «pensando». Ahora
+         solo se reenvía si lo publicado ha cambiado (o cada 10 min por si alguien lo tocó desde
+         fuera), y los candados solo se repasan de ayer en adelante: nadie reserva el pasado. */
+      const datosPublicos = sinIndefinidos(data);
+      const huella = publicId + '|' + JSON.stringify(datosPublicos);
+      const ahoraMs = Date.now();
+      const sinNovedad = huella === espejoUltimoEnvio.huella && ahoraMs - espejoUltimoEnvio.ts < ESPEJO_REPASO_MS;
+      if(!sinNovedad){
+        espejoUltimoEnvio = {huella, ts: ahoraMs};
+        app.database().ref('gastrogoan/public/' + publicId + '/info').set(datosPublicos).catch(e => {
+          espejoUltimoEnvio = {huella: '', ts: 0};   // que el próximo guardado lo reintente
+          console.error('Error publicando el espejo público', e);
+          if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
+        });
+      }
+      // Cuenta de cada mesa con QR (carta por QR, ver publicarMesasQr; ya compara por su cuenta).
       try{ publicarMesasQr(app, publicId); }catch(e){ console.error('Error publicando las cuentas de mesa', e); }
+      if(sinNovedad) return;
+      const desdeFecha = dateStr(new Date(ahoraMs - 86400000));
       // aforoHold (js/reservagastrogoan.html) es un contador aparte que la
       // web pública usa para reservar de forma atómica sin pasarse del
       // aforo — pero nunca se decrementaba solo, así que cada reserva
@@ -8423,8 +8513,8 @@ function syncPublicMirror(){
       // ahí O que tenga alguna reserva (aunque esté cancelada/pasada, para
       // cubrir el caso de "se cancelaron todas") — así vuelve a arrancar
       // de cero en el próximo sync, sin arrastrar holds obsoletos.
-      const fechasATocar = new Set(Object.keys(data.reservasResumen));
-      DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
+      const fechasATocar = new Set(Object.keys(data.reservasResumen).filter(f => f >= desdeFecha));
+      DB.reservations.forEach(r => { if(r.date && r.date >= desdeFecha) fechasATocar.add(r.date); });
       fechasATocar.forEach(fecha => {
         limpiarHolds(app, publicId, 'aforoHold', fecha);
         // mesaHold (candado por mesa concreta que usa la web pública para
@@ -8434,8 +8524,8 @@ function syncPublicMirror(){
       // Mismo motivo y mismo mecanismo que aforoHold, aplicado a pedidosHold
       // (el contador atómico de pedidos por franja): se limpia en cada sync
       // para no arrastrar holds obsoletos de pedidos ya aceptados/rechazados.
-      const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen));
-      DB.tpvOrders.forEach(o => { if(o.date && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
+      const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen).filter(f => f >= desdeFecha));
+      DB.tpvOrders.forEach(o => { if(o.date && o.date >= desdeFecha && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
       fechasPedidosATocar.forEach(fecha => {
         limpiarHolds(app, publicId, 'pedidosHold', fecha);
       });
@@ -9028,6 +9118,7 @@ function applyRemoteBlock(key, remoteValue){
   // local — se necesita para saber, después, si el resultado fusionado
   // lleva algo que la nube todavía no tiene (ver mergedFromLocal más abajo).
   const remoteOnlyJson = canonicalStringify(merged);
+  const remotaBase = merged;   // para reconocer, al final, que la fusión no cambió ni una fila de la nube (ver más abajo)
   if(LISTAS_DE_NOMBRES.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     merged = mergeListaDeNombres(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
@@ -9172,7 +9263,12 @@ function applyRemoteBlock(key, remoteValue){
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
-  const json = canonicalStringify(merged);
+  /* Segunda pasada completa evitada. Si la fusión devolvió EXACTAMENTE las mismas filas
+     (mismos objetos, mismo orden, misma cantidad) que trajo la nube, su texto es el de
+     la nube y no hace falta volver a recorrer 20.000 ventas para saberlo. Solo en
+     `sales`: ahí nadie modifica filas en el sitio durante la fusión y es donde cuesta. */
+  const mismaQueLaNube = key === 'sales' && Array.isArray(merged) && Array.isArray(remotaBase) && merged.length === remotaBase.length && merged.every((x, i) => x === remotaBase[i]);
+  const json = mismaQueLaNube ? remoteOnlyJson : canonicalStringify(merged);
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return;
   // Si la fusión conservó algo local que la nube todavía no tiene (p.ej. un
   // pedido tomado offline en ESTE dispositivo que el otro no llegó a ver
@@ -9229,7 +9325,7 @@ function applyRemoteBlock(key, remoteValue){
   // DB[key] (el merge) todavía no coincide y lo suba de verdad.
   lastSyncedSnapshot[key] = mergedFromLocal ? remoteOnlyJson : json;
   DB[key] = merged;
-  idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
+  guardarLocalDB().catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
   if(isStoredLicenseValid(DB.license)){
     localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
@@ -9424,7 +9520,7 @@ function mergeRemoteIntoLocal(val){
   });
   lastSyncedSnapshot = newSnapshot;
   if(changedLocally){
-    idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
+    guardarLocalDB().catch(e => console.error('Error guardando datos', e));
     if(isStoredLicenseValid(DB.license)){
       localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
       hideActivationGate();
@@ -11363,7 +11459,7 @@ function saveDB(){
   // negocio encima del activo. No debería pasar nunca; si alguna función
   // de cálculo lo hiciera, aquí se para.
   if(vgLeyendoOtroNegocio) return Promise.resolve();
-  const guardado = idbSet(DB_KEY, DB).catch(e => {
+  const guardado = guardarLocalDB().catch(e => {
     console.error('Error guardando datos', e);
     if(typeof showToast === 'function') showToast(t('msg.localSaveFailed'));
     // Reintento único: si el primer guardado falló por algo pasajero (p.ej.
@@ -11403,8 +11499,13 @@ function pushAllToCloud(){
   });
 }
 
+/* Cuenta cuántas veces se ha pedido subir algo. flushCloudSync la mira antes y después de
+   la subida para saber si «mientras tanto hubo otro cambio» sin volver a convertir a texto
+   TODO el negocio (con 20.000 ventas era una pasada de ~1 s en un móvil, en cada subida). */
+let cambiosLocalesSeq = 0;
 function scheduleCloudSync(){
   if(vgLeyendoOtroNegocio) return;
+  cambiosLocalesSeq++;
   schedulePublicMirrorSync();
   if(!cloudRef) return;
   // Antes el badge solo decía "conectado/desconectado" del socket, sin
@@ -11502,6 +11603,7 @@ function flushCloudSync(){
   });
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
+  const seqAlSubir = cambiosLocalesSeq;
   const onFail = (e) => {
     recordSyncError(e);
     scheduleCloudSyncRetry();
@@ -11515,7 +11617,7 @@ function flushCloudSync(){
       // del último sincronizado — si mientras tanto se hizo otro cambio
       // local (o el reintento de otro bloque sigue en curso), se queda en
       // "pending" hasta que de verdad no falte nada por confirmar.
-      const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== canonicalStringify(DB[key]));
+      const stillPending = cambiosLocalesSeq !== seqAlSubir;
       if(!stillPending) marcarNubeAlDia({trasSubirBien: true});
     }).catch(onFail);
   }catch(e){

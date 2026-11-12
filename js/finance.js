@@ -273,8 +273,26 @@ function gastosVariablesActivos(){
 // Ventas anuladas (ver requestCancelSale/tpv.js) se excluyen de todas las
 // cifras de facturación: siguen en DB.sales por trazabilidad, pero no son
 // ingreso real.
+/* Mientras se repinta una pantalla (conVentasEnCache) la lista de ventas válidas se calcula UNA vez.
+   El Panel y Gestión la pedían cientos de veces (una por día, por mes, por serie), y cada
+   petición recorría y copiaba todas las ventas: con 20.000 eran ~150 ms de un repintado de
+   casi un segundo en un móvil. Fuera de un repintado NO hay caché, así que quien modifica una
+   venta y la vuelve a leer en el mismo gesto sigue viendo el cambio. Se descarta además si
+   cambia el array (Visión global carga otro negocio en DB) o su longitud. Ningún llamador
+   modifica el resultado: todos hacen filter/forEach/some/reduce. */
+let ventasActivasCache = null;
 function activeSales(){
-  return (DB.sales||[]).filter(s => s.status !== 'anulada');
+  const v = DB.sales || [];
+  const c = ventasActivasCache;
+  if(c && c.src === v && c.n === v.length) return c.arr;
+  const arr = v.filter(s => s.status !== 'anulada');
+  if(c){ c.src = v; c.n = v.length; c.arr = arr; }
+  return arr;
+}
+function conVentasEnCache(fn){
+  if(ventasActivasCache) return fn();   // ya dentro de un repintado
+  ventasActivasCache = {src: null, n: -1, arr: null};
+  try{ return fn(); }finally{ ventasActivasCache = null; }
 }
 function salesTotalForRange(startDate, endDate){
   return activeSales().filter(s=>s.date>=startDate && s.date<=endDate).reduce((sum,s)=>sum+s.total,0);

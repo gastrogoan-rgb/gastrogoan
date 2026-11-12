@@ -2449,6 +2449,9 @@ function denyGestionAccess(){
 // navigate() por completo — por eso se repite aquí, como último punto de
 // paso real antes de pintar cualquier vista.
 function renderView(view){
+  return typeof conVentasEnCache === 'function' ? conVentasEnCache(() => renderViewSinCache(view)) : renderViewSinCache(view);
+}
+function renderViewSinCache(view){
   if(isGestionLocked(view)){ denyGestionAccess(); return; }
   // Última barrera antes de pintar, por si se llega aquí saltándose
   // navigate() (p.ej. renderView('escandallo') a mano desde la consola de
