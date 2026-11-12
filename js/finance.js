@@ -703,16 +703,30 @@ function existenciasMes(year, month){
   const e = (DB.ge.existencias || {})[existenciasClave(year, month)];
   return e && e.v != null ? parseFloat(e.v) : null;
 }
+/* Devuelve true si la foto cambió (para que quien llame guarde). ⚠️ Antes SOLO se tomaba al abrir Gestión Económica, y el texto prometía que
+   «se va actualizando sola»: si no se entraba allí los últimos días del mes, el valor de fin de mes era el de la última vez que se entró y la
+   variación salía mal. Ahora la repite cada pocos minutos la propia app (ver `existenciasFotoPeriodica`, js/app.js). */
 function fotoExistenciasAuto(){
   try{
-    if(typeof stockTotalValueBreakdown !== 'function' || !DB.ingredients) return;
+    if(typeof stockTotalValueBreakdown !== 'function' || !DB.ingredients) return false;
     const d = new Date(), k = existenciasClave(d.getFullYear(), d.getMonth());
     DB.ge.existencias = DB.ge.existencias || {};
     const e = DB.ge.existencias[k];
-    if(e && e.manual) return;
+    if(e && e.manual) return false;
     const v = Math.round(stockTotalValueBreakdown().total * 100) / 100;
-    if(!e || Math.abs((parseFloat(e.v)||0) - v) > 0.005) DB.ge.existencias[k] = {v, ts: new Date().toISOString()};
+    if(!e || Math.abs((parseFloat(e.v)||0) - v) > 0.005){ DB.ge.existencias[k] = {v, ts: new Date().toISOString()}; return true; }
   }catch(err){ console.error('Foto de existencias', err); }
+  return false;
+}
+// Solo el propietario, con la pantalla a la vista y sin leer otro negocio: así no hay varios aparatos reescribiendo lo mismo ni ruido en la nube.
+function existenciasFotoPeriodica(){
+  try{
+    if(typeof document !== 'undefined' && document.hidden) return;
+    if(typeof vgLeyendoOtroNegocio !== 'undefined' && vgLeyendoOtroNegocio) return;
+    const ses = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+    if(!ses || ses.type !== 'owner') return;
+    if(fotoExistenciasAuto()) saveDB();
+  }catch(e){}
 }
 // Positivo = el almacén bajó (se consumió más de lo comprado): más gasto.
 function geVariacionExistenciasMes(year, month){

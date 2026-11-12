@@ -4811,6 +4811,8 @@ span.dt-punto{position:absolute;border-radius:50%}
 /* Gastos Variables (6/11): comparte filas y tarjetas con Gastos Fijos */
 .gv-fc-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
 .gv-nota{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:12px 16px;background:#fff;border:1px solid var(--hair);border-radius:4px;font-size:13.5px}
+/* Existencias (12/11): línea que explica qué le hace el almacén al resultado del mes. */
+.gv-nota-x{flex:1 1 100%;margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted)}
 .gv-nota > .ti{font-size:18px;color:var(--muted)}
 .gv-nota-t{flex:1;min-width:200px}
 .gv-nota-v{font-family:var(--mono);font-weight:600;margin:0 6px}

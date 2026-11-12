@@ -195,6 +195,7 @@ lanzar; node test/alta-generador.mjs > "$SALIDA/altagenerador.txt" 2>&1 & P188=$
 lanzar; node test/tpv-menu-pasos.mjs > "$SALIDA/tpvmenupasos.txt" 2>&1 & P189=$!
 lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impresos.txt" 2>&1 & P190=$!
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
+lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -420,5 +421,6 @@ espera $P188 "Generador de licencias: alta de cliente paso a paso (automáticos,
 espera $P189 "TPV · el menú se pide paso a paso (un apartado cada vez, avanza solo salvo con extras, Atrás, total en el botón final y lo guardado no cambia)" "$SALIDA/tpvmenupasos.txt" "el menú por pasos del TPV funciona"
 espera $P190 "Impresos: los 22 documentos (ficha con foto, protocolos, vale, arqueo, pedido, reservas, QR, tickets, manual, I+D, contratos…) se generan en la ventana de impresión con fotos y fuentes cargadas, sin desbordes y a PDF A4" "$SALIDA/impresos.txt" "todos los impresos se generan bien"
 espera $P191 "QR propio (reseña del ticket, VeriFactu, QR de mesas y de reservas): se dibuja en la app, sin servicio externo, y se LEE con un lector real en las 40 versiones, con acentos y con tamaños distintos" "$SALIDA/qrlocal.txt" "el QR propio se genera y se lee"
+espera $P192 "Variación de existencias: el almacén que sube/baja cambia el resultado con las cuentas a mano, sin mes anterior no se aplica nada, la foto automática y la explicación en Gastos Variables" "$SALIDA/existencias.txt" "la variación de existencias hace las cuentas bien"
 
 exit $FALLOS
