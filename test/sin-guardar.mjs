@@ -28,7 +28,7 @@ await page.evaluate(() => {
   currentFolder = 'cocina'; ownerUnlocked = true; editUnlocked = true; document.body.classList.add('edit-unlocked', 'owner-session');
 });
 // Teclear de verdad (eventos de confianza), como lo haría una persona.
-const teclear = async (sel, txt) => { await page.click(sel); await page.evaluate(sel => document.querySelector(sel).select(), sel); await page.keyboard.type(txt); };
+const teclear = async (sel, txt) => { await page.click(sel); await page.evaluate(sel => document.querySelector(sel).select(), sel); await page.keyboard.sendCharacter(txt); };
 const modalAbierta = () => page.evaluate(() => document.getElementById('modal-overlay').classList.contains('active'));
 const avisoSobre = () => page.evaluate(() => !!document.getElementById('gg-salida-sobre'));
 const pulsar = id => page.evaluate(id => { const b = [...document.querySelectorAll('#gg-salida-sobre .btn')].find(x => (x.getAttribute('onclick') || '').includes(id)); b && b.click(); }, id);

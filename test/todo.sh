@@ -199,6 +199,8 @@ lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
 lanzar; node test/panel-equilibrio.mjs > "$SALIDA/panelequil.txt" 2>&1 & P195=$!
+lanzar; node test/sin-guardar.mjs > "$SALIDA/singuardar.txt" 2>&1 & P196=$!
+lanzar; node test/web-salida.mjs > "$SALIDA/websalida.txt" 2>&1 & P197=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -428,5 +430,7 @@ espera $P192 "Variación de existencias: el almacén que sube/baja cambia el res
 espera $P193 "Cobro al pedir con Stripe SIMULADO de punta a punta: web real + Worker real + aviso firmado + plataforma + app (abandono, firma falsa, reintento, ataque de 0,50 €, Stripe caído, dos mesas)" "$SALIDA/qrmesastripe.txt" "los 11 casos pasaron"
 espera $P194 "Ventanas y avisos siempre enteros: 9 tamaños, 5 ventanas, avisos, desplegables flotantes y teclado abierto" "$SALIDA/ventanasvis.txt" "ventanas y avisos siempre enteros"
 espera $P195 "Punto de equilibrio del Panel: cuentas a mano, coincide con Gestión Económica, comisiones y existencias fuera de los fijos, préstamo explicado" "$SALIDA/panelequil.txt" "el equilibrio del Panel es cierto"
+espera $P196 "Cambios sin guardar en TODA la app: ventanas, formularios, pantallas, Pedidos con borrador, cerrar pestaña; avisa donde debe y no en buscadores, PIN ni lo rellenado por código" "$SALIDA/singuardar.txt" "cambios sin guardar: avisa donde debe"
+espera $P197 "Web pública de pedidos: avisa al cerrar con el carrito a medias, no al ir a pagar" "$SALIDA/websalida.txt" "la web de pedidos avisa al salir"
 
 exit $FALLOS
