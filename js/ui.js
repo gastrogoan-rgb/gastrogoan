@@ -2404,8 +2404,32 @@ function ggEditorSucio(){
   for(const id in ggEditores){ try{ if(ggEditores[id].sucio()) return ggEditores[id]; }catch(e){} }
   return null;
 }
-let ggSalidaResolve = null;
+let ggSalidaResolve = null, ggSalidaSobre = false;
+function ggSalidaHtmlBotones(){
+  return `
+        <button class="btn btn-fino" onclick="ggRespondeSalida('seguir')"><i class="ti ti-pencil"></i> ${gl({es:'Seguir editando', ca:'Seguir editant', en:'Keep editing'})}</button>
+        <button class="btn btn-fino is-off" onclick="ggRespondeSalida('descartar')"><i class="ti ti-trash"></i> ${gl({es:'Salir sin guardar', ca:'Sortir sense desar', en:'Leave without saving'})}</button>
+        <button class="btn btn-fino is-on" onclick="ggRespondeSalida('guardar')"><i class="ti ti-device-floppy"></i> ${gl({es:'Guardar y salir', ca:'Desar i sortir', en:'Save and leave'})}</button>`;
+}
+// Con una ventana abierta (un formulario a medias) el aviso NO puede abrirse con openModal: sustituiría el formulario y «Seguir editando» lo habría perdido.
+// Va en su propia capa, por encima de todo, y deja la ventana intacta debajo.
+function ggPreguntarSalidaSobre(nombre){
+  return new Promise(resolve => {
+    ggSalidaResolve = resolve; ggSalidaSobre = true;
+    const d = document.createElement('div');
+    d.id = 'gg-salida-sobre'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+    d.innerHTML = `<div class="gg-salida-caja">
+      <h3><i class="ti ti-device-floppy"></i> ${gl({es:'Hay cambios sin guardar', ca:'Hi ha canvis sense desar', en:'You have unsaved changes'})}</h3>
+      ${nombre ? `<p class="gg-salida-nombre">${escapeHtml(nombre)}</p>` : ''}
+      <p class="gg-salida-txt">${gl({es:'Si sales ahora, se perderán. ¿Qué quieres hacer?', ca:'Si surts ara, es perdran. Què vols fer?', en:'If you leave now, they will be lost. What would you like to do?'})}</p>
+      <div class="gg-salida-pie">${ggSalidaHtmlBotones()}</div></div>`;
+    document.body.appendChild(d);
+    const seguir = d.querySelector('.btn'); if(seguir) seguir.focus();
+  });
+}
 function ggPreguntarSalida(ed){
+  const ov = document.getElementById('modal-overlay');
+  if(ov && ov.classList.contains('active') && document.getElementById('modal-box').innerHTML.trim()) return ggPreguntarSalidaSobre(ed && ed.nombre ? ed.nombre() : '');
   return new Promise(resolve => {
     ggSalidaResolve = resolve;
     openModal(`
@@ -2424,7 +2448,8 @@ function ggPreguntarSalida(ed){
 }
 function ggRespondeSalida(r){
   const f = ggSalidaResolve; ggSalidaResolve = null;
-  closeModal();
+  if(ggSalidaSobre){ ggSalidaSobre = false; const d = document.getElementById('gg-salida-sobre'); if(d) d.remove(); }
+  else closeModal();
   if(f) f(r);
 }
 async function ggGuardarSiHaceFalta(accion){
@@ -2437,7 +2462,149 @@ async function ggGuardarSiHaceFalta(accion){
   return accion();
 }
 if(typeof window !== 'undefined' && window.addEventListener){
-  window.addEventListener('beforeunload', e => { if(ggEditorSucio()){ e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { if(ggEditorSucio() || (typeof ggGPendientes === 'function' && ggGPendientes(true).length)){ e.preventDefault(); e.returnValue = ''; } });
+}
+
+/* ═══ CAMBIOS SIN GUARDAR EN TODA LA APP (13/11, pedido del dueño: «que pase en cualquier lado») ═══
+   Hasta hoy solo avisaban las pantallas que se registraban a mano (Escandallo, Fichas, cartas y menús). Ahora vale para CUALQUIER formulario o ventana,
+   sin registrar nada, con una sola regla:
+       «Si el usuario TOCÓ un campo y en ese mismo formulario hay un botón de guardar, hay cambios sin guardar.»
+   · Se vigila lo que el USUARIO hace (eventos de confianza), no lo que la app rellena sola: un campo rellenado por código no cuenta.
+   · El valor de partida se apunta justo antes del primer cambio, así que volver al valor original deja el formulario limpio.
+   · Ventana (modal): el botón de guardar es su botón principal. Fuera de una ventana: un botón `save…()` / `guardar…()` del mismo bloque
+     (tarjeta, formulario o sección). Sin botón de guardar no se avisa: son ajustes que se aplican al momento o simples filtros.
+   · Quedan fuera los campos de búsqueda/filtro, las contraseñas y PIN, los que ya guardan solos (`onchange="save…"`), `[data-gg-libre]`, el chat y la comanda del TPV.
+   · Sale al: cerrar la ventana (X, Cancelar o tocar fuera), cambiar de pantalla, volver atrás, cambiar de negocio, cerrar sesión y cerrar o recargar la pestaña.
+   · Forzar un formulario concreto: `data-gg-form` en su contenedor (+ `data-gg-nombre`). Excluir: `data-gg-libre`.
+   Prueba: test/sin-guardar.mjs recorre ventanas y pantallas. Una pantalla nueva con un «Guardar» ya nace protegida. */
+const GG_G_CAMPOS = new Set();
+const GG_G_ORIGEN = new WeakMap();
+let ggGForzar = false;
+function ggGVigilable(el){
+  if(!el || !el.tagName) return false;
+  const tag = el.tagName;
+  if(tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA') return false;
+  const ty = (el.type || '').toLowerCase();
+  if(['search', 'password', 'hidden', 'file', 'button', 'submit', 'reset', 'range', 'image', 'color'].includes(ty)) return false;
+  if(el.disabled || el.readOnly) return false;
+  if(el.closest('[data-gg-libre], #chat-panel, #avisos-panel, .help-panel, .modal-order, #gg-salida-sobre, .tour-bubble, [id^="acc-"], #business-select-screen, #access-select-screen')) return false;
+  if(/buscar|search|cerca|filtr|escribe un mensaje/i.test(el.placeholder || '') || /search|buscar|filtro|busca/i.test(el.id || '')) return false;
+  const h = (el.getAttribute('onchange') || '') + ' ' + (el.getAttribute('oninput') || '');
+  if(/\b(save|guardar)\w*\(/i.test(h)) return false;
+  return true;
+}
+function ggGValor(el){
+  const ty = (el.type || '').toLowerCase();
+  return (ty === 'checkbox' || ty === 'radio') ? String(!!el.checked) : String(el.value);
+}
+function ggGSnapshot(el){
+  if(!ggGVigilable(el) || GG_G_ORIGEN.has(el)) return;
+  GG_G_ORIGEN.set(el, ggGValor(el));
+}
+function ggGMarcar(el){
+  if(!ggGVigilable(el)) return;
+  if(!GG_G_ORIGEN.has(el)){
+    const ty = (el.type || '').toLowerCase();
+    // Sin foto previa (p. ej. una casilla pulsada por su etiqueta): el valor de partida es el contrario al de ahora o el que traía el HTML.
+    GG_G_ORIGEN.set(el, (ty === 'checkbox') ? String(!el.checked) : (ty === 'radio' ? String(!!el.defaultChecked) : (el.tagName === 'SELECT' ? String([...el.options].find(o => o.defaultSelected) ? [...el.options].find(o => o.defaultSelected).value : el.options[0] && el.options[0].value) : String(el.defaultValue))));
+  }
+  GG_G_CAMPOS.add(el);
+}
+// Botón que GUARDA en una ventana: el principal del pie (o de la ventana), si no es de cerrar, de PIN ni de diálogo.
+function ggGBotonModal(box){
+  const cands = [...box.querySelectorAll('.modal-footer .btn-primary, .modal-footer .is-on, .btn-primary')];
+  return cands.find(b => {
+    const oc = (b.getAttribute('onclick') || '').trim();
+    if(!oc) return false;
+    if(/^(closeModal|cancel\w*)\(/i.test(oc)) return false;
+    if(/pin\w*\(|confirmTextPrompt|confirmPickOption|confirmModal|alertModal|resolve/i.test(oc)) return false;
+    return true;
+  }) || null;
+}
+function ggGBotonGuardar(n){
+  if(n.hasAttribute && n.hasAttribute('data-gg-guardar')) return n;
+  return [...n.querySelectorAll('[data-gg-guardar], button[onclick]')].find(b => b.hasAttribute('data-gg-guardar') || /^\s*(save|guardar)\w*\(/i.test(b.getAttribute('onclick') || '')) || null;
+}
+function ggGContexto(el){
+  const box = document.getElementById('modal-box');
+  if(box && box.contains(el)){
+    if(box.classList.contains('modal-order')) return null;
+    const b = ggGBotonModal(box);
+    return b ? {raiz: box, boton: b, modal: true} : null;
+  }
+  const exp = el.closest('[data-gg-form]');
+  if(exp){ const b = ggGBotonGuardar(exp); return b ? {raiz: exp, boton: b, modal: false} : null; }
+  const fr = el.closest('.card, form, section, article, .ge-section, .mn-card');
+  if(fr){ const b = ggGBotonGuardar(fr); if(b) return {raiz: fr, boton: b, modal: false}; }
+  return null;
+}
+function ggGNombre(p){
+  if(!p) return '';
+  const h = p.raiz.querySelector('h3, h4, h2, .modal-header');
+  return h ? (h.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80) : '';
+}
+// Formularios con cambios: {raiz, boton, modal, campos[]}. `soloFuera` = sin las ventanas.
+function ggGPendientes(incluirModal){
+  const grupos = new Map();
+  for(const el of [...GG_G_CAMPOS]){
+    if(!el.isConnected){ GG_G_CAMPOS.delete(el); continue; }
+    if(!ggGVigilable(el)) continue;
+    if(ggGValor(el) === GG_G_ORIGEN.get(el)) continue;
+    const c = ggGContexto(el);
+    if(!c) continue;
+    if(c.modal && incluirModal === false) continue;
+    if(!c.modal && incluirModal === 'solo-modal') continue;
+    if(!grupos.has(c.raiz)) grupos.set(c.raiz, Object.assign({campos: []}, c));
+    grupos.get(c.raiz).campos.push(el);
+  }
+  return [...grupos.values()];
+}
+const ggGEsperar = ms => new Promise(r => setTimeout(r, ms));
+// «Guardar y salir»: se pulsa el botón de guardar tal cual (con sus validaciones). Si tras un momento los campos siguen sin guardar, no se sale.
+async function ggGGuardar(p){
+  try{ p.boton.click(); }catch(e){ return false; }
+  for(let i = 0; i < 12; i++){
+    await ggGEsperar(150);
+    const aun = ggGPendientes(true).some(x => x.raiz === p.raiz && x.campos.some(c => p.campos.includes(c)));
+    if(!aun) return true;
+  }
+  return false;
+}
+function ggGDescartar(p){ (p ? p.campos : [...GG_G_CAMPOS]).forEach(c => { if(c.isConnected) GG_G_ORIGEN.set(c, ggGValor(c)); }); }
+if(typeof document !== 'undefined'){
+  ['pointerdown', 'keydown', 'focusin'].forEach(ev => document.addEventListener(ev, e => ggGSnapshot(e.target), true));
+  ['input', 'change'].forEach(ev => document.addEventListener(ev, e => { if(e.isTrusted) ggGMarcar(e.target); }, true));
+  // Pantallas y formularios que no son ventana: entran en el mismo sistema que Escandallo o Fichas (navegar, inicio, cerrar sesión, cambiar de negocio, recargar).
+  if(typeof ggRegistrarEditor === 'function') ggRegistrarEditor('guardia', {
+    sucio: () => ggGPendientes(false).length > 0,
+    nombre: () => ggGNombre(ggGPendientes(false)[0]),
+    guardar: async () => { const p = ggGPendientes(false)[0]; return p ? ggGGuardar(p) : true; },
+    descartar: () => ggGDescartar(null)
+  });
+  // Ventanas: cerrarla (X, Cancelar o tocar fuera) con algo sin guardar pregunta. Cerrarla por código —al guardar— no pasa por aquí.
+  const ov = document.getElementById('modal-overlay');
+  if(ov) ov.addEventListener('click', e => {
+    if(ggGForzar) return;
+    const t = e.target, fondo = t.id === 'modal-overlay';
+    const btn = (t.closest && t.closest('button, .btn, .modal-close')) || null;
+    let sale = fondo;
+    if(!fondo && btn && document.getElementById('modal-box').contains(btn)){
+      const oc = (btn.getAttribute('onclick') || '').trim();
+      sale = btn.classList.contains('modal-close') || /^(closeModal|cancel\w*)\(/i.test(oc);
+    }
+    if(!sale) return;
+    const p = ggGPendientes('solo-modal')[0];
+    if(!p) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    ggPreguntarSalidaSobre(ggGNombre(p)).then(async r => {
+      if(r === 'seguir') return;
+      if(r === 'guardar'){ const ok = await ggGGuardar(p); if(!ok) return; if(!document.getElementById('modal-overlay').classList.contains('active')) return; }
+      ggGDescartar(p);
+      ggGForzar = true;
+      try{ (fondo ? ov : btn).click(); } finally { ggGForzar = false; }
+      if(ov.classList.contains('active') && r === 'guardar') closeModal();
+    });
+  }, true);
 }
 
 /* «ATRÁS» EN TODA LA APP (8/11, dueño: «cuando haces click a algo que lleva a otra página, al volver atrás no vuelve a donde estabas»)
