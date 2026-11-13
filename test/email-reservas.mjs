@@ -68,13 +68,14 @@ caso('La señal de reserva se puede pedir solo a partir de un número de persona
     'el aviso de señal y el texto del botón no se actualizan al cambiar el número de personas, sin recargar la página');
 });
 
-caso('printTicket no imprime hasta que carga el QR externo (Google/VeriFactu) — salía en blanco', () => {
+caso('printTicket no imprime hasta que las imágenes (el QR) están listas — antes salía en blanco', () => {
   const m = tpv.match(/function printTicket\(sale, opts=\{\}\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró printTicket');
   assert.ok(!/win\.print\(\);\s*\n\}/.test(m[0]),
-    'printTicket sigue llamando a win.print() justo después de escribir el HTML, antes de que cargue el QR (api.qrserver.com), en vez de esperar a window.onload');
-  assert.ok(m[0].includes('window.onload=function(){window.print();}'),
-    'printTicket no usa el mismo patrón que printComandaTicket (esperar a window.onload antes de imprimir)');
+    'printTicket sigue llamando a win.print() justo después de escribir el HTML, antes de que carguen las imágenes');
+  // Desde el 12/11 el QR se dibuja en la propia app (data:image, sin servicio externo) y toda impresión espera a imágenes y fuentes (ggEsperarYImprimir).
+  assert.ok(/ggEsperarYImprimir|imprimirRollo|printViaBrowser|window\.onload=function\(\)\{window\.print\(\);\}/.test(m[0]),
+    'printTicket no espera a que carguen las imágenes antes de imprimir');
 });
 
 caso('El tutorial de Netlify solo se enseña fuera de *.gastrogoan.com (autoalojado), y se despliega junto a index.html', () => {

@@ -43,7 +43,7 @@ async function abrir(ancho = 1280, alto = 900){
 
 await caso('Orden pedido: equilibrio arriba → atención → reservas → ventas → gastos → resultado → evolución del año → análisis de ventas → clientela → análisis de platos', async () => {
   const {page, errs} = await abrir();
-  const orden = await page.evaluate(() => ['dp-equilibrio', 'dashboard-attention', 'dp-reservas', 'dp-ventas', 'dp-gastos', 'dp-resultado', 'dashboard-trend', 'dp-analisis', 'dp-clientela', 'platos-kpis'].map(id => { const e = document.getElementById(id); return e ? e.getBoundingClientRect().top + document.querySelector('.content').scrollTop : -1; }));
+  const orden = await page.evaluate(() => ['dp-equilibrio', 'dashboard-attention', 'dp-reservas', 'dp-ventas', 'dp-gastos', 'dp-resultado', 'dashboard-trend', 'dp-analisis', 'dp-clientela', 'platos-kpis'].map(id => { const e0 = document.getElementById(id), e = e0 && (e0.closest('.dp-card') || e0); return e ? e.getBoundingClientRect().top + document.querySelector('.content').scrollTop : -1; }));
   assert.ok(orden.every(y => y >= 0), 'falta algún bloque: ' + JSON.stringify(orden));
   assert.deepEqual([...orden].sort((a, b) => a - b), orden, 'orden incorrecto: ' + JSON.stringify(orden));
   assert.deepEqual(errs, []); await page.close();
@@ -107,7 +107,7 @@ await caso('Punto de equilibrio con gastos fijos de 1.000 €: se ve el titular,
     const out = {}, esp = ms => new Promise(r => setTimeout(r, ms));
     out.sinFijos = !!document.querySelector('#dp-equilibrio .dp-eq-vacio') || !!document.querySelector('#dp-equilibrio .dp-eq-stats');
     // Forzamos un caso conocido: pérdida de 1.000 € con 0 € de ventas → fijos = 1.000.
-    window.geResultadoAntesImpMes = () => -1000; window.geFacturacionNetaMes = () => 0; window.geTotalVariablesNetoMes = () => 0;
+    window.geFijosDeduciblesForMonth = () => 1000; window.geFacturacionNetaMes = () => 0; window.geTotalVariablesNetoMes = () => 0;
     renderDashboard(); await esp(300);
     const D = dpEquilibrioDatos();
     out.F = D.F; out.obj = Math.round(D.objetivo);

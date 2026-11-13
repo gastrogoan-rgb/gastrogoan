@@ -5782,10 +5782,11 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-graf{margin-top:38px}
 .dp-eq-como{margin-top:12px;border-top:1px solid var(--hair);padding-top:8px}
 .dp-eq-como summary{cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-height:36px;display:flex;align-items:center}
-.dp-eq-tabla{width:100%;border-collapse:collapse;margin:6px 0;font-size:13.5px}
-.dp-eq-tabla td{padding:6px 0;border-bottom:1px solid var(--hair);vertical-align:top}
-.dp-eq-tabla td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:12px}
-.dp-eq-tabla tr.t td{border-bottom-color:var(--ink)}
+.dp-eq-tabla,.dp-eq-tabla tbody{display:block;width:100%;margin:6px 0;font-size:13.5px}
+.dp-eq-tabla tr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid var(--hair)}
+.dp-eq-tabla td{padding:6px 0;min-width:0;overflow-wrap:break-word}
+.dp-eq-tabla td.n{flex:none;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dp-eq-tabla tr.t{border-bottom-color:var(--ink)}
 .dp-eq-como p{color:var(--muted);margin:6px 0 0}
 .dp-eq-graf{margin-top:16px;position:relative;height:120px;border-bottom:1px solid var(--hair)}
 .dp-eq-graf svg{width:100%;height:100%;display:block;overflow:visible}
