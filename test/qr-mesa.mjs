@@ -11,7 +11,9 @@
 //   · el QR lleva un token por mesa, no el id, y el token no se publica;
 //   · el pedido entra con los precios de la carta aunque el móvil mande otros;
 //   · pagar una parte (o de menos) NO cierra la mesa;
-//   · pagar el resto la cierra sola, como venta con su ticket numerado.
+//   · pagar el resto la cierra sola, como venta con su ticket numerado;
+//   · (12/11) el negocio ELIGE cómo se cobra: en la mesa (el QR solo pide) o al pedir (Stripe antes de cocina). Ya no hay botón de
+//     pagar la cuenta desde el móvil; el aviso 'pago_mesa' sigue entendiéndose por las páginas antiguas que alguien tenga abiertas.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -58,7 +60,7 @@ await app.evaluate(() => {
   ]}]}];
   DB.activeCartaIds = [1];
   DB.tpvOrders = []; DB.sales = []; DB.pedidosMesaQr = [];
-  DB.business.qrMesa = {activo: true};       // por defecto: lo acepta el camarero
+  DB.business.qrMesa = {activo: true, cobroLocal: true};       // por defecto: lo acepta el camarero · se cobra en el local
   // Una nube de mentira: guarda lo que se publica y reparte lo que se empuja.
   window.__nube = {};
   window.__borrado = [];
@@ -131,7 +133,7 @@ await pub.goto(`http://localhost:${PUERTO}/reservagastrogoan.html?neg=pubqrmesa1
 await new Promise(r => setTimeout(r, 1500));
 // Lo que haría loadBusinessInfo() con el espejo, y una «nube» que sirve la
 // cuenta de la mesa tal como la publicó la app.
-const pintarPublica = async (cuenta, stripe) => pub.evaluate(({cuenta, stripe}) => {
+const pintarPublica = async (cuenta, stripe, cobro) => pub.evaluate(({cuenta, stripe, cobro}) => {
   window.__empujados = window.__empujados || [];
   window.__cuenta = cuenta;
   window.__oyenteCuenta = null;
@@ -141,7 +143,7 @@ const pintarPublica = async (cuenta, stripe) => pub.evaluate(({cuenta, stripe}) 
   })};
   publicId = 'pubqrmesa1';
   qrMesaListener = false; qrMesaCuenta = undefined;
-  DB = {business: {name: 'Casa QR', tiposServicio: {mesa: true, takeaway: true, delivery: true}, qrMesa: {activo: true}},
+  DB = {business: {name: 'Casa QR', tiposServicio: {mesa: true, takeaway: true, delivery: true}, qrMesa: Object.assign({activo: true}, {mesa: {cobroLocal: true, cobroTarjeta: false}, pedido: {cobroLocal: false, cobroTarjeta: true}, ambos: {cobroLocal: true, cobroTarjeta: true}}[cobro || 'mesa'])},
     cartas: [{id: 1, nombre: 'Carta', secciones: [{id: 10, nombre: 'Principales', platos: [
       {id: 100, nombre: 'Hamburguesa', precio: 12, disponible: true}, {id: 101, nombre: 'Ensalada', precio: 9, disponible: true}]}]}],
     activeCartaIds: [1], menus: [], activeMenuIds: [], reservasResumen: {}, mesasOcupadas: {}, pedidosResumen: {}, cocinaCargaActiva: 0,
@@ -149,7 +151,7 @@ const pintarPublica = async (cuenta, stripe) => pub.evaluate(({cuenta, stripe}) 
   pagoOnlineActivo = stripe;
   currentTab = 'mesa';
   renderApp();
-}, {cuenta, stripe});
+}, {cuenta, stripe, cobro});
 
 await caso('El comensal ve la carta con alérgenos y envía el pedido A SU MESA con el token', async () => {
   const cuenta = await app.evaluate(t => __nube['gastrogoan/public/pubqrmesa1/mesaQr/' + t], TOKEN);
@@ -204,7 +206,7 @@ await caso('El pedido entra con los precios de la carta y espera a que sala lo a
 await caso('Configurado "directo a cocina", entra sin esperar; un token falso, rotado o con el QR apagado no entra', async () => {
   const r = await app.evaluate(async t => {
     const linea = {platoId: 101, name: 'Ensalada', price: 1, qty: 1};
-    DB.business.qrMesa = {activo: true, aceptaCamarero: false};
+    DB.business.qrMesa = {activo: true, aceptaCamarero: false, cobroLocal: true};
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [linea], createdAt: new Date().toISOString()});
     const directo = getOpenOrderForTable(1).items.filter(l => l.platoId === 101).map(l => [l.price, l.estado]);
     const n0 = getOpenOrderForTable(1).items.length;
@@ -216,7 +218,7 @@ await caso('Configurado "directo a cocina", entra sin esperar; un token falso, r
     await __empujar({type: 'pedido_mesa', mesaToken: viejo, items: [linea], createdAt: new Date().toISOString()});
     DB.business.qrMesa = {activo: false};
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [linea], createdAt: new Date().toISOString()});
-    DB.business.qrMesa = {activo: true};
+    DB.business.qrMesa = {activo: true, cobroLocal: true};
     // Un plato que no está en la carta no entra (no hay precio de confianza).
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [{platoId: 999, name: 'Langosta', price: 0.5, qty: 1}], createdAt: new Date().toISOString()});
     return {directo, n0, n1: getOpenOrderForTable(1).items.length, mesa2: !!getOpenOrderForTable(2),
@@ -247,17 +249,11 @@ await caso('La cuenta publicada de la mesa no lleva datos personales', async () 
   return `total ${r.total} € · ${r.lineas.length} líneas`;
 });
 
+// Lo que mandaba la web ANTES de quitar el pago de la cuenta: se conserva el aviso para las páginas viejas aún abiertas.
+let REFS = 0;
 const pagarDesdeElMovil = async (modo, importe) => {
-  await pintarPublica(CUENTA, true);
-  const req = await pub.evaluate(({modo, importe}) => {
-    window.fetch = async () => new Response(JSON.stringify({url: '#stripe'}));
-    submittingRequest = false;
-    if(modo === 'parte') document.getElementById('mq-importe').value = String(importe);
-    const n = __empujados.length;
-    pagarCuentaMesaQr(modo);
-    return new Promise(r => setTimeout(() => r(__empujados.slice(n)[0] || null), 300));
-  }, {modo, importe});
-  assert.ok(req, 'el móvil no ha anunciado el pago');
+  const pendiente = (await app.evaluate(() => cuentaMesaQr(getOpenOrderForTable(1)).pendiente));
+  const req = {type: 'pago_mesa', mesaToken: TOKEN, importe: modo === 'parte' ? importe : pendiente, clientRef: 'REFvieja' + String(++REFS).padStart(4, '0'), createdAt: new Date().toISOString()};
   await app.evaluate(req => __empujar(req), req);
   return req;
 };
@@ -273,9 +269,13 @@ const confirmarEnStripe = (ref, amount) => app.evaluate(async ({ref, amount}) =>
     publicada: __nube['gastrogoan/public/pubqrmesa1/mesaQr/' + DB.tables[0].qrToken]};
 }, {ref, amount});
 
-await caso('Pagar una parte (y que el banco confirme menos) NO cierra la mesa', async () => {
-  const sinStripe = await (async () => { await pintarPublica(CUENTA, false); return pub.evaluate(() => ({todo: !!document.getElementById('mq-pagar-todo'), txt: document.getElementById('mesaqr-cuenta').innerText})); })();
-  assert.equal(sinStripe.todo, false, 'sin Stripe conectado se ofrece pagar desde el móvil');
+await caso('Aviso de pago parcial de una página antigua: el banco confirma menos y la mesa NO se cierra', async () => {
+  for(const stripe of [false, true]){
+    await pintarPublica(CUENTA, stripe);
+    const w = await pub.evaluate(() => ({todo: !!document.getElementById('mq-pagar-todo'), parte: !!document.getElementById('mq-importe'), txt: document.getElementById('mesaqr-cuenta').innerText}));
+    assert.equal(w.todo || w.parte, false, `con Stripe=${stripe} la web ofrece pagar la cuenta desde el móvil (ya no existe esa opción)`);
+    assert.match(w.txt, /camarero|waiter|cambrer/i, 'no dice que se paga al camarero');
+  }
   const req = await pagarDesdeElMovil('parte', 10);
   assert.equal(req.type, 'pago_mesa'); assert.equal(req.importe, 10); assert.equal(req.mesaToken, TOKEN); assert.ok(req.clientRef);
   // Anunció 10 € pero el banco solo confirma 8: cuenta lo confirmado, y la mesa sigue.
@@ -291,7 +291,7 @@ await caso('Pagar una parte (y que el banco confirme menos) NO cierra la mesa', 
   return 'pagado 8 € de 33 · quedan 25 €, mesa abierta';
 });
 
-await caso('Pagar el resto cierra la mesa sola: venta normal con su ticket numerado (factura simplificada)', async () => {
+await caso('Aviso de pago del resto de una página antigua: cierra la mesa sola, venta normal con su ticket numerado (factura simplificada)', async () => {
   const req = await pagarDesdeElMovil('todo');
   assert.equal(req.importe, 25);
   const r = await confirmarEnStripe(req.clientRef, 25);
@@ -308,7 +308,7 @@ await caso('Pagar el resto cierra la mesa sola: venta normal con su ticket numer
 
 await caso('Un pago que llega con la mesa ya cobrada queda para devolver, no se pierde', async () => {
   const r = await app.evaluate(async t => {
-    DB.business.qrMesa = {activo: true, aceptaCamarero: false};
+    DB.business.qrMesa = {activo: true, aceptaCamarero: false, cobroLocal: true};
     await __empujar({type: 'pedido_mesa', mesaToken: t, items: [{platoId: 101, name: 'Ensalada', price: 9, qty: 1}], createdAt: new Date().toISOString()});
     await __empujar({type: 'pago_mesa', mesaToken: t, clientRef: 'REFtarde00001', importe: 9, createdAt: new Date().toISOString()});
     const o = getOpenOrderForTable(1);
@@ -319,6 +319,239 @@ await caso('Un pago que llega con la mesa ya cobrada queda para devolver, no se 
   }, TOKEN);
   assert.deepEqual(r, [9]);
   return '9 € en «Pagos sin pedido»';
+});
+
+
+/* ------------------- COBRO AL PEDIR (12/11) ------------------- */
+const pedidoQr = (extra = {}) => Object.assign({type: 'pedido_mesa', mesaToken: TOKEN, clienteNombre: 'Luis',
+  items: [{platoId: 100, name: 'Hamburguesa', price: 0.01, qty: 2}], createdAt: new Date().toISOString()}, extra);
+const ponerCobro = (cobro, stripe, acepta) => app.evaluate(({cobro, stripe, acepta}) => {
+  DB.business.qrMesa = Object.assign({activo: true, aceptaCamarero: acepta}, {mesa: {cobroLocal: true, cobroTarjeta: false}, pedido: {cobroLocal: false, cobroTarjeta: true}, ambos: {cobroLocal: true, cobroTarjeta: true}}[cobro]);
+  pagoOnlineActivo = stripe;
+  DB.pedidosMesaQr = []; DB.tpvOrders = []; DB.sales = []; DB.unmatchedOnlinePayments = []; DB.paymentAmountMismatches = []; DB.pagosTarjetaEsperados = [];
+  window.__pagos = {};
+}, {cobro, stripe, acepta});
+const estadoMesa1 = () => app.evaluate(() => { const o = getOpenOrderForTable(1); return {
+  pend: pedidosMesaQrPendientes().length, esperando: (DB.pedidosMesaQr || []).filter(p => p.estado === 'esperando-pago').length,
+  lineas: o ? o.items.map(l => ({q: l.qty, p: l.price, e: l.estado, pagada: !!l.pagadoOnline})) : null,
+  cuenta: o ? cuentaMesaQr(o) : null, status: o && o.status, devolver: (DB.unmatchedOnlinePayments || []).map(u => u.amount),
+  descuadres: (DB.paymentAmountMismatches || []).length, espera: (DB.pagosTarjetaEsperados || []).length }; });
+
+await caso('Mi Negocio: SIN forma de cobro por defecto; hay que marcar local, tarjeta o las dos; la tarjeta no se puede marcar sin Stripe', async () => {
+  const r = await app.evaluate(() => {
+    const pintar = (stripe, q) => { pagoOnlineActivo = stripe; DB.business.qrMesa = q; const d = document.createElement('div'); d.innerHTML = renderTableQrCard(); return d; };
+    const sinStripe = pintar(false, {activo: false});
+    const conStripe = pintar(true, {activo: false});
+    const marca = (local, tarjeta, activo) => {
+      const host = document.createElement('div');
+      host.innerHTML = `<input type="checkbox" id="mn-qrmesa-local" ${local ? 'checked' : ''}><input type="checkbox" id="mn-qrmesa-tarjeta" ${tarjeta ? 'checked' : ''}><input type="checkbox" id="mn-qrmesa-activo" ${activo ? 'checked' : ''}><select id="mn-qrmesa-acepta"><option value="camarero" selected></option></select>`;
+      document.body.prepend(host); saveQrMesaConfig(); host.remove();
+      return JSON.parse(JSON.stringify(DB.business.qrMesa));
+    };
+    pagoOnlineActivo = true;
+    DB.business.qrMesa = {activo: false};
+    const defecto = qrMesaConfig();
+    const intentoSinElegir = marca(false, false, true);        // activar sin haber elegido: NO se activa
+    const soloLocal = marca(true, false, true);
+    const ambos = marca(true, true, true);
+    const quitaLaUltima = (() => { DB.business.qrMesa = {activo: true, cobroLocal: true, cobroTarjeta: false}; return marca(false, false, true); })();   // con el QR activo no se puede dejar sin ninguna
+    // Un negocio que ya lo tenía activo de antes de esta elección sigue funcionando (cobra en el local) y se le avisa.
+    DB.business.qrMesa = {activo: true};
+    const heredado = {cfg: qrMesaConfig(), local: (pagoOnlineActivo = true, qrMesaLocalDisponible()), tarjeta: qrMesaTarjetaDisponible(), aviso: /Todavía no has elegido|Encara no has triat|haven't chosen/.test((() => { const d = document.createElement('div'); d.innerHTML = renderTableQrCard(); return d.innerText || d.textContent; })())};
+    return {sinStripeDeshab: !!sinStripe.querySelector('#mn-qrmesa-tarjeta').disabled, conStripeHab: !conStripe.querySelector('#mn-qrmesa-tarjeta').disabled,
+      marcadasPorDefecto: ['#mn-qrmesa-local', '#mn-qrmesa-tarjeta'].map(q => conStripe.querySelector(q).checked),
+      defecto: {local: defecto.local, tarjeta: defecto.tarjeta, sinElegir: defecto.sinElegir}, intentoSinElegir, soloLocal, ambos, quitaLaUltima, heredado};
+  });
+  assert.equal(r.sinStripeDeshab, true, 'sin Stripe se puede marcar la tarjeta');
+  assert.equal(r.conStripeHab, true);
+  assert.deepEqual(r.marcadasPorDefecto, [false, false], 'hay una forma de cobro marcada por defecto');
+  assert.deepEqual(r.defecto, {local: false, tarjeta: false, sinElegir: true});
+  assert.equal(r.intentoSinElegir.activo, false, 'se activó el QR sin elegir cómo cobrar');
+  assert.equal(r.soloLocal.activo, true); assert.equal(r.soloLocal.cobroLocal, true); assert.equal(r.soloLocal.cobroTarjeta, false);
+  assert.equal(r.ambos.cobroLocal, true); assert.equal(r.ambos.cobroTarjeta, true);
+  assert.equal(r.quitaLaUltima.cobroLocal, true, 'se pudo quitar la última forma de cobro con el QR activo');
+  assert.equal(r.heredado.local, true, 'un negocio con el QR activo de antes se queda sin servicio'); assert.equal(r.heredado.tarjeta, false);
+  assert.ok(r.heredado.aviso, 'no se le pide elegir');
+  return 'sin defecto · activar exige elegir · heredados siguen cobrando en el local con aviso';
+});
+
+await caso('Web, cobro al pedir: el botón lleva el total, se pide el pago al Worker y el pedido viaja con su referencia de pago', async () => {
+  const cuenta = {mesa: 'Mesa 1', abierta: false, total: 0, pagado: 0, pendiente: 0};
+  await pintarPublica(cuenta, true, 'pedido');
+  const r = await pub.evaluate(() => {
+    const llamadas = [];
+    window.fetch = async (u, o) => { llamadas.push({u: String(u), body: JSON.parse(o.body)}); return new Response(JSON.stringify({url: '#stripe'})); };
+    menuOpenSection = '1:10'; renderTabContent();
+    cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 12, qty: 2}];
+    renderCartSummary();
+    const boton = document.getElementById('o-submit').textContent.trim();
+    const intro = document.getElementById('app').innerText;
+    document.getElementById('o-privacy-consent').checked = true;
+    submittingRequest = false;
+    const n = __empujados.length;
+    submitMesaQrOrder();
+    return new Promise(ok => setTimeout(() => ok({boton, intro, llamadas, req: __empujados.slice(n)[0] || null}), 400));
+  });
+  assert.match(r.boton, /24[.,]00/, 'el botón no dice el total: ' + r.boton);
+  assert.match(r.boton, /Pagar|Pay/i);
+  assert.equal(r.llamadas.length, 1, 'no se pidió el pago al Worker');
+  assert.equal(r.llamadas[0].body.amount, 24);
+  assert.ok(r.req, 'el pedido no se registró tras aceptar Stripe el pago');
+  assert.equal(r.req.type, 'pedido_mesa'); assert.equal(r.req.pagoAlPedir, true);
+  assert.ok(r.req.clientRef && r.req.clientRef === r.llamadas[0].body.orderRef, 'la referencia del pago y la del pedido no coinciden');
+  assert.equal(r.req.mesaToken, TOKEN);
+  return 'botón «' + r.boton + '» · pago 24 € y pedido con clientRef';
+});
+
+await caso('Web, cobro en la mesa: sin pagar, el botón de siempre y nada se le pide al Worker', async () => {
+  await pintarPublica({mesa: 'Mesa 1', abierta: false, total: 0, pagado: 0, pendiente: 0}, true, 'mesa');
+  const r = await pub.evaluate(() => {
+    const llamadas = [];
+    window.fetch = async (u, o) => { llamadas.push(String(u)); return new Response(JSON.stringify({url: '#stripe'})); };
+    menuOpenSection = '1:10'; renderTabContent();
+    cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 12, qty: 1}];
+    renderCartSummary();
+    document.getElementById('o-privacy-consent').checked = true;
+    submittingRequest = false;
+    const n = __empujados.length;
+    const boton = document.getElementById('o-submit').textContent.trim();
+    submitMesaQrOrder();
+    return new Promise(ok => setTimeout(() => ok({boton, llamadas, req: __empujados.slice(n)[0] || null}), 300));
+  });
+  assert.equal(r.llamadas.length, 0, 'con cobro en la mesa se ha pedido un pago');
+  assert.equal(r.req.pagoAlPedir, undefined);
+  assert.ok(!/€/.test(r.boton), 'el botón enseña un importe a pagar');
+  return 'pedido sin pago';
+});
+
+await caso('App, cobro al pedir: el pedido NO entra en cocina hasta que Stripe confirma, y entra solo, ya pagado, aunque lo acepte el camarero', async () => {
+  await ponerCobro('pedido', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFpagado0001'}));
+  const antes = await estadoMesa1();
+  assert.equal(antes.lineas, null, 'entró en la mesa antes de pagar');
+  assert.equal(antes.esperando, 1); assert.equal(antes.pend, 0, 'sala lo ve como pendiente de aceptar sin haber pagado');
+  assert.equal(antes.espera, 1, 'no se pregunta al banco por este pago');
+  const total = await app.evaluate(() => DB.pedidosMesaQr[0].totalEsperado);
+  assert.equal(total, 24, 'el importe esperado no sale de la carta del negocio (0,01 € del móvil)');
+  const despues = await app.evaluate(async () => { __pagos['PEDREFpagado0001'] = {amount: 24, createdAt: new Date().toISOString()}; await comprobarPagosTarjeta(); return null; }).then(estadoMesa1);
+  assert.deepEqual(despues.lineas, [{q: 2, p: 12, e: 'cocina', pagada: true}]);
+  assert.equal(despues.cuenta.pendiente, 0); assert.equal(despues.cuenta.pagado, 24);
+  assert.equal(despues.status, 'abierta', 'cobrar al pedir cierra la mesa: el camarero aún tiene que servir y cobrar lo que añada');
+  assert.deepEqual(despues.devolver, []); assert.equal(despues.descuadres, 0); assert.equal(despues.pend, 0);
+  return '0,01 € → 24 € de la carta · tras confirmar: en cocina, pagado, mesa abierta';
+});
+
+await caso('Cobro al pedir: pagar de MENOS no mete nada en cocina, queda para el camarero y lo pagado se anota para devolver', async () => {
+  await ponerCobro('pedido', true, false);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFpoco000002'}));
+  await app.evaluate(async () => { __pagos['PEDREFpoco000002'] = {amount: 10}; await comprobarPagosTarjeta(); });
+  const r = await estadoMesa1();
+  assert.equal(r.lineas, null, 'entró en cocina un pedido pagado a medias');
+  assert.equal(r.pend, 1, 'no queda para el camarero');
+  assert.deepEqual(r.devolver, [10]); assert.equal(r.descuadres, 1);
+  const html = await app.evaluate(() => renderQrMesaPendientes());
+  assert.match(html, /Pagó menos|pagat menys|paid less/i, 'la tarjeta de sala no avisa del pago insuficiente');
+  return 'queda pendiente · 10 € a devolver';
+});
+
+await caso('Cobro al pedir: pagar de MÁS acepta el pedido y lo que sobra va a «Pagos sin pedido» (nunca propina)', async () => {
+  await ponerCobro('pedido', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFmucho00003'}));
+  await app.evaluate(async () => { __pagos['PEDREFmucho00003'] = {amount: 30}; await comprobarPagosTarjeta(); });
+  const r = await estadoMesa1();
+  assert.equal(r.lineas.length, 1); assert.deepEqual(r.devolver, [6]);
+  assert.equal(r.cuenta.pagado, 24);
+  return '24 € pedido · 6 € a devolver';
+});
+
+await caso('Cobro al pedir: una confirmación que llega DOS veces no duplica el pedido', async () => {
+  await ponerCobro('pedido', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFdoble00004'}));
+  await app.evaluate(async () => {
+    __pagos['PEDREFdoble00004'] = {amount: 24};
+    await comprobarPagosTarjeta();
+    aplicarPagoConfirmado({orderRef: 'PEDREFdoble00004', amount: 24, createdAt: new Date().toISOString()});
+  });
+  const r = await estadoMesa1();
+  assert.equal(r.lineas.length, 1, 'el pedido entró dos veces'); assert.deepEqual(r.devolver, []);
+  return 'una sola vez';
+});
+
+await caso('Cobro al pedir: llegar SIN pagar (página antigua o consola) nunca entra solo en cocina, ni con «directo a cocina»', async () => {
+  await ponerCobro('pedido', true, false);
+  await app.evaluate(req => __empujar(req), pedidoQr());
+  const r = await estadoMesa1();
+  assert.equal(r.lineas, null, 'un pedido sin pagar entró directo en cocina');
+  assert.equal(r.pend, 1);
+  const html = await app.evaluate(() => renderQrMesaPendientes());
+  assert.match(html, /sin pagar|sense pagar|unpaid/i);
+  return 'queda para el camarero, con aviso';
+});
+
+await caso('Cobro al pedir sin Stripe conectado: el QR funciona como «en la mesa» (no deja el pedido esperando un pago imposible)', async () => {
+  await ponerCobro('pedido', false, false);
+  await app.evaluate(req => __empujar(req), pedidoQr());
+  const r = await estadoMesa1();
+  assert.deepEqual(r.lineas, [{q: 2, p: 12, e: 'cocina', pagada: false}]);
+  return 'entra directo, sin pago';
+});
+
+await caso('Cobro en la mesa: aunque la web mande un «pagoAlPedir», no se espera ningún pago', async () => {
+  await ponerCobro('mesa', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFmesa000005'}));
+  const r = await estadoMesa1();
+  assert.equal(r.esperando, 0); assert.equal(r.espera, 0); assert.equal(r.pend, 1);
+  return 'pendiente normal, sin esperar banco';
+});
+
+await caso('Web con las DOS formas de cobro: el comensal elige tarjeta ahora o pagar en el local, y el botón cambia', async () => {
+  await pintarPublica({mesa: 'Mesa 1', abierta: false, total: 0, pagado: 0, pendiente: 0}, true, 'ambos');
+  const r = await pub.evaluate(() => {
+    const llamadas = [];
+    window.fetch = async (u, o) => { llamadas.push(JSON.parse(o.body)); return new Response(JSON.stringify({url: '#stripe'})); };
+    menuOpenSection = '1:10'; renderTabContent();
+    cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 12, qty: 2}];
+    renderCartSummary();
+    const radios = [...document.querySelectorAll('input[name="m-pago-qr"]')].map(x => x.value + (x.checked ? '*' : ''));
+    const botonTarjeta = document.getElementById('o-submit').textContent.trim();
+    document.querySelector('input[name="m-pago-qr"][value="local"]').click();
+    const botonLocal = document.getElementById('o-submit').textContent.trim();
+    document.getElementById('o-privacy-consent').checked = true; submittingRequest = false;
+    const n = __empujados.length;
+    submitMesaQrOrder();
+    return new Promise(ok => setTimeout(() => {
+      const reqLocal = __empujados.slice(n)[0] || null; const llamLocal = llamadas.length;
+      document.querySelector('input[name="m-pago-qr"][value="tarjeta"]').click();
+      cart = [{key: 'a', recipeId: 100, sectionId: 10, name: 'Hamburguesa', price: 12, qty: 2}]; renderCartSummary();
+      document.getElementById('o-privacy-consent').checked = true;   // enviar el primero repintó el formulario
+      submittingRequest = false;
+      const m = __empujados.length;
+      submitMesaQrOrder();
+      setTimeout(() => ok({radios, botonTarjeta, botonLocal, reqLocal, llamLocal, reqTarjeta: __empujados.slice(m)[0] || null, llamTarjeta: llamadas.length}), 400);
+    }, 400));
+  });
+  assert.deepEqual(r.radios, ['tarjeta*', 'local'], 'no hay selector de forma de pago, o no arranca en tarjeta');
+  assert.match(r.botonTarjeta, /24[.,]00/); assert.ok(!/€/.test(r.botonLocal), 'con «pagar en el local» el botón sigue enseñando un importe a pagar');
+  assert.equal(r.llamLocal, 0, 'eligió pagar en el local y se pidió un pago'); assert.equal(r.reqLocal.pagoAlPedir, undefined);
+  assert.equal(r.llamTarjeta, 1); assert.equal(r.reqTarjeta.pagoAlPedir, true);
+  return 'tarjeta ↔ local';
+});
+
+await caso('App con las DOS formas: un pedido sin pagar es normal (lo acepta el camarero), uno pagado espera al banco', async () => {
+  await ponerCobro('ambos', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr());
+  const a = await estadoMesa1();
+  assert.equal(a.pend, 1, 'el pedido «pagar en el local» no queda para el camarero'); assert.equal(a.esperando, 0);
+  const html = await app.evaluate(() => renderQrMesaPendientes());
+  assert.ok(!/sin pagar|sense pagar|unpaid/i.test(html), 'se marca como «sin pagar» un pedido que el comensal eligió pagar en el local');
+  await ponerCobro('ambos', true, true);
+  await app.evaluate(req => __empujar(req), pedidoQr({pagoAlPedir: true, clientRef: 'PEDREFambos00006'}));
+  const b = await estadoMesa1();
+  assert.equal(b.esperando, 1); assert.equal(b.lineas, null);
+  await app.evaluate(async () => { __pagos['PEDREFambos00006'] = {amount: 24}; await comprobarPagosTarjeta(); });
+  const c = await estadoMesa1();
+  assert.equal(c.lineas.length, 1); assert.equal(c.cuenta.pendiente, 0);
+  return 'local → pendiente normal · tarjeta → espera y entra pagado';
 });
 
 await caso('La pantalla de la mesa cabe en 320 y 360 px sin scroll lateral', async () => {

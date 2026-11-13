@@ -703,16 +703,30 @@ function existenciasMes(year, month){
   const e = (DB.ge.existencias || {})[existenciasClave(year, month)];
   return e && e.v != null ? parseFloat(e.v) : null;
 }
+/* Devuelve true si la foto cambió (para que quien llame guarde). ⚠️ Antes SOLO se tomaba al abrir Gestión Económica, y el texto prometía que
+   «se va actualizando sola»: si no se entraba allí los últimos días del mes, el valor de fin de mes era el de la última vez que se entró y la
+   variación salía mal. Ahora la repite cada pocos minutos la propia app (ver `existenciasFotoPeriodica`, js/app.js). */
 function fotoExistenciasAuto(){
   try{
-    if(typeof stockTotalValueBreakdown !== 'function' || !DB.ingredients) return;
+    if(typeof stockTotalValueBreakdown !== 'function' || !DB.ingredients) return false;
     const d = new Date(), k = existenciasClave(d.getFullYear(), d.getMonth());
     DB.ge.existencias = DB.ge.existencias || {};
     const e = DB.ge.existencias[k];
-    if(e && e.manual) return;
+    if(e && e.manual) return false;
     const v = Math.round(stockTotalValueBreakdown().total * 100) / 100;
-    if(!e || Math.abs((parseFloat(e.v)||0) - v) > 0.005) DB.ge.existencias[k] = {v, ts: new Date().toISOString()};
+    if(!e || Math.abs((parseFloat(e.v)||0) - v) > 0.005){ DB.ge.existencias[k] = {v, ts: new Date().toISOString()}; return true; }
   }catch(err){ console.error('Foto de existencias', err); }
+  return false;
+}
+// Solo el propietario, con la pantalla a la vista y sin leer otro negocio: así no hay varios aparatos reescribiendo lo mismo ni ruido en la nube.
+function existenciasFotoPeriodica(){
+  try{
+    if(typeof document !== 'undefined' && document.hidden) return;
+    if(typeof vgLeyendoOtroNegocio !== 'undefined' && vgLeyendoOtroNegocio) return;
+    const ses = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+    if(!ses || ses.type !== 'owner') return;
+    if(fotoExistenciasAuto()) saveDB();
+  }catch(e){}
 }
 // Positivo = el almacén bajó (se consumió más de lo comprado): más gasto.
 function geVariacionExistenciasMes(year, month){
@@ -722,6 +736,35 @@ function geVariacionExistenciasMes(year, month){
   const ini = existenciasMes(prev.getFullYear(), prev.getMonth());
   if(fin == null || ini == null) return 0;
   return ini - fin;
+}
+
+// --- Punto de equilibrio del mes, con las cifras REALES (12/11) ---------------------------------------------------------
+// UNA sola cuenta para el Panel de Control. Separa lo que NO depende de lo que se vende (fijos) de lo que SÍ (variable), con
+// la misma contabilidad que la Cuenta de Resultados, de modo que «has superado el equilibrio» ⇔ «el resultado del mes ≥ 0»:
+//   resultado = ventas + otros ingresos − variable − fijos        (idéntico a geResultadoAntesImpMes: lo vigila test/panel-equilibrio.mjs)
+//   · FIJOS    = personal + gastos fijos (sin la retribución del titular si es persona física) + amortización + intereses − otros ingresos
+//   · VARIABLE = compras (gasto variable) + variación de existencias + comisiones de plataformas → %, sobre las ventas netas
+// ⚠️ Antes los fijos eran «ventas − variables − resultado», que metía en los fijos las comisiones y la variación de existencias
+// (suben y bajan con las ventas y con la foto del almacén) y inflaba el equilibrio. Con pocos datos (menos de 7 días del mes o sin
+// ventas) el % variable real es ruido —una factura grande entrada el día 2 lo dispara—: se usa el objetivo del negocio
+// (food cost objetivo + «otros costes variables» de Punto de equilibrio) y se dice.
+function geEquilibrioMes(year, month, diaDelMes){
+  const S = geFacturacionNetaMes(year, month);
+  const compras = geTotalVariablesNetoMes(year, month), exis = geVariacionExistenciasMes(year, month), comis = geComisionesMes(year, month);
+  const otrosIng = geOtrosIngresosNetoMes(year, month);
+  const fijosOp = geFijosDeduciblesForMonth(year, month);
+  const personal = Math.min(fijosOp, Math.max(0, gePersonalDeducibleForMonth(year, month)));
+  const amort = geAmortizacionMes(year, month), intereses = geInteresesMes(year, month);
+  const fijos = Math.max(0, fijosOp + amort + intereses - otrosIng);
+  const variable = compras + exis + comis;
+  const vReal = S > 0 ? Math.max(0, variable / S) : null;
+  const fcObj = geFoodCostObjPct() / 100, otrosPct = ((DB.ge.config || {}).peOtrosPct || 0) / 100;
+  const vObjetivo = Math.min(0.95, fcObj + otrosPct);
+  const dia = diaDelMes != null ? diaDelMes : 31;
+  const suficientes = vReal != null && dia >= 7;
+  const v = suficientes ? Math.min(0.95, vReal) : vObjetivo;
+  return {S, compras, exis, comis, otrosIng, personal, gastosFijos: fijosOp - personal, amort, intereses, fijos, variable, vReal, vObjetivo, v, suficientes,
+    cuotasBanco: geCapexCuotaMes(year, month), resultado: S + otrosIng - variable - fijosOp - amort - intereses};
 }
 
 // Resultado antes de impuestos de un mes — misma fórmula que GE → Cuenta

@@ -9394,6 +9394,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setInterval(() => {
     updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders();
     if(typeof avisosPintar === 'function') avisosPintar();   // cambia el día: cumpleaños, mantenimientos vencidos…
+    if(typeof existenciasFotoPeriodica === 'function') existenciasFotoPeriodica();   // valor del almacén a fin de mes, sin depender de abrir Gestión
     if(typeof marcharPedidosProgramadosQueYaTocan === 'function') marcharPedidosProgramadosQueYaTocan();
   }, 60000);
 

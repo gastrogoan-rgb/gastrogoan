@@ -2871,7 +2871,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .cp-ok{font-size:12.5px;color:var(--olive);display:inline-flex;gap:5px;align-items:center}
 /* Menú de tres puntos (norma 30/10): editar y borrar viven dentro de «⋯». Ver ggMenuAcciones en js/ui.js */
 .mn-btn{min-width:40px;padding:0 10px}
-.mn-menu{position:fixed;z-index:200100;min-width:190px;max-width:calc(100vw - 16px);background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:0 6px 22px rgba(28,26,23,.14);padding:4px}
+.mn-menu{position:fixed;z-index:200100;min-width:190px;max-width:calc(100vw - 16px);max-height:calc(var(--vvh,100dvh) - 16px);overflow-y:auto;background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:0 6px 22px rgba(28,26,23,.14);padding:4px}
 .mn-menu:focus{outline:none}
 .mn-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;background:none;border:0;border-radius:3px;font-family:inherit;font-size:14px;color:var(--ink);text-align:left;cursor:pointer}
 .mn-item .ti{font-size:16px;color:var(--muted);flex:none}
@@ -4811,6 +4811,8 @@ span.dt-punto{position:absolute;border-radius:50%}
 /* Gastos Variables (6/11): comparte filas y tarjetas con Gastos Fijos */
 .gv-fc-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
 .gv-nota{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:12px 16px;background:#fff;border:1px solid var(--hair);border-radius:4px;font-size:13.5px}
+/* Existencias (12/11): línea que explica qué le hace el almacén al resultado del mes. */
+.gv-nota-x{flex:1 1 100%;margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted)}
 .gv-nota > .ti{font-size:18px;color:var(--muted)}
 .gv-nota-t{flex:1;min-width:200px}
 .gv-nota-v{font-family:var(--mono);font-weight:600;margin:0 6px}
@@ -5767,6 +5769,25 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-st.mal .dp-eq-st-v{color:#B4432F} .dp-eq-st.bien .dp-eq-st-v{color:var(--olive)}
 .dp-eq-nota{color:var(--muted);margin:10px 0 0;display:flex;gap:6px}
 .dp-eq-vacio{margin:6px 0 14px;color:var(--muted)}
+/* (12/11) Título de cada tarjeta y selector de periodo EN LA MISMA FILA (antes el selector caía debajo, a la derecha, y dejaba un hueco). Solo en PC y
+   tablet: en móvil el título es la cabecera plegable y el selector va debajo, a todo ancho. El contenedor interior se «disuelve» (display:contents)
+   para que el título y `.dp-cab` sean celdas de la misma rejilla; todo lo demás ocupa la fila entera. */
+@media (min-width:761px){
+  .dp-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:14px;align-items:center}
+  .dp-card > h3{grid-column:1;grid-row:1;margin:0 0 12px}
+  .dp-card > div[id]{display:contents}
+  .dp-card > div[id] > *{grid-column:1 / -1}
+  .dp-card > div[id] > .dp-cab{grid-column:2;grid-row:1;margin:0 0 12px;justify-content:flex-end}
+}
+.dp-eq-graf{margin-top:38px}
+.dp-eq-como{margin-top:12px;border-top:1px solid var(--hair);padding-top:8px}
+.dp-eq-como summary{cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-height:36px;display:flex;align-items:center}
+.dp-eq-tabla,.dp-eq-tabla tbody{display:block;width:100%;margin:6px 0;font-size:13.5px}
+.dp-eq-tabla tr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid var(--hair)}
+.dp-eq-tabla td{padding:6px 0;min-width:0;overflow-wrap:break-word}
+.dp-eq-tabla td.n{flex:none;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dp-eq-tabla tr.t{border-bottom-color:var(--ink)}
+.dp-eq-como p{color:var(--muted);margin:6px 0 0}
 .dp-eq-graf{margin-top:16px;position:relative;height:120px;border-bottom:1px solid var(--hair)}
 .dp-eq-graf svg{width:100%;height:100%;display:block;overflow:visible}
 .dp-eq-g-meta{stroke:var(--hair);stroke-dasharray:3 4;fill:none}
@@ -6636,3 +6657,23 @@ small{font-size:max(.8333em, 11px)}
 .rw-fb-pub.is-on,.rw-fb-editor.is-on{box-shadow:0 0 0 3px rgba(74,93,78,.4)}
 .rw-fb-editor{background:#FAFAF7;border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
 .rw-fb-editor code{font-family:var(--mono);font-size:10.5px;color:#555}
+
+
+/* ════ NORMA: VENTANAS Y AVISOS SIEMPRE ENTEROS (13/11, test/ventanas-visibles.mjs) ════
+   El dueño: «las ventanas se quedan comidas y no se ve el recuadro entero centrado; el botón negro de aviso, igual». Causa en un móvil real:
+   la ventana se centraba en la pantalla GRANDE (layout viewport) y el teclado o las barras del navegador se comían parte de ella.
+   Ahora todo se mide contra el área VISIBLE (--vvh / --vvt / --vvb, ggSincronizarAreaVisible en js/ui.js):
+     · la capa de ventanas ocupa exactamente lo que se ve y la ventana nunca pasa de ahí (con 16 px de aire; en móvil es una hoja pegada abajo);
+     · el aviso negro va SIEMPRE por encima de lo que tape abajo y con 16 px de aire por todos los lados;
+     · cualquier menú flotante lleva tope de altura y scroll propio. Una pantalla o ventana nueva no tiene que hacer nada: nace bien. */
+.modal-overlay{top:var(--vvt,0px);left:0;right:0;bottom:auto;height:var(--vvh,100dvh)}
+.modal{max-height:calc(var(--vvh,100dvh) - 32px)}
+.modal.modal-xl{max-height:calc(var(--vvh,100dvh) - 32px)}
+.modal.modal-order{max-height:calc(var(--vvh,100dvh) - 16px)}
+.toast{bottom:calc(var(--vvb,0px) + 24px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px)}
+@media (max-width:760px){
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{max-height:var(--vvh,100dvh)}
+  .modal.modal-xl,.modal.modal-order{max-height:var(--vvh,100dvh)}
+  .toast{bottom:calc(var(--vvb,0px) + 20px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px)}
+}

@@ -28,7 +28,7 @@ function appDeCadaUso(fuente, ruta){
   lineas.forEach((l, i) => {
     // Solo cuenta la app que se RECIBE en el then: `firebase.app()` es la
     // del propio negocio y no pasa por aquí.
-    const m = l.match(/get(PublicMirror|Platform[A-Za-z]*)App\(\)\.then\(app/);
+    const m = l.match(/get(PublicMirror|Platform[A-Za-z]*)App\(\)\.then\(app/) || l.match(/app = await get(PublicMirror)App\(\)/);
     if(m) ultima = m[0];
     if(l.includes(ruta) && /\bapp\.database\(\)/.test(l)) usos.push({linea: i+1, app: ultima, texto: l.trim().slice(0,60)});
   });

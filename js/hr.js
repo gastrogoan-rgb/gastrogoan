@@ -1527,6 +1527,17 @@ const GE = (function(){
         <i class="ti ti-building-warehouse"></i>
         <span class="gv-nota-t"><b>${t('hr.ex.title').replace('${mes}', getMeses()[mes])}</b> <span class="gv-nota-v">${e ? fmtMoney(e.v) : '—'}</span> <small>${e ? (e.manual ? t('hr.ex.manual') : t('hr.ex.auto')) : t('hr.ex.none')}</small></span>
         <button type="button" class="btn btn-sm" onclick="GE.editarExistencias(${gvYear},${mes})"><i class="ti ti-edit"></i> ${t('hr.ex.contar')}</button>
+        ${(() => {
+          // Qué le hace esto al resultado de ESTE mes, dicho con claridad (o por qué no hace nada).
+          const fin = existenciasMes(gvYear, mes), pd = new Date(gvYear, mes - 1, 1), ini = existenciasMes(pd.getFullYear(), pd.getMonth());
+          if((ge().config || {}).usarExistencias === false || fin == null) return '';
+          if(ini == null) return `<p class="gv-nota-x">${escapeHtml(gl({es:'Falta el valor del mes anterior (' + getMeses()[pd.getMonth()] + '): este mes no se aplica ninguna variación. Se completa solo cuando haya dos meses seguidos.', ca:'Falta el valor del mes anterior (' + getMeses()[pd.getMonth()] + '): aquest mes no s\'aplica cap variació. Es completa sol quan hi hagi dos mesos seguits.', en:'The previous month\'s value is missing (' + getMeses()[pd.getMonth()] + '): no change in stock is applied this month. It fills in by itself once there are two months in a row.'}))}</p>`;
+          const v = geVariacionExistenciasMes(gvYear, mes);
+          const txt = Math.abs(v) < 0.005 ? gl({es:'El almacén no ha cambiado: no se ajusta el gasto.', ca:'El magatzem no ha canviat: no s\'ajusta la despesa.', en:'Stock has not changed: spending is not adjusted.'})
+            : v > 0 ? gl({es:`El almacén ha bajado ${fmtMoney(v)}: se consumió más de lo comprado, así que el gasto de producto sube ${fmtMoney(v)} en el resultado.`, ca:`El magatzem ha baixat ${fmtMoney(v)}: es va consumir més del que es va comprar, així que la despesa de producte puja ${fmtMoney(v)} al resultat.`, en:`Stock went down by ${fmtMoney(v)}: more was used than bought, so product cost goes up by ${fmtMoney(v)} in the result.`})
+            : gl({es:`El almacén ha subido ${fmtMoney(-v)}: parte de lo comprado sigue guardado y aún no es gasto, así que el gasto de producto baja ${fmtMoney(-v)} en el resultado (y con él el impuesto de este mes).`, ca:`El magatzem ha pujat ${fmtMoney(-v)}: part del que es va comprar continua guardat i encara no és despesa, així que la despesa de producte baixa ${fmtMoney(-v)} al resultat (i amb ella l'impost d'aquest mes).`, en:`Stock went up by ${fmtMoney(-v)}: part of what was bought is still in storage and not yet an expense, so product cost goes down by ${fmtMoney(-v)} in the result (and so does this month's tax).`});
+          return `<p class="gv-nota-x">${escapeHtml(txt)}</p>`;
+        })()}
       </div>`;
     }
     const allItems = variablesMes(mes,gvYear);

@@ -38,6 +38,8 @@ await page.evaluate(async ([code, dburl]) => {
   localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user: 'jefe', authKey: 'k'.repeat(20), pinHash: 'h'}));
   localStorage.setItem('gastrogoan_access_session', JSON.stringify({type: 'owner', ts: Date.now()}));
   Object.assign(DB.business, {name: 'Casa Paco', netlifySetupDone: true, extConnPromptSeen: true, tourSeen: true, categoryIconHintSeen: true});
+  // La sonda solo mira el QR de mesa (lo que las reglas viejas no traen) si el negocio lo usa: es el caso que avisa de reglas antiguas.
+  DB.business.qrMesa = {activo: true, aceptaCamarero: true};
   DB.business.ownFirebase = {apiKey: 'fake-api-key', databaseURL: dburl};
   await saveDB();
 }, [CODE, DB_NEGOCIO]);
