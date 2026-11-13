@@ -2871,7 +2871,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .cp-ok{font-size:12.5px;color:var(--olive);display:inline-flex;gap:5px;align-items:center}
 /* Menú de tres puntos (norma 30/10): editar y borrar viven dentro de «⋯». Ver ggMenuAcciones en js/ui.js */
 .mn-btn{min-width:40px;padding:0 10px}
-.mn-menu{position:fixed;z-index:200100;min-width:190px;max-width:calc(100vw - 16px);background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:0 6px 22px rgba(28,26,23,.14);padding:4px}
+.mn-menu{position:fixed;z-index:200100;min-width:190px;max-width:calc(100vw - 16px);max-height:calc(var(--vvh,100dvh) - 16px);overflow-y:auto;background:#fff;border:1px solid var(--hair);border-radius:3px;box-shadow:0 6px 22px rgba(28,26,23,.14);padding:4px}
 .mn-menu:focus{outline:none}
 .mn-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;background:none;border:0;border-radius:3px;font-family:inherit;font-size:14px;color:var(--ink);text-align:left;cursor:pointer}
 .mn-item .ti{font-size:16px;color:var(--muted);flex:none}
@@ -6656,3 +6656,23 @@ small{font-size:max(.8333em, 11px)}
 .rw-fb-pub.is-on,.rw-fb-editor.is-on{box-shadow:0 0 0 3px rgba(74,93,78,.4)}
 .rw-fb-editor{background:#FAFAF7;border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
 .rw-fb-editor code{font-family:var(--mono);font-size:10.5px;color:#555}
+
+
+/* ════ NORMA: VENTANAS Y AVISOS SIEMPRE ENTEROS (13/11, test/ventanas-visibles.mjs) ════
+   El dueño: «las ventanas se quedan comidas y no se ve el recuadro entero centrado; el botón negro de aviso, igual». Causa en un móvil real:
+   la ventana se centraba en la pantalla GRANDE (layout viewport) y el teclado o las barras del navegador se comían parte de ella.
+   Ahora todo se mide contra el área VISIBLE (--vvh / --vvt / --vvb, ggSincronizarAreaVisible en js/ui.js):
+     · la capa de ventanas ocupa exactamente lo que se ve y la ventana nunca pasa de ahí (con 16 px de aire; en móvil es una hoja pegada abajo);
+     · el aviso negro va SIEMPRE por encima de lo que tape abajo y con 16 px de aire por todos los lados;
+     · cualquier menú flotante lleva tope de altura y scroll propio. Una pantalla o ventana nueva no tiene que hacer nada: nace bien. */
+.modal-overlay{top:var(--vvt,0px);left:0;right:0;bottom:auto;height:var(--vvh,100dvh)}
+.modal{max-height:calc(var(--vvh,100dvh) - 32px)}
+.modal.modal-xl{max-height:calc(var(--vvh,100dvh) - 32px)}
+.modal.modal-order{max-height:calc(var(--vvh,100dvh) - 16px)}
+.toast{bottom:calc(var(--vvb,0px) + 24px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px)}
+@media (max-width:760px){
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{max-height:var(--vvh,100dvh)}
+  .modal.modal-xl,.modal.modal-order{max-height:var(--vvh,100dvh)}
+  .toast{bottom:calc(var(--vvb,0px) + 20px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px)}
+}

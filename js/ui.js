@@ -2167,6 +2167,8 @@ function ggAbrirMenuAcciones(btn, ev){
   left = Math.min(Math.max(8, left), window.innerWidth - mw - 8);
   let top = r.bottom + 4;
   if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);   // sin sitio debajo, se abre hacia arriba
+  // Un menú más alto que la pantalla (muchas acciones en un móvil apaisado) se salía por abajo: se ajusta al hueco y hace scroll por dentro.
+  if(top + mh > window.innerHeight - 8) top = Math.max(8, window.innerHeight - mh - 8);
   menu.style.left = left + 'px';
   menu.style.top = top + 'px';
   btn.setAttribute('aria-expanded', 'true');
@@ -2269,6 +2271,7 @@ function ggPeriodoAbrir(btn){
   let left = Math.min(Math.max(8, r.left), window.innerWidth - mw - 8);
   let top = r.bottom + 4;
   if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+  if(top + mh > window.innerHeight - 8) top = Math.max(8, window.innerHeight - mh - 8);
   menu.style.left = left + 'px'; menu.style.top = top + 'px';
   btn.setAttribute('aria-expanded', 'true');
   ggMenuAbierto = {btn, menu};
@@ -2317,6 +2320,25 @@ function ggPlegableAbierta(clave){ return ggPlegablesAbiertos.has(String(clave))
    enteras al guardar o cambiar de pestaña. En PC no hace nada (las reglas viven en el @media del CSS). */
 const GG_ACC_ABIERTOS = new Set(), GG_ACC_CERRADOS = new Set();
 function ggAccMovil(){ return !!(window.matchMedia && window.matchMedia('(max-width:760px)').matches); }
+/* ── Lo que REALMENTE se ve (13/11) ──────────────────────────────────────────────────────────────────────────────────────────
+   En un móvil, la barra de direcciones, el teclado y la barra de gestos cambian el área visible sin que `position:fixed` lo note
+   (iOS en particular: el teclado se come la parte baja de la ventana centrada). `visualViewport` sí lo sabe. Se publica en tres variables
+   que usan las ventanas (`.modal-overlay`), los avisos (`.toast`) y los menús flotantes:
+     --vvh = alto visible · --vvt = cuánto se ha desplazado la parte visible desde arriba · --vvb = lo que tapa por abajo (teclado, barra). */
+function ggSincronizarAreaVisible(){
+  try{
+    const vv = window.visualViewport, root = document.documentElement;
+    const h = vv ? vv.height : window.innerHeight, t = vv ? vv.offsetTop : 0;
+    root.style.setProperty('--vvh', Math.round(h) + 'px');
+    root.style.setProperty('--vvt', Math.round(t) + 'px');
+    root.style.setProperty('--vvb', Math.max(0, Math.round(window.innerHeight - h - t)) + 'px');
+  }catch(e){}
+}
+if(typeof window !== 'undefined'){
+  ggSincronizarAreaVisible();
+  window.addEventListener('resize', ggSincronizarAreaVisible);
+  if(window.visualViewport){ window.visualViewport.addEventListener('resize', ggSincronizarAreaVisible); window.visualViewport.addEventListener('scroll', ggSincronizarAreaVisible); }
+}
 function ggAccPreparar(){
   if(!ggAccMovil()) return;
   const vista = document.querySelector('.view.active'); if(!vista) return;

@@ -197,6 +197,8 @@ lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impres
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
+lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
+lanzar; node test/panel-equilibrio.mjs > "$SALIDA/panelequil.txt" 2>&1 & P195=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -424,5 +426,7 @@ espera $P190 "Impresos: los 22 documentos (ficha con foto, protocolos, vale, arq
 espera $P191 "QR propio (reseña del ticket, VeriFactu, QR de mesas y de reservas): se dibuja en la app, sin servicio externo, y se LEE con un lector real en las 40 versiones, con acentos y con tamaños distintos" "$SALIDA/qrlocal.txt" "el QR propio se genera y se lee"
 espera $P192 "Variación de existencias: el almacén que sube/baja cambia el resultado con las cuentas a mano, sin mes anterior no se aplica nada, la foto automática y la explicación en Gastos Variables" "$SALIDA/existencias.txt" "la variación de existencias hace las cuentas bien"
 espera $P193 "Cobro al pedir con Stripe SIMULADO de punta a punta: web real + Worker real + aviso firmado + plataforma + app (abandono, firma falsa, reintento, ataque de 0,50 €, Stripe caído, dos mesas)" "$SALIDA/qrmesastripe.txt" "los 11 casos pasaron"
+espera $P194 "Ventanas y avisos siempre enteros: 9 tamaños, 5 ventanas, avisos, desplegables flotantes y teclado abierto" "$SALIDA/ventanasvis.txt" "ventanas y avisos siempre enteros"
+espera $P195 "Punto de equilibrio del Panel: cuentas a mano, coincide con Gestión Económica, comisiones y existencias fuera de los fijos, préstamo explicado" "$SALIDA/panelequil.txt" "el equilibrio del Panel es cierto"
 
 exit $FALLOS
