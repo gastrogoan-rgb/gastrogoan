@@ -145,10 +145,15 @@ await caso('PANTALLAS: en cada ventana de alta (cliente, empleado, ingrediente, 
 
 await caso('PANTALLA: Mi Negocio — escribir en una tarjeta con «Guardar» y cambiar de pantalla pregunta (con las tres salidas)', async () => {
   await page.evaluate(async () => { ggGDescartar(null); document.getElementById('gg-salida-sobre')?.remove(); try{ closeModal(); }catch(e){} currentFolder = 'gestion'; navigate('minegocio'); await new Promise(r => setTimeout(r, 900)); });
-  const campo = await page.evaluate(() => { const i = [...document.querySelectorAll('#view-minegocio input[type=text], #view-minegocio input:not([type]), #view-minegocio textarea')].find(x => x.offsetParent && ggGVigilable(x) && ggGContexto(x)); return i ? (i.id ? '#' + i.id : null) : null; });
-  assert.ok(campo, 'Mi Negocio no tiene ningún campo con botón de guardar en su tarjeta');
-  await page.evaluate(sel => document.querySelector(sel).scrollIntoView({block: 'center'}), campo);
-  await w(300); await page.focus(campo); await page.keyboard.type('zz');
+  const candidatos = await page.evaluate(() => [...document.querySelectorAll('#view-minegocio input[type=text], #view-minegocio input:not([type]), #view-minegocio textarea')].filter(x => x.offsetParent && ggGVigilable(x) && ggGContexto(x) && x.id).map(x => '#' + x.id));
+  assert.ok(candidatos.length, 'Mi Negocio no tiene ningún campo con botón de guardar en su tarjeta');
+  let campo = null;
+  for(const c of candidatos){
+    await page.evaluate(sel => document.querySelector(sel).scrollIntoView({block: 'center'}), c);
+    await w(150); await page.focus(c); await page.keyboard.sendCharacter('zz');
+    if(await page.evaluate(sel => /zz/.test(document.querySelector(sel).value), c)){ campo = c; break; }
+  }
+  assert.ok(campo, 'no se pudo escribir en ningún campo de Mi Negocio: ' + candidatos.slice(0, 5) + JSON.stringify(await page.evaluate(() => ({act: document.activeElement && (document.activeElement.id || document.activeElement.tagName), ov: document.getElementById('modal-overlay').className, sobre: !!document.getElementById('gg-salida-sobre'), flag: ggSalidaSobre, hidden: document.hidden, focus: document.hasFocus(), inert: [...document.querySelectorAll('[inert]')].length, val: (document.querySelector('#dc-motivo')||{}).value}))));
   const dbg = await page.evaluate(sel => { const e = document.querySelector(sel), r = e.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return {v: document.querySelector(sel).value, act: document.activeElement && document.activeElement.id, pend: ggGPendientes(false).length, cmp: GG_G_CAMPOS.size, enPunto: t ? (t.id || t.className || t.tagName) : null, rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], modal: document.getElementById('modal-overlay').className}; }, campo);
   await page.evaluate(() => navigate('home')); await w(400);
   const txt = await page.evaluate(() => document.getElementById('modal-box').innerText);
@@ -165,7 +170,7 @@ await caso('PANTALLA: Mi Negocio — escribir en una tarjeta con «Guardar» y c
 await caso('PANTALLA: sin tocar nada, cambiar de pantalla no pregunta; los ajustes que se aplican solos tampoco', async () => {
   await page.evaluate(async () => { currentFolder = 'gestion'; navigate('minegocio'); await new Promise(r => setTimeout(r, 800)); navigate('home'); await new Promise(r => setTimeout(r, 400)); });
   assert.ok(await page.evaluate(() => document.getElementById('view-home').classList.contains('active')));
-  assert.equal(await page.evaluate(() => /sin guardar/i.test(document.getElementById('modal-box').innerText)), false);
+  assert.equal(await page.evaluate(() => /sin guardar/i.test(document.getElementById('modal-box').innerText)), false, JSON.stringify(await page.evaluate(() => ({txt: document.getElementById('modal-box').innerText.slice(0, 160), pend: ggGPendientes(true).map(p => [p.raiz.id || p.raiz.className, p.campos.map(c => c.id)]), vista: document.querySelector('.view.active').id}))));
 });
 
 await caso('PEDIDOS: un pedido a un proveedor con cantidades puestas avisa al cambiar de pestaña, y «Guardar y salir» lo deja como borrador', async () => {

@@ -2448,8 +2448,11 @@ function ggPreguntarSalida(ed){
 }
 function ggRespondeSalida(r){
   const f = ggSalidaResolve; ggSalidaResolve = null;
-  if(ggSalidaSobre){ ggSalidaSobre = false; const d = document.getElementById('gg-salida-sobre'); if(d) d.remove(); }
-  else closeModal();
+  // Se decide por lo que HAY en pantalla, no por una bandera: si la capa de aviso desapareció por otro camino, la bandera quedaba puesta y la
+  // ventana normal ya no se cerraba nunca.
+  const d = document.getElementById('gg-salida-sobre');
+  ggSalidaSobre = false;
+  if(d) d.remove(); else closeModal();
   if(f) f(r);
 }
 async function ggGuardarSiHaceFalta(accion){
