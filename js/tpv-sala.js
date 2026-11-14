@@ -754,7 +754,7 @@ function tpvPedidoFichaHtml(o){
       ${o.time ? `<span class="tp-ped-hora${urgente ? ' is-urgente' : ''}"><i class="ti ${urgente ? 'ti-alarm' : 'ti-clock'}"></i> ${escapeHtml(o.time)}</span>` : (mins !== null ? `<span class="tp-ped-hora">${mins}'</span>` : '')}
     </span>
     <b class="tp-ped-nom">${escapeHtml(nom)}</b>
-    ${o.clientRef && o.origenOnline ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
+    ${o.clientRef ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
     ${dir ? `<span class="tp-ped-dir"><i class="ti ti-map-pin"></i> ${escapeHtml(dir)}</span>` : ''}
     ${tpvPedidoLineasHtml(o)}
     ${o.instrucciones ? `<span class="tp-ped-dir"><i class="ti ti-door-enter"></i> ${escapeHtml(o.instrucciones)}</span>` : ''}

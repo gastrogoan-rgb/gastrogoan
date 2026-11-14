@@ -136,6 +136,7 @@ await caso('Pedido por teléfono: crea el pedido en el mismo flujo (con zona y h
   await new Promise(r => setTimeout(r, 200));
   const o = DB.tpvOrders[0];
   if(!o || o.tipo !== 'delivery' || o.clienteNombre !== 'Luis' || o.costeEnvio !== 3 || !o.origenTelefono) throw new Error('pedido mal creado: ' + JSON.stringify(o));
+  if(!o.clientRef || o.clientRef.length < 12) throw new Error('el pedido por teléfono necesita un token de 12+ caracteres para el tablero y su número');
   return null;
 }));
 
@@ -228,6 +229,14 @@ await caso('Orden de cocina: con los minutos de las fichas, el plato más largo 
   const r = entOrdenCocina(o); if(!r || r.length !== 2) throw new Error('no calculó');
   if(r[0].min !== 45 || r[1].min !== 5) throw new Error('orden por duración: ' + JSON.stringify(r.map(x => x.min)));
   if(r[1].empezar - r[0].empezar !== 40 * 60000) throw new Error('la ensalada debe empezar 40 min después de la carrillera');
+  return null;
+}));
+
+await caso('Pantalla de listos: botón propio con enlace, copiar y abrir; ya no vive en el kit; los pedidos por teléfono entran en el tablero', () => app.evaluate(() => {
+  if(!entBarraHtml().includes('entAbrirTablero')) throw new Error('falta el botón «Pantalla de listos»');
+  entAbrirTablero(); const t = document.body.textContent; if(!/listos=1/.test(t) || !/Copiar enlace/.test(t) || !/Abrir pantalla/.test(t)) throw new Error('la ventana no trae enlace, copiar y abrir'); closeModal();
+  entAbrirKit(); if(/listos=1/.test(document.body.textContent)) throw new Error('el tablero no debe estar en el kit de captación'); closeModal();
+  const tok = entNuevoToken(); if(tok.length < 12) throw new Error('token corto');
   return null;
 }));
 
