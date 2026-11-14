@@ -104,6 +104,7 @@ const esRuido = s =>
   s.length < 3 ||                          // símbolos, iniciales, unidades
   !/[a-záéíóúàèòïüçñ]/i.test(s) ||         // sin letras: números, fechas, importes
   /^[\d\s.,:/€%+\-()]+$/.test(s) ||        // "1.850,00 €", "21/09", "09:00 - 17:00"
+  /^[+\-]?\d+ ?(min|h|km|kg|g|l)$/i.test(s) ||   // una cifra con su unidad internacional («+10 min», «30 min»)
   IGUALES_DE_VERDAD.has(s.toLowerCase()) ||
   DATOS_SEMBRADOS.some(d => s.includes(d));
 

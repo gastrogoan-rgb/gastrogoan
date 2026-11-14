@@ -55,7 +55,7 @@ await caso('Un pedido de Delivery usa el texto de reparto, no el de recoger', as
     renderTrackStatus({status:'listo', tipo:'delivery', updatedAt: new Date().toISOString()});
     return document.getElementById('app').textContent;
   });
-  assert.ok(texto.includes('en reparto'), 'un pedido a domicilio "listo" debe decir que está en reparto');
+  assert.ok(texto.includes('esperando al repartidor'), 'un pedido a domicilio "listo" debe decir que espera al repartidor (el «en camino» llega con «Salgo»)');
   assert.ok(!texto.includes('Listo para recoger'), 'no debe mostrar el texto de recoger en un pedido a domicilio');
 });
 

@@ -1100,6 +1100,8 @@ let yendoAPagar = false;       // true justo antes de saltar a la página de pag
 // personalizar el texto). Nunca salta al ir a pagar, ni con el carrito vacío, ni en pantallas de solo lectura (seguimiento, gestión de reserva).
 window.addEventListener('beforeunload', e => {
   if(yendoAPagar) return;
+  // Un navegador automatizado (las pruebas) no tiene a nadie delante a quien preguntar: el diálogo bloquearía cada navegación.
+  if(navigator.webdriver && !window.__ggForzarAvisoSalida) return;
   let a_medias = Array.isArray(cart) && cart.length > 0;
   if(!a_medias){
     const campos = ['o-name', 'o-phone', 'o-email', 'o-address', 'm-name', 'r-name', 'r-phone', 'r-email'];
@@ -5721,21 +5723,21 @@ function entTrackExtraHtml(data, status, esDelivery){
   if((status === 'pendiente' || status === 'aceptado') && !data.cancelPedida) acc.push(`<button type="button" class="btn" onclick="entCancelarPedido()">${escapeHtml(t('ent.cancelar'))}</button>`);
   if(status === 'entregado' || (!esDelivery && status === 'listo')) acc.push(`<button type="button" class="btn" onclick="entIncidenciaAbrir()">${escapeHtml(t('ent.incidencia'))}</button>`);
   if(acc.length) h += `<div class="ent-acc">${acc.join('')}</div><div id="ent-acc-msg" class="ent-sub" role="status"></div>`;
-  if(!final && 'Notification' in window){
+  if(!final && typeof Notification !== 'undefined'){
     if(Notification.permission === 'default') h += `<div class="ent-acc"><button type="button" class="btn" onclick="entPedirAvisos()">${escapeHtml(t('ent.avisar'))}</button></div>`;
     else if(Notification.permission === 'granted') h += `<p class="ent-sub">${escapeHtml(t('ent.avisar.on'))}</p>`;
   }
   return h;
 }
 function entPedirAvisos(){
-  try{ Notification.requestPermission().then(() => { if(lastTrackStatusData) renderTrackStatus(lastTrackStatusData); }); }catch(e){}
+  try{ if(typeof Notification === 'undefined') return; Notification.requestPermission().then(() => { if(lastTrackStatusData) renderTrackStatus(lastTrackStatusData); }); }catch(e){}
 }
 function entNotificarCambio(status, head){
   try{
     if(entEstadoVisto !== null && entEstadoVisto !== status){
       try{ if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }catch(e){}
       document.title = '● ' + head + ' · ' + ((DB.business || {}).name || '');
-      if('Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification((DB.business || {}).name || 'GastroGoan', {body: head, tag: 'gg-pedido'});
+      if(typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) new Notification((DB.business || {}).name || 'GastroGoan', {body: head, tag: 'gg-pedido'});
     }
     entEstadoVisto = status;
   }catch(e){}

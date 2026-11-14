@@ -9,6 +9,7 @@ await page.setRequestInterception(true);
 page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver|workers\.dev/.test(r.url()) ? r.abort() : r.continue());
 await page.goto('http://localhost:8950/reservagastrogoan.html?neg=pubsalida1', {waitUntil: 'domcontentloaded'});
 await new Promise(r => setTimeout(r, 1200));
+await page.evaluate(() => { window.__ggForzarAvisoSalida = true; });
 const sale = () => page.evaluate(() => { const e = new Event('beforeunload', {cancelable: true}); window.dispatchEvent(e); return e.defaultPrevented; });
 await caso('Carrito vacío y sin datos: se puede salir sin aviso', async () => { await page.evaluate(() => { cart = []; yendoAPagar = false; }); assert.equal(await sale(), false); });
 await caso('Con platos en el carrito: el navegador avisa antes de cerrar o recargar', async () => { await page.evaluate(() => { cart = [{key: 'a', recipeId: 1, sectionId: 1, name: 'Plato', price: 5, qty: 1}]; }); assert.equal(await sale(), true); });
