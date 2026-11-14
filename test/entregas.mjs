@@ -249,12 +249,13 @@ await caso('Reloj desajustado: desde 3 min de diferencia con el servidor se avis
 
 await caso('Rider: «Ruta completa» por hora prometida y «Siguiente parada»', () => app.evaluate(async () => {
   const mk = (id, hora, dir) => ({id, tipo: 'delivery', status: 'abierta', clienteNombre: 'C' + id, clienteDireccion: dir, date: todayStr(), time: hora, items: [{name: 'x', price: 1, qty: 1, estado: 'entregado'}], repartidorId: null});
-  DB.tpvOrders = [mk(1, '21:30', 'Calle B 2'), mk(2, '21:00', 'Calle A 1'), mk(3, '22:00', 'Calle C 3')];
+  const hm = min => { const d = new Date(Date.now() + min * 60000), p = n => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()); };
+  DB.tpvOrders = [mk(1, hm(20), 'Calle B 2'), mk(2, hm(10), 'Calle A 1'), mk(3, hm(30), 'Calle C 3')];
   entAbrirRepartidor(); await new Promise(r => setTimeout(r, 100));
   const t = document.getElementById('ent-rep-body').innerHTML;
   if(!t.includes('Ruta completa (3')) throw new Error('falta la ruta completa');
   if(t.indexOf('Calle%20A%201') > t.indexOf('Calle%20B%202') && t.indexOf('Calle%20B%202') > 0) throw new Error('la ruta no va por hora prometida');
-  if(t.indexOf('Siguiente parada') < 0 || t.indexOf('C2') > t.indexOf('C1')) throw new Error('la siguiente parada debe ser la de las 21:00');
+  if(t.indexOf('Siguiente parada') < 0 || t.indexOf('C2') > t.indexOf('C1')) throw new Error('la siguiente parada debe ser la más temprana');
   const url = buildRouteMapsUrl([DB.tpvOrders[1], DB.tpvOrders[0], DB.tpvOrders[2]], {respetarOrden: true});
   if(url.includes('optimize:true')) throw new Error('no debe reordenar');
   closeModal(); return null;
