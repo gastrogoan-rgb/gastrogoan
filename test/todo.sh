@@ -202,6 +202,7 @@ lanzar; node test/panel-equilibrio.mjs > "$SALIDA/panelequil.txt" 2>&1 & P195=$!
 lanzar; node test/sin-guardar.mjs > "$SALIDA/singuardar.txt" 2>&1 & P196=$!
 lanzar; node test/web-salida.mjs > "$SALIDA/websalida.txt" 2>&1 & P197=$!
 lanzar; node test/entregas.mjs > "$SALIDA/entregas.txt" 2>&1 & P198=$!
+lanzar; node test/entregas-veracidad.mjs > "$SALIDA/entregasver.txt" 2>&1 & P199=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -434,5 +435,6 @@ espera $P195 "Punto de equilibrio del Panel: cuentas a mano, coincide con Gesti�
 espera $P196 "Cambios sin guardar en TODA la app: ventanas, formularios, pantallas, Pedidos con borrador, cerrar pestaña; avisa donde debe y no en buscadores, PIN ni lo rellenado por código" "$SALIDA/singuardar.txt" "cambios sin guardar: avisa donde debe"
 espera $P197 "Web pública de pedidos: avisa al cerrar con el carrito a medias, no al ir a pagar" "$SALIDA/websalida.txt" "la web de pedidos avisa al salir"
 espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana prometida, empaquetado, monedero, pedido por teléfono, avisos del cliente, web (repetir, alérgenos, pausas)" "$SALIDA/entregas.txt" "fase 1 y 2 .lo hecho. funcionan"
+espera $P199 "Veracidad del seguimiento: estados, ventana, llegada estimada y latido son hechos reales, no relleno" "$SALIDA/entregasver.txt" "es veraz"
 
 exit $FALLOS

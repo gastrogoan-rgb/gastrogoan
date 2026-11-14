@@ -680,7 +680,7 @@ function renderTableOrderModal(orderId){
       <section class="tp-or-col tp-or-comanda ${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
         ${comandaHtml}
       </section>
-      ${(esRepartoPropio(order) || (order.tipo === 'takeaway' && order.origenOnline) || order.origenTelefono) ? `<section class="tp-or-col tp-or-repartocol ${panel === 'reparto' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}${typeof entEmpaquetadoHtml === 'function' && (order.items || []).length ? entEmpaquetadoHtml(order) : ''}</section>` : ''}
+      ${(esRepartoPropio(order) || (order.tipo === 'takeaway' && order.origenOnline) || order.origenTelefono) ? `<section class="tp-or-col tp-or-repartocol ${panel === 'reparto' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}${typeof entEmpaquetadoHtml === 'function' && (order.items || []).length ? entEmpaquetadoHtml(order) : ''}${typeof entOrdenCocinaHtml === 'function' ? entOrdenCocinaHtml(order) : ''}</section>` : ''}
     </div>
     <div class="modal-footer tp-or-pie">${actionButtons}</div>
   `, {order: true});

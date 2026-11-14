@@ -417,7 +417,7 @@ caso('El código postal avisa al momento si entra o no en la zona de reparto, si
   assert.ok(m[0].includes("cpList.includes(cp)"), 'no comprueba el código postal contra cpList al momento');
   assert.ok(m[0].includes("t('cp.fueraDeZona').replace('${lista}', cpList.join(', '))"),
     'si el código postal no entra, debe decir qué códigos SÍ se aceptan, no solo que este no vale');
-  assert.ok(publica.includes('oninput="checkCpLive()"'), 'el campo de código postal no dispara la comprobación al escribir');
+  assert.ok(publica.includes('oninput="checkCpLive()'), 'el campo de código postal no dispara la comprobación al escribir');
 });
 
 
