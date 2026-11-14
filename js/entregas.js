@@ -150,6 +150,7 @@ function entBarraHtml(){
           : `<button type="button" class="btn btn-sm btn-fino" onclick="entPausarCanal('delivery')"><i class="ti ti-player-pause"></i> ${escapeHtml(gl({es:'Pausar domicilio', ca:'Pausar domicili', en:'Pause delivery'}))}</button>`}
       <button type="button" class="btn btn-sm btn-fino" onclick="entNuevoPedidoTelefono()"><i class="ti ti-phone-plus"></i> ${escapeHtml(gl({es:'Pedido por teléfono', ca:'Comanda per telèfon', en:'Phone order'}))}</button>
       <button type="button" class="btn btn-sm btn-fino" onclick="entAbrirRepartidor()"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Mi reparto', ca:'El meu repartiment', en:'My deliveries'}))}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="entAbrirTablero()"><i class="ti ti-device-tv"></i> ${escapeHtml(gl({es:'Pantalla de listos', ca:'Pantalla de llestos', en:'Ready screen'}))}</button>
       <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirKit()"><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Captación', ca:'Captació', en:'Acquisition'}))}</button>
       <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirAnalitica()"><i class="ti ti-chart-line"></i> ${escapeHtml(gl({es:'Tiempos', ca:'Temps', en:'Timings'}))}</button>
     </div>
@@ -442,8 +443,10 @@ function entCrearPedidoTelefono(){
       id, tableId: null, tipo, clienteNombre: nombre, clienteTelefono: tel, clienteEmail: '', clienteDireccion: tipo === 'delivery' ? dir.trim() : '', clienteCodigoPostal: tipo === 'delivery' ? cp : '',
       notas, date: todayStr(), time: hora, costeEnvio: tipo === 'delivery' ? costeEnvioPedidoPublico('delivery', 0, 0) : 0, propina: 0,
       status: 'abierta', items: [], tandas: [], createdAt: new Date().toISOString(), aceptadoAt: new Date().toISOString(), origenOnline: false, origenTelefono: true,
-      clientRef: null, clientId: matched ? matched.id : null, metodoPagoLocal: null, pagaCon: null
+      clientRef: entNuevoToken(), clientId: matched ? matched.id : null, metodoPagoLocal: null, pagaCon: null
     });
+    // Con token propio entra en el tablero de listos y tiene su Nº como cualquier pedido de la web.
+    try{ syncOrderStatusForPublic(DB.tpvOrders[DB.tpvOrders.length - 1]); }catch(e){}
     saveDB(); closeModal(); renderTPV(); openTableOrder(null, id);
   };
   if(fuera){ confirmModal(gl({es:'Ese código postal está fuera de tu zona de reparto. ¿Crear el pedido igualmente?', ca:'Aquest codi postal és fora de la teva zona de repartiment. Crear la comanda igualment?', en:'That postal code is outside your delivery area. Create the order anyway?'}), {confirmLabel: gl({es:'Crear igualmente', ca:'Crear igualment', en:'Create anyway'})}).then(ok => { if(ok) fin(); }); return; }
@@ -716,7 +719,6 @@ function entAbrirKit(){
     <div class="modal-body">
       <p class="pr-ayuda">${escapeHtml(gl({es:'Un enlace por canal: así ves de dónde llega cada pedido (queda en el pedido como «origen»). Para Google, pégalo en tu ficha como enlace de «Pedir» / «Comida por encargo».', ca:'Un enllaç per canal: així veus d\'on arriba cada comanda (queda a la comanda com a «origen»). Per a Google, enganxa\'l a la teva fitxa com a enllaç de «Demanar» / «Menjar per encàrrec».', en:'One link per channel: you see where each order comes from (it is stored on the order as «origin»). For Google, paste it in your listing as the «Order» / «Food pickup» link.'}))}</p>
       ${ENT_ORIGENES.map(([k, nom]) => { const url = entEnlaceOrigen(k); return `<div class="card" style="margin-bottom:8px"><b>${escapeHtml(nom)}</b><div class="txt-xs" style="word-break:break-all">${escapeHtml(url)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-fino" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar', ca:'Copiar', en:'Copy'}))}</button></div></div>`; }).join('')}
-      <div class="card" style="margin-bottom:8px"><b>${escapeHtml(gl({es:'Tablero de pedidos listos (pantalla del local)', ca:'Tauler de comandes llestes (pantalla del local)', en:'Ready-orders board (shop screen)'}))}</b><div class="txt-xs" style="word-break:break-all">${escapeHtml(getPublicClientLink() + (getPublicClientLink().includes('?') ? '&' : '?') + 'listos=1')}</div><div class="txt-xs">${escapeHtml(gl({es:'Ábrelo en una tele o tablet junto al mostrador: solo muestra números de pedido.', ca:'Obre\'l en una tele o tauleta al costat del taulell: només mostra números de comanda.', en:'Open it on a TV or tablet by the counter: it only shows order numbers.'}))}</div></div>
       <div class="field"><label>${escapeHtml(gl({es:'Código para el flyer de la bolsa', ca:'Codi per al flyer de la bossa', en:'Code for the bag flyer'}))}</label>
         <select id="ent-kit-cod"><option value="">${escapeHtml(gl({es:'(sin código)', ca:'(sense codi)', en:'(no code)'}))}</option>${cod.map(c => `<option value="${escapeHtml(c.codigo)}">${escapeHtml(c.codigo)} · ${c.pct ? c.pct + '%' : c.eur + '€'}</option>`).join('')}</select>
         <small style="color:var(--muted)">${escapeHtml(gl({es:'Créalos en Mi Negocio › Pedidos › Códigos promocionales.', ca:'Crea\'ls a Mi Negocio › Comandes › Codis promocionals.', en:'Create them in My Business › Orders › Promo codes.'}))}</small></div>
@@ -736,3 +738,22 @@ function entImprimirFlyer(){
     <img src="${qrImagenUrl(url, 260)}" width="220" height="220" alt="QR"><div style="font-size:13px;margin-top:6px">${escapeHtml(url)}</div></div>`;
   printReportWindow(gl({es:'Flyer para la bolsa', ca:'Flyer per a la bossa', en:'Bag flyer'}), h);
 }
+
+/* ───────── 18. PANTALLA DE PEDIDOS LISTOS PARA EL LOCAL (14/11) ─────────
+   Una tele o tablet junto al mostrador con «En preparación» y «Listos para recoger», solo con el número de pedido. Antes el enlace vivía dentro
+   del «Kit de captación» (mal sitio: es de operación diaria, no de captación) y no tenía botones. */
+function entEnlaceTablero(){ const b = getPublicClientLink(); return b ? b + (b.includes('?') ? '&' : '?') + 'listos=1' : ''; }
+function entAbrirTablero(){
+  const url = entEnlaceTablero();
+  openModal(`<div class="modal-header"><h3><i class="ti ti-device-tv"></i> ${escapeHtml(gl({es:'Pantalla de pedidos listos', ca:'Pantalla de comandes llestes', en:'Ready-orders screen'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p class="pr-ayuda">${escapeHtml(gl({es:'Ábrela en una tele o tablet junto al mostrador. Enseña dos columnas, «En preparación» y «Listos para recoger», solo con el NÚMERO de pedido (el mismo que ve el cliente en su seguimiento y el que sale en cada pedido del TPV), nunca nombres ni teléfonos. Avisa de los que llevan 10 min o más sin recoger. Incluye los pedidos de la web y los que tomas por teléfono; no los de plataformas externas.', ca:'Obre-la en una tele o tauleta al costat del taulell. Mostra dues columnes, «En preparació» i «Llestos per recollir», només amb el NÚMERO de comanda (el mateix que veu el client al seu seguiment i el que surt a cada comanda del TPV), mai noms ni telèfons. Avisa dels que porten 10 min o més sense recollir. Inclou les comandes del web i les que prens per telèfon; no les de plataformes externes.', en:'Open it on a TV or tablet by the counter. It shows two columns, "Being prepared" and "Ready for pickup", with the order NUMBER only (the same the customer sees in their tracking and shown on each POS order), never names or phones. It flags orders waiting 10+ min. It includes web orders and the ones you take by phone; not external platforms.'}))}</p>
+      <div class="card" style="word-break:break-all;font-size:13px">${escapeHtml(url)}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar enlace', ca:'Copiar enllaç', en:'Copy link'}))}</button>
+      <a class="btn btn-primary" href="${escapeHtml(url)}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${escapeHtml(gl({es:'Abrir pantalla', ca:'Obrir pantalla', en:'Open screen'}))}</a>
+    </div>`);
+}
+// Token propio para un pedido tomado por teléfono (mismo formato que el de la web: 12+ caracteres, ver reglas de orderStatus).
+function entNuevoToken(){ return Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(36).padStart(2, '0')).join(''); }
