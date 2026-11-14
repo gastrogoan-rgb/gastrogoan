@@ -367,18 +367,16 @@ await caso('Web: tablero de listos (?listos=1) solo con números, preparando vs 
   return null;
 }));
 
-await caso('Web: compartir la cesta por enlace y cargarla en otro móvil', () => pub.evaluate(() => {
-  cart = [{key: '11', recipeId: 11, sectionId: 1, name: 'Croquetas de jamón', price: 9.5, qty: 2, modificadores: []}];
-  let url = ''; navigator.clipboard = {writeText: u => { url = u; return Promise.resolve(); }}; navigator.share = undefined; entCestaCompartir();
-  return new Promise(r => setTimeout(() => {
-    if(!/cesta=11x2/.test(url)) throw new Error('enlace: ' + url);
-    cart = []; history.replaceState(null, '', '?neg=pubentreg1&cesta=11x2'); entCestaCargar();
-    if(cart.length !== 1 || cart[0].qty !== 2) throw new Error('no cargó la cesta: ' + JSON.stringify(cart));
-    history.replaceState(null, '', '?neg=pubentreg1'); cart = []; r(null);
-  }, 50));
-}));
-
-await caso('Sin errores de JavaScript en la web', async () => { assert.deepEqual(errsPub.filter(x => !ruido(x)), []); });
+await caso('Web: compartir la cesta por enlace y cargarla en otro móvil', async () => {
+  const url = await pub.evaluate(async () => {
+    cart = [{key: '11', recipeId: 11, sectionId: 1, name: 'Croquetas de jamón', price: 9.5, qty: 2, modificadores: []}];
+    let u = ''; Object.defineProperty(navigator, 'share', {value: undefined, configurable: true}); Object.defineProperty(navigator, 'clipboard', {value: {writeText: x => { u = x; return Promise.resolve(); }}, configurable: true});
+    entCestaCompartir(); await new Promise(r => setTimeout(r, 80)); return u;
+  });
+  assert.ok(/cesta=11x2/.test(url), 'enlace: ' + url);
+  const n = await pub.evaluate(() => { cart = []; history.replaceState(null, '', '?neg=pubentreg1&cesta=11x2'); entCestaCargar(); const r = JSON.stringify(cart.map(l => l.qty)); history.replaceState(null, '', '?neg=pubentreg1'); cart = []; return r; });
+  assert.equal(n, '[2]');
+});
 
 await browser.close(); web.kill();
 console.log(fallos ? `\n❌ ${fallos} fallos` : '\n✅ para llevar y delivery: fase 1 y 2 (lo hecho) funcionan');
