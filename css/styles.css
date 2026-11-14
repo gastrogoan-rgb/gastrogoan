@@ -6728,3 +6728,44 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
 .ent-rep-sig .ent-rot{flex:1 0 100%}
 .ent-rep-sig .btn{margin-left:auto;min-height:48px}
 .ent-rep-card.is-siguiente{border-left:6px solid var(--olive)}
+
+/* ═══ MÓVIL · TPV y Comandas Cocina (14/11, revisión visual de verdad) ═══
+   Lo que se vio mirando las capturas a 390 px: antes de la primera mesa había ~270 px (volver + título + subtítulo + cifras + botonera + filtros),
+   el filtro «Mías» quedaba solo en una fila, las mesas libres medían lo mismo que las ocupadas, la campana tenía el contador ENCIMA del icono
+   y los seis botones de Comandas Cocina gastaban 250 px con el texto partido en dos líneas. */
+@media (max-width:720px){
+  #view-tpv .view-subtitle{display:none}
+  #view-tpv .btn-back{margin-bottom:2px}
+  #view-tpv .view-title{margin-bottom:8px}
+  .tp-filtros{display:flex;flex-wrap:wrap;gap:6px}
+  .tp-filtros{gap:4px;flex-wrap:wrap}
+  .tp-filtros .btn,.tp-filtros .cl-chip{flex:1 1 auto;justify-content:center;padding-left:4px !important;padding-right:4px !important;font-size:12px !important;letter-spacing:0 !important;min-width:0}
+  .tp-mesas-herr .btn{flex:none;padding-left:8px !important;padding-right:8px !important;font-size:12px !important;letter-spacing:0 !important}
+  .tp-mesas-herr .tp-buscar{min-width:0;width:100px}
+  button.kt-cn b{letter-spacing:.02em;white-space:nowrap}
+  button.kt-cn .kt-st,.kt-cn .kt-st{white-space:nowrap;letter-spacing:.02em;font-size:11px;padding:2px 5px}
+  .tp-mesa.is-libre{min-height:76px;gap:2px}
+  .tp-mesas-herr{flex-wrap:nowrap}
+  .tp-mesas-herr .tp-buscar{flex:1 1 auto;width:auto;min-width:0}
+  #avisos-fab .chat-badge,#chat-fab .chat-badge{top:-7px;right:-7px}
+  .app-header #avisos-fab.avisos-con{box-shadow:0 0 0 2px rgba(138,74,59,.38)}
+  /* Cocina: dos filas de botones de UNA línea (icono fuera: el rótulo ya lo dice todo) */
+  .kds-toolbar .btn.btn-fino{flex-direction:row;min-height:44px;padding:4px 4px;white-space:nowrap;font-size:12px}
+  .kds-toolbar .btn.btn-fino .ti{display:none}
+}
+@media (max-width:720px){
+  .kds-toolbar .btn.btn-fino,.tp-botonera .btn{letter-spacing:0 !important}
+}
+/* Herramientas de pedidos plegadas (14/11): la franja medía ~600 px antes del primer pedido en móvil. En PC va abierta y sin cabecera. */
+.ent-herr>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.ent-herr>summary::-webkit-details-marker{display:none}
+.ent-herr-on{margin-left:4px;padding:1px 6px;background:var(--olive);color:#fff;font-size:11px;border-radius:2px}
+@media (min-width:721px){.ent-herr>summary{display:none}}
+@media (max-width:720px){.ent-herr[open]>summary{margin-bottom:8px}}
+.ent-sonido[hidden]{display:none}
+@media (max-width:720px){.ent-sonido{padding:4px 6px}.ent-sonido span{display:none}.ent-sonido .btn,.ent-sonido button{min-height:40px}}
+@media (max-width:360px){
+  .tp-filtros{flex-wrap:wrap}
+  button.kt-cn{flex-wrap:wrap;row-gap:4px}
+  .kds-toolbar .btn.btn-fino{font-size:11px;padding:4px 2px}
+}
