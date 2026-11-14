@@ -6686,3 +6686,40 @@ small{font-size:max(.8333em, 11px)}
 #gg-salida-sobre .gg-salida-txt{font-size:13.5px;line-height:1.5;color:var(--muted);margin:0}
 #gg-salida-sobre .gg-salida-pie{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
 @media (max-width:760px){#gg-salida-sobre .gg-salida-pie .btn{flex:1 1 100%;justify-content:center;min-height:44px}}
+
+/* ════ PARA LLEVAR Y DELIVERY (13/11, js/entregas.js, test/entregas.mjs) ════
+   Franja de sonido + modo ocupado + pausas, alarma que parpadea, empaquetado, vista del repartidor y monedero. Letra mínima 11 px y
+   toques de 44 px como en el resto de la app. */
+.ent-barra{display:flex;flex-direction:column;gap:8px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-m,4px);background:#fff}
+.ent-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ent-rot{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ent-chips{display:inline-flex;flex-wrap:wrap;gap:6px}
+.ent-estado{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 8px;border-radius:var(--r-s,3px);background:#F1EFE9}
+.ent-estado.is-lim{background:#F6E7C8;color:#6B4A0E}
+.ent-estado.is-off{background:#F0D9D3;color:#7A2E1F}
+.ent-sonido{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-s,3px);background:#F6E7C8;color:#5A3E0B;font-size:13px}
+.ent-sonido span{flex:1 1 220px}
+body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{color:var(--red,#8A4A3B)}
+@media (prefers-reduced-motion:no-preference){
+  body.ent-alarma .tp-togo-tabs .btn:first-child{animation:ent-parpadeo 1s ease-in-out infinite}
+  @keyframes ent-parpadeo{0%,100%{box-shadow:0 0 0 0 rgba(138,74,59,.0)}50%{box-shadow:0 0 0 4px rgba(138,74,59,.35)}}
+}
+.ent-empaq{margin-bottom:10px}
+.ent-empaq-lista{display:flex;flex-direction:column;gap:2px;margin:6px 0}
+.ent-chk{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 6px;border-radius:var(--r-s,3px);cursor:pointer;font-size:14px}
+.ent-chk input{width:22px;height:22px;flex:none}
+.ent-chk.is-hecho{background:#E7EEDB;color:#3D4F22}
+.ent-empaq-pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.ent-rep-lista{display:flex;flex-direction:column;gap:10px}
+.ent-rep-card{padding:12px}
+.ent-rep-card.is-encamino{border:2px solid var(--olive,#5B6B2E)}
+.ent-rep-top{display:flex;justify-content:space-between;gap:8px;font-size:16px}
+.ent-rep-hora{font-family:var(--mono);font-size:14px}
+.ent-rep-dir{margin:6px 0;font-size:15px}
+.ent-rep-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.ent-rep-nota{font-size:13px;margin:4px 0;color:var(--ink)}
+.ent-rep-cobro{margin:6px 0}
+.ent-rep-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ent-grande{flex:1 1 140px;min-height:56px;font-size:17px;justify-content:center}
+.ent-mon-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:8px 0}
+.ent-mon-campos label{display:flex;flex-direction:column;gap:4px;font-size:12px}

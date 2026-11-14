@@ -106,6 +106,7 @@ function openCashClosureModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('label.period')}: ${fmtDateTime(desde)} — ${fmtDateTime(hasta)}<br>${ticketCount} ${ticketCount!==1?t('noun.tickets'):t('noun.ticket')}</p>
+    ${typeof entAvisoMonederosHtml === 'function' ? entAvisoMonederosHtml() : ''}
     <div class="table-wrap">
       <table>
         <thead><tr><th>${t('label.paymentMethod')}</th><th>${t('label.totalSales')}</th></tr></thead>

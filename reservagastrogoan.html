@@ -1002,6 +1002,33 @@
   /* Mientras carga no se enseña la cabecera genérica con el nombre «Reservas y Pedidos»: aparece ya con el nombre y el logo del local. */
   body:has(#app-loading) header{display:none}
   body:has(#app-loading) #app{min-height:60vh;display:flex;align-items:center;justify-content:center}
+
+  /* ===== Para llevar y delivery (13/11) ===== */
+  .ent-ocupado{margin:10px 0;padding:10px 12px;border-radius:var(--r,6px);background:#F6E7C8;color:#5A3E0B;font-size:14px}
+  .ent-repetir{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;margin:10px 0;padding:12px 14px;min-height:48px;border:1px solid var(--line,#D8D3C8);border-radius:var(--r,6px);background:#fff;font:inherit;text-align:left;cursor:pointer}
+  .ent-repetir b{font-size:15px}.ent-repetir span{font-size:13px;color:var(--muted)}
+  .ent-repetir:hover{border-color:var(--olive);background:#F7F6F0}
+  .ent-env{margin:6px 0 0;padding:8px 12px;font-size:13px;border-radius:var(--r,6px);background:#F1EFE9}
+  .ent-env.ok{background:#E7EEDB;color:#3D4F22}
+  .ent-alerg{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0}
+  .ent-alerg .ent-alt{font-size:12px;color:var(--muted);margin-right:4px}
+  .ent-alerg button{min-height:40px;padding:6px 12px;border:1px solid var(--line,#D8D3C8);border-radius:999px;background:#fff;font:inherit;font-size:13px;cursor:pointer}
+  .ent-alerg button[aria-pressed="true"]{background:var(--olive);border-color:var(--olive);color:#fff}
+  .dc.dc-evita{opacity:.45}
+  .dc-av{display:block;font-size:12px;font-weight:600;color:var(--red,#8A4A3B)}
+  .ent-sc{display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:400;font-size:14px;cursor:pointer}
+  .ent-sc input{width:20px;height:20px}
+  .ent-legal{margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
+  .ent-rec{margin:8px 0;padding:10px 12px;border-radius:var(--r,6px);background:#F1EFE9;font-size:13px}
+  .ent-rec button,.ent-rec a{font:inherit;font-size:13px;color:var(--olive);background:none;border:0;text-decoration:underline;cursor:pointer;padding:6px 0;min-height:36px}
+  .ent-vent{margin:10px 0 0;font-size:15px;font-weight:600}
+  .ent-sub{margin:2px 0 0;font-size:13px;color:var(--muted);font-weight:400}
+  .ent-retraso{margin:12px 0 0;padding:12px 14px;border-radius:var(--r,6px);background:#F6E7C8;color:#5A3E0B;font-size:14px}
+  .ent-retraso b{display:block;margin-bottom:2px}
+  .ent-acc{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .ent-acc .btn{min-height:48px}
+  .ent-pin{margin:12px 0 0;padding:12px;border:2px dashed var(--olive);border-radius:var(--r,6px);text-align:center}
+  .ent-pin b{display:block;font-family:var(--mono,monospace);font-size:32px;letter-spacing:.3em}
 </style>
 </head>
 <body>
@@ -1212,10 +1239,10 @@ const I18N = {
     'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la web del restaurante, en «Reservar mesa».',
     'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
     'track.backToMenu':'Volver a la carta','track.backHome':'Volver al inicio','resManage.lookupAlso':'También puedes volver a ella desde la web del restaurante, en «¿Ya reservaste? Accede a tu reserva», con tu nombre, email y teléfono.',
-    'track.head.pendiente':'Hemos recibido tu pedido','track.desc.pendiente':'El restaurante lo está revisando. Aquí verás cada paso, sin recargar.','track.head.aceptado':'Pedido confirmado','track.desc.aceptado':'El restaurante ya lo tiene y va a empezar a prepararlo.','track.head.preparando':'Lo estamos preparando','track.desc.preparando':'Tu pedido está en cocina.','track.head.listo.takeaway':'Listo para recoger','track.desc.listo.takeaway':'Ya puedes pasar a buscarlo. Al llegar, di tu número de pedido.','track.head.listo.delivery':'Va de camino','track.desc.listo.delivery':'El repartidor ya ha salido con tu pedido.','track.head.entregado.takeaway':'Pedido recogido','track.desc.entregado.takeaway':'Que aproveche. Gracias por tu pedido.','track.head.entregado.delivery':'Pedido entregado','track.desc.entregado.delivery':'Que aproveche. Gracias por tu pedido.','track.type.takeaway':'Para recoger','track.type.delivery':'A domicilio','track.call':'Llamar','track.write':'Escribir','track.saveLinkTitle':'Para volver a mirarlo','track.summaryTitle':'Lo que has pedido','track.tip':'Propina','track.total':'Total','track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
+    'track.head.pendiente':'Hemos recibido tu pedido','track.desc.pendiente':'El restaurante lo está revisando. Aquí verás cada paso, sin recargar.','track.head.aceptado':'Pedido confirmado','track.desc.aceptado':'El restaurante ya lo tiene y va a empezar a prepararlo.','track.head.preparando':'Lo estamos preparando','track.desc.preparando':'Tu pedido está en cocina.','track.head.listo.takeaway':'Listo para recoger','track.desc.listo.takeaway':'Ya puedes pasar a buscarlo. Al llegar, di tu número de pedido.','track.head.listo.delivery':'Tu pedido está listo','track.desc.listo.delivery':'En cuanto salga el repartidor te lo diremos aquí.','track.head.entregado.takeaway':'Pedido recogido','track.desc.entregado.takeaway':'Que aproveche. Gracias por tu pedido.','track.head.entregado.delivery':'Pedido entregado','track.desc.entregado.delivery':'Que aproveche. Gracias por tu pedido.','track.type.takeaway':'Para recoger','track.type.delivery':'A domicilio','track.call':'Llamar','track.write':'Escribir','track.saveLinkTitle':'Para volver a mirarlo','track.summaryTitle':'Lo que has pedido','track.tip':'Propina','track.total':'Total','track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
     'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
-    'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo.takeaway':'Listo para recoger','track.step.listo.delivery':'Listo, en reparto','track.step.entregado.takeaway':'Recogido','track.step.entregado.delivery':'Entregado',
+    'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo.takeaway':'Listo para recoger','track.step.listo.delivery':'Listo, esperando al repartidor','track.step.entregado.takeaway':'Recogido','track.step.entregado.delivery':'Entregado',
     'track.orderNumber':'Nº','track.contactTitle':'¿Necesitas anular o cambiar tu pedido?','track.saveLinkHint':'Guarda este enlace: lo necesitarás para ver el estado de tu pedido.',
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
     'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Pago hecho. En cuanto el banco lo confirme, el restaurante lo verá en su pantalla.','pago.ok.banner':'Pago hecho. Aquí puedes seguir tu pedido en directo.','pago.ok.bannerRes':'Pago de la señal hecho. Aquí puedes ver y gestionar tu reserva.','pago.ok.btn':'Volver al inicio',
@@ -1301,10 +1328,10 @@ const I18N = {
     'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use “Book a table” on the restaurant\'s page.',
     'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
     'track.backToMenu':'Back to menu','track.backHome':'Back to home','resManage.lookupAlso':"You can also get back to it from the restaurant's page, in “Already booked? Access your reservation”, with your name, email and phone.",
-    'track.head.pendiente':"We've got your order",'track.desc.pendiente':"The restaurant is reviewing it. You'll see every step here, no need to refresh.",'track.head.aceptado':'Order confirmed','track.desc.aceptado':'The restaurant has it and will start preparing it shortly.','track.head.preparando':"We're preparing it",'track.desc.preparando':'Your order is in the kitchen.','track.head.listo.takeaway':'Ready for pickup','track.desc.listo.takeaway':'You can come and collect it. Give your order number when you arrive.','track.head.listo.delivery':'On its way','track.desc.listo.delivery':'The rider has left with your order.','track.head.entregado.takeaway':'Order collected','track.desc.entregado.takeaway':'Enjoy your meal. Thanks for your order.','track.head.entregado.delivery':'Order delivered','track.desc.entregado.delivery':'Enjoy your meal. Thanks for your order.','track.type.takeaway':'Pickup','track.type.delivery':'Delivery','track.call':'Call','track.write':'Email','track.saveLinkTitle':'To check it later','track.summaryTitle':'Your order','track.tip':'Tip','track.total':'Total','track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
+    'track.head.pendiente':"We've got your order",'track.desc.pendiente':"The restaurant is reviewing it. You'll see every step here, no need to refresh.",'track.head.aceptado':'Order confirmed','track.desc.aceptado':'The restaurant has it and will start preparing it shortly.','track.head.preparando':"We're preparing it",'track.desc.preparando':'Your order is in the kitchen.','track.head.listo.takeaway':'Ready for pickup','track.desc.listo.takeaway':'You can come and collect it. Give your order number when you arrive.','track.head.listo.delivery':'Your order is ready','track.desc.listo.delivery':'As soon as the rider leaves we will tell you here.','track.head.entregado.takeaway':'Order collected','track.desc.entregado.takeaway':'Enjoy your meal. Thanks for your order.','track.head.entregado.delivery':'Order delivered','track.desc.entregado.delivery':'Enjoy your meal. Thanks for your order.','track.type.takeaway':'Pickup','track.type.delivery':'Delivery','track.call':'Call','track.write':'Email','track.saveLinkTitle':'To check it later','track.summaryTitle':'Your order','track.tip':'Tip','track.total':'Total','track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
     'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
-    'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo.takeaway':'Ready for pickup','track.step.listo.delivery':'Ready, on its way','track.step.entregado.takeaway':'Picked up','track.step.entregado.delivery':'Delivered',
+    'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo.takeaway':'Ready for pickup','track.step.listo.delivery':'Ready, waiting for the rider','track.step.entregado.takeaway':'Picked up','track.step.entregado.delivery':'Delivered',
     'track.orderNumber':'No.','track.contactTitle':'Need to cancel or change your order?','track.saveLinkHint':'Save this link: you\'ll need it to check your order status.',
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
     'pago.ok.title':'Payment successful!','pago.ok.msg':'Payment done. As soon as the bank confirms it, the restaurant will see it on their screen.','pago.ok.banner':'Payment done. You can follow your order live here.','pago.ok.bannerRes':'Deposit paid. You can view and manage your booking here.','pago.ok.btn':'Back to home',
@@ -1390,10 +1417,10 @@ const I18N = {
     'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la web del restaurant, a «Reservar taula».',
     'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
     'track.backToMenu':'Tornar a la carta','track.backHome':"Tornar a l'inici",'resManage.lookupAlso':'També hi pots tornar des de la web del restaurant, a «Ja vas reservar? Accedeix a la teva reserva», amb el teu nom, email i telèfon.',
-    'track.head.pendiente':'Hem rebut la teva comanda','track.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs cada pas, sense recarregar.",'track.head.aceptado':'Comanda confirmada','track.desc.aceptado':'El restaurant ja la té i començarà a preparar-la aviat.','track.head.preparando':"L'estem preparant",'track.desc.preparando':'La teva comanda és a la cuina.','track.head.listo.takeaway':'A punt per recollir','track.desc.listo.takeaway':'Ja pots passar a buscar-la. En arribar, digues el teu número de comanda.','track.head.listo.delivery':'Ja és de camí','track.desc.listo.delivery':'El repartidor ja ha sortit amb la teva comanda.','track.head.entregado.takeaway':'Comanda recollida','track.desc.entregado.takeaway':'Bon profit. Gràcies per la teva comanda.','track.head.entregado.delivery':'Comanda lliurada','track.desc.entregado.delivery':'Bon profit. Gràcies per la teva comanda.','track.type.takeaway':'Per recollir','track.type.delivery':'A domicili','track.call':'Trucar','track.write':'Escriure','track.saveLinkTitle':'Per tornar-ho a mirar','track.summaryTitle':'El que has demanat','track.tip':'Propina','track.total':'Total','track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
+    'track.head.pendiente':'Hem rebut la teva comanda','track.desc.pendiente':"El restaurant l'està revisant. Aquí veuràs cada pas, sense recarregar.",'track.head.aceptado':'Comanda confirmada','track.desc.aceptado':'El restaurant ja la té i començarà a preparar-la aviat.','track.head.preparando':"L'estem preparant",'track.desc.preparando':'La teva comanda és a la cuina.','track.head.listo.takeaway':'A punt per recollir','track.desc.listo.takeaway':'Ja pots passar a buscar-la. En arribar, digues el teu número de comanda.','track.head.listo.delivery':'La teva comanda és a punt','track.desc.listo.delivery':'Quan surti el repartidor t\'ho direm aquí.','track.head.entregado.takeaway':'Comanda recollida','track.desc.entregado.takeaway':'Bon profit. Gràcies per la teva comanda.','track.head.entregado.delivery':'Comanda lliurada','track.desc.entregado.delivery':'Bon profit. Gràcies per la teva comanda.','track.type.takeaway':'Per recollir','track.type.delivery':'A domicili','track.call':'Trucar','track.write':'Escriure','track.saveLinkTitle':'Per tornar-ho a mirar','track.summaryTitle':'El que has demanat','track.tip':'Propina','track.total':'Total','track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
     'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
-    'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo.takeaway':'Llesta per recollir','track.step.listo.delivery':'Llesta, en repartiment','track.step.entregado.takeaway':'Recollida','track.step.entregado.delivery':'Lliurada',
+    'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo.takeaway':'Llesta per recollir','track.step.listo.delivery':'Llesta, esperant el repartidor','track.step.entregado.takeaway':'Recollida','track.step.entregado.delivery':'Lliurada',
     'track.orderNumber':'Núm.','track.contactTitle':'Necessites anul·lar o canviar la teva comanda?','track.saveLinkHint':'Guarda aquest enllaç: el necessitaràs per veure l\'estat de la teva comanda.',
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
     'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'Pagament fet. Tan bon punt el banc el confirmi, el restaurant el veurà a la pantalla.','pago.ok.banner':'Pagament fet. Aquí pots seguir la teva comanda en directe.','pago.ok.bannerRes':'Pagament de la paga i senyal fet. Aquí pots veure i gestionar la teva reserva.','pago.ok.btn':'Tornar a l\'inici',
@@ -1490,6 +1517,68 @@ const I18N_WZ = {
   }
 };
 Object.keys(I18N_WZ).forEach(l => Object.assign(I18N[l], I18N_WZ[l]));
+
+/* ============ PARA LLEVAR Y DELIVERY (13/11, plan reports/Delivery y take away sublimes.md) ============ */
+const I18N_ENT = {
+  es:{
+    'track.head.encamino':'Va de camino','track.desc.encamino':'El repartidor ya ha salido con tu pedido.','track.step.encamino':'En camino',
+    'ent.ventana':'Hora prometida: %s','ent.llegada':'Llegada estimada: %s','ent.salio':'Salió a las %s',
+    'ent.retraso.t':'Vamos con un poco de retraso','ent.retraso.d':'Tu pedido tarda algo más de lo previsto. Lo sentimos: estamos en ello. Si necesitas algo, llama al restaurante.',
+    'ent.avisar':'Avisarme en este móvil','ent.avisar.on':'Te avisaremos aquí cuando cambie (con esta página abierta).','ent.avisar.no':'Tu navegador no permite avisos: deja esta página abierta.',
+    'ent.pausa.takeaway':'Los pedidos para llevar están en pausa hasta las %s. Vuelve a intentarlo entonces.','ent.pausa.delivery':'Los pedidos a domicilio están en pausa hasta las %s. Vuelve a intentarlo entonces.',
+    'ent.ocupado':'Ahora tenemos más pedidos de lo normal: las horas se retrasan unos %d min.',
+    'ent.repetir':'Repetir mi último pedido','ent.repetir.sub':'%d platos · %s','ent.repetir.falta':'Algún plato ya no está disponible y no se ha añadido: %s',
+    'ent.faltaEnvio':'Te faltan %s para el envío gratis','ent.envioGratis':'Envío gratis','ent.faltaMin':'Te faltan %s para el mínimo',
+    'ent.sin.titulo':'Evitar alérgenos','ent.sin.contiene':'Contiene %s','ent.sin.limpiar':'Quitar filtro',
+    'ent.instr.entrega':'Instrucciones de entrega (piso, timbre, cómo encontrarte)','ent.sinContacto':'Entrega sin contacto: déjalo en la puerta',
+    'ent.recogida':'Cómo recogerlo','ent.recogida.maps':'Cómo llegar',
+    'ent.legal':'Precio final con IVA incluido; el envío se indica aparte. Los alimentos que se preparan al momento o pueden deteriorarse o caducar con rapidez no tienen derecho de desistimiento (art. 103 del texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios).',
+    'ent.recordado':'Hemos rellenado tus datos de la última vez.','ent.olvidar':'Olvidar mis datos',
+    'ent.ya':'Ya estoy aquí','ent.ya.cinco':'Estoy a 5 minutos','ent.ya.ok':'Avisado. Enseguida te lo llevamos.','ent.ya.error':'No se ha podido avisar. Llama al restaurante.',
+    'ent.cancelar':'Cancelar mi pedido','ent.cancelar.conf':'¿Cancelar tu pedido? Si ya estaba pagado, el restaurante te lo devolverá.','ent.cancelar.ok':'Hemos avisado al restaurante de que lo cancelas.',
+    'ent.incidencia':'¿Algo ha ido mal?','ent.incidencia.faltaba':'Faltaba algo','ent.incidencia.mal':'Estaba mal','ent.incidencia.frio':'Llegó frío','ent.incidencia.otro':'Otro problema','ent.incidencia.ok':'Gracias. El restaurante lo verá y se pondrá en contacto contigo.',
+    'ent.pin':'Código de entrega','ent.pin.d':'Dícteselo al repartidor al recibirlo.','ent.mandar':'Enviado'
+  },
+  en:{
+    'track.head.encamino':'On its way','track.desc.encamino':'The rider has left with your order.','track.step.encamino':'On its way',
+    'ent.ventana':'Promised time: %s','ent.llegada':'Estimated arrival: %s','ent.salio':'Left at %s',
+    'ent.retraso.t':'We are running a little late','ent.retraso.d':'Your order is taking longer than planned. We are sorry: we are on it. If you need anything, call the restaurant.',
+    'ent.avisar':'Notify me on this phone','ent.avisar.on':'We will alert you here when it changes (while this page is open).','ent.avisar.no':'Your browser does not allow alerts: keep this page open.',
+    'ent.pausa.takeaway':'Pickup orders are paused until %s. Please try again then.','ent.pausa.delivery':'Delivery orders are paused until %s. Please try again then.',
+    'ent.ocupado':'We have more orders than usual: times are delayed by about %d min.',
+    'ent.repetir':'Repeat my last order','ent.repetir.sub':'%d dishes · %s','ent.repetir.falta':'Some dishes are no longer available and were not added: %s',
+    'ent.faltaEnvio':'%s more for free delivery','ent.envioGratis':'Free delivery','ent.faltaMin':'%s more to reach the minimum',
+    'ent.sin.titulo':'Avoid allergens','ent.sin.contiene':'Contains %s','ent.sin.limpiar':'Clear filter',
+    'ent.instr.entrega':'Delivery instructions (floor, bell, how to find you)','ent.sinContacto':'Contactless delivery: leave it at the door',
+    'ent.recogida':'How to collect it','ent.recogida.maps':'Get directions',
+    'ent.legal':'Final price includes VAT; delivery is shown separately. Food prepared to order or that can spoil or expire quickly has no right of withdrawal (art. 103 of the Spanish consumer protection law, TRLGDCU).',
+    'ent.recordado':'We filled in your details from last time.','ent.olvidar':'Forget my details',
+    'ent.ya':'I am here','ent.ya.cinco':'I am 5 minutes away','ent.ya.ok':'Done. We will bring it right out.','ent.ya.error':'We could not notify them. Please call the restaurant.',
+    'ent.cancelar':'Cancel my order','ent.cancelar.conf':'Cancel your order? If it was already paid, the restaurant will refund it.','ent.cancelar.ok':'We have told the restaurant you are cancelling.',
+    'ent.incidencia':'Did something go wrong?','ent.incidencia.faltaba':'Something was missing','ent.incidencia.mal':'It was wrong','ent.incidencia.frio':'It arrived cold','ent.incidencia.otro':'Other problem','ent.incidencia.ok':'Thank you. The restaurant will see it and get in touch.',
+    'ent.pin':'Delivery code','ent.pin.d':'Tell it to the rider when you receive it.','ent.mandar':'Sent'
+  },
+  ca:{
+    'track.head.encamino':'Va de camí','track.desc.encamino':'El repartidor ja ha sortit amb la teva comanda.','track.step.encamino':'En camí',
+    'ent.ventana':'Hora promesa: %s','ent.llegada':'Arribada estimada: %s','ent.salio':'Va sortir a les %s',
+    'ent.retraso.t':'Anem amb una mica de retard','ent.retraso.d':'La teva comanda triga una mica més del previst. Ho sentim: hi estem treballant. Si necessites res, truca al restaurant.',
+    'ent.avisar':'Avisa\'m en aquest mòbil','ent.avisar.on':'T\'avisarem aquí quan canviï (amb aquesta pàgina oberta).','ent.avisar.no':'El teu navegador no permet avisos: deixa aquesta pàgina oberta.',
+    'ent.pausa.takeaway':'Les comandes per emportar estan en pausa fins a les %s. Torna-ho a provar llavors.','ent.pausa.delivery':'Les comandes a domicili estan en pausa fins a les %s. Torna-ho a provar llavors.',
+    'ent.ocupado':'Ara tenim més comandes del normal: les hores es retarden uns %d min.',
+    'ent.repetir':'Repetir la meva última comanda','ent.repetir.sub':'%d plats · %s','ent.repetir.falta':'Algun plat ja no està disponible i no s\'ha afegit: %s',
+    'ent.faltaEnvio':'Et falten %s per a l\'enviament gratuït','ent.envioGratis':'Enviament gratuït','ent.faltaMin':'Et falten %s per al mínim',
+    'ent.sin.titulo':'Evitar al·lèrgens','ent.sin.contiene':'Conté %s','ent.sin.limpiar':'Treure el filtre',
+    'ent.instr.entrega':'Instruccions de lliurament (pis, timbre, com trobar-te)','ent.sinContacto':'Lliurament sense contacte: deixa-ho a la porta',
+    'ent.recogida':'Com recollir-ho','ent.recogida.maps':'Com arribar',
+    'ent.legal':'Preu final amb IVA inclòs; l\'enviament s\'indica a part. Els aliments que es preparen al moment o poden deteriorar-se o caducar ràpidament no tenen dret de desistiment (art. 103 del text refós de la Llei general per a la defensa dels consumidors i usuaris).',
+    'ent.recordado':'Hem omplert les teves dades de l\'última vegada.','ent.olvidar':'Oblidar les meves dades',
+    'ent.ya':'Ja sóc aquí','ent.ya.cinco':'Sóc a 5 minuts','ent.ya.ok':'Avisat. Ara mateix te\'l portem.','ent.ya.error':'No s\'ha pogut avisar. Truca al restaurant.',
+    'ent.cancelar':'Cancel·lar la meva comanda','ent.cancelar.conf':'Cancel·lar la teva comanda? Si ja estava pagada, el restaurant te la retornarà.','ent.cancelar.ok':'Hem avisat el restaurant que la cancel·les.',
+    'ent.incidencia':'Alguna cosa ha anat malament?','ent.incidencia.faltaba':'Faltava alguna cosa','ent.incidencia.mal':'Estava malament','ent.incidencia.frio':'Ha arribat fred','ent.incidencia.otro':'Un altre problema','ent.incidencia.ok':'Gràcies. El restaurant ho veurà i es posarà en contacte amb tu.',
+    'ent.pin':'Codi de lliurament','ent.pin.d':'Digues-l\'hi al repartidor quan ho rebis.','ent.mandar':'Enviat'
+  }
+};
+Object.keys(I18N_ENT).forEach(l => Object.assign(I18N[l], I18N_ENT[l]));
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
 
 function setLang(lang){
@@ -2512,7 +2601,7 @@ function trayActualizar(){
       <span class="tray-r">${escapeHtml(resumen)}</span>
       <span class="tray-t">${fmtMoney(sub)}</span>
       <span class="tray-c" aria-hidden="true"></span>
-    </button>${trayOpen ? `<div class="tray-b">${cart.map(cartLineHtml).join('')}</div>` : ''}`;
+    </button>${trayOpen ? `<div class="tray-b">${cart.map(cartLineHtml).join('')}</div>` : ''}${entEnvioFaltaHtml(sub)}`;
   if(foco){ const b = [...box.querySelectorAll('[data-k]')].find(x => x.dataset.k === foco); if(b) b.focus({preventScroll:true}); }
 }
 /* Texto del botón «Continuar»: en el pedido lleva el total y avisa de lo que falta. */
@@ -3032,10 +3121,25 @@ function primerTurnoDesde(turnos, minTime){
 function getLeadTimeMin(kind){
   const b = DB.business || {};
   const specific = kind === 'reserva' ? b.leadTimeMinReservas : b.leadTimeMinPedidos;
-  if(specific != null) return parseInt(specific) || 0;
-  if(b.leadTimeMin != null) return parseInt(b.leadTimeMin) || 0;
-  return parseInt((b.pedidos||{}).leadTimeMin) || 0;
+  let base;
+  if(specific != null) base = parseInt(specific) || 0;
+  else if(b.leadTimeMin != null) base = parseInt(b.leadTimeMin) || 0;
+  else base = parseInt((b.pedidos||{}).leadTimeMin) || 0;
+  // Modo ocupado del negocio (+10/15/20 min con caducidad): se suma a lo que ya se prometía, y caduca solo con el reloj del cliente.
+  return kind === 'reserva' ? base : base + ocupadoExtraMin();
 }
+function ocupadoExtraMin(){
+  const p = (DB.business || {}).pedidos || {};
+  const h = p.ocupadoHasta ? new Date(p.ocupadoHasta) : null, x = parseInt(p.ocupadoExtraMin) || 0;
+  return (h && !isNaN(h) && h.getTime() > Date.now() && x > 0) ? x : 0;
+}
+// Pausa de un canal (para llevar / domicilio) con caducidad; devuelve la hora de reanudación o null.
+function canalPausadoHasta(tipo){
+  const p = (DB.business || {}).pedidos || {};
+  const h = new Date(tipo === 'delivery' ? p.pausaDeliveryHasta : p.pausaTakeawayHasta);
+  return (!isNaN(h) && h.getTime() > Date.now()) ? h : null;
+}
+function horaCorta(d){ return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function applyLeadTime(dateInputId, timeInputId, hintBoxId, kind){
   const leadTimeMin = getLeadTimeMin(kind);
   const date = document.getElementById(dateInputId).value;
@@ -4548,6 +4652,7 @@ function menuInnerHtml(cartas){
     if(!hayC) h += `<h3 class="cs-tit">${escapeHtml(t('menus.title'))}</h3>`;
     h += buildMenusHtml();
   } else {
+    h += entFiltroAlergenosHtml();
     h += `<div class="srch"><input type="search" id="menu-search" value="${escapeHtml(menuQuery)}" placeholder="${escapeHtml(t('wz.o.search'))}" aria-label="${escapeHtml(t('wz.o.search'))}" oninput="menuBuscar(this.value)" autocomplete="off"></div>
       <div id="menu-results">${menuResultadosHtml(cartas)}</div>`;
   }
@@ -4649,13 +4754,15 @@ function renderMenuDishesHtml(sec){
     const hasMods = (p.modificadores || []).length > 0;
     const desc = p.descripcion || p.description || '';
     const q = dishQty(p), nombre = trPlato(p);
+    const evita = entContieneEvitado(p.id);
     // El área que se toca para añadir es un botón que cubre la tarjeta (dc-main); lo demás se pinta ENCIMA con una rejilla propia:
     // nombre + «i» arriba, precio + control abajo. Así la cantidad nunca cae encima del plato de al lado ni del texto.
     return `
-    <div class="menu-item dish dc${q ? ' en' : ''}" data-dish="${p.id}">
+    <div class="menu-item dish dc${q ? ' en' : ''}${evita.length ? ' dc-evita' : ''}" data-dish="${p.id}">
       <button type="button" class="dc-main" onclick="dishTap(${p.id}, '${escapeJsAttr(sec.id)}')" aria-label="${escapeHtml(t('aria.addItem').replace('%s', nombre) + ' · ' + fmtMoney(final))}"></button>
       <span class="dc-n name">${escapeHtml(nombre)}${promo ? ` <span class="promo-badge">-${promo.discountPct}%</span>` : ''}</span>
       <button type="button" class="dc-i" onclick="dishInfo(${p.id})" aria-label="${escapeHtml(t('info.de').replace('%s', nombre))}"><span aria-hidden="true">i</span></button>
+      ${evita.length ? `<span class="dc-av">${escapeHtml(t('ent.sin.contiene').replace('%s', evita.map(allergenLabel).join(', ')))}</span>` : ''}
       ${desc ? `<span class="dc-d">${escapeHtml(desc)}</span>` : ''}
       <span class="dc-foot">
         <span class="dc-p price">${promo ? `<s>${fmtMoney(base)}</s> ` : ''}${fmtMoney(final)}${hasMods ? ` <span class="dc-m">${escapeHtml(t('modifiers.fromPrice'))}</span>` : ''}</span>
@@ -4857,7 +4964,7 @@ function servicioChipsHtml(p, isDelivery){
   const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
   const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
   const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
-  const eta = Math.min(base + (DB.cocinaCargaActiva || 0) * extra, max || (base + (DB.cocinaCargaActiva || 0) * extra));
+  const eta = Math.min(base + (DB.cocinaCargaActiva || 0) * extra, max || (base + (DB.cocinaCargaActiva || 0) * extra)) + ocupadoExtraMin();
   chips.push(t('wz.o.chip.eta').replace('%d', eta));
   return `<div class="chips">${chips.map(c => `<span class="chip">${escapeHtml(c)}</span>`).join('')}</div>`;
 }
@@ -4887,6 +4994,17 @@ function renderOrderForm(){
 
   const isDelivery = currentTab === 'delivery';
   const p = (DB.business||{}).pedidos || {};
+  const pausaCanal = canalPausadoHasta(isDelivery ? 'delivery' : 'takeaway');
+  if(pausaCanal){
+    const tel = String((DB.business || {}).phone || '').trim();
+    box.innerHTML = `<div class="card aviso-pausa">
+      <div class="ap-ic" aria-hidden="true"></div>
+      <h2>${t('error.pedidosPausados.title')}</h2>
+      <p>${escapeHtml(t(isDelivery ? 'ent.pausa.delivery' : 'ent.pausa.takeaway').replace('%s', horaCorta(pausaCanal)))}</p>
+      ${tel ? `<a class="btn btn-primary ap-tel" href="tel:${escapeHtml(tel.replace(/\s+/g, ''))}">${escapeHtml(t('grupo.llamar'))} · ${escapeHtml(tel)}</a>` : ''}
+    </div>`;
+    return;
+  }
   wzIniciar('pedido');
   wzState.rendered = 'pedido';
   const menuHtml = buildMenuHtml(cartas);
@@ -4901,6 +5019,8 @@ function renderOrderForm(){
         <h2 class="wz-h" tabindex="-1">${t('wz.o.pick.title')}</h2>
         <p class="wz-sub">${t(isDelivery ? 'wz.o.pick.sub.delivery' : 'wz.o.pick.sub.takeaway')}</p>
         ${servicioChipsHtml(p, isDelivery)}
+        ${entOcupadoAvisoHtml()}
+        ${entRepetirHtml()}
         ${menuHtml}
       </section>
 
@@ -4943,10 +5063,17 @@ function renderOrderForm(){
           <input type="email" id="o-email" placeholder="${t('email.reserva.placeholder')}" autocomplete="email">
           <small style="color:var(--muted)">${t('email.pedido.hint')}</small>
         </div>
+        ${isDelivery ? `
+        <div class="field">
+          <label for="o-instr">${t('ent.instr.entrega')}</label>
+          <textarea id="o-instr" maxlength="300" rows="2"></textarea>
+          <label class="ent-sc"><input type="checkbox" id="o-sincontacto"> <span>${t('ent.sinContacto')}</span></label>
+        </div>` : entRecogidaHtml(p)}
         <div class="field">
           <label for="o-notes">${t('order.notas')}</label>
           <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
         </div>
+        <div id="ent-recordado"></div>
       </section>
 
       <section class="wz-step card" data-wz="3" hidden>
@@ -4964,6 +5091,7 @@ function renderOrderForm(){
           </div>
         </div>
         <p class="wz-ok">${t('wz.o.next')}</p>
+        <p class="ent-legal">${escapeHtml(t('ent.legal'))}</p>
         <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0 0;cursor:pointer">
           <input type="checkbox" id="o-privacy-consent" class="consent-check">
           <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
@@ -4980,6 +5108,7 @@ function renderOrderForm(){
   updateCierreHint();
   updateCashAmountVisibility();
   updateOrderSlots(wzState.reached === 1 && wzState.step === 1);
+  entPrefill();
   wzAplicar();
 }
 
@@ -5272,6 +5401,8 @@ function etaHintHtml(){
 async function submitOrder(){
   if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
   if((DB.business||{}).pedidosOnlineActivos === false){ showInlineError(t('error.pedidosPausados.body')); return; }
+  const pausaEnvio = canalPausadoHasta(currentTab === 'delivery' ? 'delivery' : 'takeaway');
+  if(pausaEnvio){ showInlineError(t(currentTab === 'delivery' ? 'ent.pausa.delivery' : 'ent.pausa.takeaway').replace('%s', horaCorta(pausaEnvio))); return; }
   if(submittingRequest) return;
   submittingRequest = true;
   setBtnLoading('o-submit', true);
@@ -5466,9 +5597,13 @@ async function submitOrder(){
   };
   if(metodoPagoLocal) req.metodoPagoLocal = metodoPagoLocal;
   if(pagaCon != null) req.pagaCon = pagaCon;
+  const instr = (document.getElementById('o-instr') || {}).value;
+  if(instr && instr.trim()) req.instrucciones = instr.trim().slice(0, 300);
+  if((document.getElementById('o-sincontacto') || {}).checked) req.sinContacto = true;
 
   req.total = total;
   guardarResumenPedido(req);
+  entGuardarUltimo(req);
 
   const submitBtn = document.getElementById('o-submit');
   if(submitBtn) submitBtn.disabled = true;
@@ -5481,6 +5616,148 @@ async function submitOrder(){
 
   sendRequest(req, t('order.ok'));
 }
+
+
+/* ============ PARA LLEVAR Y DELIVERY (13/11): datos recordados, repetir pedido, filtro de alérgenos, avisos ============
+   Todo vive en el navegador del cliente (localStorage): sin cuentas, sin servidor y sin coste por licencia. */
+const ENT_ULTIMO_LS = 'gg_ult_pedido_';
+function entUltimo(){ try{ return JSON.parse(localStorage.getItem(ENT_ULTIMO_LS + publicId) || 'null'); }catch(e){ return null; } }
+function entGuardarUltimo(req){
+  try{
+    localStorage.setItem(ENT_ULTIMO_LS + publicId, JSON.stringify({
+      ts: Date.now(), tipo: req.tipo, nombre: req.clienteNombre || '', tel: req.clienteTelefono || '', email: req.clienteEmail || '',
+      dir: req.clienteDireccion || '', cp: req.codigoPostal || '', instr: req.instrucciones || '',
+      items: (req.items || []).map(l => ({id: l.platoId, n: String(l.name || ''), q: Number(l.qty) || 1, m: (l.modificadores || []).map(x => x && x.id)}))
+    }));
+  }catch(e){}
+}
+function entOlvidar(){
+  try{ localStorage.removeItem(ENT_ULTIMO_LS + publicId); }catch(e){}
+  ['o-name', 'o-phone', 'o-email', 'o-address', 'o-cp', 'o-instr'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  const b = document.getElementById('ent-recordado'); if(b) b.innerHTML = '';
+}
+function entPrefill(){
+  const u = entUltimo(); if(!u) return;
+  const poner = (id, v) => { const el = document.getElementById(id); if(el && !el.value && v) el.value = v; };
+  poner('o-name', u.nombre); poner('o-phone', u.tel); poner('o-email', u.email);
+  if(currentTab === 'delivery'){ poner('o-address', u.dir); poner('o-cp', u.cp); poner('o-instr', u.instr); }
+  const b = document.getElementById('ent-recordado');
+  if(b && (u.nombre || u.tel)) b.innerHTML = `<div class="ent-rec">${escapeHtml(t('ent.recordado'))} <button type="button" onclick="entOlvidar()">${escapeHtml(t('ent.olvidar'))}</button></div>`;
+}
+function entOcupadoAvisoHtml(){
+  const x = ocupadoExtraMin();
+  return x ? `<p class="ent-ocupado" role="status">${escapeHtml(t('ent.ocupado').replace('%d', x))}</p>` : '';
+}
+function entRepetirHtml(){
+  const u = entUltimo();
+  if(!u || !(u.items || []).length || cart.length) return '';
+  const n = u.items.reduce((s, l) => s + l.q, 0);
+  const res = u.items.slice(0, 3).map(l => (l.q > 1 ? l.q + '× ' : '') + l.n).join(' · ') + (u.items.length > 3 ? ' …' : '');
+  return `<button type="button" class="ent-repetir" id="ent-repetir" onclick="entRepetir()"><b>${escapeHtml(t('ent.repetir'))}</b><span>${escapeHtml(t('ent.repetir.sub').replace('%d', n).replace('%s', res))}</span></button>`;
+}
+function entRepetir(){
+  const u = entUltimo(); if(!u) return;
+  const faltan = [];
+  (u.items || []).forEach(it => {
+    const f = findPlatoById(it.id);
+    if(!f || f.plato.disponible === false){ faltan.push(it.n); return; }
+    const p = f.plato, mods = (p.modificadores || []).filter(m => (it.m || []).includes(m.id));
+    const price = dishPriceInfo(p).final + mods.reduce((s, m) => s + (m.precio || 0), 0);
+    const key = cartLineKey(p.id, mods.map(m => m.id));
+    let line = cart.find(l => l.key === key);
+    if(!line){ line = {key, recipeId: p.id, sectionId: f.sectionId, name: p.nombre, price, qty: 0, modificadores: mods}; cart.push(line); }
+    line.qty += it.q;
+  });
+  const b = document.getElementById('ent-repetir'); if(b) b.remove();
+  renderCartSummary();
+  if(faltan.length) showInlineError(t('ent.repetir.falta').replace('%s', faltan.join(', ')));
+}
+function entRecogidaHtml(p){
+  const b = DB.business || {}, instr = String(p.instruccionesRecogida || '').trim();
+  if(!instr && !b.address) return '';
+  const maps = (b.gmaps && /^https?:/i.test(b.gmaps)) ? b.gmaps : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.address || '');
+  return `<div class="ent-rec"><b>${escapeHtml(t('ent.recogida'))}</b>${instr ? `<br>${escapeHtml(instr)}` : ''}${b.address ? `<br>${escapeHtml(b.address)} · <a href="${escapeHtml(maps)}" target="_blank" rel="noopener">${escapeHtml(t('ent.recogida.maps'))}</a>` : ''}</div>`;
+}
+// «Te faltan X € para el envío gratis»: lo que más empuja a completar el pedido (y es verdad: se calcula con los mismos números del envío).
+function entEnvioFaltaHtml(sub){
+  if(currentTab !== 'delivery') return '';
+  const p = (DB.business || {}).pedidos || {}, fee = p.deliveryFee || 0, free = p.freeDeliveryFrom || 0;
+  if(!(fee > 0) || !(free > 0)) return '';
+  return sub >= free ? `<div class="ent-env ok">${escapeHtml(t('ent.envioGratis'))}</div>` : `<div class="ent-env">${escapeHtml(t('ent.faltaEnvio').replace('%s', fmtMoney(free - sub)))}</div>`;
+}
+/* Filtro de alérgenos: atenúa lo que contiene lo elegido y lo dice en la tarjeta. No bloquea nada (el cliente decide) y no sustituye
+   a la «i» ni al aviso al restaurante: es una ayuda para no tener que abrir plato por plato. */
+let entEvitar = new Set();
+function entAlergenosPresentes(){
+  const set = new Set(); Object.values(DB.allergens || {}).forEach(a => (a || []).forEach(x => set.add(x)));
+  return [...set].sort((a, b) => allergenLabel(a).localeCompare(allergenLabel(b)));
+}
+function entFiltroAlergenosHtml(){
+  const lista = entAlergenosPresentes(); if(!lista.length) return '';
+  return `<div class="ent-alerg" role="group" aria-label="${escapeHtml(t('ent.sin.titulo'))}"><span class="ent-alt">${escapeHtml(t('ent.sin.titulo'))}</span>${lista.map((a, i) => `<button type="button" aria-pressed="${entEvitar.has(a)}" onclick="entToggleAlergeno(${i})">${escapeHtml(allergenLabel(a))}</button>`).join('')}${entEvitar.size ? `<button type="button" onclick="entLimpiarAlergenos()">${escapeHtml(t('ent.sin.limpiar'))}</button>` : ''}</div>`;
+}
+function entToggleAlergeno(i){ const a = entAlergenosPresentes()[i]; if(a == null) return; if(entEvitar.has(a)) entEvitar.delete(a); else entEvitar.add(a); repaintMenu(); }
+function entLimpiarAlergenos(){ entEvitar.clear(); repaintMenu(); }
+function entContieneEvitado(id){ return entEvitar.size ? ((DB.allergens || {})[id] || []).filter(a => entEvitar.has(a)) : []; }
+
+/* Seguimiento: ventana prometida, llegada estimada, aviso de retraso y avisos en este móvil (Notification API: sin servidor, sin coste). */
+let entEstadoVisto = null;
+function entHoraDe(iso){ const d = new Date(iso); return isNaN(d) ? '' : horaCorta(d); }
+function entTrackExtraHtml(data, status, esDelivery){
+  let h = '';
+  const final = status === 'entregado' || (!esDelivery && status === 'listo');
+  if(data.desde && data.hasta && !final) h += `<p class="ent-vent">${escapeHtml(t('ent.ventana').replace('%s', entHoraDe(data.desde) + '–' + entHoraDe(data.hasta)))}</p>`;
+  if(status === 'encamino'){
+    if(data.salidaAt) h += `<p class="ent-sub">${escapeHtml(t('ent.salio').replace('%s', entHoraDe(data.salidaAt)))}</p>`;
+    if(data.llegadaEstimada) h += `<p class="ent-vent">${escapeHtml(t('ent.llegada').replace('%s', entHoraDe(data.llegadaEstimada)))}</p>`;
+  }
+  const limite = status === 'encamino' && data.llegadaEstimada ? Math.max(new Date(data.hasta || 0).getTime() || 0, new Date(data.llegadaEstimada).getTime()) : new Date(data.hasta || 0).getTime();
+  if(!final && limite && Date.now() > limite + 60000) h += `<div class="ent-retraso" role="status"><b>${escapeHtml(t('ent.retraso.t'))}</b>${escapeHtml(t('ent.retraso.d'))}</div>`;
+  if(status === 'encamino' && data.pin) h += `<div class="ent-pin"><span class="ent-sub">${escapeHtml(t('ent.pin'))}</span><b>${escapeHtml(String(data.pin))}</b><span class="ent-sub">${escapeHtml(t('ent.pin.d'))}</span></div>`;
+  const acc = [];
+  if(!esDelivery && (status === 'aceptado' || status === 'preparando' || status === 'listo')){
+    acc.push(`<button type="button" class="btn" onclick="entAvisarRest('llegada')">${escapeHtml(t('ent.ya'))}</button>`, `<button type="button" class="btn" onclick="entAvisarRest('cinco')">${escapeHtml(t('ent.ya.cinco'))}</button>`);
+  }
+  if((status === 'pendiente' || status === 'aceptado') && !data.cancelPedida) acc.push(`<button type="button" class="btn" onclick="entCancelarPedido()">${escapeHtml(t('ent.cancelar'))}</button>`);
+  if(status === 'entregado' || (!esDelivery && status === 'listo')) acc.push(`<button type="button" class="btn" onclick="entIncidenciaAbrir()">${escapeHtml(t('ent.incidencia'))}</button>`);
+  if(acc.length) h += `<div class="ent-acc">${acc.join('')}</div><div id="ent-acc-msg" class="ent-sub" role="status"></div>`;
+  if(!final && 'Notification' in window){
+    if(Notification.permission === 'default') h += `<div class="ent-acc"><button type="button" class="btn" onclick="entPedirAvisos()">${escapeHtml(t('ent.avisar'))}</button></div>`;
+    else if(Notification.permission === 'granted') h += `<p class="ent-sub">${escapeHtml(t('ent.avisar.on'))}</p>`;
+  }
+  return h;
+}
+function entPedirAvisos(){
+  try{ Notification.requestPermission().then(() => { if(lastTrackStatusData) renderTrackStatus(lastTrackStatusData); }); }catch(e){}
+}
+function entNotificarCambio(status, head){
+  try{
+    if(entEstadoVisto !== null && entEstadoVisto !== status){
+      try{ if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }catch(e){}
+      document.title = '● ' + head + ' · ' + ((DB.business || {}).name || '');
+      if('Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification((DB.business || {}).name || 'GastroGoan', {body: head, tag: 'gg-pedido'});
+    }
+    entEstadoVisto = status;
+  }catch(e){}
+}
+function entEnviarAviso(cuerpo, okKey){
+  const msg = document.getElementById('ent-acc-msg');
+  return db.ref('gastrogoan/public/' + publicId + '/requests').push(Object.assign({type: 'pedido_aviso', token: trackToken, createdAt: new Date().toISOString()}, cuerpo))
+    .then(() => { if(msg) msg.textContent = t(okKey); })
+    .catch(e => { console.error(e); if(msg) msg.textContent = t('ent.ya.error'); });
+}
+function entAvisarRest(accion){ entEnviarAviso({accion}, 'ent.ya.ok'); }
+async function entCancelarPedido(){
+  if(!(await confirmModal(t('ent.cancelar.conf'), {danger: true}))) return;
+  entEnviarAviso({accion: 'cancelar'}, 'ent.cancelar.ok');
+}
+function entIncidenciaAbrir(){
+  const msg = document.getElementById('ent-acc-msg'); if(!msg) return;
+  const b = (m, k) => `<button type="button" class="btn" onclick="entIncidencia('${m}')">${escapeHtml(t(k))}</button>`;
+  msg.innerHTML = `<div class="ent-acc">${b('faltaba', 'ent.incidencia.faltaba')}${b('mal', 'ent.incidencia.mal')}${b('frio', 'ent.incidencia.frio')}${b('otro', 'ent.incidencia.otro')}</div>`;
+}
+function entIncidencia(motivo){ entEnviarAviso({accion: 'incidencia', motivo}, 'ent.incidencia.ok'); }
+setInterval(() => { try{ if(trackListenerAttached && lastTrackStatusData && document.querySelector('.trk') && !document.hidden) renderTrackStatus(lastTrackStatusData); }catch(e){} }, 30000);
 
 /* ============ PAGO CON TARJETA (Stripe) ============
    1) Se pide al Worker el pago ANTES de registrar el pedido en el negocio:
@@ -6053,15 +6330,13 @@ function renderTrackStatus(data){
   // no aportaba nada al cliente —ya lo tiene en la mano— y no se distinguía
   // del anterior. Un pedido ya cerrado se sigue viendo como listo.
   if(!esDelivery && status === 'entregado') status = 'listo';
-  const idx = Math.max(0, TRACK_STEPS.indexOf(status));
+  const stepsKeys = esDelivery ? ['pendiente','aceptado','preparando','listo','encamino','entregado'] : ['pendiente','aceptado','preparando','listo'];
+  const idx = Math.max(0, stepsKeys.indexOf(status));
   const tipoTxt = data.tipo ? t(esDelivery ? 'track.type.delivery' : 'track.type.takeaway') : '';
   // Lo que le importa al cliente: qué está pasando AHORA, dicho en una frase.
   const k = (status === 'listo' || status === 'entregado') ? status + (esDelivery ? '.delivery' : '.takeaway') : status;
-  const steps = [
-    t('track.step.pendiente'), t('track.step.aceptado'), t('track.step.preparando'),
-    t(esDelivery ? 'track.step.listo.delivery' : 'track.step.listo.takeaway'),
-    ...(esDelivery ? [t('track.step.entregado.delivery')] : []),
-  ];
+  const steps = stepsKeys.map(sk => sk === 'listo' ? t(esDelivery ? 'track.step.listo.delivery' : 'track.step.listo.takeaway') : sk === 'entregado' ? t('track.step.entregado.delivery') : t('track.step.' + sk));
+  entNotificarCambio(status, t('track.head.' + k));
   const clase = i => i < idx ? 'hecho' : (i === idx ? (idx === steps.length - 1 ? 'hecho ahora' : 'ahora') : '');
   app.innerHTML = `
     <div class="trk">
@@ -6073,6 +6348,7 @@ function renderTrackStatus(data){
         ${k !== 'pendiente' ? '<div class="trk-check" aria-hidden="true"></div>' : ''}
         <h2 class="trk-h">${t('track.head.' + k)}</h2>
         <p class="trk-desc">${t('track.desc.' + k)}</p>
+        ${entTrackExtraHtml(data, status, esDelivery)}
         <div class="trk-bar" aria-hidden="true">${steps.map((_, i) => `<span class="${i < idx ? 'hecho' : (i === idx ? 'ahora' : '')}"></span>`).join('')}</div>
       </div>
       <ol class="trk-steps">

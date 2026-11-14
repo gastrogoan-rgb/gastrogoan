@@ -5171,7 +5171,7 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa')",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa' || newData.child('type').val() === 'pedido_aviso')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -7366,6 +7366,8 @@ function publishPublicLookup(publicId, config){
 // audio) para avisar de que ha llegado una reserva o pedido online nuevo,
 // independientemente de la vista que el personal tenga abierta en ese momento.
 function playNewRequestAlert(){
+  // Con el sonido ya desbloqueado (js/entregas.js) se usa ese mismo contexto: uno nuevo, sin un toque previo, lo bloquea el navegador.
+  if(typeof entSonidoActivo === 'function' && entSonidoActivo() && entPitido(3)) return;
   try{
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if(!Ctx) return;
@@ -8321,6 +8323,9 @@ function initPublicRequestsListener(){
       }else if(req.type === 'pedido_mesa'){
         // Carta por QR con token de mesa (ver recibirPedidoMesaQr).
         if(recibirPedidoMesaQr(req)) notifyNewRequest = true;
+      }else if(req.type === 'pedido_aviso'){
+        // Avisos del cliente sobre SU pedido (llegada, cancelar, incidencia). Se busca por el token, nunca por id.
+        if(typeof entAvisoDelCliente === 'function' && entAvisoDelCliente(req)) notifyNewRequest = true;
       }else if(req.type === 'pago_mesa'){
         recibirPagoMesaQr(req);
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
@@ -8414,6 +8419,9 @@ function initPublicRequestsListener(){
         });
         const subtotalRevisado = onlineItems.reduce((sum, it) => sum + it.price * it.qty, 0);
         const costeEnvioRevisado = costeEnvioPedidoPublico(tipoPedido, subtotalRevisado, req.costeEnvio);
+        // El mínimo de pedido se vuelve a comprobar aquí, igual que la zona y los precios: en la web solo lo ve el navegador (13/11, #12).
+        const minimoNegocio = parseFloat(((DB.business && DB.business.pedidos) || {}).pedidoMinimo) || 0;
+        const bajoMinimo = minimoNegocio > 0 && subtotalRevisado + 0.001 < minimoNegocio;
         if(Math.abs(costeEnvioRevisado - (Number(req.costeEnvio) || 0)) > 0.01){
           revisado.correcciones.push({nombre: t('precios.envio'), enviado: Number(req.costeEnvio) || 0, real: costeEnvioRevisado});
         }
@@ -8439,6 +8447,10 @@ function initPublicRequestsListener(){
           // La web ya comprueba la zona, pero eso es el navegador del cliente: aquí se vuelve a mirar el código postal con la
           // lista del negocio (como los precios) para que un pedido a domicilio fuera de zona nunca entre solo.
           pendienteVerificarZona: !!req.pendienteVerificarZona || !!zonaDeRepartoDePedido(req).fuera,
+          bajoMinimo: bajoMinimo || undefined, minimoRequerido: bajoMinimo ? minimoNegocio : undefined,
+          // Datos del plan delivery: instrucciones de entrega/recogida, alérgenos y "hasta cuándo" prometido.
+          instrucciones: String(req.instrucciones || '').slice(0, 300) || undefined,
+          sinContacto: !!req.sinContacto || undefined,
           fueraDeZona: zonaDeRepartoDePedido(req).fuera || undefined,
           phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
           // El cliente ya indicó en la web pública con qué billete va a pagar
@@ -8467,7 +8479,7 @@ function initPublicRequestsListener(){
           // confirmación del banco. Sin esto, el estado no se publicaba hasta
           // aceptarlo, y al volver del pago leía «No encontramos ese pedido».
           if(newOrder) syncOrderStatusForPublic(newOrder);
-        } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && !zonaDeRepartoDePedido(req).fuera && typeof acceptOnlineOrder === 'function'){
+        } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && !zonaDeRepartoDePedido(req).fuera && !bajoMinimo && typeof acceptOnlineOrder === 'function'){
           // Con el interruptor de "Pedidos online" en ON (por defecto), el
           // pedido se acepta solo, sin pasar por la bandeja de pendientes —
           // salvo que necesite verificación manual de zona de reparto, en
@@ -8529,9 +8541,33 @@ function buildSucursalesList(){
 // recoger/repartir) → "entregado" (cobrado o marcado como entregado en
 // reparto). "rechazado" se pasa aparte, explícitamente, porque en ese
 // momento el pedido ya se ha borrado de DB.tpvOrders.
+/* ============================================================
+   HORA PROMETIDA COMO VENTANA Y LLEGADA ESTIMADA (13/11, plan delivery #2 y #3)
+   El cliente elige una hora; el negocio promete una VENTANA desde esa hora (`pedidos.ventanaMin`, 10 por defecto): una hora exacta
+   se incumple casi siempre y es lo que más enfada. Devuelve ISO o null si el pedido no trae hora. */
+function ventanaPromesaPedido(order){
+  if(!order || !order.date || !order.time) return null;
+  const ini = new Date(order.date + 'T' + order.time);
+  if(isNaN(ini)) return null;
+  const p = (DB.business && DB.business.pedidos) || {};
+  const w = Math.min(60, Math.max(0, parseInt(p.ventanaMin))); const min = isNaN(w) ? 10 : w;
+  return {desde: ini.toISOString(), hasta: new Date(ini.getTime() + min * 60000).toISOString(), min};
+}
+/* Llegada estimada de un reparto que ya salió: salida + el tiempo habitual de reparto del negocio (`pedidos.repartoMin`, 15 por
+   defecto) o, si hay histórico suficiente de ese código postal, la mediana real de sus entregas (`tiempoRepartoCp`). */
+function llegadaEstimadaPedido(order){
+  if(!order || !order.entregaSalidaAt) return null;
+  const sal = new Date(order.entregaSalidaAt); if(isNaN(sal)) return null;
+  let min = typeof tiempoRepartoCp === 'function' ? tiempoRepartoCp(order.clienteCodigoPostal) : null;
+  if(min == null){ const p = (DB.business && DB.business.pedidos) || {}; const r = parseInt(p.repartoMin); min = isNaN(r) ? 15 : r; }
+  return new Date(sal.getTime() + min * 60000).toISOString();
+}
+
 function computePublicOrderStatus(order){
   if(order.status === 'pendiente-online') return 'pendiente';
   if(order.status === 'pagada' || order.entregaEstado === 'entregado') return 'entregado';
+  // «En camino»: lo dispara un hecho real, el repartidor pulsando «Salgo» (13/11, plan delivery #2).
+  if(order.tipo === 'delivery' && order.entregaEstado === 'encamino') return 'encamino';
   const food = (order.items||[]).filter(l => !l.bebida && !l.isShipping);
   if(food.length && food.every(l => l.estado === 'entregado')) return 'listo';
   if(food.some(l => l.estado === 'preparando' || l.estado === 'cocina')) return 'preparando';
@@ -8548,15 +8584,23 @@ function syncOrderStatusForPublic(order, forcedStatus){
   const publicId = getPublicId();
   if(!publicId) return;
   const status = forcedStatus || computePublicOrderStatus(order);
+  // Marca de «listo» la primera vez que el pedido lo está (alimenta la analítica de tiempos).
+  if(status === 'listo' && !order.listoAt) order.listoAt = new Date().toISOString();
   getPublicMirrorApp().then(app => {
     if(!app) return;
     // `tipo` (takeaway/delivery) viaja aquí para que la página de
     // seguimiento pueda matizar el texto ("listo para recoger" frente a
     // "en reparto") — antes no se publicaba y esa pantalla no tenía forma
     // de saber cuál de los dos era.
-    app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + order.clientRef).set({
-      status, tipo: order.tipo || '', updatedAt: new Date().toISOString()
-    }).catch(()=>{});
+    const v = ventanaPromesaPedido(order);
+    const cuerpo = {status, tipo: order.tipo || '', updatedAt: new Date().toISOString()};
+    // Hora como ventana («21:10–21:25») y, si ya salió, cuándo salió y cuándo se espera (13/11, plan delivery #2/#3).
+    if(v){ cuerpo.desde = v.desde; cuerpo.hasta = v.hasta; }
+    if(order.entregaSalidaAt){ cuerpo.salidaAt = order.entregaSalidaAt; const e = llegadaEstimadaPedido(order); if(e) cuerpo.llegadaEstimada = e; }
+    if(order.listoAt) cuerpo.listoAt = order.listoAt;
+    if(order.tipo === 'delivery' && order.pinEntrega && status !== 'entregado') cuerpo.pin = order.pinEntrega;
+    if(order.cancelacionPedida) cuerpo.cancelPedida = true;
+    app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + order.clientRef).set(cuerpo).catch(()=>{});
   }).catch(()=>{});
 }
 
@@ -10734,6 +10778,24 @@ function renderPedidosConfigCard(){
         <small style="color:var(--muted)">${t('mn.pedidos.minOrderDesc')}</small>
       </div>
       <div class="field">
+        <label>${escapeHtml(gl({es:'Ventana de la hora prometida (min)', ca:'Finestra de l\'hora promesa (min)', en:'Promised-time window (min)'}))}</label>
+        <input type="number" id="mn-ventanamin" min="0" max="60" step="5" value="${escapeHtml(p.ventanaMin != null ? p.ventanaMin : 10)}">
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'El cliente ve «21:10–21:20» en vez de una hora exacta que casi siempre se incumple.', ca:'El client veu «21:10–21:20» en comptes d\'una hora exacta que gairebé sempre s\'incompleix.', en:'The customer sees "21:10–21:20" instead of an exact time that is almost always missed.'}))}</small>
+      </div>
+      <div class="field">
+        <label>${escapeHtml(gl({es:'Preparación, margen y reparto (min)', ca:'Preparació, marge i repartiment (min)', en:'Prep, margin and delivery (min)'}))}</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="number" id="mn-prepmin" min="0" max="120" step="5" value="${escapeHtml(p.prepMin != null ? p.prepMin : 25)}" style="width:90px" aria-label="${escapeHtml(gl({es:'Preparación', ca:'Preparació', en:'Prep'}))}">
+          <input type="number" id="mn-margenmin" min="0" max="60" step="5" value="${escapeHtml(p.margenMin != null ? p.margenMin : 10)}" style="width:90px" aria-label="${escapeHtml(gl({es:'Margen', ca:'Marge', en:'Margin'}))}">
+          <input type="number" id="mn-repartomin" min="0" max="90" step="5" value="${escapeHtml(p.repartoMin != null ? p.repartoMin : 15)}" style="width:90px" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">
+        </div>
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'Un pedido programado pasa a cocina a «hora prometida − estos minutos». El reparto solo cuenta en domicilio y es la estimación cuando aún no hay histórico del código postal.', ca:'Una comanda programada passa a cuina a «hora promesa − aquests minuts». El repartiment només compta a domicili i és l\'estimació quan encara no hi ha històric del codi postal.', en:'A scheduled order goes to the kitchen at "promised time − these minutes". Delivery only counts for home delivery and is the estimate until the postal code has history.'}))}</small>
+      </div>
+      <div class="field">
+        <label>${escapeHtml(gl({es:'Cómo recoger el pedido (puerta, mostrador…)', ca:'Com recollir la comanda (porta, taulell…)', en:'How to collect the order (door, counter…)'}))}</label>
+        <textarea id="mn-instrrecogida" rows="2" maxlength="200">${escapeHtml(p.instruccionesRecogida || '')}</textarea>
+      </div>
+      <div class="field">
         <label>${t('mn.pedidos.maxPorFranja')}</label>
         <input type="number" id="mn-maxporfranja" min="0" step="1" value="${escapeHtml(p.maxPorFranja||0)}" placeholder="0">
         <small style="color:var(--muted)">${t('mn.pedidos.maxPorFranjaDesc')}</small>
@@ -10870,6 +10932,12 @@ async function savePedidosConfig(){
   p.tiempoMaxEstimado = Math.max(0, parseInt(document.getElementById('mn-tiempomax').value) || 0);
   p.cierrePedidosAntesMin = Math.max(0, parseInt(document.getElementById('mn-cierreantes').value) || 0);
   p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
+  const nv = id => { const el = document.getElementById(id); return el ? parseInt(el.value) : NaN; };
+  if(!isNaN(nv('mn-ventanamin'))) p.ventanaMin = Math.min(60, Math.max(0, nv('mn-ventanamin')));
+  if(!isNaN(nv('mn-prepmin'))) p.prepMin = Math.min(120, Math.max(0, nv('mn-prepmin')));
+  if(!isNaN(nv('mn-margenmin'))) p.margenMin = Math.min(60, Math.max(0, nv('mn-margenmin')));
+  if(!isNaN(nv('mn-repartomin'))) p.repartoMin = Math.min(90, Math.max(0, nv('mn-repartomin')));
+  const ir = document.getElementById('mn-instrrecogida'); if(ir) p.instruccionesRecogida = ir.value.trim().slice(0, 200);
   const maxParadasEl = document.getElementById('mn-maxparadasruta');
   if(maxParadasEl) p.maxParadasPorRuta = Math.max(0, parseInt(maxParadasEl.value) || 0);
   const ventanaRutaEl = document.getElementById('mn-ventanaruta');
