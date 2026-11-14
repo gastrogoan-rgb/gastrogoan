@@ -433,6 +433,6 @@ espera $P194 "Ventanas y avisos siempre enteros: 9 tamaños, 5 ventanas, avisos,
 espera $P195 "Punto de equilibrio del Panel: cuentas a mano, coincide con Gestión Económica, comisiones y existencias fuera de los fijos, préstamo explicado" "$SALIDA/panelequil.txt" "el equilibrio del Panel es cierto"
 espera $P196 "Cambios sin guardar en TODA la app: ventanas, formularios, pantallas, Pedidos con borrador, cerrar pestaña; avisa donde debe y no en buscadores, PIN ni lo rellenado por código" "$SALIDA/singuardar.txt" "cambios sin guardar: avisa donde debe"
 espera $P197 "Web pública de pedidos: avisa al cerrar con el carrito a medias, no al ir a pagar" "$SALIDA/websalida.txt" "la web de pedidos avisa al salir"
-espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana prometida, empaquetado, monedero, pedido por teléfono, avisos del cliente, web (repetir, alérgenos, pausas)" "$SALIDA/entregas.txt" "fase 1 y 2 (lo hecho) funcionan"
+espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana prometida, empaquetado, monedero, pedido por teléfono, avisos del cliente, web (repetir, alérgenos, pausas)" "$SALIDA/entregas.txt" "fase 1 y 2 .lo hecho. funcionan"
 
 exit $FALLOS
