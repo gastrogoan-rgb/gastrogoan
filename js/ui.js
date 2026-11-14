@@ -518,6 +518,12 @@ function tourPositionUI(opts){
   const medir = () => el ? el.getBoundingClientRect() : null;
   const valido = r => r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh;
   let rect = medir();
+  // Lo explicado existe pero un paso anterior dejó la pantalla desplazada y queda fuera de la vista: se trae a la vista antes de decidir que
+  // «no hay nada que resaltar» (con una pantalla más alta —p. ej. el TPV con su franja de pedidos— el foco se perdía y el paso salía en blanco).
+  if(ajustar && el && rect && rect.width > 0 && rect.height > 0 && !(rect.bottom > 0 && rect.top < vh)){
+    try{ el.scrollIntoView({block: 'center'}); }catch(e){}
+    rect = medir();
+  }
 
   if(!valido(rect)){
     spot.classList.add('no-target'); spot.classList.add('active');
