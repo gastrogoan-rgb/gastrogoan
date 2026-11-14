@@ -1029,6 +1029,16 @@
   .ent-acc .btn{min-height:48px}
   .ent-pin{margin:12px 0 0;padding:12px;border:2px dashed var(--olive);border-radius:var(--r,6px);text-align:center}
   .ent-pin b{display:block;font-family:var(--mono,monospace);font-size:32px;letter-spacing:.3em}
+  .tv-board{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:16px 0;min-height:60vh}
+  .tv-board h2{font-size:clamp(20px,3vw,34px);margin:0 0 12px}
+  .tv-board ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:12px}
+  .tv-board li{font-family:var(--mono,monospace);font-size:clamp(28px,6vw,64px);font-weight:700;padding:10px 18px;border:2px solid var(--line,#D8D3C8);border-radius:var(--r,6px);background:#fff}
+  .tv-listos li{background:#E7EEDB;border-color:var(--olive)}
+  .tv-board li small{display:block;font-size:14px;font-weight:400;color:var(--red,#8A4A3B)}
+  .tv-board li.tv-tarde{border-color:var(--red,#8A4A3B)}
+  .tv-board li.tv-vacio{border:0;background:none;color:var(--muted)}
+  @media (max-width:700px){.tv-board{grid-template-columns:1fr}}
+  .ent-cesta{margin-top:6px}.ent-cesta button{font:inherit;font-size:13px;color:var(--olive);background:none;border:0;text-decoration:underline;cursor:pointer;min-height:36px}
 </style>
 </head>
 <body>
@@ -1523,6 +1533,9 @@ Object.keys(I18N_WZ).forEach(l => Object.assign(I18N[l], I18N_WZ[l]));
 /* ============ PARA LLEVAR Y DELIVERY (13/11, plan reports/Delivery y take away sublimes.md) ============ */
 const I18N_ENT = {
   es:{
+    'ent.tv.prep':'En preparación','ent.tv.listos':'Listos para recoger','ent.tv.lleva':'lleva %d min','ent.cesta.compartir':'Compartir mi cesta','ent.cesta.ok':'Enlace copiado',
+    'ent.codigo':'Código promocional (si tienes uno)','ent.codigo.ok':'Código aplicado','ent.codigo.no':'Ese código no existe','ent.codigo.caducado':'Ese código ha caducado','ent.codigo.agotado':'Ese código ya se ha agotado','ent.codigo.minimo':'Ese código pide un pedido mínimo de %s','ent.codigo.linea':'Código %s',
+    'ent.noVisto':'Ahora mismo el restaurante no está mirando su pantalla: tu pedido le llegará en cuanto la abra. Si es urgente, llámale.',
     'track.head.encamino':'Va de camino','track.desc.encamino':'El repartidor ya ha salido con tu pedido.','track.step.encamino':'En camino',
     'ent.ventana':'Hora prometida: %s','ent.llegada':'Llegada estimada: %s','ent.salio':'Salió a las %s',
     'ent.retraso.t':'Vamos con un poco de retraso','ent.retraso.d':'Tu pedido tarda algo más de lo previsto. Lo sentimos: estamos en ello. Si necesitas algo, llama al restaurante.',
@@ -1542,6 +1555,9 @@ const I18N_ENT = {
     'ent.pin':'Código de entrega','ent.pin.d':'Dícteselo al repartidor al recibirlo.','ent.mandar':'Enviado'
   },
   en:{
+    'ent.tv.prep':'Being prepared','ent.tv.listos':'Ready for pickup','ent.tv.lleva':'waiting %d min','ent.cesta.compartir':'Share my basket','ent.cesta.ok':'Link copied',
+    'ent.codigo':'Promo code (if you have one)','ent.codigo.ok':'Code applied','ent.codigo.no':'That code does not exist','ent.codigo.caducado':'That code has expired','ent.codigo.agotado':'That code has run out','ent.codigo.minimo':'That code needs a minimum order of %s','ent.codigo.linea':'Code %s',
+    'ent.noVisto':'The restaurant is not looking at its screen right now: your order will reach them as soon as they open it. If it is urgent, give them a call.',
     'track.head.encamino':'On its way','track.desc.encamino':'The rider has left with your order.','track.step.encamino':'On its way',
     'ent.ventana':'Promised time: %s','ent.llegada':'Estimated arrival: %s','ent.salio':'Left at %s',
     'ent.retraso.t':'We are running a little late','ent.retraso.d':'Your order is taking longer than planned. We are sorry: we are on it. If you need anything, call the restaurant.',
@@ -1561,6 +1577,9 @@ const I18N_ENT = {
     'ent.pin':'Delivery code','ent.pin.d':'Tell it to the rider when you receive it.','ent.mandar':'Sent'
   },
   ca:{
+    'ent.tv.prep':'En preparació','ent.tv.listos':'Llestos per recollir','ent.tv.lleva':'fa %d min','ent.cesta.compartir':'Compartir la meva cistella','ent.cesta.ok':'Enllaç copiat',
+    'ent.codigo':'Codi promocional (si en tens un)','ent.codigo.ok':'Codi aplicat','ent.codigo.no':'Aquest codi no existeix','ent.codigo.caducado':'Aquest codi ha caducat','ent.codigo.agotado':'Aquest codi ja s\'ha esgotat','ent.codigo.minimo':'Aquest codi demana una comanda mínima de %s','ent.codigo.linea':'Codi %s',
+    'ent.noVisto':'Ara mateix el restaurant no està mirant la seva pantalla: la teva comanda li arribarà quan l\'obri. Si és urgent, truca\'l.',
     'track.head.encamino':'Va de camí','track.desc.encamino':'El repartidor ja ha sortit amb la teva comanda.','track.step.encamino':'En camí',
     'ent.ventana':'Hora promesa: %s','ent.llegada':'Arribada estimada: %s','ent.salio':'Va sortir a les %s',
     'ent.retraso.t':'Anem amb una mica de retard','ent.retraso.d':'La teva comanda triga una mica més del previst. Ho sentim: hi estem treballant. Si necessites res, truca al restaurant.',
@@ -2135,6 +2154,7 @@ function loadBusinessInfo(){
       // el límite acumulado real de la franja.
       pedidosResumen: val.pedidosResumen || {},
       cocinaCargaActiva: val.cocinaCargaActiva || 0,
+      appVistaTs: val.appVistaTs || 0,
       tables: val.tables || [],
       promos: val.promos || [],
       allergens: val.allergens || {}
@@ -2337,6 +2357,8 @@ function renderApp(){
     renderNpsSurvey();
     return;
   }
+  // Tablero de «listos» para una pantalla del local (?listos=1): solo números de pedido, sin nombres.
+  if(new URLSearchParams(location.search).get('listos') === '1'){ renderListosBoard(); return; }
   // Seguimiento de un pedido ya enviado (?track=token): pantalla aparte,
   // con su propio listener en vivo — no pasa por las pestañas normales.
   if(trackToken){
@@ -2603,7 +2625,7 @@ function trayActualizar(){
       <span class="tray-r">${escapeHtml(resumen)}</span>
       <span class="tray-t">${fmtMoney(sub)}</span>
       <span class="tray-c" aria-hidden="true"></span>
-    </button>${trayOpen ? `<div class="tray-b">${cart.map(cartLineHtml).join('')}</div>` : ''}${entEnvioFaltaHtml(sub)}`;
+    </button>${trayOpen ? `<div class="tray-b">${cart.map(cartLineHtml).join('')}</div>` : ''}${entEnvioFaltaHtml(sub)}<div class="ent-cesta"><button type="button" onclick="entCestaCompartir()">${escapeHtml(t('ent.cesta.compartir'))}</button> <span id="ent-cesta-msg" class="ent-sub" role="status"></span></div>`;
   if(foco){ const b = [...box.querySelectorAll('[data-k]')].find(x => x.dataset.k === foco); if(b) b.focus({preventScroll:true}); }
 }
 /* Texto del botón «Continuar»: en el pedido lleva el total y avisa de lo que falta. */
@@ -2613,7 +2635,7 @@ function wzNavActualizar(){
   next.disabled = false; next.textContent = t('wz.next');
   if(wzState.kind !== 'pedido' || wzState.step !== 1) return;
   const p = (DB.business || {}).pedidos || {};
-  const n = cart.reduce((s, l) => s + l.qty, 0), sub = cart.reduce((s, l) => s + l.price * l.qty, 0), min = p.pedidoMinimo || 0;
+  const n = cart.reduce((s, l) => s + l.qty, 0), sub = cart.reduce((s, l) => s + l.price * l.qty, 0), min = minimoPedidoWeb(p, currentTab === 'delivery');
   if(!n){ next.disabled = true; next.textContent = t('wz.o.empty'); }
   else if(min > 0 && sub < min){ next.disabled = true; next.textContent = t('wz.o.faltan').replace('%s', fmtMoney(min - sub)); }
   else {
@@ -2651,7 +2673,7 @@ function wzValidar(step){
     const p = (DB.business || {}).pedidos || {};
     if(step === 1){
       if(!cart.length){ showInlineError(t('error.carrito.vacio')); return false; }
-      const min = p.pedidoMinimo || 0, sub = cart.reduce((s, l) => s + l.price * l.qty, 0);
+      const min = minimoPedidoWeb(p, currentTab === 'delivery'), sub = cart.reduce((s, l) => s + l.price * l.qty, 0);
       if(min > 0 && sub < min){ showInlineError(t('error.pedido.min').replace('%s', fmtMoney(min))); return false; }
       return true;
     }
@@ -2738,7 +2760,7 @@ function updateOrderSlots(preseleccionar){
   const p = (DB.business || {}).pedidos || {};
   const lead = getLeadTimeMin('pedido');
   let min = '00:00';
-  if(date === todayStr()){ const d = new Date(Date.now() + lead * 60000); min = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  if(date === todayStr()){ const d = new Date(Date.now() + Math.max(lead, etaPedidoMin(p, currentTab === 'delivery')) * 60000); min = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
   const todos = slotsDelDia(date).filter(sl => sl >= min).filter(sl => { const c = pedidosCutoffTimeForTurno(date, sl, p); return !c || sl <= c.limite; });
   const inp = wzEl('o-time');
   if(!todos.length){ if(inp) inp.value = ''; box.innerHTML = `<p class="slots-vacio">${escapeHtml(t('wz.o.sinHoras'))}</p>`; return; }
@@ -3129,6 +3151,22 @@ function getLeadTimeMin(kind){
   else base = parseInt((b.pedidos||{}).leadTimeMin) || 0;
   // Modo ocupado del negocio (+10/15/20 min con caducidad): se suma a lo que ya se prometía, y caduca solo con el reloj del cliente.
   return kind === 'reserva' ? base : base + ocupadoExtraMin();
+}
+// ¿Hay alguien mirando la app del restaurante? Sin latido (apps antiguas) se asume que sí; con latido de hace más de 15 min, no.
+function appVistaFresca(){
+  const t0 = Number((DB || {}).appVistaTs) || 0;
+  return !t0 || (Date.now() - t0) < 15 * 60000;
+}
+/* Tiempo estimado ÚNICO (chip, hueco «Cuanto antes» y validación): preparación + carga de cocina (solo si el dato es reciente) + modo ocupado
+   + reparto en domicilio. Antes el chip decía «~35 min» y «Cuanto antes» ofrecía la hora de dentro de 10: la web se contradecía. */
+function etaPedidoMin(p, isDelivery){
+  const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
+  const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
+  const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
+  const carga = appVistaFresca() ? (DB.cocinaCargaActiva || 0) : 0;
+  const prep = Math.min(base + carga * extra, max || (base + carga * extra));
+  const rep = isDelivery ? (parseInt(p.repartoMin) || 0) : 0;
+  return prep + rep + ocupadoExtraMin();
 }
 function ocupadoExtraMin(){
   const p = (DB.business || {}).pedidos || {};
@@ -4963,10 +5001,7 @@ function servicioChipsHtml(p, isDelivery){
     chips.push(t('wz.o.chip.fee').replace('%s', fee ? fmtMoney(fee) : fmtMoney(0)) + (free > 0 && fee > 0 ? ' · ' + t('wz.o.chip.free').replace('%s', fmtMoney(free)) : ''));
     if((p.cpList || []).length) chips.push(t('wz.o.chip.zone').replace('%s', p.cpList.join(', ')));
   }
-  const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
-  const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
-  const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
-  const eta = Math.min(base + (DB.cocinaCargaActiva || 0) * extra, max || (base + (DB.cocinaCargaActiva || 0) * extra)) + ocupadoExtraMin();
+  const eta = etaPedidoMin(p, isDelivery);
   chips.push(t('wz.o.chip.eta').replace('%d', eta));
   return `<div class="chips">${chips.map(c => `<span class="chip">${escapeHtml(c)}</span>`).join('')}</div>`;
 }
@@ -5049,7 +5084,7 @@ function renderOrderForm(){
         </div>
         <div class="field">
           <label for="o-cp">${t('cp')}</label>
-          <input type="text" id="o-cp" placeholder="28001" inputmode="numeric" autocomplete="postal-code" oninput="checkCpLive()">
+          <input type="text" id="o-cp" placeholder="28001" inputmode="numeric" autocomplete="postal-code" oninput="checkCpLive(); renderCartSummary()">
           <small id="o-cp-hint"></small>
         </div>` : ''}
         <div class="field">
@@ -5075,6 +5110,11 @@ function renderOrderForm(){
           <label for="o-notes">${t('order.notas')}</label>
           <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
         </div>
+        <div class="field">
+          <label for="o-codigo">${t('ent.codigo')}</label>
+          <input type="text" id="o-codigo" maxlength="30" autocomplete="off" autocapitalize="characters" value="${escapeHtml(codigoPromoEscrito)}" oninput="codigoPromoCambia(this.value)">
+          <small id="o-codigo-msg" style="color:var(--muted)"></small>
+        </div>
         <div id="ent-recordado"></div>
       </section>
 
@@ -5092,6 +5132,7 @@ function renderOrderForm(){
             <small style="color:var(--muted)">${t('pago.pagaConHint')}</small>
           </div>
         </div>
+        ${entNoVistoHtml()}
         <p class="wz-ok">${t('wz.o.next')}</p>
         <p class="ent-legal">${escapeHtml(t('ent.legal'))}</p>
         <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0 0;cursor:pointer">
@@ -5111,6 +5152,7 @@ function renderOrderForm(){
   updateCashAmountVisibility();
   updateOrderSlots(wzState.reached === 1 && wzState.step === 1);
   entPrefill();
+  entCestaCargar();
   wzAplicar();
 }
 
@@ -5159,17 +5201,19 @@ function renderCartSummary(){
   const p = (DB.business||{}).pedidos || {};
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const deliveryFee = getDeliveryFee(p, subtotal, currentTab === 'delivery');
-  const freeFrom = p.freeDeliveryFrom || 0;
+  const freeFrom = condicionesDeEnvio(p, cpEscrito()).gratis;
   const missingForFreeDelivery = currentTab === 'delivery' && freeFrom > 0 && subtotal < freeFrom ? freeFrom - subtotal : 0;
   const tip = computeTipAmount(subtotal);
-  const total = subtotal + deliveryFee + tip;
-  const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
+  const descCod = currentTab !== 'mesa' ? descuentoDeCodigo(subtotal, deliveryFee) : {importe: 0};
+  const total = subtotal + deliveryFee - descCod.importe + tip;
+  const pedidoMinimo = currentTab !== 'mesa' ? minimoPedidoWeb(p, currentTab === 'delivery') : 0;
   const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
   if(submitBtn) submitBtn.disabled = bajoMinimo;
   box.innerHTML = `
     <h3 class="cs-tit" style="margin-top:0">${t('cart.title')}</h3>
     ${cart.map(cartLineHtml).join('')}
     ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cl-x"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cl-x"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
+    ${descCod.importe > 0 ? `<div class="cl-x"><span>${escapeHtml(t('ent.codigo.linea').replace('%s', descCod.v.codigo))}</span><span style="color:var(--olive);font-weight:600">−${fmtMoney(descCod.importe)}</span></div>` : ''}
     ${tip > 0 ? `<div class="cl-x"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
     ${missingForFreeDelivery > 0 ? `<p class="cl-hint">${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
@@ -5348,13 +5392,47 @@ function confirmAddMenuFromModal(){
   closeInfoModal();
   renderCartSummary();
 }
+/* Zonas con tarifa propia y códigos promocionales (14/11): MISMAS reglas que js/core.js (zonaDeEnvio, condicionesDeEnvio, entAplicarCodigo), para que
+   lo que ve el cliente sea lo que la app luego calcula y cobra. */
+function zonaDeEnvio(p, cp){ cp = String(cp || '').replace(/\s+/g, ''); return ((p && p.zonas) || []).find(z => z && Array.isArray(z.cps) && z.cps.includes(cp)) || null; }
+function condicionesDeEnvio(p, cp){
+  const z = zonaDeEnvio(p, cp), num = (a, b) => (a !== undefined && a !== null && a !== '' && !isNaN(Number(a))) ? Number(a) : (Number(b) || 0);
+  return {zona: z, fee: num(z && z.fee, p.deliveryFee), minimo: num(z && z.minimo, p.pedidoMinimo), gratis: num(z && z.gratis, p.freeDeliveryFrom)};
+}
+function cpEscrito(){ const el = document.getElementById('o-cp'); return el ? String(el.value || '').replace(/\s+/g, '') : ''; }
+// Mínimo de pedido: en el paso de elegir platos aún no hay código postal, así que se usa el MÁS BAJO (el definitivo se comprueba al enviar).
+function minimoPedidoWeb(p, isDelivery, definitivo){
+  if(!isDelivery) return Number(p.pedidoMinimo) || 0;
+  if(definitivo || cpEscrito()) return condicionesDeEnvio(p, cpEscrito()).minimo;
+  const todos = [Number(p.pedidoMinimo) || 0].concat((p.zonas || []).map(z => (z.minimo !== undefined && z.minimo !== null && z.minimo !== '') ? Number(z.minimo) : (Number(p.pedidoMinimo) || 0)));
+  return Math.min.apply(null, todos);
+}
+let codigoPromoEscrito = '';
+function codigoPromoValido(subtotal){
+  const p = (DB.business || {}).pedidos || {}, cod = String(codigoPromoEscrito || '').trim().toUpperCase();
+  if(!cod) return null;
+  const c = (p.codigos || []).find(x => x && String(x.codigo).toUpperCase() === cod);
+  if(!c) return {error: 'ent.codigo.no'};
+  if(c.hasta && c.hasta < todayStr()) return {error: 'ent.codigo.caducado'};
+  if(c.usosMax > 0 && (c.usados || 0) >= c.usosMax) return {error: 'ent.codigo.agotado'};
+  if(c.minimo > 0 && subtotal + 0.001 < c.minimo) return {error: 'ent.codigo.minimo', min: c.minimo};
+  return {codigo: c.codigo, pct: c.pct || 0, eur: c.eur || 0};
+}
+function descuentoDeCodigo(subtotal, envio){
+  const v = codigoPromoValido(subtotal); if(!v || v.error) return {v, importe: 0};
+  const base = subtotal + envio;
+  const importe = Math.min(base, v.pct > 0 ? Math.round(base * v.pct) / 100 : v.eur);
+  return {v, importe: Math.round(importe * 100) / 100};
+}
+function codigoPromoCambia(v){ codigoPromoEscrito = String(v || '').slice(0, 30); renderCartSummary(); const m = document.getElementById('o-codigo-msg'); if(m){ const sub = cart.reduce((s, l) => s + l.price * l.qty, 0), r = codigoPromoValido(sub); m.textContent = !codigoPromoEscrito ? '' : (r && r.error ? t(r.error).replace('%s', r.min ? fmtMoney(r.min) : '') : t('ent.codigo.ok')); } }
 // Coste de envío a domicilio, con posibilidad de que el negocio lo haga
 // gratis a partir de un importe mínimo de pedido (p.freeDeliveryFrom, 0 o
 // sin definir = no hay umbral, siempre se cobra el envío fijo).
 function getDeliveryFee(p, subtotal, isDelivery){
   if(!isDelivery) return 0;
-  const fee = p.deliveryFee || 0;
-  const freeFrom = p.freeDeliveryFrom || 0;
+  const cond = condicionesDeEnvio(p, cpEscrito());
+  const fee = cond.fee;
+  const freeFrom = cond.gratis;
   if(freeFrom > 0 && subtotal >= freeFrom) return 0;
   return fee;
 }
@@ -5391,11 +5469,7 @@ function activarPropinaOtra(){
 // terminar, con un tope máximo para no anunciar esperas disparatadas.
 function etaHintHtml(){
   const p = (DB.business||{}).pedidos || {};
-  const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
-  const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
-  const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
-  const carga = DB.cocinaCargaActiva || 0;
-  const eta = Math.min(base + carga * extra, max || (base + carga * extra));
+  const eta = etaPedidoMin(p, currentTab === 'delivery');
   const label = currentTab === 'delivery' ? t('cart.etaDelivery') : t('cart.etaTakeaway');
   return `<p class="hi hi-clock" style="font-size:13px;color:var(--muted);margin-top:8px">${label.replace('%d', eta)}</p>`;
 }
@@ -5462,7 +5536,7 @@ async function submitOrder(){
   }
 
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
-  const pedidoMinimo = p.pedidoMinimo || 0;
+  const pedidoMinimo = minimoPedidoWeb(p, isDelivery, true);
   if(pedidoMinimo > 0 && subtotal < pedidoMinimo){
     showInlineError(t('error.pedido.min').replace('%s', fmtMoney(pedidoMinimo)));
     submittingRequest = false;
@@ -5557,7 +5631,8 @@ async function submitOrder(){
 
   const deliveryFee = getDeliveryFee(p, subtotal, isDelivery);
   const tip = computeTipAmount(subtotal);
-  const total = subtotal + deliveryFee + tip;
+  const descCodigo = descuentoDeCodigo(subtotal, deliveryFee);
+  const total = subtotal + deliveryFee - descCodigo.importe + tip;
 
   // Método de pago elegido entre las opciones que el negocio acepta
   // (efectivo / tarjeta al recibir / TPV virtual). Si es DOMICILIO y elige
@@ -5599,6 +5674,8 @@ async function submitOrder(){
   };
   if(metodoPagoLocal) req.metodoPagoLocal = metodoPagoLocal;
   if(pagaCon != null) req.pagaCon = pagaCon;
+  if(descCodigo.importe > 0) req.codigo = descCodigo.v.codigo;
+  const origen = new URLSearchParams(location.search).get('origen'); if(origen) req.origen = origen;
   const instr = (document.getElementById('o-instr') || {}).value;
   if(instr && instr.trim()) req.instrucciones = instr.trim().slice(0, 300);
   if((document.getElementById('o-sincontacto') || {}).checked) req.sinContacto = true;
@@ -5646,6 +5723,7 @@ function entPrefill(){
   const b = document.getElementById('ent-recordado');
   if(b && (u.nombre || u.tel)) b.innerHTML = `<div class="ent-rec">${escapeHtml(t('ent.recordado'))} <button type="button" onclick="entOlvidar()">${escapeHtml(t('ent.olvidar'))}</button></div>`;
 }
+function entNoVistoHtml(){ return appVistaFresca() ? '' : `<p class="ent-ocupado" role="status">${escapeHtml(t('ent.noVisto'))}</p>`; }
 function entOcupadoAvisoHtml(){
   const x = ocupadoExtraMin();
   return x ? `<p class="ent-ocupado" role="status">${escapeHtml(t('ent.ocupado').replace('%d', x))}</p>` : '';
@@ -5715,6 +5793,7 @@ function entTrackExtraHtml(data, status, esDelivery){
   }
   const limite = status === 'encamino' && data.llegadaEstimada ? Math.max(new Date(data.hasta || 0).getTime() || 0, new Date(data.llegadaEstimada).getTime()) : new Date(data.hasta || 0).getTime();
   if(!final && limite && Date.now() > limite + 60000) h += `<div class="ent-retraso" role="status"><b>${escapeHtml(t('ent.retraso.t'))}</b>${escapeHtml(t('ent.retraso.d'))}</div>`;
+  if(status === 'pendiente' || status === 'aceptado') h += entNoVistoHtml();
   if(status === 'encamino' && data.pin) h += `<div class="ent-pin"><span class="ent-sub">${escapeHtml(t('ent.pin'))}</span><b>${escapeHtml(String(data.pin))}</b><span class="ent-sub">${escapeHtml(t('ent.pin.d'))}</span></div>`;
   const acc = [];
   if(!esDelivery && (status === 'aceptado' || status === 'preparando' || status === 'listo')){
@@ -5760,6 +5839,49 @@ function entIncidenciaAbrir(){
 }
 function entIncidencia(motivo){ entEnviarAviso({accion: 'incidencia', motivo}, 'ent.incidencia.ok'); }
 setInterval(() => { try{ if(trackListenerAttached && lastTrackStatusData && document.querySelector('.trk') && !document.hidden) renderTrackStatus(lastTrackStatusData); }catch(e){} }, 30000);
+
+
+/* ============ TABLERO DE «LISTOS» PARA UNA PANTALLA DEL LOCAL (?listos=1, 14/11, plan delivery #23) ============
+   Una tele o tablet en el mostrador: «En preparación» y «Listos» solo con el NÚMERO de pedido (el mismo que ve el cliente en su seguimiento),
+   nunca nombres ni teléfonos: esta ruta de la nube se puede leer. Abre UNA conexión (la de esta pantalla). «Lleva N min sin recoger» avisa al personal. */
+let listosAttached = false, listosDatos = {}, listosTimer = null;
+function renderListosBoard(){
+  if(listosAttached) return; listosAttached = true;
+  document.getElementById('app').innerHTML = '<div class="empty"><div class="spinner"></div></div>';
+  db.ref('gastrogoan/public/' + publicId + '/orderStatus').on('value', snap => { listosDatos = snap.val() || {}; pintarListos(); }, () => { listosDatos = {}; pintarListos(); });
+  listosTimer = setInterval(pintarListos, 30000);
+}
+function pintarListos(){
+  const app = document.getElementById('app'); if(!app) return;
+  const lim = Date.now() - 12 * 3600000;
+  const filas = Object.keys(listosDatos).map(tok => Object.assign({tok}, listosDatos[tok])).filter(v => v && v.tipo === 'takeaway' && ['aceptado', 'preparando', 'listo'].includes(v.status) && new Date(v.updatedAt || 0).getTime() > lim);
+  const prep = filas.filter(v => v.status !== 'listo'), listos = filas.filter(v => v.status === 'listo').sort((a, b) => new Date(a.listoAt || a.updatedAt) - new Date(b.listoAt || b.updatedAt));
+  const cod = v => `<li>${escapeHtml(shortCode(v.tok))}</li>`;
+  const listoLi = v => { const min = v.listoAt ? Math.floor((Date.now() - new Date(v.listoAt).getTime()) / 60000) : 0; return `<li${min >= 10 ? ' class="tv-tarde"' : ''}>${escapeHtml(shortCode(v.tok))}${min >= 10 ? `<small>${escapeHtml(t('ent.tv.lleva').replace('%d', min))}</small>` : ''}</li>`; };
+  app.innerHTML = `<div class="tv-board">
+    <section><h2>${escapeHtml(t('ent.tv.prep'))}</h2><ol>${prep.map(cod).join('') || `<li class="tv-vacio">—</li>`}</ol></section>
+    <section class="tv-listos"><h2>${escapeHtml(t('ent.tv.listos'))}</h2><ol>${listos.map(listoLi).join('') || `<li class="tv-vacio">—</li>`}</ol></section>
+  </div>`;
+}
+
+/* ============ COMPARTIR MI CESTA (14/11, plan delivery #30, versión ligera) ============
+   Un pedido en grupo de verdad (carrito compartido con varios pagos) necesita estado compartido y reglas nuevas en la nube de cada negocio.
+   Esto es lo que se puede hacer sin ellas: un ENLACE con la cesta, para que otra persona la abra, le añada lo suyo y pida. */
+function entCestaCompartir(){
+  const raw = cart.filter(l => l.recipeId != null && !(l.modificadores || []).length).map(l => l.recipeId + 'x' + l.qty).join('-');
+  if(!raw) return;
+  const url = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + '&cesta=' + encodeURIComponent(raw);
+  const aviso = () => { const b = document.getElementById('ent-cesta-msg'); if(b) b.textContent = t('ent.cesta.ok'); };
+  if(navigator.share){ navigator.share({url, title: (DB.business || {}).name || ''}).catch(() => {}); return; }
+  try{ navigator.clipboard.writeText(url).then(aviso); }catch(e){ prompt(t('ent.cesta.compartir'), url); }
+}
+function entCestaCargar(){
+  try{
+    const raw = new URLSearchParams(location.search).get('cesta'); if(!raw || cart.length) return;
+    raw.split('-').forEach(par => { const [id, q] = par.split('x').map(Number); const f = findPlatoById(id); if(f && f.plato.disponible !== false && q > 0 && q < 50){ const price = dishPriceInfo(f.plato).final; cart.push({key: cartLineKey(f.plato.id, []), recipeId: f.plato.id, sectionId: f.sectionId, name: f.plato.nombre, price, qty: q, modificadores: []}); } });
+    renderCartSummary();
+  }catch(e){}
+}
 
 /* ============ PAGO CON TARJETA (Stripe) ============
    1) Se pide al Worker el pago ANTES de registrar el pedido en el negocio:
@@ -6198,7 +6320,7 @@ function sendRequest(req, successMsg){
     // desaparece para siempre.
     if(req.type === 'pedido' && req.clientRef){
       trackToken = req.clientRef;
-      pedidoOptimista = !!req.metodoPagoLocal && (DB.business||{}).pedidosOnlineActivos !== false && !req.pendienteVerificarZona;
+      pedidoOptimista = !!req.metodoPagoLocal && (DB.business||{}).pedidosOnlineActivos !== false && !req.pendienteVerificarZona && appVistaFresca();
       trackRecienEnviadoHasta = Date.now() + 15 * 60 * 1000;
       trackListenerAttached = false;
       renderOrderTrackingView();
