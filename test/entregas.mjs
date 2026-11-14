@@ -172,6 +172,94 @@ await caso('Las reglas aceptan el tipo `pedido_aviso`', () => app.evaluate(() =>
   return null;
 }));
 
+
+await caso('Zonas con tarifa propia: el envío y el mínimo salen de la zona del código postal, y lo vacío usa el general', () => app.evaluate(() => {
+  DB.business.pedidos = {pedidoMinimo: 15, deliveryFee: 3, freeDeliveryFrom: 30, zonas: entZonasDeTexto('Centro | 08001, 08002 | 2 | 12 | 25\nLejos | 08999 | 5 | | ')};
+  if(DB.business.pedidos.zonas.length !== 2) throw new Error('no leyó las zonas');
+  const a = condicionesDeEnvio(DB.business.pedidos, '08001'), b = condicionesDeEnvio(DB.business.pedidos, '08999'), c = condicionesDeEnvio(DB.business.pedidos, '99999');
+  if(a.fee !== 2 || a.minimo !== 12 || a.gratis !== 25) throw new Error('centro: ' + JSON.stringify(a));
+  if(b.fee !== 5 || b.minimo !== 15 || b.gratis !== 30) throw new Error('lejos (vacío = general): ' + JSON.stringify(b));
+  if(c.fee !== 3) throw new Error('sin zona usa el general');
+  if(costeEnvioPedidoPublico('delivery', 10, 0, '08001') !== 2 || costeEnvioPedidoPublico('delivery', 26, 0, '08001') !== 0) throw new Error('coste por zona / gratis desde');
+  if(entZonasATexto(DB.business.pedidos.zonas).indexOf('Centro | 08001,08002 | 2 | 12 | 25') !== 0) throw new Error('ida y vuelta a texto');
+  return null;
+}));
+
+await caso('Códigos promocionales: la app los valida (caducidad, mínimo, usos) y los cuenta; los de compensación no se editan a mano', () => app.evaluate(() => {
+  const hoy = todayStr();
+  DB.business.pedidos = {codigos: entCodigosDeTexto('BIENVENIDA | 10% | 15 | 2099-01-01 | 2\nCINCO | 5€ | | | \nVIEJO | 10% | | 2000-01-01 |\nmal | xx', [])};
+  if(DB.business.pedidos.codigos.length !== 3) throw new Error('debían salir 3 códigos válidos: ' + DB.business.pedidos.codigos.length);
+  if(entAplicarCodigo('bienvenida', 10)) throw new Error('bajo el mínimo no debe aplicarse');
+  const a = entAplicarCodigo('bienvenida', 20); if(!a || a.pct !== 10) throw new Error('10 %: ' + JSON.stringify(a));
+  entAplicarCodigo('BIENVENIDA', 20); if(entAplicarCodigo('BIENVENIDA', 20)) throw new Error('agotado tras 2 usos');
+  if(entAplicarCodigo('VIEJO', 20)) throw new Error('caducado');
+  const c = entAplicarCodigo('CINCO', 50); if(!c || c.pct !== 10) throw new Error('5 € de 50 € = 10 %: ' + JSON.stringify(c));
+  DB.business.pedidos.codigos.push({codigo: 'LOAB12', pct: 10, usosMax: 1, usados: 0, compensacion: true});
+  if(entCodigosATexto(DB.business.pedidos.codigos).includes('LOAB12')) throw new Error('la compensación no se edita');
+  if(!entCodigosDeTexto('', DB.business.pedidos.codigos).some(x => x.codigo === 'LOAB12')) throw new Error('la compensación se debe conservar al guardar');
+  return null;
+}));
+
+await caso('Autopausa: al llegar a N pedidos en curso se pausan los dos canales y no se repite', () => app.evaluate(() => {
+  DB.business.pedidos = {autopausaN: 2};
+  DB.tpvOrders = [1, 2].map(i => ({id: 700 + i, tipo: 'takeaway', status: 'abierta', items: [{name: 'x', price: 1, qty: 1}]}));
+  entAutopausaTick();
+  if(!entCanalPausado('takeaway') || !entCanalPausado('delivery')) throw new Error('no pausó');
+  const hasta = DB.business.pedidos.pausaTakeawayHasta; entAutopausaTick();
+  if(DB.business.pedidos.pausaTakeawayHasta !== hasta) throw new Error('se volvió a pausar');
+  DB.business.pedidos.pausaTakeawayHasta = ''; DB.business.pedidos.pausaDeliveryHasta = ''; DB.tpvOrders = [];
+  return null;
+}));
+
+await caso('Compensación por retraso: solo si llegó tarde y el negocio la tiene activada', () => app.evaluate(() => {
+  DB.business.pedidos = {ventanaMin: 10, compensarRetrasoPct: 0};
+  const o = {date: todayStr(), time: '12:00', entregadoAt: new Date(new Date(todayStr() + 'T12:30').getTime()).toISOString(), clienteNombre: 'Eva'};
+  let abierto = false; window.confirmModal = () => { abierto = true; return Promise.resolve(false); };
+  entOfrecerCompensacion(o); if(abierto) throw new Error('desactivada: no debe preguntar');
+  DB.business.pedidos.compensarRetrasoPct = 10; entOfrecerCompensacion(o); if(!abierto) throw new Error('20 min tarde con la compensación activa: debía preguntar');
+  abierto = false; o.entregadoAt = new Date(new Date(todayStr() + 'T12:12').getTime()).toISOString(); entOfrecerCompensacion(o);
+  if(abierto) throw new Error('2 min tarde no merece compensación');
+  return null;
+}));
+
+await caso('Orden de cocina: con los minutos de las fichas, el plato más largo empieza antes y todo acaba a la hora prometida', () => app.evaluate(() => {
+  DB.recipes = [{id: 1, nombre: 'Carrillera'}, {id: 2, nombre: 'Ensalada'}]; DB.fichas = [{recipeId: 1, pasosDet: [{min: 40}, {min: 5}]}, {recipeId: 2, pasosDet: [{min: 5}]}];
+  const o = {date: '2026-11-14', time: '21:00', items: [{name: 'Carrillera', recipeId: 1, qty: 1, price: 1}, {name: 'Ensalada', recipeId: 2, qty: 1, price: 1}]};
+  const r = entOrdenCocina(o); if(!r || r.length !== 2) throw new Error('no calculó');
+  if(r[0].min !== 45 || r[1].min !== 5) throw new Error('orden por duración: ' + JSON.stringify(r.map(x => x.min)));
+  if(r[1].empezar - r[0].empezar !== 40 * 60000) throw new Error('la ensalada debe empezar 40 min después de la carrillera');
+  return null;
+}));
+
+await caso('Kit de captación: un enlace por canal con `?origen=` y la barra enseña Captación', () => app.evaluate(() => {
+  DB.business.publicId = 'pubentreg1';
+  const u = entEnlaceOrigen('google'); if(!/origen=google$/.test(u)) throw new Error('enlace: ' + u);
+  if(!entBarraHtml().includes('entAbrirKit')) throw new Error('falta el botón');
+  entAbrirKit(); if(!document.body.textContent.includes('origen')) throw new Error('el kit no se abrió'); closeModal();
+  return null;
+}));
+
+await caso('Reloj desajustado: desde 3 min de diferencia con el servidor se avisa', () => app.evaluate(() => {
+  document.body.insertAdjacentHTML('beforeend', '<div id="ent-aviso-reloj" hidden></div>');
+  entRelojOffsetMs = 5 * 60000; entPintarAvisoReloj(); const b = document.getElementById('ent-aviso-reloj');
+  if(b.hidden || !/5 min/.test(b.textContent)) throw new Error('no avisó: ' + b.textContent);
+  entRelojOffsetMs = 30000; entPintarAvisoReloj(); if(!b.hidden) throw new Error('30 s no debe avisar'); b.remove();
+  return null;
+}));
+
+await caso('Rider: «Ruta completa» por hora prometida y «Siguiente parada»', () => app.evaluate(async () => {
+  const mk = (id, hora, dir) => ({id, tipo: 'delivery', status: 'abierta', clienteNombre: 'C' + id, clienteDireccion: dir, date: todayStr(), time: hora, items: [{name: 'x', price: 1, qty: 1, estado: 'entregado'}], repartidorId: null});
+  DB.tpvOrders = [mk(1, '21:30', 'Calle B 2'), mk(2, '21:00', 'Calle A 1'), mk(3, '22:00', 'Calle C 3')];
+  entAbrirRepartidor(); await new Promise(r => setTimeout(r, 100));
+  const t = document.getElementById('ent-rep-body').innerHTML;
+  if(!t.includes('Ruta completa (3')) throw new Error('falta la ruta completa');
+  if(t.indexOf('Calle%20A%201') > t.indexOf('Calle%20B%202') && t.indexOf('Calle%20B%202') > 0) throw new Error('la ruta no va por hora prometida');
+  if(t.indexOf('Siguiente parada') < 0 || t.indexOf('C2') > t.indexOf('C1')) throw new Error('la siguiente parada debe ser la de las 21:00');
+  const url = buildRouteMapsUrl([DB.tpvOrders[1], DB.tpvOrders[0], DB.tpvOrders[2]], {respetarOrden: true});
+  if(url.includes('optimize:true')) throw new Error('no debe reordenar');
+  closeModal(); return null;
+}));
+
 await caso('Sin errores de JavaScript en la app', async () => { const e = errsApp.filter(x => !ruido(x)); assert.deepEqual(e, []); });
 
 /* ============================ LA WEB ============================ */
@@ -249,6 +337,45 @@ await caso('Web: aviso legal de alimentos perecederos en el último paso', async
   const src = await pub.evaluate(() => renderOrderForm.toString());
   assert.ok(src.includes('ent-legal'));
 });
+
+
+await caso('Web: zonas de envío y código promocional con el mismo cálculo que la app', () => pub.evaluate(() => {
+  const p = DB.business.pedidos = {deliveryFee: 3, freeDeliveryFrom: 30, pedidoMinimo: 15, zonas: [{nombre: 'Centro', cps: ['28001'], fee: 2, minimo: 12, gratis: 25}], codigos: [{codigo: 'HOLA10', pct: 10, minimo: 15, hasta: '2099-01-01', usosMax: 0, usados: 0}, {codigo: 'VIEJO', pct: 10, hasta: '2000-01-01'}]};
+  document.body.insertAdjacentHTML('beforeend', '<input id="o-cp" value="28001">');
+  if(getDeliveryFee(p, 10, true) !== 2 || getDeliveryFee(p, 26, true) !== 0) throw new Error('envío por zona');
+  if(minimoPedidoWeb(p, true) !== 12) throw new Error('mínimo de la zona');
+  document.getElementById('o-cp').value = '';
+  if(minimoPedidoWeb(p, true) !== 12) throw new Error('sin CP debe usar el más bajo (12)');
+  codigoPromoEscrito = 'hola10';
+  const d = descuentoDeCodigo(20, 3); if(d.importe !== 2.3) throw new Error('10 % de 23 = 2,30: ' + d.importe);
+  codigoPromoEscrito = 'VIEJO'; if(!codigoPromoValido(20).error) throw new Error('caducado debe fallar');
+  codigoPromoEscrito = 'hola10'; if(!codigoPromoValido(10).error) throw new Error('bajo mínimo debe fallar');
+  codigoPromoEscrito = ''; document.getElementById('o-cp').remove();
+  return null;
+}));
+
+await caso('Web: tablero de listos (?listos=1) solo con números, preparando vs listos, y «lleva N min»', () => pub.evaluate(() => {
+  const ahora = Date.now(), iso = ms => new Date(ahora + ms).toISOString();
+  listosDatos = {'tok-aaaaaaaaaaaa1': {status: 'preparando', tipo: 'takeaway', updatedAt: iso(-60000)}, 'tok-bbbbbbbbbbbb2': {status: 'listo', tipo: 'takeaway', updatedAt: iso(-900000), listoAt: iso(-900000)}, 'tok-cccccccccccc3': {status: 'listo', tipo: 'delivery', updatedAt: iso(-1000)}, 'tok-dddddddddddd4': {status: 'entregado', tipo: 'takeaway', updatedAt: iso(-1000)}};
+  pintarListos();
+  const t = document.getElementById('app').textContent;
+  if(!/En preparación/.test(t) || !/Listos para recoger/.test(t)) throw new Error('faltan columnas');
+  if(!t.includes(shortCode('tok-aaaaaaaaaaaa1')) || !t.includes(shortCode('tok-bbbbbbbbbbbb2'))) throw new Error('faltan números');
+  if(t.includes(shortCode('tok-cccccccccccc3')) || t.includes(shortCode('tok-dddddddddddd4'))) throw new Error('un domicilio o un entregado no van en el tablero');
+  if(!/lleva 15 min/.test(t)) throw new Error('falta «lleva 15 min»');
+  return null;
+}));
+
+await caso('Web: compartir la cesta por enlace y cargarla en otro móvil', () => pub.evaluate(() => {
+  cart = [{key: '11', recipeId: 11, sectionId: 1, name: 'Croquetas de jamón', price: 9.5, qty: 2, modificadores: []}];
+  let url = ''; navigator.clipboard = {writeText: u => { url = u; return Promise.resolve(); }}; navigator.share = undefined; entCestaCompartir();
+  return new Promise(r => setTimeout(() => {
+    if(!/cesta=11x2/.test(url)) throw new Error('enlace: ' + url);
+    cart = []; history.replaceState(null, '', '?neg=pubentreg1&cesta=11x2'); entCestaCargar();
+    if(cart.length !== 1 || cart[0].qty !== 2) throw new Error('no cargó la cesta: ' + JSON.stringify(cart));
+    history.replaceState(null, '', '?neg=pubentreg1'); cart = []; r(null);
+  }, 50));
+}));
 
 await caso('Sin errores de JavaScript en la web', async () => { assert.deepEqual(errsPub.filter(x => !ruido(x)), []); });
 

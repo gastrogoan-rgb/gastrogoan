@@ -7509,11 +7509,22 @@ function revisarPreciosPedidoPublico(reqItems, tipo){
   return {lineas, correcciones, sinVerificar};
 }
 // El gasto de envío, con la configuración del negocio y el subtotal ya bueno.
-function costeEnvioPedidoPublico(tipo, subtotal, enviado){
+/* Zonas de reparto con tarifa propia (14/11, plan delivery #20): `pedidos.zonas = [{nombre, cps:[…], fee, minimo, gratis}]`. Un campo vacío = el valor
+   general. La web y la app usan estas MISMAS funciones, para que el precio que ve el cliente sea el que luego se cobra. */
+function zonaDeEnvio(p, cp){
+  cp = String(cp || '').replace(/\s+/g, '');
+  return ((p && p.zonas) || []).find(z => z && Array.isArray(z.cps) && z.cps.includes(cp)) || null;
+}
+function condicionesDeEnvio(p, cp){
+  const z = zonaDeEnvio(p, cp), num = (a, b) => (a !== undefined && a !== null && a !== '' && !isNaN(Number(a))) ? Number(a) : (Number(b) || 0);
+  return {zona: z, fee: num(z && z.fee, p.deliveryFee), minimo: num(z && z.minimo, p.pedidoMinimo), gratis: num(z && z.gratis, p.freeDeliveryFrom)};
+}
+function costeEnvioPedidoPublico(tipo, subtotal, enviado, cp){
   if(tipo !== 'delivery') return 0;
   const p = (DB.business && DB.business.pedidos) || {};
-  const fee = Number(p.deliveryFee) || 0;
-  const gratisDesde = Number(p.freeDeliveryFrom) || 0;
+  const cond = condicionesDeEnvio(p, cp);
+  const fee = cond.fee;
+  const gratisDesde = cond.gratis;
   const real = (gratisDesde > 0 && subtotal >= gratisDesde) ? 0 : fee;
   // Si el negocio no tiene gasto de envío configurado no hay con qué
   // comparar: se respeta lo que llegue, que nunca baja de cero.
@@ -8418,14 +8429,16 @@ function initPublicRequestsListener(){
           return {platoId: l.platoId||null, recipeId: l.recipeId||null, name, price, qty, tanda: l.tanda||'', notas: l.notas||'', modificadores: mods};
         });
         const subtotalRevisado = onlineItems.reduce((sum, it) => sum + it.price * it.qty, 0);
-        const costeEnvioRevisado = costeEnvioPedidoPublico(tipoPedido, subtotalRevisado, req.costeEnvio);
+        const costeEnvioRevisado = costeEnvioPedidoPublico(tipoPedido, subtotalRevisado, req.costeEnvio, req.codigoPostal);
         // El mínimo de pedido se vuelve a comprobar aquí, igual que la zona y los precios: en la web solo lo ve el navegador (13/11, #12).
-        const minimoNegocio = parseFloat(((DB.business && DB.business.pedidos) || {}).pedidoMinimo) || 0;
+        const minimoNegocio = tipoPedido === 'delivery' ? condicionesDeEnvio((DB.business && DB.business.pedidos) || {}, req.codigoPostal).minimo : (parseFloat(((DB.business && DB.business.pedidos) || {}).pedidoMinimo) || 0);
         const bajoMinimo = minimoNegocio > 0 && subtotalRevisado + 0.001 < minimoNegocio;
         if(Math.abs(costeEnvioRevisado - (Number(req.costeEnvio) || 0)) > 0.01){
           revisado.correcciones.push({nombre: t('precios.envio'), enviado: Number(req.costeEnvio) || 0, real: costeEnvioRevisado});
         }
         avisarPreciosCorregidos(revisado.correcciones, revisado.sinVerificar, req.clienteNombre);
+        // Código promocional: lo valida y lo calcula la APP con las reglas del negocio (no el navegador).
+        const promo = typeof entAplicarCodigo === 'function' ? entAplicarCodigo(req.codigo, subtotalRevisado) : null;
         const newOrderId = genId();
         const matchedClientPedido = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
         DB.tpvOrders.push({
@@ -8447,10 +8460,12 @@ function initPublicRequestsListener(){
           // La web ya comprueba la zona, pero eso es el navegador del cliente: aquí se vuelve a mirar el código postal con la
           // lista del negocio (como los precios) para que un pedido a domicilio fuera de zona nunca entre solo.
           pendienteVerificarZona: !!req.pendienteVerificarZona || !!zonaDeRepartoDePedido(req).fuera,
+          descuentoPct: promo ? promo.pct : undefined, codigoPromo: promo ? promo.codigo : undefined,
           bajoMinimo: bajoMinimo || undefined, minimoRequerido: bajoMinimo ? minimoNegocio : undefined,
           // Datos del plan delivery: instrucciones de entrega/recogida, alérgenos y "hasta cuándo" prometido.
           instrucciones: String(req.instrucciones || '').slice(0, 300) || undefined,
           sinContacto: !!req.sinContacto || undefined,
+          origenCaptacion: String(req.origen || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 20) || undefined,
           fueraDeZona: zonaDeRepartoDePedido(req).fuera || undefined,
           phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
           // El cliente ya indicó en la web pública con qué billete va a pagar
@@ -8559,7 +8574,13 @@ function llegadaEstimadaPedido(order){
   if(!order || !order.entregaSalidaAt) return null;
   const sal = new Date(order.entregaSalidaAt); if(isNaN(sal)) return null;
   let min = typeof tiempoRepartoCp === 'function' ? tiempoRepartoCp(order.clienteCodigoPostal) : null;
-  if(min == null){ const p = (DB.business && DB.business.pedidos) || {}; const r = parseInt(p.repartoMin); min = isNaN(r) ? 15 : r; }
+  if(min == null){
+    // ⚠️ Solo con un dato REAL: el tiempo de reparto que el negocio ha puesto, o el histórico de ese código postal. Sin ninguno de los dos
+    // no se inventa una hora (el cliente verá solo «salió a las…»): una estimación sacada de la nada se incumple y quita credibilidad.
+    const p = (DB.business && DB.business.pedidos) || {}; const r = parseInt(p.repartoMin);
+    if(!(r > 0)) return null;
+    min = r;
+  }
   return new Date(sal.getTime() + min * 60000).toISOString();
 }
 
@@ -8568,9 +8589,15 @@ function computePublicOrderStatus(order){
   if(order.status === 'pagada' || order.entregaEstado === 'entregado') return 'entregado';
   // «En camino»: lo dispara un hecho real, el repartidor pulsando «Salgo» (13/11, plan delivery #2).
   if(order.tipo === 'delivery' && order.entregaEstado === 'encamino') return 'encamino';
-  const food = (order.items||[]).filter(l => !l.bebida && !l.isShipping);
-  if(food.length && food.every(l => l.estado === 'entregado')) return 'listo';
-  if(food.some(l => l.estado === 'preparando' || l.estado === 'cocina')) return 'preparando';
+  /* Qué cuenta para decir «listo» (14/11, auditoría de veracidad): la comida; y si el pedido SOLO lleva bebidas, las bebidas. Antes un pedido de
+     solo bebidas se quedaba en «aceptado» para siempre porque «toda la comida entregada» era falso con cero platos.
+     «Lo estamos preparando» solo cuando un cocinero lo ha empezado de verdad (estado «preparando» o ya hay algo terminado): un plato recién
+     enviado a cocina (`cocina`) todavía está en cola y decir que se prepara era adelantarse. */
+  const lineas = (order.items||[]).filter(l => !l.isShipping);
+  const food = lineas.filter(l => !l.bebida);
+  const cuenta = food.length ? food : lineas;
+  if(cuenta.length && cuenta.every(l => l.estado === 'entregado')) return 'listo';
+  if(cuenta.some(l => l.estado === 'preparando' || l.estado === 'entregado')) return 'preparando';
   return 'aceptado';
 }
 // Publica el estado de UN pedido concreto (identificado por su clientRef,
@@ -10791,6 +10818,29 @@ function renderPedidosConfigCard(){
         </div>
         <small style="color:var(--muted)">${escapeHtml(gl({es:'Un pedido programado pasa a cocina a «hora prometida − estos minutos». El reparto solo cuenta en domicilio y es la estimación cuando aún no hay histórico del código postal.', ca:'Una comanda programada passa a cuina a «hora promesa − aquests minuts». El repartiment només compta a domicili i és l\'estimació quan encara no hi ha històric del codi postal.', en:'A scheduled order goes to the kitchen at "promised time − these minutes". Delivery only counts for home delivery and is the estimate until the postal code has history.'}))}</small>
       </div>
+      ${deliveryEnabled ? `
+      <div class="field">
+        <label>${escapeHtml(gl({es:'Zonas con tarifa propia (opcional)', ca:'Zones amb tarifa pròpia (opcional)', en:'Zones with their own fee (optional)'}))}</label>
+        <textarea id="mn-zonas" rows="3" placeholder="Centro | 08001,08002 | 2 | 12 | 25">${escapeHtml(entZonasATexto(p.zonas))}</textarea>
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'Una por línea: nombre | códigos postales | tarifa | mínimo | envío gratis desde. Lo que dejes vacío usa el valor general. La web y la app calculan el envío con estas mismas reglas.', ca:'Una per línia: nom | codis postals | tarifa | mínim | enviament gratuït des de. El que deixis buit fa servir el valor general. El web i l\'app calculen l\'enviament amb aquestes mateixes regles.', en:'One per line: name | postal codes | fee | minimum | free delivery from. Anything left empty uses the general value. The web and the app compute delivery with these same rules.'}))}</small>
+      </div>` : ''}
+      <div class="field">
+        <label>${escapeHtml(gl({es:'Válvulas de cocina', ca:'Vàlvules de cuina', en:'Kitchen valves'}))}</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="number" id="mn-autopausan" min="0" max="50" step="1" value="${escapeHtml(p.autopausaN || 0)}" style="width:90px" aria-label="${escapeHtml(gl({es:'Autopausa', ca:'Autopausa', en:'Auto-pause'}))}">
+          <small>${escapeHtml(gl({es:'pedidos en curso para pausar solos 15 min (0 = nunca)', ca:'comandes en curs per pausar soles 15 min (0 = mai)', en:'orders in progress to auto-pause 15 min (0 = never)'}))}</small>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
+          <input type="number" id="mn-compensapct" min="0" max="100" step="1" value="${escapeHtml(p.compensarRetrasoPct || 0)}" style="width:90px" aria-label="${escapeHtml(gl({es:'Compensación', ca:'Compensació', en:'Compensation'}))}">
+          <small>${escapeHtml(gl({es:'% de descuento que se ofrece si un pedido llega más de 10 min tarde (0 = no)', ca:'% de descompte que s\'ofereix si una comanda arriba més de 10 min tard (0 = no)', en:'% discount offered if an order arrives over 10 min late (0 = none)'}))}</small>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-weight:400;cursor:pointer"><input type="checkbox" id="mn-propinabote" ${p.propinaBote ? 'checked' : ''}> ${escapeHtml(gl({es:'Las propinas de reparto van a un bote común (si no, son del repartidor)', ca:'Les propines de repartiment van a un pot comú (si no, són del repartidor)', en:'Delivery tips go to a shared pot (otherwise they are the rider\'s)'}))}</label>
+      </div>
+      <div class="field">
+        <label>${escapeHtml(gl({es:'Códigos promocionales', ca:'Codis promocionals', en:'Promo codes'}))}</label>
+        <textarea id="mn-codigos" rows="3" placeholder="BIENVENIDA | 10% | 15 | 2026-12-31 | 100">${escapeHtml(entCodigosATexto(p.codigos))}</textarea>
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'Una por línea: CÓDIGO | descuento (10% o 5€) | pedido mínimo | válido hasta (AAAA-MM-DD) | usos máximos. Son públicos (viajan con la carta): úsalos para campañas, no como secreto. Se calculan en la app con tus reglas.', ca:'Una per línia: CODI | descompte (10% o 5€) | comanda mínima | vàlid fins (AAAA-MM-DD) | usos màxims. Són públics (viatgen amb la carta): fes-los servir per a campanyes, no com a secret. Es calculen a l\'app amb les teves regles.', en:'One per line: CODE | discount (10% or 5€) | minimum order | valid until (YYYY-MM-DD) | max uses. They are public (they travel with the menu): use them for campaigns, not as a secret. They are computed in the app with your rules.'}))}</small>
+      </div>
       <div class="field">
         <label>${escapeHtml(gl({es:'Cómo recoger el pedido (puerta, mostrador…)', ca:'Com recollir la comanda (porta, taulell…)', en:'How to collect the order (door, counter…)'}))}</label>
         <textarea id="mn-instrrecogida" rows="2" maxlength="200">${escapeHtml(p.instruccionesRecogida || '')}</textarea>
@@ -10938,6 +10988,11 @@ async function savePedidosConfig(){
   if(!isNaN(nv('mn-margenmin'))) p.margenMin = Math.min(60, Math.max(0, nv('mn-margenmin')));
   if(!isNaN(nv('mn-repartomin'))) p.repartoMin = Math.min(90, Math.max(0, nv('mn-repartomin')));
   const ir = document.getElementById('mn-instrrecogida'); if(ir) p.instruccionesRecogida = ir.value.trim().slice(0, 200);
+  const apN = document.getElementById('mn-autopausan'); if(apN) p.autopausaN = Math.max(0, parseInt(apN.value) || 0);
+  const cpc = document.getElementById('mn-compensapct'); if(cpc) p.compensarRetrasoPct = Math.min(100, Math.max(0, parseFloat(cpc.value) || 0));
+  const pb = document.getElementById('mn-propinabote'); if(pb) p.propinaBote = !!pb.checked;
+  const zEl = document.getElementById('mn-zonas'); if(zEl) p.zonas = entZonasDeTexto(zEl.value);
+  const cEl = document.getElementById('mn-codigos'); if(cEl) p.codigos = entCodigosDeTexto(cEl.value, p.codigos);
   const maxParadasEl = document.getElementById('mn-maxparadasruta');
   if(maxParadasEl) p.maxParadasPorRuta = Math.max(0, parseInt(maxParadasEl.value) || 0);
   const ventanaRutaEl = document.getElementById('mn-ventanaruta');

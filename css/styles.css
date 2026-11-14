@@ -6723,3 +6723,8 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
 .ent-grande{flex:1 1 140px;min-height:56px;font-size:17px;justify-content:center}
 .ent-mon-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:8px 0}
 .ent-mon-campos label{display:flex;flex-direction:column;gap:4px;font-size:12px}
+
+.ent-rep-sig{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;padding:12px;border:2px solid var(--olive);border-radius:var(--r-m,4px);background:#F7F6F0;font-size:15px}
+.ent-rep-sig .ent-rot{flex:1 0 100%}
+.ent-rep-sig .btn{margin-left:auto;min-height:48px}
+.ent-rep-card.is-siguiente{border-left:6px solid var(--olive)}

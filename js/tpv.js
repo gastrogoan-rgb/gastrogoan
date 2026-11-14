@@ -37,6 +37,7 @@ function markRepartoEntregado(orderId){
   order.entregadoAt = new Date().toISOString();
   if(!order.entregaSalidaAt) order.entregaSalidaAt = order.entregadoAt;   // sin «Salgo»: la salida se da por la entrega (no inventa un tiempo de reparto)
   if(typeof entGuardarTiempos === 'function') entGuardarTiempos(order);
+  if(typeof entOfrecerCompensacion === 'function') setTimeout(() => entOfrecerCompensacion(order), 400);
   logAudit('edit', t('audit.orderDelivered').replace('${name}', order.clienteNombre||'?'));
   saveDB();
   if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
@@ -196,13 +197,13 @@ function getRouteGroupForOrder(order){
 // forma 100% oficial de pedir esto sin clave de la API de rutas de pago,
 // pero este prefijo es el que usan históricamente apps de reparto para
 // conseguirlo con la Maps normal y gratuita.
-function buildRouteMapsUrl(orders){
+function buildRouteMapsUrl(orders, opts){
   const addresses = orders.map(o => (o.clienteDireccion||'') + (o.clienteCodigoPostal ? ' ' + o.clienteCodigoPostal : '')).filter(Boolean);
   if(!addresses.length) return null;
   if(addresses.length === 1) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addresses[0])}`;
   const destination = addresses[addresses.length-1];
   const waypoints = addresses.slice(0, -1);
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&waypoints=optimize:true|${waypoints.map(encodeURIComponent).join('|')}&travelmode=driving`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&waypoints=${(opts && opts.respetarOrden) ? '' : 'optimize:true|'}${waypoints.map(encodeURIComponent).join('|')}&travelmode=driving`;
 }
 function setRepartoNotasForOrder(orderId, value){
   const order = DB.tpvOrders.find(o => o.id === orderId);

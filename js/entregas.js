@@ -133,6 +133,7 @@ function entBarraHtml(){
   const extraBtn = m => `<button type="button" class="btn btn-sm btn-fino${oc && oc.extra === m ? ' is-lim' : ''}" onclick="entPonerOcupado(${m})">+${m} min</button>`;
   return `
   <div class="ent-barra" id="ent-barra">
+    <div class="ent-sonido" id="ent-aviso-reloj" hidden></div>
     ${!entSonidoActivo() ? `<div class="ent-sonido"><i class="ti ti-volume-off"></i><span>${escapeHtml(gl({es:'El sonido de avisos está desactivado en este aparato: toca para activarlo y mantener la pantalla encendida.', ca:'El so d\'avisos està desactivat en aquest aparell: toca per activar-lo i mantenir la pantalla encesa.', en:'Alert sound is off on this device: tap to turn it on and keep the screen awake.'}))}</span><button type="button" class="btn btn-fino is-lim" id="ent-activar-sonido" onclick="entActivarSonido()">${escapeHtml(gl({es:'Activar sonido', ca:'Activar so', en:'Turn sound on'}))}</button></div>` : ''}
     <div class="ent-fila">
       <span class="ent-rot">${escapeHtml(gl({es:'Cocina saturada', ca:'Cuina saturada', en:'Kitchen busy'}))}</span>
@@ -149,6 +150,7 @@ function entBarraHtml(){
           : `<button type="button" class="btn btn-sm btn-fino" onclick="entPausarCanal('delivery')"><i class="ti ti-player-pause"></i> ${escapeHtml(gl({es:'Pausar domicilio', ca:'Pausar domicili', en:'Pause delivery'}))}</button>`}
       <button type="button" class="btn btn-sm btn-fino" onclick="entNuevoPedidoTelefono()"><i class="ti ti-phone-plus"></i> ${escapeHtml(gl({es:'Pedido por teléfono', ca:'Comanda per telèfon', en:'Phone order'}))}</button>
       <button type="button" class="btn btn-sm btn-fino" onclick="entAbrirRepartidor()"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Mi reparto', ca:'El meu repartiment', en:'My deliveries'}))}</button>
+      <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirKit()"><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Captación', ca:'Captació', en:'Acquisition'}))}</button>
       <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirAnalitica()"><i class="ti ti-chart-line"></i> ${escapeHtml(gl({es:'Tiempos', ca:'Temps', en:'Timings'}))}</button>
     </div>
   </div>`;
@@ -299,21 +301,23 @@ function entPintarRepartidor(){
   const lista = entRepartosDe(yo);
   const cobro = o => { const f = computeFinalTotal(o); return f.amountDue; };
   const tarjeta = o => lista.length ? `
-    <article class="card ent-rep-card${o.entregaEstado === 'encamino' ? ' is-encamino' : ''}">
+    <article class="card ent-rep-card${o.entregaEstado === 'encamino' ? ' is-encamino' : ''}${o === lista[0] ? ' is-siguiente' : ''}">
       <div class="ent-rep-top"><b>${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</b><span class="ent-rep-hora"><i class="ti ti-clock"></i> ${escapeHtml(o.time || '—')}</span></div>
       ${o.clienteDireccion ? `<div class="ent-rep-dir"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}${o.clienteCodigoPostal ? ' (' + escapeHtml(o.clienteCodigoPostal) + ')' : ''}</div>
         <div class="ent-rep-nav"><a class="btn btn-fino" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.clienteDireccion + ' ' + (o.clienteCodigoPostal || ''))}"><i class="ti ti-map-2"></i> Maps</a>
         <a class="btn btn-fino" target="_blank" rel="noopener" href="https://waze.com/ul?q=${encodeURIComponent(o.clienteDireccion + ' ' + (o.clienteCodigoPostal || ''))}&navigate=yes"><i class="ti ti-navigation"></i> Waze</a>
         ${o.clienteTelefono ? `<a class="btn btn-fino" href="tel:${escapeHtml(o.clienteTelefono.replace(/\s+/g, ''))}"><i class="ti ti-phone"></i> ${escapeHtml(gl({es:'Llamar', ca:'Trucar', en:'Call'}))}</a>` : ''}</div>` : ''}
       ${o.instrucciones ? `<div class="ent-rep-nota"><i class="ti ti-note"></i> ${escapeHtml(o.instrucciones)}</div>` : ''}
-      ${o.sinContacto ? `<div class="ent-rep-nota"><i class="ti ti-hand-off"></i> ${escapeHtml(gl({es:'Sin contacto: déjalo en la puerta', ca:'Sense contacte: deixa-ho a la porta', en:'Contactless: leave at the door'}))}</div>` : ''}
+      ${o.sinContacto ? `<div class="ent-rep-nota">${o.fotoEntrega ? `<img src="${o.fotoEntrega}" alt="" style="max-width:120px;border-radius:4px;vertical-align:middle"> ` : `<button type="button" class="btn btn-sm btn-fino" onclick="entFotoEntrega(${o.id})"><i class="ti ti-camera"></i> ${escapeHtml(gl({es:'Foto de entrega', ca:'Foto de lliurament', en:'Delivery photo'}))}</button> `}<i class="ti ti-hand-off"></i> ${escapeHtml(gl({es:'Sin contacto: déjalo en la puerta', ca:'Sense contacte: deixa-ho a la porta', en:'Contactless: leave at the door'}))}</div>` : ''}
       <div class="ent-rep-cobro">${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>` : o.metodoPagoLocal === 'tarjeta' ? `<span class="tp-av"><i class="ti ti-credit-card"></i> ${escapeHtml(gl({es:'Paga con tarjeta al llegar · ', ca:'Paga amb targeta en arribar · ', en:'Pays by card on arrival · '}))}${fmtMoney(cobro(o))}</span>` : `<span class="tp-av is-inc"><i class="ti ti-cash"></i> ${escapeHtml(gl({es:'Cobrar ', ca:'Cobrar ', en:'Collect '}))}<b>${fmtMoney(cobro(o))}</b>${o.pagaCon ? ' · ' + escapeHtml(gl({es:'paga con ', ca:'paga amb ', en:'pays with '})) + fmtMoney(o.pagaCon) + ' → ' + escapeHtml(gl({es:'cambio ', ca:'canvi ', en:'change '})) + fmtMoney(Math.max(0, o.pagaCon - cobro(o))) : ''}</span>`}</div>
       <div class="ent-rep-btns">
         ${o.entregaEstado !== 'encamino' ? `<button type="button" class="btn btn-primary ent-grande" onclick="markRepartoSalida(${o.id}); setTimeout(entPintarRepartidor, 50)"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Salgo', ca:'Surto', en:'Leaving'}))}</button>` : ''}
         <button type="button" class="btn ${o.entregaEstado === 'encamino' ? 'btn-primary' : 'btn-fino'} ent-grande" onclick="markRepartoEntregado(${o.id}); setTimeout(entPintarRepartidor, 50)"><i class="ti ti-circle-check"></i> ${escapeHtml(gl({es:'Entregado', ca:'Lliurat', en:'Delivered'}))}</button>
       </div>
     </article>` : '';
+  const ruta = lista.length ? buildRouteMapsUrl(lista, {respetarOrden: true}) : null;
   box.innerHTML = `
+    ${lista.length ? `<div class="ent-rep-sig"><span class="ent-rot">${escapeHtml(gl({es:'Siguiente parada', ca:'Propera parada', en:'Next stop'}))}</span><b>${escapeHtml(lista[0].clienteNombre || togoOrderLabel(lista[0]))}</b> · ${escapeHtml(lista[0].time || '—')}${lista[0].clienteDireccion ? ' · ' + escapeHtml(lista[0].clienteDireccion) : ''}${ruta && lista.length > 1 ? `<a class="btn btn-primary" target="_blank" rel="noopener" href="${ruta}"><i class="ti ti-route"></i> ${escapeHtml(gl({es:'Ruta completa (' + lista.length + ' paradas, por hora prometida)', ca:'Ruta completa (' + lista.length + ' parades, per hora promesa)', en:'Full route (' + lista.length + ' stops, by promised time)'}))}</a>` : ''}</div>` : ''}
     <p class="pr-ayuda">${escapeHtml(yo ? gl({es:'Solo ves los pedidos que te tocan.', ca:'Només veus les comandes que et toquen.', en:'You only see the orders assigned to you.'}) : gl({es:'Ves todos los repartos en curso, ordenados por la hora prometida.', ca:'Veus tots els repartiments en curs, ordenats per l\'hora promesa.', en:'You see every delivery in progress, ordered by promised time.'}))}</p>
     ${lista.length ? `<div class="ent-rep-lista">${lista.map(tarjeta).join('')}</div>` : `<div class="empty es-vacio"><i class="ti ti-moped"></i>${escapeHtml(gl({es:'No hay repartos pendientes.', ca:'No hi ha repartiments pendents.', en:'No deliveries pending.'}))}</div>`}
     ${yo || entEsRepartidorActual() ? `<div style="margin-top:10px"><button type="button" class="btn btn-fino" onclick="entAbrirMonedero()"><i class="ti ti-wallet"></i> ${escapeHtml(gl({es:'Mi monedero de hoy', ca:'La meva cartera d\'avui', en:'My wallet today'}))}</button></div>` : `<div style="margin-top:10px"><button type="button" class="btn btn-fino owner-only" onclick="entAbrirMonedero()"><i class="ti ti-wallet"></i> ${escapeHtml(gl({es:'Monederos de hoy', ca:'Carteres d\'avui', en:'Wallets today'}))}</button></div>`}`;
@@ -360,7 +364,7 @@ function entAbrirMonedero(){
     const esperado = (parseFloat(m.fondo) || 0) + d.efectivo;
     return `<div class="card ent-mon" data-k="${escapeHtml(k)}">
       <h3 style="justify-content:space-between;font-size:14px"><span><i class="ti ti-user"></i> ${escapeHtml(entRiderNombre(k))}</span>${m.cerrado ? `<span class="badge badge-green">${escapeHtml(gl({es:'Liquidado', ca:'Liquidat', en:'Settled'}))}</span>` : `<span class="badge badge-amber">${escapeHtml(gl({es:'Abierto', ca:'Obert', en:'Open'}))}</span>`}</h3>
-      <div class="txt-xs">${escapeHtml(gl({es:'Entregas hoy: ', ca:'Lliuraments avui: ', en:'Deliveries today: '}))}<b>${d.n}</b> · ${escapeHtml(gl({es:'Propinas (suyas): ', ca:'Propines (seves): ', en:'Tips (theirs): '}))}<b>${fmtMoney(d.propinas)}</b></div>
+      <div class="txt-xs">${escapeHtml(gl({es:'Entregas hoy: ', ca:'Lliuraments avui: ', en:'Deliveries today: '}))}<b>${d.n}</b> · ${escapeHtml(((DB.business.pedidos || {}).propinaBote) ? gl({es:'Propinas (al bote común): ', ca:'Propines (al pot comú): ', en:'Tips (shared pot): '}) : gl({es:'Propinas (suyas): ', ca:'Propines (seves): ', en:'Tips (theirs): '}))}<b>${fmtMoney(d.propinas)}</b></div>
       <div class="ent-mon-campos">
         <label>${escapeHtml(gl({es:'Cambio que lleva (fondo)', ca:'Canvi que porta (fons)', en:'Change carried (float)'}))}<input type="number" min="0" step="0.5" id="ent-mon-fondo-${escapeHtml(k)}" value="${m.fondo != null ? m.fondo : ''}" ${m.cerrado ? 'disabled' : ''} onchange="entMonederoFondo('${escapeHtml(k)}', this.value)"></label>
         <label>${escapeHtml(gl({es:'Efectivo que entrega', ca:'Efectiu que lliura', en:'Cash handed in'}))}<input type="number" min="0" step="0.01" id="ent-mon-contado-${escapeHtml(k)}" value="${m.contado != null ? m.contado : ''}" ${m.cerrado ? 'disabled' : ''}></label>
@@ -539,4 +543,196 @@ function entAvisoDelCliente(req){
     return true;
   }
   return false;
+}
+
+/* ───────── 11. LATIDO DE LA APP (14/11, auditoría de veracidad) ─────────
+   La web da un pedido por «confirmado» al instante, pero si la tablet está cerrada nadie lo ve. Cada 2 min (y al volver a la pestaña) la
+   app escribe un sello en `info/appVistaTs`: una sola escritura mínima, en la nube del propio negocio. Si el sello es viejo, la web lo dice. */
+function entLatido(){
+  try{
+    if(typeof DB === 'undefined' || !DB || !DB.business || typeof firebase === 'undefined' || document.visibilityState === 'hidden') return;
+    const id = typeof getPublicId === 'function' ? getPublicId() : null; if(!id) return;
+    getPublicMirrorApp().then(app => { if(app) app.database().ref('gastrogoan/public/' + id + '/info/appVistaTs').set(Date.now()).catch(() => {}); }).catch(() => {});
+  }catch(e){}
+}
+setInterval(entLatido, 120000);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') setTimeout(entLatido, 1500); });
+setTimeout(entLatido, 8000);
+
+/* ───────── 12. ZONAS CON TARIFA PROPIA Y CÓDIGOS PROMOCIONALES (14/11, plan delivery #20, #21) ───────── */
+function entZonasATexto(zonas){
+  return (zonas || []).map(z => [z.nombre || '', (z.cps || []).join(','), z.fee ?? '', z.minimo ?? '', z.gratis ?? ''].join(' | ')).join('\n');
+}
+function entZonasDeTexto(txt){
+  const out = [];
+  String(txt || '').split('\n').forEach(l => {
+    const c = l.split('|').map(x => x.trim()); if(c.length < 2 || !c[1]) return;
+    const cps = c[1].split(/[,\s]+/).map(x => x.replace(/\D/g, '')).filter(x => x.length === 5);
+    if(!cps.length) return;
+    const num = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? '' : Math.max(0, n); };
+    out.push({nombre: c[0].slice(0, 40), cps, fee: num(c[2]), minimo: num(c[3]), gratis: num(c[4])});
+  });
+  return out.slice(0, 30);
+}
+function entCodigosATexto(cods){
+  return (cods || []).filter(c => !c.compensacion).map(c => [c.codigo, c.pct ? c.pct + '%' : (c.eur ? c.eur + '€' : ''), c.minimo || '', c.hasta || '', c.usosMax || ''].join(' | ')).join('\n');
+}
+function entCodigosDeTexto(txt, previos){
+  const usados = {}; (previos || []).forEach(c => { usados[c.codigo] = c.usados || 0; });
+  const out = [];
+  String(txt || '').split('\n').forEach(l => {
+    const c = l.split('|').map(x => x.trim()); const codigo = (c[0] || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 20);
+    if(!codigo || !c[1]) return;
+    const m = c[1].replace(',', '.').match(/^(\d+(?:\.\d+)?)\s*(%|€|eur)?$/i); if(!m) return;
+    const v = parseFloat(m[1]); const esPct = m[2] === '%' || !m[2];
+    const it = {codigo, minimo: parseFloat(String(c[2] || '').replace(',', '.')) || 0, hasta: /^\d{4}-\d{2}-\d{2}$/.test(c[3] || '') ? c[3] : '', usosMax: parseInt(c[4]) || 0, usados: usados[codigo] || 0};
+    if(esPct) it.pct = Math.min(100, v); else it.eur = v;
+    out.push(it);
+  });
+  // Los códigos de compensación por retraso (los crea la app, un solo uso) no se editan a mano: se conservan.
+  return out.concat((previos || []).filter(c => c.compensacion && !(c.usosMax > 0 && c.usados >= c.usosMax))).slice(0, 60);
+}
+// La app valida el código con SUS reglas al recibir el pedido (el navegador solo lo enseña). Devuelve {codigo, pct} o null.
+function entAplicarCodigo(codigo, subtotal){
+  const p = (DB.business && DB.business.pedidos) || {}; const cod = String(codigo || '').trim().toUpperCase(); if(!cod) return null;
+  const c = (p.codigos || []).find(x => x && String(x.codigo).toUpperCase() === cod); if(!c) return null;
+  if(c.hasta && c.hasta < todayStr()) return null;
+  if(c.usosMax > 0 && (c.usados || 0) >= c.usosMax) return null;
+  if(c.minimo > 0 && subtotal + 0.001 < c.minimo) return null;
+  c.usados = (c.usados || 0) + 1;
+  const pct = c.pct > 0 ? c.pct : Math.min(100, Math.round(c.eur / Math.max(0.01, subtotal) * 10000) / 100);
+  return {codigo: c.codigo, pct};
+}
+// Compensación por retraso: si llegó tarde (pasada la ventana por más de `compensarMin`), la app prepara un código de UN solo uso y lo deja
+// listo para mandarlo por WhatsApp. Nunca se manda solo (no hay API de mensajes): lo pulsa una persona.
+function entOfrecerCompensacion(order){
+  try{
+    const p = (DB.business && DB.business.pedidos) || {}; const pct = parseFloat(p.compensarRetrasoPct) || 0; if(pct <= 0) return;
+    const v = ventanaPromesaPedido(order); if(!v || !order.entregadoAt) return;
+    const tarde = Math.round((new Date(order.entregadoAt) - new Date(v.hasta)) / 60000);
+    if(tarde < (parseInt(p.compensarMin) || 10)) return;
+    const hasta = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const cod = 'LO' + Math.random().toString(36).slice(2, 7).toUpperCase();
+    confirmModal(gl({es:'El pedido llegó ' + tarde + ' min tarde. ¿Preparar un código de ' + pct + ' % para el cliente?', ca:'La comanda ha arribat ' + tarde + ' min tard. Preparar un codi del ' + pct + ' % per al client?', en:'The order arrived ' + tarde + ' min late. Prepare a ' + pct + ' % code for the customer?'}), {confirmLabel: gl({es:'Preparar código', ca:'Preparar codi', en:'Prepare code'})}).then(ok => {
+      if(!ok) return;
+      if(!Array.isArray(p.codigos)) p.codigos = [];
+      p.codigos.push({codigo: cod, pct, minimo: 0, hasta, usosMax: 1, usados: 0, compensacion: true});
+      saveDB();
+      const texto = gl({es:'Hola ' + (order.clienteNombre || '') + ', sentimos el retraso. Para tu próximo pedido tienes un ' + pct + ' % con el código ' + cod + ' (válido 30 días).', ca:'Hola ' + (order.clienteNombre || '') + ', sentim el retard. Per a la teva propera comanda tens un ' + pct + ' % amb el codi ' + cod + ' (vàlid 30 dies).', en:'Hi ' + (order.clienteNombre || '') + ', sorry for the delay. For your next order you get ' + pct + ' % off with code ' + cod + ' (valid 30 days).'});
+      const num = whatsappDeTelefono(order.clienteTelefono);
+      if(num) window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+      else { try{ navigator.clipboard.writeText(texto); }catch(e){} showToast(gl({es:'Código ' + cod + ' copiado: el cliente no tiene móvil para WhatsApp', ca:'Codi ' + cod + ' copiat: el client no té mòbil per a WhatsApp', en:'Code ' + cod + ' copied: the customer has no mobile for WhatsApp'})); }
+    });
+  }catch(e){ console.error(e); }
+}
+
+/* ───────── 13. AUTOPAUSA (#28) ─────────
+   Con `pedidos.autopausaN` = N, al llegar a N pedidos para llevar/domicilio EN CURSO se pausan los dos canales 15 min (con aviso). La válvula de
+   «cocina saturada» sin que nadie tenga que acordarse; el negocio la reanuda cuando quiera. */
+function entEnCurso(){ return (DB.tpvOrders || []).filter(o => o && (o.tipo === 'takeaway' || o.tipo === 'delivery') && o.status === 'abierta' && o.entregaEstado !== 'entregado' && !(typeof esPedidoProgramadoLejano === 'function' && esPedidoProgramadoLejano(o))).length; }
+function entAutopausaTick(){
+  try{
+    const n = parseInt(((DB.business && DB.business.pedidos) || {}).autopausaN) || 0; if(n <= 0) return;
+    if(entCanalPausado('takeaway') && entCanalPausado('delivery')) return;
+    if(entEnCurso() < n) return;
+    const p = entPedidosCfg(), hasta = new Date(Date.now() + 15 * 60000).toISOString();
+    if(!entCanalPausado('takeaway')) p.pausaTakeawayHasta = hasta;
+    if(!entCanalPausado('delivery')) p.pausaDeliveryHasta = hasta;
+    saveDB(); entProgramarCaducidad();
+    logAudit('edit', gl({es:'Autopausa: ' + n + ' pedidos en curso, canales pausados 15 min', ca:'Autopausa: ' + n + ' comandes en curs, canals en pausa 15 min', en:'Auto-pause: ' + n + ' orders in progress, channels paused 15 min'}));
+    showToast(gl({es:'Autopausa: hay ' + n + ' pedidos en curso. Pedidos pausados 15 min.', ca:'Autopausa: hi ha ' + n + ' comandes en curs. Comandes en pausa 15 min.', en:'Auto-pause: ' + n + ' orders in progress. Orders paused for 15 min.'}));
+    if(typeof renderTPV === 'function' && document.querySelector('#view-tpv.active')) renderTPV();
+  }catch(e){}
+}
+setInterval(entAutopausaTick, 20000);
+
+/* ───────── 14. RELOJ DESAJUSTADO (#1) ─────────
+   Todo lo que se promete se mide con el reloj de la tablet. Si va adelantada o atrasada, «a las 21:10» es mentira. Se compara con el reloj del
+   servidor de Firebase (`.info/serverTimeOffset`, sin coste) y se avisa desde 3 min de diferencia. */
+let entRelojOffsetMs = null;
+function entComprobarReloj(){
+  try{
+    if(typeof firebase === 'undefined' || typeof getPublicMirrorApp !== 'function') return;
+    getPublicMirrorApp().then(app => { if(!app) return; app.database().ref('.info/serverTimeOffset').once('value').then(sn => { entRelojOffsetMs = Number(sn.val()) || 0; entPintarAvisoReloj(); }).catch(() => {}); }).catch(() => {});
+  }catch(e){}
+}
+function entPintarAvisoReloj(){
+  const b = document.getElementById('ent-aviso-reloj'); if(!b) return;
+  const min = Math.round(Math.abs(entRelojOffsetMs || 0) / 60000);
+  b.hidden = min < 3; if(min >= 3) b.textContent = gl({es:'El reloj de este aparato va ' + min + ' min ' + (entRelojOffsetMs > 0 ? 'atrasado' : 'adelantado') + ': las horas prometidas saldrán mal. Corrígelo en los ajustes del aparato.', ca:'El rellotge d\'aquest aparell va ' + min + ' min ' + (entRelojOffsetMs > 0 ? 'endarrerit' : 'avançat') + ': les hores promeses sortiran malament. Corregeix-ho als ajustos de l\'aparell.', en:'This device\'s clock is ' + min + ' min ' + (entRelojOffsetMs > 0 ? 'behind' : 'ahead') + ': promised times will be wrong. Fix it in the device settings.'});
+}
+setInterval(entComprobarReloj, 30 * 60000); setTimeout(entComprobarReloj, 15000);
+
+/* ───────── 15. FOTO DE ENTREGA «sin contacto» (#25) ─────────
+   Solo en pedidos «déjalo en la puerta». Se reduce a 480 px y calidad .5 (~25 KB) y se guarda en el pedido y en su venta (la nube del propio
+   negocio): sin servidor ni almacenamiento extra por licencia. */
+function entFotoEntrega(orderId){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment');
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if(!f) return;
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const k = Math.min(1, 480 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const o = DB.tpvOrders.find(x => x.id === orderId); URL.revokeObjectURL(url); if(!o) return;
+      o.fotoEntrega = c.toDataURL('image/jpeg', 0.5); const sale = (DB.sales || []).find(x => x && x.id === orderId); if(sale) sale.fotoEntrega = o.fotoEntrega;
+      saveDB(); showToast(gl({es:'Foto guardada', ca:'Foto desada', en:'Photo saved'})); if(document.getElementById('ent-rep-body')) entPintarRepartidor();
+    };
+    img.src = url;
+  };
+  inp.click();
+}
+
+/* ───────── 16. ORDEN DE COCINA PARA QUE TODO TERMINE A LA VEZ (#27) ─────────
+   Con los minutos de la ficha técnica de cada plato (`ficha.pasosDet[].min`), se calcula a qué hora empezar cada uno para que el pedido
+   termine junto. Es una ayuda: se enseña en la hoja del pedido y no mueve nada solo. */
+function entMinutosPlato(linea){
+  try{
+    const plato = typeof findActiveDishByName === 'function' ? findActiveDishByName(linea.name) : null;
+    const rid = (linea.recipeId != null ? linea.recipeId : (plato && plato.recipeId));
+    const f = rid != null ? (DB.fichas || []).find(x => String(x.recipeId) === String(rid)) : null;
+    return f && Array.isArray(f.pasosDet) ? f.pasosDet.reduce((s, x) => s + (parseInt(x && x.min) || 0), 0) : 0;
+  }catch(e){ return 0; }
+}
+function entOrdenCocina(order){
+  const v = ventanaPromesaPedido(order); if(!v) return null;
+  const fin = new Date(v.desde).getTime(), lineas = (order.items || []).filter(l => !l.isShipping && !l.bebida).map(l => ({n: l.qty + '× ' + l.name, min: entMinutosPlato(l)})).filter(l => l.min > 0);
+  if(lineas.length < 2) return null;
+  return lineas.sort((a, b) => b.min - a.min).map(l => ({n: l.n, min: l.min, empezar: new Date(fin - l.min * 60000)}));
+}
+function entOrdenCocinaHtml(order){
+  const o = entOrdenCocina(order); if(!o) return '';
+  return `<div class="card ent-empaq"><h3 style="font-size:14px"><i class="ti ti-chef-hat"></i> ${escapeHtml(gl({es:'Orden de cocina', ca:'Ordre de cuina', en:'Kitchen order'}))}</h3><p class="txt-xs">${escapeHtml(gl({es:'Para que todo esté a la hora prometida, según los minutos de cada ficha técnica:', ca:'Perquè tot estigui a l\'hora promesa, segons els minuts de cada fitxa tècnica:', en:'So everything is ready at the promised time, from each recipe card\'s minutes:'}))}</p><ul class="tp-mini">${o.map(l => `<li><b>${entHoraCorta(l.empezar)}</b> ${escapeHtml(l.n)} <span class="txt-xs">(${l.min} min)</span></li>`).join('')}</ul></div>`;
+}
+
+/* ───────── 17. KIT DE CAPTACIÓN (#26) ─────────
+   Enlaces con `?origen=` (Google, Instagram, WhatsApp, bolsa) para saber de dónde llega cada pedido, su QR y un flyer imprimible para meter en
+   la bolsa de los pedidos de plataforma («la próxima vez, directo y sin comisión») con un código del primer pedido. */
+const ENT_ORIGENES = [['google', 'Google'], ['instagram', 'Instagram'], ['whatsapp', 'WhatsApp'], ['bolsa', gl({es:'Flyer en la bolsa', ca:'Flyer a la bossa', en:'Bag flyer'})]];
+function entEnlaceOrigen(o){ const base = getPublicClientLink(); return base ? base + (base.includes('?') ? '&' : '?') + 'origen=' + o : ''; }
+function entAbrirKit(){
+  const p = (DB.business && DB.business.pedidos) || {}; const cod = (p.codigos || []).filter(c => !c.compensacion);
+  openModal(`<div class="modal-header"><h3><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Kit de captación', ca:'Kit de captació', en:'Acquisition kit'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p class="pr-ayuda">${escapeHtml(gl({es:'Un enlace por canal: así ves de dónde llega cada pedido (queda en el pedido como «origen»). Para Google, pégalo en tu ficha como enlace de «Pedir» / «Comida por encargo».', ca:'Un enllaç per canal: així veus d\'on arriba cada comanda (queda a la comanda com a «origen»). Per a Google, enganxa\'l a la teva fitxa com a enllaç de «Demanar» / «Menjar per encàrrec».', en:'One link per channel: you see where each order comes from (it is stored on the order as «origin»). For Google, paste it in your listing as the «Order» / «Food pickup» link.'}))}</p>
+      ${ENT_ORIGENES.map(([k, nom]) => { const url = entEnlaceOrigen(k); return `<div class="card" style="margin-bottom:8px"><b>${escapeHtml(nom)}</b><div class="txt-xs" style="word-break:break-all">${escapeHtml(url)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-sm btn-fino" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar', ca:'Copiar', en:'Copy'}))}</button></div></div>`; }).join('')}
+      <div class="card" style="margin-bottom:8px"><b>${escapeHtml(gl({es:'Tablero de pedidos listos (pantalla del local)', ca:'Tauler de comandes llestes (pantalla del local)', en:'Ready-orders board (shop screen)'}))}</b><div class="txt-xs" style="word-break:break-all">${escapeHtml(getPublicClientLink() + (getPublicClientLink().includes('?') ? '&' : '?') + 'listos=1')}</div><div class="txt-xs">${escapeHtml(gl({es:'Ábrelo en una tele o tablet junto al mostrador: solo muestra números de pedido.', ca:'Obre\'l en una tele o tauleta al costat del taulell: només mostra números de comanda.', en:'Open it on a TV or tablet by the counter: it only shows order numbers.'}))}</div></div>
+      <div class="field"><label>${escapeHtml(gl({es:'Código para el flyer de la bolsa', ca:'Codi per al flyer de la bossa', en:'Code for the bag flyer'}))}</label>
+        <select id="ent-kit-cod"><option value="">${escapeHtml(gl({es:'(sin código)', ca:'(sense codi)', en:'(no code)'}))}</option>${cod.map(c => `<option value="${escapeHtml(c.codigo)}">${escapeHtml(c.codigo)} · ${c.pct ? c.pct + '%' : c.eur + '€'}</option>`).join('')}</select>
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'Créalos en Mi Negocio › Pedidos › Códigos promocionales.', ca:'Crea\'ls a Mi Negocio › Comandes › Codis promocionals.', en:'Create them in My Business › Orders › Promo codes.'}))}</small></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="entImprimirFlyer()"><i class="ti ti-printer"></i> ${escapeHtml(gl({es:'Imprimir flyer para la bolsa', ca:'Imprimir flyer per a la bossa', en:'Print bag flyer'}))}</button></div>`);
+}
+function entImprimirFlyer(){
+  const url = entEnlaceOrigen('bolsa'); const sel = document.getElementById('ent-kit-cod'); const cod = sel ? sel.value : '';
+  const c = ((DB.business.pedidos || {}).codigos || []).find(x => x.codigo === cod);
+  const dto = c ? (c.pct ? c.pct + ' %' : c.eur + ' €') : '';
+  const nombre = (DB.business && DB.business.name) || '';
+  const h = `<div style="font-family:sans-serif;text-align:center;padding:24px;border:3px solid #000;max-width:520px;margin:0 auto">
+    <div style="font-size:28px;font-weight:800">${escapeHtml(nombre)}</div>
+    <div style="font-size:22px;margin:14px 0">${escapeHtml(gl({es:'¿Te ha gustado? La próxima vez, pide directo.', ca:'T\'ha agradat? La propera vegada, demana directe.', en:'Enjoyed it? Next time, order direct.'}))}</div>
+    <div style="font-size:16px">${escapeHtml(gl({es:'Sin comisiones de plataforma: mejor para ti y para nosotros.', ca:'Sense comissions de plataforma: millor per a tu i per a nosaltres.', en:'No platform fees: better for you and for us.'}))}</div>
+    ${dto ? `<div style="font-size:26px;font-weight:800;border:2px dashed #000;margin:16px 0;padding:10px">${escapeHtml(dto)} ${escapeHtml(gl({es:'en tu primer pedido · código', ca:'a la teva primera comanda · codi', en:'off your first order · code'}))} ${escapeHtml(c.codigo)}</div>` : ''}
+    <img src="${qrImagenUrl(url, 260)}" width="220" height="220" alt="QR"><div style="font-size:13px;margin-top:6px">${escapeHtml(url)}</div></div>`;
+  printReportWindow(gl({es:'Flyer para la bolsa', ca:'Flyer per a la bossa', en:'Bag flyer'}), h);
 }
