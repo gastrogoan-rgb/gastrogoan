@@ -106,6 +106,7 @@ function openCashClosureModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('label.period')}: ${fmtDateTime(desde)} — ${fmtDateTime(hasta)}<br>${ticketCount} ${ticketCount!==1?t('noun.tickets'):t('noun.ticket')}</p>
+    ${typeof entAvisoMonederosHtml === 'function' ? entAvisoMonederosHtml() : ''}
     <div class="table-wrap">
       <table>
         <thead><tr><th>${t('label.paymentMethod')}</th><th>${t('label.totalSales')}</th></tr></thead>
@@ -1171,7 +1172,16 @@ function viewSupplierOrderHistory(nombre){
   pedidoHistorialSupplierFilter = nombre;
   renderPedidos();
 }
+// «Realizar pedido» con cantidades puestas es un pedido a medias: salir sin guardarlo (cambiar de pestaña, de pantalla, cerrar sesión, recargar) lo
+// perdería. Se registra como cualquier editor: el aviso ofrece guardarlo como borrador, que es lo que ya hace «Guardar borrador».
+if(typeof ggRegistrarEditor === 'function') ggRegistrarEditor('pedido-nuevo', {
+  sucio: () => !!orderModalSupplier && orderModalLines.some(l => (parseFloat(l.cantidad) || 0) > 0),
+  nombre: () => gl({es:'Pedido a ' + orderModalSupplier + ' sin enviar ni guardar', ca:'Comanda a ' + orderModalSupplier + ' sense enviar ni desar', en:'Order to ' + orderModalSupplier + ' not sent or saved'}),
+  guardar: async () => { const n = DB.purchaseOrders.length; await guardarBorradorPedido(); return DB.purchaseOrders.length > n; },
+  descartar: () => { orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; orderLetra = ''; }
+});
 function setPedidosTab(tab){
+  if(tab !== 'crear' && typeof ggEditorSucio === 'function' && ggEditorSucio()){ ggGuardarSiHaceFalta(() => setPedidosTab(tab)); return; }
   pedidosTab = tab;
   pedidoDetailId = null;
   if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; orderFiltro = ''; orderLetra = ''; }

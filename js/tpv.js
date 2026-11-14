@@ -23,6 +23,7 @@ function esRepartoPropio(order){
 }
 function repartoStatusBadgeHtml(order){
   if(order.entregaEstado === 'entregado') return ` <span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('reparto.entregado')}</span>`;
+  if(order.entregaEstado === 'encamino') return ` <span class="badge badge-blue"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'En camino', ca:'En camí', en:'On its way'}))}</span>`;
   if(order.repartidorId || order.repartidorCourierId) return ` <span class="badge badge-blue"><i class="ti ti-moped"></i> ${t('reparto.enCamino')}</span>`;
   return ` <span class="badge badge-amber"><i class="ti ti-alert-triangle"></i> ${t('reparto.sinAsignar')}</span>`;
 }
@@ -34,6 +35,8 @@ function markRepartoEntregado(orderId){
   if(!order || order.entregaEstado === 'entregado') return;
   order.entregaEstado = 'entregado';
   order.entregadoAt = new Date().toISOString();
+  if(!order.entregaSalidaAt) order.entregaSalidaAt = order.entregadoAt;   // sin «Salgo»: la salida se da por la entrega (no inventa un tiempo de reparto)
+  if(typeof entGuardarTiempos === 'function') entGuardarTiempos(order);
   logAudit('edit', t('audit.orderDelivered').replace('${name}', order.clienteNombre||'?'));
   saveDB();
   if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
@@ -117,6 +120,15 @@ function liberarPedidosDeRepartidor(employeeId){
 
 // Pedidos de reparto propio "vivos" ahora mismo (aún sin entregar), para el
 // contador del botón de la barra de herramientas.
+/* Cuándo se lanza a cocina un pedido programado (13/11, plan delivery #8): a «hora prometida − preparación − margen», no una hora antes para
+   todos (un café y una paletilla no tardan lo mismo). Preparación y margen son del negocio (`pedidos.prepMin`, `pedidos.margenMin`);
+   en un domicilio se suma además el tiempo de reparto (`pedidos.repartoMin`). Devuelve milisegundos. */
+function margenDeMarchaMs(order){
+  const p = (DB.business && DB.business.pedidos) || {};
+  const prep = Math.max(0, parseInt(p.prepMin)); const margen = Math.max(0, parseInt(p.margenMin)); const rep = Math.max(0, parseInt(p.repartoMin));
+  const total = (isNaN(prep) ? 25 : prep) + (isNaN(margen) ? 10 : margen) + ((order && order.tipo === 'delivery') ? (isNaN(rep) ? 15 : rep) : 0);
+  return Math.min(total, 180) * 60 * 1000;
+}
 /* Un pedido para dentro de X horas no cuenta como "activo" todavía: mismo
    margen que usa acceptOnlineOrder/marcharPedidosProgramadosQueYaTocan, para
    que las tres partes (marchar, cocina, reparto) se muevan juntas. */
@@ -124,7 +136,7 @@ function esPedidoProgramadoLejano(order){
   if(!order || !order.date || !order.time) return false;
   const horaPedida = new Date(order.date + 'T' + order.time);
   if(isNaN(horaPedida)) return false;
-  return (horaPedida.getTime() - Date.now()) > 60 * 60 * 1000;
+  return (horaPedida.getTime() - Date.now()) > margenDeMarchaMs(order);
 }
 function getActiveRepartosOrders(){
   return DB.tpvOrders.filter(o => esRepartoPropio(o) && o.status !== 'pagada' && o.status !== 'pendiente-online' && o.entregaEstado !== 'entregado' && !esPedidoProgramadoLejano(o));
@@ -325,6 +337,7 @@ function renderRepartoControlCardHtml(order){
         </div>
         <div style="flex:1;min-width:200px">
           ${repartidorSelectHtml}
+          ${(!entregado && order.entregaEstado !== 'encamino') ? `<button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="markRepartoSalida(${order.id})"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Salgo (en camino)', ca:'Surto (en camí)', en:'Leaving (on its way)'}))}</button>` : ''}
           ${!entregado ? `<button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="markRepartoEntregado(${order.id})"><i class="ti ti-circle-check"></i> ${t('reparto.btn.entregado')}</button>` : ''}
           <div class="field" style="margin-top:8px">
             <label style="font-size:12px">${t('reparto.notas')}</label>
@@ -841,6 +854,8 @@ async function acceptOnlineOrder(orderId, auto){
 
     order.status = 'abierta';
     const ahora = new Date().toISOString();
+    if(!order.aceptadoAt) order.aceptadoAt = ahora;
+    if(order.tipo === 'delivery' && !order.pinEntrega) order.pinEntrega = String(Math.floor(1000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 9000)));
     /* ⚠️ UN PEDIDO PROGRAMADO PARA MÁS ADELANTE NO SE MARCHA HOY.
 
        "Aceptar" solo confirma que el negocio lo ha visto y lo va a preparar —
@@ -852,7 +867,7 @@ async function acceptOnlineOrder(orderId, auto){
        diferencia entre ahora y la hora pedida, se acepta pero se deja
        pendiente de marchar — igual que un pedido normal que aún no se ha
        enviado a cocina. */
-    const margenAntesDeMarchar = 60 * 60 * 1000; // 1 hora, igual que Cocina/Reparto
+    const margenAntesDeMarchar = margenDeMarchaMs(order);
     const horaPedida = (order.date && order.time) ? new Date(order.date + 'T' + order.time) : null;
     const esParaMasAdelante = horaPedida && !isNaN(horaPedida) && (horaPedida.getTime() - Date.now()) > margenAntesDeMarchar;
     (order.items||[]).forEach(l => {
@@ -2217,7 +2232,7 @@ function printMarchadasIfEnabled(order, firedLines){
   const printers = (typeof ensureComandaPrinters === 'function' ? ensureComandaPrinters() : (DB.business && DB.business.comandas && DB.business.comandas.printers) || []).filter(p => p.activo);
   if(!printers.length) return;
   const table = order.tableId ? DB.tables.find(t=>t.id===order.tableId) : null;
-  const titulo = table ? table.name : togoOrderLabel(order);
+  const titulo = table ? table.name : ((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof entTituloComanda === 'function' ? entTituloComanda(order) : togoOrderLabel(order));
   printers.forEach(p => {
     const lineas = firedLines.filter(l => l.qty > 0 && (p.contenido==='todo' || (p.contenido==='comida' ? !l.bebida : l.bebida)));
     if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, comandaAllergensText(order, lineas), p.id);
@@ -3437,14 +3452,13 @@ function decrementMenuStock(order, linea, qty){
    se quedaría pendiente para siempre, porque acceptOnlineOrder solo lo dejó
    marcado como aceptado, sin marchar, a propósito. */
 function marcharPedidosProgramadosQueYaTocan(){
-  const margenAntesDeMarchar = 60 * 60 * 1000;
   const ahora = new Date().toISOString();
   let huboAlguno = false;
   DB.tpvOrders.forEach(order => {
     if(order.status !== 'abierta') return;
     if(!order.date || !order.time) return;
     const horaPedida = new Date(order.date + 'T' + order.time);
-    if(isNaN(horaPedida) || (horaPedida.getTime() - Date.now()) > margenAntesDeMarchar) return;
+    if(isNaN(horaPedida) || (horaPedida.getTime() - Date.now()) > margenDeMarchaMs(order)) return;
     let algunaLinea = false;
     (order.items||[]).forEach(l => {
       if(l.estado) return;   // ya marchada, o no es un plato (bebida sin cocina)
@@ -4517,7 +4531,7 @@ function apuntarVentaPagoOnline(order){
     total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: '', descuentoResponsableNombre: '', propina,
     tableId: null, pax: null, tipo: order.tipo, express: false, clienteNombre: order.clienteNombre || '', clientId: order.clientId || null,
     camareroId: null, metodoPago: 'Online', pagos: [{label: t('label.paidOnline'), amount: total, metodoPago: 'Online'}],
-    items: buildSaleItemsForOrder(order), pagoOnlineAnticipado: true};
+    items: buildSaleItemsForOrder(order), pagoOnlineAnticipado: true, tiempos: (typeof entTiemposDeOrder === 'function' ? entTiemposDeOrder(order) : null) || undefined};
   applyDeliveryCommission(order, sale);
   if(!Array.isArray(DB.sales)) DB.sales = [];
   numerarTicket(sale);
@@ -4556,6 +4570,7 @@ function finalizeCharge(orderId, opts){
   // es barato de comprobar y evita un doble cobro/doble descuento de stock
   // si en el futuro se añade algo asíncrono antes de marcar 'pagada'.
   if(order.status === 'pagada') return;
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && !order.recogidoAt) order.recogidoAt = new Date().toISOString();
   const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue, valeAplicado} = computeFinalTotal(order);
   // La venta ya se apuntó al llegar el pago (apuntarVentaPagoOnline): cerrar
   // es solo cerrar. Si al recogerlo se añadió algo y queda dinero por cobrar,
@@ -4649,7 +4664,7 @@ function finalizeCharge(orderId, opts){
   // en UTC — la venta caía en el día (y el mes) anterior y no aparecía en
   // Ventas, mientras la comisión sí (1/10).
   const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? diaLocalDe(order.pagoFecha) : todayStr();
-  const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
+  const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order), tiempos: (typeof entTiemposDeOrder === 'function' ? entTiemposDeOrder(order) : null) || undefined};
   estamparSenalEnVenta(order, sale);
   if(valeAplicado > 0){
     sale.valeId = order.valeRegalo.valeId; sale.valeImporte = valeAplicado;
@@ -5101,7 +5116,7 @@ function finalizeSplitOrder(orderId){
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
     metodoPago: metodos.length===1?metodos[0]:'Dividido',
-    pagos, items: buildSaleItemsForOrder(order)
+    pagos, items: buildSaleItemsForOrder(order), tiempos: (typeof entTiemposDeOrder === 'function' ? entTiemposDeOrder(order) : null) || undefined
   };
   estamparSenalEnVenta(order, sale);
   // Los vales solo se gastan ahora, al cerrar la cuenta entera (si se cancela el reparto no se ha tocado ninguno).

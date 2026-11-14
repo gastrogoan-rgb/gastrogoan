@@ -666,7 +666,7 @@ function renderTableOrderModal(orderId){
       <div class="tp-or-pest">
         ${soloConsulta ? '' : `<button type="button" role="tab" class="tp-or-pestana${panel === 'carta' ? ' is-on' : ''}" aria-selected="${panel === 'carta'}" onclick="setTpvOrderMobilePane('carta', ${order.id})"><i class="ti ti-pencil-plus"></i> ${escapeHtml(gl({es:'Tomar nota', ca:'Prendre nota', en:'Take order'}))}</button>`}
         <button type="button" role="tab" class="tp-or-pestana${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? ' is-on' : ''}" aria-selected="${panel === 'comanda' || (soloConsulta && panel !== 'reparto')}" onclick="setTpvOrderMobilePane('comanda', ${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(gl({es:'Pedido', ca:'Comanda', en:'Order'}))}${unidades ? ` <b class="tp-or-barra-n">${unidades}</b>` : ''} <span class="tp-or-pest-tot">${fmtMoney(total)}</span></button>
-        ${esRepartoPropio(order) ? `<button type="button" role="tab" class="tp-or-pestana tp-or-pest-reparto${panel === 'reparto' ? ' is-on' : ''}" aria-selected="${panel === 'reparto'}" onclick="setTpvOrderMobilePane('reparto', ${order.id})"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}${repartoStatusBadgeHtml(order)}</button>` : ''}
+        ${(esRepartoPropio(order) || (order.tipo === 'takeaway' && order.origenOnline) || order.origenTelefono) ? `<button type="button" role="tab" class="tp-or-pestana tp-or-pest-reparto${panel === 'reparto' ? ' is-on' : ''}" aria-selected="${panel === 'reparto'}" onclick="setTpvOrderMobilePane('reparto', ${order.id})"><i class="ti ti-moped"></i> ${escapeHtml(order.tipo === 'delivery' ? gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}) : gl({es:'Empaquetado', ca:'Empaquetat', en:'Packing'}))}${esRepartoPropio(order) ? repartoStatusBadgeHtml(order) : ''}</button>` : ''}
       </div>
       <div class="tp-or-chips">${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</div>
     </div>
@@ -680,7 +680,7 @@ function renderTableOrderModal(orderId){
       <section class="tp-or-col tp-or-comanda ${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
         ${comandaHtml}
       </section>
-      ${esRepartoPropio(order) ? `<section class="tp-or-col tp-or-repartocol ${panel === 'reparto' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">${renderRepartoControlCardHtml(order)}</section>` : ''}
+      ${(esRepartoPropio(order) || (order.tipo === 'takeaway' && order.origenOnline) || order.origenTelefono) ? `<section class="tp-or-col tp-or-repartocol ${panel === 'reparto' ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}))}">${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}${typeof entEmpaquetadoHtml === 'function' && (order.items || []).length ? entEmpaquetadoHtml(order) : ''}</section>` : ''}
     </div>
     <div class="modal-footer tp-or-pie">${actionButtons}</div>
   `, {order: true});
@@ -720,6 +720,7 @@ function renderTpvToGo(tiposServicio){
         <button type="button" class="btn btn-fino" onclick="openTogoCalendarModal()"><i class="ti ti-calendar-stats"></i> ${escapeHtml(t('title.togoCalendar'))}</button>
       </div>
     </div>
+    ${(typeof entBarraHtml === 'function') ? (entProgramarCaducidad(), entBarraHtml()) : ''}
     ${!pedidosOnlineOn ? `<div class="manual-warning tp-togo-aviso"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('tpv.onlineOrdersPausedWarning'))}</div>` : ''}
     <div class="cl-chips tp-togo-tabs" role="group">
       <button type="button" class="btn btn-sm btn-fino${togoTab === 'pendientes' ? ' is-on' : ''}" aria-pressed="${togoTab === 'pendientes'}" onclick="setTogoTabManual('pendientes')"><i class="ti ti-bell-ringing"></i> ${escapeHtml(t('tab.pendingOnline'))}${pendingCount ? ` <b>${pendingCount}</b>` : ''}</button>
@@ -756,8 +757,12 @@ function tpvPedidoFichaHtml(o){
     ${o.clientRef && o.origenOnline ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
     ${dir ? `<span class="tp-ped-dir"><i class="ti ti-map-pin"></i> ${escapeHtml(dir)}</span>` : ''}
     ${tpvPedidoLineasHtml(o)}
+    ${o.instrucciones ? `<span class="tp-ped-dir"><i class="ti ti-door-enter"></i> ${escapeHtml(o.instrucciones)}</span>` : ''}
     <span class="tp-ped-total">${fmtMoney(orderTotal(o))}</span>
     <span class="tp-ped-pie">
+      ${o.llegadaAviso ? `<span class="tp-av is-inc"><i class="ti ti-map-pin-check"></i> ${escapeHtml(o.llegadaAviso.accion === 'cinco' ? gl({es:'A 5 min', ca:'A 5 min', en:'5 min away'}) : gl({es:'Ya está aquí', ca:'Ja és aquí', en:'Is here'}))}</span>` : ''}
+      ${o.cancelacionPedida ? `<span class="tp-av is-inc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'Pide cancelar', ca:'Demana cancel·lar', en:'Asks to cancel'}))}</span>` : ''}
+      ${o.entregaEstado === 'encamino' ? `<span class="tp-av is-pago"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'En camino', ca:'En camí', en:'On its way'}))}</span>` : ''}
       ${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>` : `<span class="tp-av"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.paymentPending'))}</span>`}
       ${metodo ? `<span class="tp-av"><i class="ti ${o.metodoPagoLocal === 'tarjeta' ? 'ti-credit-card' : 'ti-cash'}"></i> ${escapeHtml(metodo)}</span>` : ''}
       ${incidenciaAbierta(o) ? `<span class="tp-av is-inc"><i class="ti ti-alert-triangle"></i></span>` : ''}
@@ -799,6 +804,8 @@ function renderTpvPendingOnline(){
           ${o.clientRef ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
           ${esperaMin >= 30 ? `<span class="tp-ped-alerta"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.waitingSince').replace('${min}', esperaMin))}</span>` : ''}
           ${o.pendienteVerificarZona ? `<span class="tp-ped-alerta"><i class="ti ti-alert-triangle"></i> ${escapeHtml(o.fueraDeZona ? t('label.zoneOutside') : t('label.zoneNotVerified'))}</span>` : ''}
+          ${o.bajoMinimo ? `<span class="tp-ped-alerta"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'Por debajo del mínimo de pedido (' + fmtMoney(o.minimoRequerido || 0) + '). Llama al cliente o recházalo.', ca:'Per sota del mínim de comanda (' + fmtMoney(o.minimoRequerido || 0) + '). Truca al client o rebutja\'l.', en:'Below the order minimum (' + fmtMoney(o.minimoRequerido || 0) + '). Call the customer or reject it.'}))}</span>` : ''}
+          ${o.instrucciones ? `<span class="tp-ped-dir"><i class="ti ti-door-enter"></i> ${escapeHtml(o.instrucciones)}</span>` : ''}
           <span class="tp-ped-pie">${o.pagado ? `<span class="tp-av is-pago"><i class="ti ti-credit-card"></i> ${escapeHtml(t('label.paidOnline'))}</span>`
             : o.pagoInsuficiente ? `<span class="tp-av is-inc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.paymentShort'))}</span>`
             : (o.origenOnline && !o.metodoPagoLocal) ? `<span class="tp-av"><i class="ti ti-clock"></i> ${escapeHtml(t('label.awaitingCardPayment'))}</span>` : ''}</span>
