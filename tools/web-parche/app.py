@@ -25,7 +25,7 @@ DESC = {
  'en': 'Hospitality has become a subscription business.<br>GastroGoan App replaces them all with a single system.',
 }
 PRECIO = {'es': '240 € + IVA / año', 'ca': "240 € + IVA / any", 'en': '€240 + VAT / year'}
-NOTA = {'es': 'El primer año, 300 € + IVA', 'ca': 'El primer any, 300 € + IVA', 'en': 'First year, €300 + VAT'}
+NOTA = {'es': '+ 60 € de instalación el primer año', 'ca': '+ 60 € d’instal·lació el primer any', 'en': '+ €60 setup fee in the first year'}
 DATOS = {  # todo verificable: lo dicen la FAQ, las condiciones y la propia app
  'es': [('21', 'herramientas en una sola app'), ('0 €', 'de comisión por reserva o por pedido'), ('20 min', 'para ponerla en marcha, con guía'), ('100 %', 'tus datos, en tu propia nube')],
  'ca': [('21', 'eines en una sola app'), ('0 €', 'de comissió per reserva o per comanda'), ('20 min', 'per posar-la en marxa, amb guia'), ('100 %', 'les teves dades, al teu propi núvol')],
