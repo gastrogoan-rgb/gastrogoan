@@ -77,7 +77,7 @@ a.logo{display:inline-flex;align-items:center;min-height:44px}
   background:radial-gradient(ellipse 46% 52% at 50% -8%,rgba(241,232,210,.13),rgba(241,232,210,.04) 45%,transparent 72%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,linear-gradient(180deg,#1C1A17,#24221D)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 60% at 50% 0%,rgba(255,224,170,.09),transparent 70%)}
 .hero>*{position:relative}
-h1{margin:0;white-space:nowrap;font-size:clamp(1.3rem,6.3vw,3.4rem);line-height:1;font-weight:400;letter-spacing:-.03em;color:#fff}
+h1{margin:0;white-space:nowrap;font-size:clamp(1.3rem,6.3vw,3.4rem);line-height:1;font-weight:600;letter-spacing:-.03em;color:#fff}
 h1 b{font-weight:600}h1 i{font-style:normal;color:#8FA593}
 .sub{display:flex;flex-direction:column;align-items:center;gap:12px;margin:clamp(22px,3vw,34px) auto 0;max-width:34em;font-size:clamp(1rem,.92rem + .4vw,1.2rem);line-height:1.5;color:#F1EFE9;text-wrap:balance}
 .sub::before{content:"";width:28px;height:2px;background:#6F8A74}
@@ -93,7 +93,7 @@ main{flex:1}
 /* el mono en mayúsculas ES parte de la tipografía de GastroGoan: también en las descripciones */
 .puerta .n{font:400 12px/1 var(--mono);letter-spacing:.1em;color:var(--muted);transition:color .25s}
 .puerta h3{margin:0;font-size:clamp(1.6rem,1.05rem + 2vw,2.5rem);line-height:1.1;font-weight:600;letter-spacing:-.035em;justify-self:start;padding-bottom:3px;background:linear-gradient(var(--oliva),var(--oliva)) 0 100%/0 2px no-repeat;transition:background-size .45s var(--ease)}
-.puerta p{grid-column:2;margin:0;font:400 12px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);max-width:60ch}
+.puerta p{grid-column:2;margin:0;font:400 12px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#3D3A34;max-width:60ch}
 .puerta .fl{grid-column:3;grid-row:1;font-size:clamp(1.3rem,1rem + 1vw,1.8rem);color:var(--muted);transition:transform .38s var(--ease),color .25s}
 .puerta:hover h3,.puerta:focus-visible h3{background-size:100% 2px}
 .puerta:hover .fl,.puerta:focus-visible .fl{transform:translateX(9px);color:var(--oliva)}
@@ -162,7 +162,7 @@ def pagina(l):
   <nav class="idiomas" aria-label="{t['idioma']}">{idi}</nav>
 </header>
 <section class="hero">
-  <h1>{e(t['h1'])} Gastro<b>Goan</b><i>.</i></h1>
+  <h1>{e(t['h1'])} GastroGoan<i>.</i></h1>
   <p class="sub">{e(t['sub'])}</p>
 </section>
 <main>
