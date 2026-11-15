@@ -20,6 +20,71 @@ BASE_GIT = 'a152bda'
 MSG = {'es': 'Hola, me gustaría pedir una propuesta para un evento con Le Petit Comité.',
        'ca': "Hola, m'agradaria demanar una proposta per a un esdeveniment amb Le Petit Comité.",
        'en': "Hi, I'd like to request a proposal for an event with Le Petit Comité."}
+
+# Menús de ejemplo con más nivel (pedido del dueño, 17/11: «lo de cada ejemplo es demasiado básico»).
+# Producto con nombre y técnica concreta, sin prometer nada que no se haga.
+MENUS_TOP = {
+ 'es': [
+  ('Pan de cristal con tomate, jamón y anchoas', 'Pan de cristal, tomate de colgar y anchoa del Cantábrico'),
+  ('Gamba roja y calamar a la plancha', 'Gamba roja a la sal y calamar de potera a la llama'),
+  ('Arroz meloso de galeras y sepia · a elegir', 'Arroz de galeras y sepia con alioli de su coral · o de pato y setas'),
+  ('Crema catalana quemada al momento', 'Crema catalana de vainilla, quemada en la mesa'),
+  ('Verduras de temporada a la llama con romesco', 'Verduras de temporada a la llama con romesco de avellana tostada'),
+  ('Butifarra artesana y costillas glaseadas', 'Costilla ibérica glaseada a baja temperatura y butifarra de payés'),
+  ('Chuletón madurado a la brasa de encina', 'Chuletón de vaca madurada a la brasa de encina, sal en escamas'),
+  ('Piña a la brasa con helado de coco', 'Piña asada al carbón con ron añejo y helado de coco y lima'),
+  ('Dos blancos de variedad autóctona', 'Xarel·lo de viñas viejas y un blanco con crianza sobre lías'),
+  ('Un cava de crianza como transición', 'Un espumoso de larga crianza de la zona como transición'),
+  ('Dos tintos de bodegas pequeñas de la zona', 'Sumoll y garnacha de pequeños productores del Penedès'),
+  ('Tabla de embutido y queso curado', 'Embutido artesano, quesos catalanes y pan de masa madre'),
+  ('Quesos frescos con blanco joven', 'Mató y cabra fresco con un xarel·lo joven'),
+  ('Semicurados de oveja con cava', 'Oveja semicurada con un espumoso brut nature'),
+  ('Curados intensos con tinto de crianza', 'Curados de largo afinado con una garnacha con crianza'),
+  ('Azul con vino dulce, para cerrar', 'Azul cremoso con un vino dulce, para cerrar'),
+  ('Compra y planificación del menú semanal', 'Menú semanal pensado para tu casa: gustos, alergias y temporada'),
+  ('Cocinado en tu propia cocina, en casa', 'Cocino en tu cocina con producto de mercado'),
+  ('Comidas y cenas listas, etiquetadas por día', 'Comidas y cenas listas, etiquetadas y con cómo calentarlas'),
+  ('Menú acordado y compra hecha por mí', 'Menú degustación a medida y compra de producto de primera'),
+  ('Cocino en tu cocina, sin salir de casa', 'Cocino y emplato en tu casa, pase a pase'),
+ ],
+ 'ca': [
+  ('Croqueta de rostit i snack del Penedès', 'Croqueta de rostit de l’àvia i coca de recapte cruixent'),
+  ('Tàrtar de tomàquet rosa amb ventresca', 'Tàrtar de tomàquet rosa, ventresca de tonyina i oli d’arbequina'),
+  ('Presa ibèrica a la brasa amb escalivada', 'Presa ibèrica a la brasa d’alzina amb escalivada fumada'),
+  ('Torrada caramel·litzada amb gelat de vainilla', 'Torrija de brioix caramel·litzada amb gelat de vainilla'),
+  ('Pa de vidre amb tomàquet, pernil i anxoves', 'Pa de vidre, tomàquet de penjar i anxova del Cantàbric'),
+  ('Gamba vermella i calamar a la planxa', 'Gamba vermella a la sal i calamar de potera a la flama'),
+  ('Arròs melós de galeres i sípia · a triar', 'Arròs de galeres i sípia amb allioli del seu corall · o d’ànec i bolets'),
+  ('Crema catalana cremada al moment', 'Crema catalana de vainilla, cremada a taula'),
+  ('Verdures de temporada a la flama amb romesco', 'Verdures de temporada a la flama amb romesco d’avellana torrada'),
+  ('Botifarra artesana i costelles glacejades', 'Costella ibèrica glacejada a baixa temperatura i botifarra de pagès'),
+  ('Xuletó madurat a la brasa d\'alzina', 'Xuletó de vaca madurada a la brasa d’alzina, sal en escates'),
+  ('Pinya a la brasa amb gelat de coco', 'Pinya rostida al carbó amb rom vell i gelat de coco i llima'),
+  ('Estacions d\'aperitius i show-cooking', 'Estacions d’aperitius, ostres obertes al moment i show-cooking'),
+  ('Carpaccio de gamba i bombó de foie', 'Carpaccio de gamba vermella i bombó de foie amb poma verda'),
+  ('Filet amb reducció de garnatxa', 'Filet de vedella amb reducció de garnatxa i parmentier de tòfona'),
+  ('Taula de postres i pastís nupcial', 'Taula de postres d’autor i pastís nupcial a mida'),
+ ],
+ 'en': [
+  ('Slow-roast croquette and Penedès snack', 'Grandma’s slow-roast croquette and crisp coca de recapte'),
+  ('Pink tomato tartare with belly tuna', 'Pink tomato tartare, tuna belly and arbequina oil'),
+  ('Grilled Ibérico pork with escalivada', 'Ibérico pork over holm-oak coals with smoked escalivada'),
+  ('Caramelised torrija with vanilla ice cream', 'Caramelised brioche torrija with vanilla ice cream'),
+  ('Glass bread with tomato, ham and anchovies', 'Glass bread, hanging tomatoes and Cantabrian anchovy'),
+  ('Grilled red prawn and squid', 'Salt-baked red prawn and line-caught squid over the flame'),
+  ('Creamy mantis shrimp and cuttlefish rice · your choice', 'Mantis shrimp and cuttlefish rice with coral aioli · or duck and wild mushrooms'),
+  ('Crema catalana torched to order', 'Vanilla crema catalana, torched at the table'),
+  ('Flame-grilled seasonal vegetables with romesco', 'Flame-grilled seasonal vegetables with toasted hazelnut romesco'),
+  ('Artisan sausage and glazed ribs', 'Slow-cooked glazed Ibérico ribs and farmhouse butifarra'),
+  ('Aged côte de boeuf over holm-oak coals', 'Aged côte de boeuf over holm-oak coals, flaked salt'),
+  ('Grilled pineapple with coconut ice cream', 'Charcoal-roasted pineapple, aged rum and coconut-lime ice cream'),
+  ('Appetiser stations and show-cooking', 'Appetiser stations, freshly shucked oysters and show-cooking'),
+  ('Prawn carpaccio and foie bonbon', 'Red prawn carpaccio and foie bonbon with green apple'),
+  ('Sirloin with garnacha reduction', 'Beef tenderloin, garnacha reduction and truffle parmentier'),
+  ('Dessert table and wedding cake', 'Signature dessert table and bespoke wedding cake'),
+ ],
+}
+
 MENUS = {'es': 'Ver menús', 'ca': 'Veure menús', 'en': 'See menus'}
 
 CSS = '''<style data-gg="eventos">
@@ -115,6 +180,10 @@ def procesar(l):
     # 5) Cierre como en Asesoría y App: frase, «Reserva tu fecha» subrayado y WhatsApp/email/Instagram
     i = t.index('<!-- cta'); j = t.index('</section>', i) + len('</section>')
     t = t[:i] + eventos_ocasiones.cierre(t[i:j], l) + t[j:]
+    # menús de ejemplo con más nivel
+    for viejo, nuevo in MENUS_TOP[l]:
+        assert viejo in t, ('menú', l, viejo)
+        t = t.replace(viejo, nuevo)
     # ancla para «Ver menús»
     k = t.index('<!-- men'); k = t.index('<section', k)
     t = t[:k] + '<section id="ev-menus"' + t[k + len('<section'):]
