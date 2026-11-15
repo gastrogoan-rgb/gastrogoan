@@ -308,7 +308,9 @@ p b{color:var(--tinta)}
 
 def pagina(pag, l):
     u = UI[l]
-    secs = ''.join(f'<section><h2>{h}</h2>' + ''.join(f'<p>{p}</p>' for p in ps) + '</section>' for h, ps in textos(l)[pag])
+    import re as _re
+    _g = lambda x: _re.sub(r'(?<![\w-])(\w+(?:-\w+)+)', r'<span style="white-space:nowrap">\1</span>', x) if '<' not in x else x
+    secs = ''.join(f'<section><h2>{h}</h2>' + ''.join(f'<p>{_g(p) if "href" not in p else p}</p>' for p in ps) + '</section>' for h, ps in textos(l)[pag])
     AC, AT = ' aria-current="page"', ' aria-current="true"'
     otras = ''.join(f'<a href="{PAGS[k][l]}"{AC if k == pag else ""}>{NOMBRES[k][l]}</a>' for k in PAGS)
     idiomas = ''.join(f'<a href="{PAGS[pag][k]}" hreflang="{k}"{AT if k == l else ""}>{k.upper()}</a>' for k in ('es', 'ca', 'en'))
