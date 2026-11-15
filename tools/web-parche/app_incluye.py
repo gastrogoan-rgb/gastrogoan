@@ -120,57 +120,70 @@ def svg(k):
 
 
 def incluye(l):
-    c = CAB[l]; z = ZN[l]
-    chips = f'<button type="button" class="gg-in-chip on" data-z="todo" aria-pressed="true">{z["todo"]} <span>{len(H)}</span></button>' + ''.join(
-        f'<button type="button" class="gg-in-chip" data-z="{k}" aria-pressed="false">{z[k]} <span>{sum(1 for h in H if h[1] == k)}</span></button>' for k in ZONAS)
+    c = CAB[l]
     cards = ''
     for n, (ic, zona, dest, tx) in enumerate(H):
         t, d = tx[l]
-        cards += f'''<article class="gg-in-card{' dest' if dest else ''} gg-app-rev" data-z="{zona}" style="--d:{(n % 6) * 0.06:.2f}s">
+        cards += f'''<article class="gg-in-card{' dest' if dest else ''} gg-app-rev" style="--d:{(n % 6) * 0.06:.2f}s;--f:{(n * 0.37) % 3:.2f}s">
           <span class="gg-in-ic">{svg(ic)}</span>
           <h3 class="gg-in-t">{t}</h3>
           <p class="gg-in-d">{d}</p>
-          <span class="gg-in-z">{z[zona]}</span>
         </article>'''
-    return f'''<!-- qué incluye: todas las herramientas, filtrables por zona -->
+    # Cinta que corre con los nombres de todo lo que incluye (dos filas, sentidos contrarios)
+    nombres = [tx[l][0] for _, _, _, tx in H]
+    def fila(lista):
+        return ''.join(f'<span>{x}</span><i aria-hidden="true">✦</i>' for x in lista)
+    m1 = fila(nombres[:11]); m2 = fila(nombres[11:] + nombres[:2])
+    return f'''<!-- qué incluye: todas las herramientas -->
   <section class="gg-in">
     <div class="gg-in-cab">
       <span class="gg-met-et gg-app-rev">{c['et']}</span>
       <h2 class="gg-in-h gg-app-rev" style="--d:.08s">{c['h2']}</h2>
-      <p class="gg-in-num gg-app-rev" style="--d:.16s"><b class="gg-in-cuenta" data-n="{len(H)}">{len(H)}</b> {c['n']} <span>{c['una']}</span></p>
+      <div class="gg-in-num gg-app-rev" style="--d:.16s">
+        <b class="gg-in-cuenta" data-n="{len(H)}">{len(H)}</b>
+        <span class="gg-in-num-t"><span>{c['n']}</span><strong>{c['una']}</strong></span>
+      </div>
     </div>
-    <div class="gg-in-chips gg-app-rev" style="--d:.22s" role="group" aria-label="{c['filtro']}">{chips}</div>
+    <div class="gg-in-cinta" aria-hidden="true">
+      <div class="gg-in-fila"><div>{m1}{m1}</div></div>
+      <div class="gg-in-fila al-reves"><div>{m2}{m2}</div></div>
+    </div>
     <div class="gg-in-grid">{cards}</div>
     <script>
-    /* Filtro por zona y cifra que cuenta. Delegación en document: la página se monta dos veces. */
+    /* Cifra que cuenta (como un marcador), luz que sigue al ratón por la parrilla y, en móvil,
+       un toque abre cada tarjeta. Delegación en document: la página se monta dos veces. */
     (function(){{
       if(window.__ggIn) return; window.__ggIn=1;
       var quieto=matchMedia('(prefers-reduced-motion: reduce)').matches;
-      document.addEventListener('click',function(e){{
-        var b=e.target.closest&&e.target.closest('.gg-in-chip'); if(!b) return;
-        var z=b.dataset.z, S=b.closest('.gg-in');
-        S.querySelectorAll('.gg-in-chip').forEach(function(x){{var on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)}});
-        var k=0;
-        S.querySelectorAll('.gg-in-card').forEach(function(c){{
-          var ve=(z==='todo'||c.dataset.z===z);
-          c.classList.toggle('fuera',!ve);
-          if(ve){{c.classList.remove('entra');void c.offsetWidth;c.style.setProperty('--e',(k++*0.05)+'s');c.classList.add('entra')}}
-        }});
-      }});
       document.addEventListener('click',function(e){{
         var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c||c.classList.contains('dest')) return;
         if(!matchMedia('(max-width:560px)').matches) return;
         c.classList.toggle('abierta'); c.setAttribute('aria-expanded',c.classList.contains('abierta'));
       }});
+      document.addEventListener('pointermove',function(e){{
+        var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c||e.pointerType!=='mouse') return;
+        var r=c.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+        c.style.setProperty('--mx',(x*100)+'%'); c.style.setProperty('--my',(y*100)+'%');
+        if(!quieto) c.style.setProperty('--rx',((0.5-y)*6)+'deg'), c.style.setProperty('--ry',((x-0.5)*8)+'deg');
+      }});
+      document.addEventListener('pointerout',function(e){{
+        var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c||c.contains(e.relatedTarget)) return;
+        c.style.removeProperty('--rx'); c.style.removeProperty('--ry');
+      }});
       function cuenta(){{
         var el=document.querySelector('.gg-in-cuenta'); if(!el||el.dataset.hecho) return;
-        if(el.getBoundingClientRect().top>innerHeight*0.9) return;
-        el.dataset.hecho=1; if(quieto) return;
-        var n=+el.dataset.n,t0=performance.now();
-        (function p(t){{var q=Math.min(1,(t-t0)/1100);el.textContent=Math.round(n*(1-Math.pow(1-q,3)));if(q<1&&document.body.contains(el))requestAnimationFrame(p)}})(t0);
+        if(el.getBoundingClientRect().top>innerHeight*0.85) return;
+        el.dataset.hecho=1; var caja=el.parentNode;
+        if(quieto){{caja.classList.add('fin');return}}
+        var n=+el.dataset.n,t0=performance.now(),ult=-1;
+        (function p(t){{
+          var q=Math.min(1,(t-t0)/1600),v=Math.round(n*(1-Math.pow(1-q,4)));
+          if(v!==ult){{el.textContent=v;ult=v;el.classList.remove('tic');void el.offsetWidth;el.classList.add('tic')}}
+          if(q<1&&document.body.contains(el))requestAnimationFrame(p); else caja.classList.add('fin');
+        }})(t0);
       }}
       addEventListener('scroll',cuenta,{{passive:true}});
-      var i=0,iv=setInterval(function(){{cuenta();if(++i>40)clearInterval(iv)}},250);
+      var i=0,iv=setInterval(function(){{cuenta();if(++i>60)clearInterval(iv)}},250);
     }})();
     </script>
   </section>
@@ -183,9 +196,19 @@ CSS = '''
 .gg-in{padding:clamp(48px,6vw,84px) clamp(20px,6vw,64px);border-bottom:1px solid #E7E2D9;display:flex;flex-direction:column;align-items:center;gap:clamp(22px,3vw,32px)}
 .gg-in-cab{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
 .gg-in-h{margin:0;font-size:clamp(28px,3.6vw,42px);font-weight:700;letter-spacing:-.03em;line-height:1.12;color:#1C1A17;text-wrap:balance}
-.gg-in-num{margin:0;font-size:clamp(17px,2vw,21px);color:#3D3A34}
-.gg-in-num b{font-size:1.5em;font-weight:700;color:#4A5D4E;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.gg-in-num span{font-weight:700;color:#1C1A17}
+.gg-in-num{position:relative;display:flex;align-items:center;gap:clamp(12px,2vw,20px);margin-top:6px}
+.gg-in-cuenta{display:inline-block;min-width:1.15em;font-size:clamp(80px,11vw,140px);font-weight:700;line-height:.85;letter-spacing:-.05em;color:#4A5D4E;font-variant-numeric:tabular-nums;text-align:right}
+.gg-in-num-t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font-size:clamp(18px,2.2vw,24px);color:#3D3A34;line-height:1.2}
+.gg-in-num-t strong{position:relative;font-weight:700;color:#1C1A17;padding:0 .08em}
+.gg-in-num-t strong::before{content:"";position:absolute;left:0;right:0;bottom:.04em;height:.42em;background:#C5D6BF;z-index:-1;transform-origin:left;transform:scaleX(1)}
+.gg-in-num-t strong{z-index:0}
+/* La cinta: dos filas de nombres que corren en sentidos contrarios, a todo el ancho */
+.gg-in-cinta{width:calc(100% + 2*clamp(20px,6vw,64px));display:flex;flex-direction:column;gap:6px;overflow:hidden;padding:10px 0;border-top:1px solid #E7E2D9;border-bottom:1px solid #E7E2D9;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.gg-in-fila{overflow:hidden;white-space:nowrap}
+.gg-in-fila>div{display:inline-flex;align-items:center;gap:22px;padding-right:22px}
+.gg-in-fila span{font-size:clamp(20px,2.6vw,32px);font-weight:700;letter-spacing:-.025em;color:#1C1A17}
+.gg-in-fila.al-reves span{color:transparent;-webkit-text-stroke:1px #4A5D4E}
+.gg-in-fila i{font-style:normal;font-size:14px;color:#4A5D4E}
 .gg-in-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:820px}
 .gg-in-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #D5CFC4;border-radius:3px;background:#fff;color:#1C1A17;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .25s,color .25s,border-color .25s}
 .gg-in-chip span{font-size:11px;color:#716C65;transition:color .25s}
@@ -196,16 +219,20 @@ CSS = '''
 .gg-in-grid{width:100%;max-width:1160px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));grid-auto-flow:dense;gap:14px}
 .gg-in-card{position:relative;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:22px 22px 18px;background:#fff;border:1px solid #E7E2D9;border-radius:3px;overflow:hidden;transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,border-color .35s}
 .gg-in-card::before{content:"";position:absolute;left:0;top:0;height:3px;width:0;background:#4A5D4E;transition:width .5s cubic-bezier(.65,0,.35,1)}
-.gg-in-card:hover{transform:translateY(-4px);border-color:#C9D3CB;box-shadow:0 22px 40px -26px rgba(28,26,23,.45)}
+.gg-in-grid{perspective:1200px}
+.gg-in-card{transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));background-image:radial-gradient(260px circle at var(--mx,-999px) var(--my,-999px),rgba(74,93,78,.10),transparent 60%)}
+.gg-in-card.dest{background-image:radial-gradient(300px circle at var(--mx,-999px) var(--my,-999px),rgba(126,155,132,.22),transparent 60%)}
+.gg-in-card:hover{transform:translateY(-4px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));border-color:#C9D3CB;box-shadow:0 22px 40px -26px rgba(28,26,23,.45)}
 .gg-in-card:hover::before{width:100%}
 .gg-in-ic{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#EEF2EC;color:#4A5D4E;transition:background .3s,color .3s,transform .4s cubic-bezier(.2,.9,.25,1.3)}
 .gg-in-ic svg{width:23px;height:23px}
 .gg-in-card:hover .gg-in-ic{background:#4A5D4E;color:#FAF8F4;transform:rotate(-8deg) scale(1.06)}
 .gg-in-t{margin:4px 0 0;font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.25;color:#1C1A17}
 .gg-in-d{margin:0;flex:1;font-size:14.5px;line-height:1.55;color:#3D3A34;text-wrap:pretty}
-.gg-in-z{align-self:flex-start;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
+/* (sin zona: el dueño quitó las etiquetas) */
+.gg-in-z{display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
 /* Las destacadas: en tinta, más anchas */
-.gg-in-card.dest{background:#1C1A17;border-color:#1C1A17}
+.gg-in-card.dest{background-color:#1C1A17;border-color:#1C1A17}
 .gg-in-card.dest .gg-in-t{color:#FAF8F4;font-size:clamp(19px,1.9vw,22px)}
 .gg-in-card.dest .gg-in-d{color:#C9C2B6;font-size:15px}
 .gg-in-card.dest .gg-in-z{color:#7E9B84}
@@ -216,6 +243,18 @@ CSS = '''
 .gg-in-card.fuera{display:none}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-in-entra{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes gg-in-corre{to{transform:translateX(-50%)}}
+  @keyframes gg-in-flota{0%,100%{translate:0 0}50%{translate:0 -4px}}
+  @keyframes gg-in-tic{0%{transform:translateY(-.08em);opacity:.6}100%{transform:none;opacity:1}}
+  .gg-in-fila>div{animation:gg-in-corre 48s linear infinite}
+  .gg-in-fila.al-reves>div{animation-direction:reverse;animation-duration:56s}
+  .gg-in-cinta:hover .gg-in-fila>div{animation-play-state:paused}
+  .gg-in-ic svg{animation:gg-in-flota 3.4s ease-in-out var(--f,0s) infinite}
+  .gg-in-cuenta.tic{animation:gg-in-tic .14s ease-out}
+  .gg-js .gg-in-num-t strong::before{transform:scaleX(0);transition:transform .8s cubic-bezier(.65,0,.35,1) .1s}
+  .gg-js .gg-in-num.fin .gg-in-num-t strong::before{transform:scaleX(1)}
+  .gg-js .gg-in-num.fin .gg-in-cuenta{animation:gg-in-pop .5s cubic-bezier(.2,.9,.25,1.4)}
+  @keyframes gg-in-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
   .gg-in-card.entra{animation:gg-in-entra .45s cubic-bezier(.2,.7,.2,1) var(--e,0s) both}
   .gg-js .gg-in-card.gg-app-rev .gg-in-ic{transform:scale(.4) rotate(-30deg);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.25,1.3) calc(var(--d,0s) + .2s),opacity .3s calc(var(--d,0s) + .2s),background .3s,color .3s}
   .gg-js .gg-in-card.gg-app-rev.gg-vis .gg-in-ic{transform:none;opacity:1}
