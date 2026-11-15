@@ -17,15 +17,18 @@ CSS = '''<style data-gg="asesoria">
 .gg-sobre{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(28px,5vw,64px);align-items:center;max-width:980px}
 /* Retrato en un círculo con el borde verde de la marca y SIN fondo: la imagen es transparente
    y se ve el crema de la página detrás. */
-.gg-sobre-foto{margin:0;width:clamp(200px,22vw,260px);aspect-ratio:1;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 8px #FAF8F4,0 0 0 9px #C9D3CB}
+.gg-sobre-foto{margin:0 0 0 9px;width:clamp(150px,14vw,172px);aspect-ratio:1;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 8px #FAF8F4,0 0 0 9px #C9D3CB}
 .gg-sobre-foto img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 8%}
 .gg-sobre-txt{display:flex;flex-direction:column;gap:14px;max-width:600px}
 .gg-sobre-et{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
 .gg-sobre-et::before{content:"";width:28px;height:2px;background:#4A5D4E}
-.gg-cita{margin:8px 0 0;padding:2px 0 2px 18px;border-left:3px solid #4A5D4E;font-size:clamp(19px,1.1rem + .6vw,24px);line-height:1.35;font-weight:600;letter-spacing:-.015em;color:#1C1A17;text-wrap:balance}
+.gg-sobre-izq{display:flex;flex-direction:column;align-items:flex-start;gap:16px;width:clamp(240px,26vw,310px)}
+.gg-cita{margin:0;padding:2px 0 2px 14px;border-left:3px solid #4A5D4E;font-size:clamp(15px,.85rem + .3vw,17px);line-height:1.4;font-weight:600;letter-spacing:-.015em;color:#1C1A17;text-wrap:balance}
 @media (max-width:720px){
   .gg-sobre{grid-template-columns:1fr;justify-items:center;gap:32px}
   .gg-sobre-foto{width:min(220px,60vw)}
+  .gg-sobre-izq{width:min(300px,100%);align-items:center}
+  .gg-sobre-foto{margin:0}
   .gg-sobre-txt{max-width:none;width:100%}
 }
 @media (prefers-reduced-motion:no-preference){
@@ -38,11 +41,11 @@ CSS = '''<style data-gg="asesoria">
 # método ya se explica en «La ruta 360º». Debajo, solo la cita.
 BIO = {
  'es': ['Ocho años de formación en las mejores escuelas de hostelería de España y trayectoria en restaurantes de renombre. Especializado en gestión de empresa: números, equipos y procesos que hacen que un local funcione y gane dinero.',
-        'Trabajo desde tres valores: honestidad para decir las cosas como son, exigencia con el oficio y cercanía con quien lleva el negocio.'],
+        'Trabajo bajo tres valores: honestidad para decir las cosas como son, exigencia con el oficio y cercanía con quien lleva el negocio.'],
  'ca': ["Vuit anys de formació a les millors escoles d'hostaleria d'Espanya i trajectòria en restaurants de renom. Especialitzat en gestió d'empresa: números, equips i processos que fan que un local funcioni i guanyi diners.",
-        "Treballo des de tres valors: honestedat per dir les coses com són, exigència amb l'ofici i proximitat amb qui porta el negoci."],
+        "Treballo sota tres valors: honestedat per dir les coses com són, exigència amb l'ofici i proximitat amb qui porta el negoci."],
  'en': ["Eight years of training at Spain's best hospitality schools and experience in renowned restaurants. Specialised in business management: the numbers, teams and processes that make a venue work and make money.",
-        'I work from three values: honesty to say things as they are, high standards for the craft, and closeness to the people who run the business.'],
+        'I work by three values: honesty to say things as they are, high standards for the craft, and closeness to the people who run the business.'],
 }
 
 def sobre(sec, l):
@@ -54,12 +57,14 @@ def sobre(sec, l):
     texto = ''.join(f'<p style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;">{p}</p>' for p in BIO[l])
     return f'''<section class="aseso-sobre" style="padding:clamp(40px,5.5vw,76px) clamp(24px,6vw,64px);border-bottom:1px solid #E7E2D9;">
     <div class="gg-sobre">
-      <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"></figure>
+      <div class="gg-sobre-izq">
+        <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"></figure>
+        {f'<blockquote class="gg-cita">{cita}</blockquote>' if cita else ''}
+      </div>
       <div class="gg-sobre-txt">
         <span class="gg-sobre-et">{et}</span>
         <h2 style="margin:0;font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-0.02em;">{nombre}</h2>
         {texto}
-        {f'<blockquote class="gg-cita">{cita}</blockquote>' if cita else ''}
       </div>
     </div>
   </section>'''
