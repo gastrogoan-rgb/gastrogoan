@@ -203,6 +203,9 @@ lanzar; node test/sin-guardar.mjs > "$SALIDA/singuardar.txt" 2>&1 & P196=$!
 lanzar; node test/web-salida.mjs > "$SALIDA/websalida.txt" 2>&1 & P197=$!
 lanzar; node test/entregas.mjs > "$SALIDA/entregas.txt" 2>&1 & P198=$!
 lanzar; node test/entregas-veracidad.mjs > "$SALIDA/entregasver.txt" 2>&1 & P199=$!
+lanzar; node test/sw-reservas.mjs > "$SALIDA/swreservas.txt" 2>&1 & P200=$!
+lanzar; node test/sw-app-offline.mjs > "$SALIDA/swappoff.txt" 2>&1 & P201=$!
+lanzar; node test/web-comercial.mjs > "$SALIDA/webcom.txt" 2>&1 & P202=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -436,5 +439,8 @@ espera $P196 "Cambios sin guardar en TODA la app: ventanas, formularios, pantall
 espera $P197 "Web pública de pedidos: avisa al cerrar con el carrito a medias, no al ir a pagar" "$SALIDA/websalida.txt" "la web de pedidos avisa al salir"
 espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana prometida, empaquetado, monedero, pedido por teléfono, avisos del cliente, web (repetir, alérgenos, pausas)" "$SALIDA/entregas.txt" "fase 1 y 2 .lo hecho. funcionan"
 espera $P199 "Veracidad del seguimiento: estados, ventana, llegada estimada y latido son hechos reales, no relleno" "$SALIDA/entregasver.txt" "es veraz"
+espera $P200 "La web de reservas abre sin red tras la primera visita (bloqueos de LaLiga)" "$SALIDA/swreservas.txt" "abre sin red tras la primera visita"
+espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALIDA/swappoff.txt" "abre sin red una vez instalada"
+espera $P202 "Web comercial: 13 páginas, sin cargas externas, sin desbordes en móvil, enlace de pago vigente" "$SALIDA/webcom.txt" "la web comercial está completa"
 
 exit $FALLOS
