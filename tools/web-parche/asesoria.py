@@ -9,7 +9,7 @@ Uso: python3 tools/web-parche/asesoria.py
 """
 import re, json, os, subprocess, sys
 sys.path.insert(0, os.path.dirname(__file__))
-import asesoria_ruta, asesoria_extras, asesoria_dif, asesoria_test, asesoria_cta
+import asesoria_ruta, asesoria_extras, asesoria_dif, asesoria_test, asesoria_cta, volver
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'asesoria', 'ca': 'ca-assessoria', 'en': 'en-advisory'}
 BASE_GIT = 'a152bda'
@@ -98,6 +98,7 @@ def procesar(l):
     i = t.index('<!-- cta -->'); j = t.index('</section>', i) + len('</section>')
     t = t[:i] + asesoria_cta.cta(t[i:j], l) + t[j:]
     t = t.replace('</helmet>', CSS.replace('</style>', asesoria_ruta.CSS + asesoria_extras.CSS + asesoria_dif.CSS + asesoria_test.CSS + asesoria_cta.CSS + '</style>') + '\n</helmet>', 1)
+    t = volver.aplicar(t)   # 8) «Volver» como botón visible
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch, '· cita:', bool(re.search('gg-cita', t)))
