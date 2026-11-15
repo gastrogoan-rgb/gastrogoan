@@ -11,7 +11,7 @@ Uso: python3 tools/web-parche/app.py
 import re, json, os, subprocess, sys
 from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(__file__))
-import volver, app_cuenta
+import volver, app_cuenta, app_incluye
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'app', 'ca': 'ca-app', 'en': 'en-app'}
 BASE_GIT = 'a152bda'
@@ -115,9 +115,12 @@ def procesar(l):
     # 4) El problema + Tu solución → una sola sección que se toca
     i = t.index('<!-- problema'); j = t.index('<!--', t.index('<!--', i + 5) + 5)
     t = t[:i] + app_cuenta.cuenta(l) + t[j:]
+    # 5) Qué incluye → todas las herramientas, filtrables por zona
+    i = t.index('<!-- qu'); j = t.index('<!--', i + 5)
+    t = t[:i] + app_incluye.incluye(l) + t[j:]
     # 3) volver
     t = volver.aplicar(t)
-    t = t.replace('</helmet>', CSS.replace('</style>', app_cuenta.CSS + '</style>') + '\n</helmet>', 1)
+    t = t.replace('</helmet>', CSS.replace('</style>', app_cuenta.CSS + app_incluye.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch, '· enlaces de compra cambiados:', n)
