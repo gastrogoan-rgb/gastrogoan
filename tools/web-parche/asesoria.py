@@ -22,8 +22,9 @@ CSS = '''<style data-gg="asesoria">
 .gg-firma{display:flex;align-items:center;gap:16px;margin-top:10px}
 .gg-sobre-foto{flex:none;margin:0;width:68px;height:68px;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 4px #FAF8F4,0 0 0 5px #C9D3CB}
 .gg-sobre-foto img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 6%}
-.gg-cita{margin:0;font-size:15.5px;line-height:1.7;font-weight:400;font-style:italic;color:#1C1A17;text-wrap:balance;
-  text-decoration:underline;text-decoration-color:#4A5D4E;text-decoration-thickness:2px;text-underline-offset:5px;text-decoration-skip-ink:none}
+.gg-cita{margin:0;font-size:15.5px;line-height:2;font-weight:400;font-style:italic;color:#1C1A17;text-wrap:balance}
+/* Subrayado de rotulador: una franja verde detrás de la mitad baja de las letras, no una línea. */
+.gg-marca{background:#4A5D4E;color:#FAF8F4;-webkit-box-decoration-break:clone;box-decoration-break:clone;padding:3px 8px 4px;border-radius:2px}
 @media (max-width:420px){.gg-sobre-foto{width:58px;height:58px}.gg-cita{font-size:14.5px}.gg-firma{gap:13px}}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
@@ -56,7 +57,7 @@ def sobre(sec, l):
       {texto}
       <div class="gg-firma">
         <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"></figure>
-        {f'<blockquote class="gg-cita">{cita}</blockquote>' if cita else ''}
+        {f'<blockquote class="gg-cita"><span class="gg-marca">{cita}</span></blockquote>' if cita else ''}
       </div>
     </div>
   </section>'''
