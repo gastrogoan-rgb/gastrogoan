@@ -17,6 +17,10 @@ CSS = '''<style data-gg="volver">
 .gg-volver:hover,.gg-volver:focus-visible{background:#4A5D4E;border-color:#4A5D4E;color:#FAF8F4}
 .gg-volver:hover .gg-volver-f{transform:translateX(-4px)}
 .gg-volver:focus-visible{outline:2px solid #4A5D4E;outline-offset:2px}
+/* zona de toque del menú superior (logo e idiomas): 44 px, como pide la norma */
+nav>div>a:first-child{display:inline-flex;align-items:center;min-height:44px}
+.lang-drop>summary{min-height:44px;box-sizing:border-box;cursor:pointer}
+.lang-drop a{min-height:44px;box-sizing:border-box}
 @media (max-width:359px){.gg-volver{padding:0;width:44px;justify-content:center}.gg-volver-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 </style>'''
 
