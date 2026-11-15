@@ -9,7 +9,7 @@ Uso: python3 tools/web-parche/asesoria.py
 """
 import re, json, os, subprocess, sys
 sys.path.insert(0, os.path.dirname(__file__))
-import asesoria_ruta, asesoria_extras
+import asesoria_ruta, asesoria_extras, asesoria_dif
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'asesoria', 'ca': 'ca-assessoria', 'en': 'en-advisory'}
 BASE_GIT = 'a152bda'
@@ -88,7 +88,10 @@ def procesar(l):
     # 4) «Extras que suman» → la carta de extras
     i = t.index('<!-- extras -->') if '<!-- extras -->' in t else t.index('<!-- extres -->'); j = t.index('<!--', i + 10)
     t = t[:i] + asesoria_extras.extras(t[i:j], l) + t[j:]
-    t = t.replace('</helmet>', CSS.replace('</style>', asesoria_ruta.CSS + asesoria_extras.CSS + '</style>') + '\n</helmet>', 1)
+    # 5) «Lo que nos diferencia» → manifiesto que se enciende al bajar
+    i = t.index('<!-- lo que nos diferencia -->') if '<!-- lo que nos diferencia -->' in t else t.index('<!-- el que ens diferencia -->'); j = t.index('<!--', i + 10)
+    t = t[:i] + asesoria_dif.dif(t[i:j], l) + t[j:]
+    t = t.replace('</helmet>', CSS.replace('</style>', asesoria_ruta.CSS + asesoria_extras.CSS + asesoria_dif.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch, '· cita:', bool(re.search('gg-cita', t)))
