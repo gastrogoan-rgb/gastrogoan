@@ -115,7 +115,7 @@ def como(sec, l, datos=None):
       <h2 class="ev-cm-h">{sub}</h2>
     </div>
     <div class="ev-cm-pista ev-rev" style="--d:.1s">
-      <div class="ev-cm-raya" aria-hidden="true"><span></span></div>
+      <div class="ev-cm-raya" aria-hidden="true"><span></span><i class="ev-cm-punta"></i></div>
       {nodos}
     </div>
     <div class="ev-cm-bloque ev-rev" style="--d:.2s">
@@ -145,8 +145,8 @@ def como(sec, l, datos=None):
       /* Corre solo, a ritmo de lectura (pedido del dueño): la raya se va llenando de un paso al siguiente
          de forma continua y, al llegar, el paso se enciende. Al terminar el tercero espera, se vacía y vuelve
          a empezar. Solo mientras la sección se ve; tocar un paso lo elige y se queda ahí un rato. */
-      var POR=4200, FIN=5200, p=0, paso=0, ult=performance.now(), espera=0;
-      function raya(S,x){{var r=S.querySelector('.ev-cm-raya span'); if(r) r.style.transform='scaleX('+(x/2)+')'}}
+      var POR=3200, FIN=4200, p=0, paso=0, ult=performance.now(), espera=0;
+      function raya(S,x){{var r=S.querySelector('.ev-cm-raya span'); if(r) r.style.transform='scaleX('+(x/2)+')'; var c=S.querySelector('.ev-cm-raya'); if(c) c.style.setProperty('--p',(x/2).toFixed(4))}}
       function marca(S,n){{
         if(S.dataset.k==String(n)) return; S.dataset.k=n; k=n;
         S.querySelectorAll('.ev-cm-nodo').forEach(function(b,i){{b.classList.toggle('on',i===n);b.classList.toggle('hecho',i<n);b.setAttribute('aria-pressed',i===n)}});
@@ -165,7 +165,7 @@ def como(sec, l, datos=None):
         var n=paso; espera+=dt;
         if(n>=2){{ if(espera>FIN){{espera=0;p=0;S.classList.add('vacia');setTimeout(function(){{var s=document.querySelector('.ev-cm');if(s)s.classList.remove('vacia')}},450);p=0;paso=0;raya(S,0);marca(S,0)}} return }}
         /* se queda en cada paso lo justo para leerlo y luego la raya corre hasta el siguiente */
-        var HOLD=POR*0.6, TRAV=POR*0.4;
+        var HOLD=POR*0.55, TRAV=POR*0.45;   /* ~1,8 s leyendo y ~1,4 s de recorrido: se ve avanzar (17/11) */
         if(espera<HOLD) return;
         var q=Math.min(1,(espera-HOLD)/TRAV), e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
         p=n+e; raya(S,p);
@@ -215,8 +215,16 @@ CSS = '''
 .ev-cm-et::before,.ev-cm-et::after{content:"";width:28px;height:2px;background:#4A5D4E}
 .ev-cm-h{margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:clamp(36px,4.6vw,58px);line-height:1.05;color:#1C1A17}
 .ev-cm-pista{position:relative;width:100%;max-width:860px;display:grid;grid-template-columns:repeat(3,1fr)}
-.ev-cm-raya{position:absolute;left:16.66%;right:16.66%;top:38px;height:2px;background:#E7E2D9}
-.ev-cm-raya span{position:absolute;inset:0;background:#4A5D4E;transform-origin:left;transform:scaleX(0)}
+.ev-cm-raya{position:absolute;left:16.66%;right:16.66%;top:37px;height:4px;border-radius:2px;background:#E7E2D9}
+.ev-cm-raya span{position:absolute;inset:0;border-radius:2px;background:#4A5D4E;transform-origin:left;transform:scaleX(0)}
+/* La punta que viaja de un paso al siguiente: así se ve que va «de la idea a la mesa» */
+.ev-cm-punta{position:absolute;top:50%;left:calc(var(--p,0)*100%);width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#4A5D4E;box-shadow:0 0 0 5px rgba(74,93,78,.18)}
+@media (prefers-reduced-motion:no-preference){
+  @keyframes ev-cm-pop{0%{transform:scale(1)}45%{transform:scale(1.24)}100%{transform:scale(1.12)}}
+  @keyframes ev-cm-halo{0%{box-shadow:0 0 0 0 rgba(74,93,78,.35)}100%{box-shadow:0 0 0 16px rgba(74,93,78,0)}}
+  .ev-cm-nodo.on .ev-cm-c{animation:ev-cm-pop .5s cubic-bezier(.2,.9,.25,1.3) both,ev-cm-halo 1.2s ease-out .1s}
+  .ev-cm-punta{animation:ev-cm-halo 1.4s ease-out infinite}
+}
 .ev-cm.vacia .ev-cm-raya span,.ev-cm.a-mano .ev-cm-raya span{transition:transform .45s cubic-bezier(.65,0,.35,1)}
 .ev-cm-nodo{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 6px;border:0;background:none;cursor:pointer;font:inherit;color:inherit}
 .ev-cm-c{position:relative;width:78px;height:78px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#FAF8F4;border:1.5px solid #D5CFC4;color:#716C65;transition:background .45s,border-color .45s,color .45s,transform .45s cubic-bezier(.2,.9,.25,1.3),box-shadow .45s}

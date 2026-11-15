@@ -95,6 +95,9 @@ CSS = '''
 .ev-oc-cab{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .ev-oc-pista{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#716C65}
 .ev-oc-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;max-width:1080px}
+/* Siete ocasiones = UNA fila en cuanto caben (pedido del dueño, 17/11); en tablet 4+3, en móvil de dos en dos */
+@media (min-width:900px){.ev-oc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));width:100%;gap:10px}.ev-oc-grid .ev-oc-f{width:auto}}
+@media (min-width:900px) and (max-width:1100px){.ev-oc-grid .ev-oc-n{font-size:17px}}
 .ev-oc-f{position:relative;box-sizing:border-box;width:136px;min-height:136px;padding:18px 10px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:#fff;border:1px solid #E7E2D9;border-radius:3px;color:#1C1A17;text-decoration:none;cursor:pointer;transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,border-color .35s,background .35s,color .35s}
 .ev-oc-f.otra{border-style:dashed;border-color:#C9C2B6;background:transparent}
 .ev-oc-ic{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#EEF2EC;color:#4A5D4E;transition:background .35s,color .35s,transform .45s cubic-bezier(.2,.9,.25,1.3)}
