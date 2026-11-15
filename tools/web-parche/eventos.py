@@ -71,13 +71,18 @@ def cabecera(h, l):
     nombre = re.search(r'<h1[^>]*>([^<]+)</h1>', h).group(1)
     ps = re.findall(r'<p[^>]*>([^<]+)</p>', h)
     pedir = re.search(r'<a [^>]*>([^<]+)</a>', h).group(1)
+    # Cambio pedido por el dueño (16/11): «disfrutes», no «estés en la mesa»
+    desc = (ps[1].replace('para que tú solo estés en la mesa.', 'para que tú solo disfrutes.')
+                 .replace('perquè tu només siguis a taula.', 'perquè tu només gaudeixis.')
+                 .replace('so you just sit at the table.', 'so you just enjoy it.'))
+    assert desc != ps[1], 'frase de la descripción no encontrada'
     letras = ''.join(f'<span class="l" style="--i:{k}">{c}</span>' if c != ' ' else ' ' for k, c in enumerate(nombre))
     wa = 'https://wa.me/34622390245?text=' + quote(MSG[l])
     return f'''<header class="ev-hero">
     <div class="ev-et"><span>{et[0]}</span><span>{et[1]}</span></div>
     <h1 class="ev-h1" aria-label="{nombre}"><span aria-hidden="true">{letras}</span></h1>
     <p class="ev-frase">{ps[0]}</p>
-    <p class="ev-desc">{ps[1]}</p>
+    <p class="ev-desc">{desc}</p>
     <div class="ev-acc">
       <a class="ev-btn prim" href="{wa}" target="_blank" rel="noopener">{WA}{pedir}<span class="gg-flecha" aria-hidden="true">→</span></a>
       <a class="ev-btn sec" href="#ev-menus">{MENUS[l]}<span class="gg-flecha" aria-hidden="true">↓</span></a>
