@@ -176,17 +176,14 @@ def incluye(l):
         var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c||c.contains(e.relatedTarget)) return;
         c.style.removeProperty('--rx'); c.style.removeProperty('--ry');
       }});
+      /* Igual que el precio: el estado aquí, no en el elemento (una copia montada a mitad se quedaba congelada) */
+      var c0=0;
       function cuenta(){{
-        var el=document.querySelector('.gg-in-cuenta'); if(!el||el.dataset.hecho) return;
-        if(el.getBoundingClientRect().top>innerHeight*0.85) return;
-        el.dataset.hecho=1; var caja=el.parentNode;
-        if(quieto){{caja.classList.add('fin');return}}
-        var n=+el.dataset.n,t0=performance.now(),ult=-1;
-        (function p(t){{
-          var q=Math.min(1,(t-t0)/1600),v=Math.round(n*(1-Math.pow(1-q,4)));
-          if(v!==ult){{el.textContent=v;ult=v;el.classList.remove('tic');void el.offsetWidth;el.classList.add('tic')}}
-          if(q<1&&document.body.contains(el))requestAnimationFrame(p); else caja.classList.add('fin');
-        }})(t0);
+        var el=document.querySelector('.gg-in-cuenta'); if(!el) return; var caja=el.parentNode, n=+el.dataset.n;
+        if(!c0){{ if(el.getBoundingClientRect().top>innerHeight*0.85) return; c0=performance.now() }}
+        var q=quieto?1:Math.min(1,(performance.now()-c0)/1600), v=Math.round(n*(1-Math.pow(1-q,4)));
+        if(el.textContent!==String(v)){{el.textContent=v;el.classList.remove('tic');void el.offsetWidth;el.classList.add('tic')}}
+        if(q>=1) caja.classList.add('fin'); else requestAnimationFrame(cuenta);
       }}
       addEventListener('scroll',cuenta,{{passive:true}});
       var i=0,iv=setInterval(function(){{cuenta();if(++i>60)clearInterval(iv)}},250);
