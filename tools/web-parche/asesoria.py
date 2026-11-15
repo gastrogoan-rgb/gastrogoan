@@ -22,12 +22,14 @@ CSS = '''<style data-gg="asesoria">
 .gg-sobre-txt{display:flex;flex-direction:column;gap:14px;max-width:600px}
 .gg-sobre-et{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
 .gg-sobre-et::before{content:"";width:28px;height:2px;background:#4A5D4E}
-.gg-sobre-izq{display:flex;flex-direction:column;align-items:flex-start;gap:16px;width:clamp(240px,26vw,310px)}
-.gg-cita{margin:0;padding:2px 0 2px 14px;border-left:3px solid #4A5D4E;font-size:clamp(15px,.85rem + .3vw,17px);line-height:1.4;font-weight:600;letter-spacing:-.015em;color:#1C1A17;text-wrap:balance}
+.gg-sobre-izq{display:flex;flex-direction:column;align-items:flex-start;gap:16px;width:clamp(312px,28vw,330px)}
+.gg-cita{margin:0;padding:2px 0 2px 14px;border-left:2px solid #4A5D4E;font-size:14.5px;line-height:1.45;font-weight:400;font-style:italic;letter-spacing:0;color:#3D3A34;text-wrap:balance;max-width:100%}
 @media (max-width:720px){
   .gg-sobre{grid-template-columns:1fr;justify-items:center;gap:32px}
   .gg-sobre-foto{width:min(220px,60vw)}
-  .gg-sobre-izq{width:min(300px,100%);align-items:center}
+  .gg-sobre-izq{width:min(320px,100%);align-items:center;order:2}
+  .gg-sobre-txt{order:1}
+  .gg-cita{font-size:14px}
   .gg-sobre-foto{margin:0}
   .gg-sobre-txt{max-width:none;width:100%}
 }
