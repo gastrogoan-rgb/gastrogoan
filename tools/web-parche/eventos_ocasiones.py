@@ -161,3 +161,67 @@ CSS = '''
   .menu-panel>div:last-child>div:nth-child(4){animation-delay:.18s}
 }
 '''
+
+
+# ---------- Cierre (como en Asesoría y App, con la letra de Le Petit Comité) ----------
+FIN = {
+ 'es': dict(l1='Tu próxima mesa empieza con un mensaje.', l2='Reserva tu fecha', msg='Hola, quiero reservar una fecha con Le Petit Comité.',
+            asunto='Reservar una fecha', wa='WhatsApp', mail='Email', ig='Instagram', pie='Propuesta en 48 horas · Sin compromiso'),
+ 'ca': dict(l1='La teva propera taula comença amb un missatge.', l2='Reserva la teva data', msg='Hola, vull reservar una data amb Le Petit Comité.',
+            asunto='Reservar una data', wa='WhatsApp', mail='Correu', ig='Instagram', pie='Proposta en 48 hores · Sense compromís'),
+ 'en': dict(l1='Your next table starts with a message.', l2='Book your date', msg="Hi, I'd like to book a date with Le Petit Comité.",
+            asunto='Booking a date', wa='WhatsApp', mail='Email', ig='Instagram', pie='Proposal in 48 hours · No commitment'),
+}
+MAIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M3.5 6.5h17v11h-17z M3.8 7l8.2 6.2L20.2 7"/></svg>'
+IG_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="12" cy="12" r="4"/></g><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor"/></svg>'
+
+
+def cierre(sec, l):
+    x = FIN[l]
+    mail = re.search(r'href="mailto:([^"]+)"', sec).group(1)
+    ig = re.search(r'instagram\.com/([A-Za-z0-9_.]+)', sec).group(1)
+    wa = 'https://wa.me/34622390245?text=' + quote(x['msg'])
+    mt = f'mailto:{mail}?subject=' + quote(x['asunto']) + '&body=' + quote(x['msg'])
+    bloque = f'''<h2 class="ev-fin-h"><span class="ev-fin-l1 ev-rev">{x['l1']}</span>
+      <span class="ev-fin-l2 ev-rev" style="--d:.15s"><span class="ev-fin-hl">{x['l2']}</span><span class="ev-fin-pt">.</span></span></h2>
+    <div class="ev-fin-bur ev-rev" style="--d:.3s">
+      <a class="ev-fin-b prim" href="{wa}" target="_blank" rel="noopener">{WA}<span>{x['wa']}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
+      <a class="ev-fin-b" href="{mt}">{MAIL_SVG}<span>{x['mail']}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
+      <a class="ev-fin-b" href="https://ig.me/m/{ig}" target="_blank" rel="noopener">{IG_SVG}<span>{x['ig']}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
+    </div>
+    <span class="ev-fin-pie ev-rev" style="--d:.4s">{x['pie']}</span>'''
+    i = sec.index('<h2'); j = sec.index('<div style="display:flex;justify-content:space-between')
+    sec = sec[:i] + bloque + '\n    ' + sec[j:]
+    return sec.replace('<section style="background:#1C1A17;', '<section class="ev-fin" style="background:#1C1A17;', 1)
+
+
+CSS += '''
+/* ---------- Cierre ---------- */
+.ev-fin>.ev-fin-h,.ev-fin>.ev-fin-bur,.ev-fin>.ev-fin-pie{align-self:center;text-align:center}
+.ev-fin{padding-top:clamp(64px,9vw,110px)!important}
+.ev-fin-h{margin:0;display:flex;flex-direction:column;align-items:center;gap:.1em;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:clamp(28px,4.2vw,54px);line-height:1.1;color:#FAF8F4}
+.ev-fin-l1{white-space:nowrap}
+.ev-fin-l2{font-weight:600;font-size:1.25em}
+.ev-fin-hl{padding:0 .1em;background:linear-gradient(transparent 60%,#4A5D4E 60%,#4A5D4E 92%,transparent 92%) 0 0/100% 100% no-repeat}
+.ev-fin-pt{color:#7E9B84}
+.ev-fin-bur{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:640px;margin-top:8px}
+.ev-fin-b{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 14px;box-sizing:border-box;border-radius:3px;border:1px solid rgba(250,248,244,.35);color:#FAF8F4;font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:background .25s,color .25s,border-color .25s,transform .25s,box-shadow .25s}
+.ev-fin-b svg{width:18px;height:18px;flex:none}
+.ev-fin-b.prim{background:#FAF8F4;color:#1C1A17;border-color:#FAF8F4}
+.ev-fin-b:hover,.ev-fin-b:focus-visible{background:#4A5D4E;border-color:#4A5D4E;color:#FAF8F4;transform:translateY(-2px);box-shadow:0 16px 30px -16px rgba(0,0,0,.8)}
+.ev-fin-b:focus-visible{outline:2px solid #7E9B84;outline-offset:3px}
+.ev-fin-b .gg-flecha{display:inline-block;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+.ev-fin-b:hover .gg-flecha{transform:translateX(5px)}
+.ev-fin-pie{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8A857C}
+.ev-fin a[href$=".html"]{display:inline-flex;align-items:center;min-height:44px}
+@media (max-width:600px){.ev-fin-h{font-size:5.6vw}.ev-fin-l2{font-size:1.55em}.ev-fin-bur{grid-template-columns:1fr;max-width:340px}}
+@media (prefers-reduced-motion:no-preference){
+  @keyframes ev-fin-brillo{0%,70%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
+  @keyframes ev-fin-empuja{0%,80%,100%{transform:none}88%{transform:translateX(6px)}}
+  .ev-fin-b.prim::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(90deg,transparent,rgba(74,93,78,.3),transparent);animation:ev-fin-brillo 3.4s ease-in-out infinite;pointer-events:none}
+  .ev-fin-b.prim .gg-flecha{animation:ev-fin-empuja 3.4s ease-in-out infinite}
+  .ev-fin-b.prim:hover .gg-flecha{animation:none}
+  .ev-js .ev-fin-hl{background-size:0% 100%;transition:background-size 1s cubic-bezier(.65,0,.35,1) .55s}
+  .ev-js .ev-fin-l2.ev-vis .ev-fin-hl{background-size:100% 100%}
+}
+'''

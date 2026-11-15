@@ -112,6 +112,9 @@ def procesar(l):
     i = t.index('<!-- ocas'); j = t.index('<!-- cta', i)
     oc = eventos_ocasiones.ocasiones(t[i:j], l); t = t[:i] + t[j:]
     k = t.index('<!-- men'); t = t[:k] + oc + t[k:]
+    # 5) Cierre como en Asesoría y App: frase, «Reserva tu fecha» subrayado y WhatsApp/email/Instagram
+    i = t.index('<!-- cta'); j = t.index('</section>', i) + len('</section>')
+    t = t[:i] + eventos_ocasiones.cierre(t[i:j], l) + t[j:]
     # ancla para «Ver menús»
     k = t.index('<!-- men'); k = t.index('<section', k)
     t = t[:k] + '<section id="ev-menus"' + t[k + len('<section'):]
