@@ -139,3 +139,134 @@ PDF (diagnóstico, plan, informe semanal, informe de cierre, certificados), modo
 
 ### Orden al retomarlo
 Primero la Fase 0 (que nada falle). Después, en este orden: diagnóstico con datos reales y el radar (es lo que vende) → objetivos que se miden solos y el marcador semanal → acta en vivo y tareas al equipo → informe de cierre y lo que viene después → herramientas del coach (diagnóstico exprés y embudo) → el resto. Cada bloque, con su prueba y sus capturas.
+
+---
+
+## Carne en el asador: la anatomía de cada pieza
+
+Pedido del dueño (15/11): no basta con la lista de ideas. **Cada pieza del Plan 360 tiene que pensarse entera**: qué datos lleva, en qué formatos se ve, qué se puede hacer con ella y cómo se conecta con el resto de la app. El objetivo es que el trabajo del hostelero sea fluido: que nunca tenga que preguntarse qué toca, por qué, cuánto cuesta, quién lo hace ni cómo va.
+
+Regla de diseño para todas: **una pieza se crea en un toque** (con lo mínimo) y **se enriquece después** sin estorbar. Lo opcional aparece cuando hace falta.
+
+### Tarea
+- **Datos**:
+  - título;
+  - qué hay que hacer, con pasos en forma de *subtareas con casilla*;
+  - **por qué** (a qué objetivo y a qué área sirve);
+  - responsable, que puede ser el dueño, uno o varios empleados o un área entera;
+  - fecha límite y hora;
+  - duración estimada;
+  - **prioridad** (crítica, alta, media o baja) e **impacto × esfuerzo**;
+  - coste previsto y real, enlazado al presupuesto;
+  - proveedor implicado;
+  - dónde se hace en la app (enlace directo a Escandallo, Fichas, Limpieza, Oferta…);
+  - **criterio de hecho**: qué tiene que verse para darla por terminada;
+  - evidencia exigida (foto, documento, firma, cifra);
+  - tarea de la que depende (no se puede empezar sin la otra);
+  - repetición (diaria, semanal, mensual), para hábitos como «revisar mermas cada lunes»;
+  - etiquetas;
+  - quién la puso: «Puesta por tu coach» o «Puesta por mí».
+- **Estados**: por hacer → en curso → **bloqueada (con motivo)** → para revisar (el coach da el visto bueno) → hecha / no hecha (con motivo) / aplazada (con nueva fecha). Cada cambio queda en su **historial**, con quién lo hizo y cuándo.
+- **Formatos**:
+  - fila compacta en «Hoy»;
+  - tarjeta en el tablero;
+  - barra en el cronograma;
+  - ficha completa;
+  - hoja imprimible con sus casillas y firma, para colgar en la cocina;
+  - mensaje de WhatsApp para pasarla al responsable;
+  - entrada en el calendario (un archivo .ics, que no cuesta nada).
+- **Dentro de la tarea**:
+  - comentarios entre el coach y el negocio;
+  - notas de voz;
+  - fotos de antes y después;
+  - adjuntos;
+  - plantilla o recurso de apoyo;
+  - un vídeo o una microlección de «cómo se hace».
+- **Acciones**: duplicar, mover de día, delegar, partir en dos, convertir en hábito, pedir ayuda al coach (le llega un aviso), y guardarla en el banco para reutilizarla con otros clientes.
+- **Avisos**: la campana el día que toca, «vence mañana», «atrasada», «bloqueada» (al coach) y «para revisar» (al coach).
+
+### Objetivo
+- **Datos**:
+  - qué se quiere conseguir, redactado en formato SMART con ayuda en pantalla;
+  - área;
+  - **por qué importa en €** (lo calcula la app);
+  - **indicador** enganchado a un dato de la app o tecleado a mano;
+  - valor de partida (día 1), valor objetivo y fecha;
+  - hitos intermedios (semana 1, 2, 3 y 4);
+  - prioridad (prioritario, esencial o complementario) y peso;
+  - responsable;
+  - tareas que lo empujan;
+  - riesgos.
+- **Estados**: sin empezar · en marcha · **en camino / en riesgo / desviado** (calculado comparando el ritmo con la fecha) · cumplido · parcial · no cumplido (con motivo y aprendizaje).
+- **Formatos**:
+  - tarjeta con una barra de progreso hacia la meta;
+  - **gráfica de evolución** con la línea objetivo;
+  - semáforo;
+  - fila del «tablero de objetivos»;
+  - página del informe de cierre;
+  - póster «Nuestros objetivos del mes» para el equipo, imprimible.
+- **Ver claramente objetivos y prioridades**:
+  - una pantalla **«Lo importante»**: los 3 objetivos prioritarios arriba, en grande, con su cifra de hoy frente a la meta;
+  - debajo, los esenciales y los complementarios;
+  - y una **matriz impacto × esfuerzo** donde cada objetivo o tarea es un punto que se arrastra (victorias rápidas, proyectos grandes, rellenos y lo que no compensa).
+
+### Presupuesto (nuevo)
+- **Presupuesto del Plan**: cuánto puede invertir el negocio en total y por área. Cada tarea, inversión o compra lo consume, y se ve **lo previsto, lo comprometido, lo gastado y lo que queda**.
+- **Presupuestos de proveedores**: pedir presupuesto a dos o tres proveedores (mensaje ya escrito por WhatsApp o email desde Proveedores), apuntar lo que contesta cada uno, **comparar en una tabla** (precio, plazo, garantía, condiciones), elegir, y que se convierta en inversión o gasto con su factura.
+- **Presupuesto que el coach le hace al negocio**: Plan 360, mantenimiento o extras, con aceptación y firma en la app (como el contrato) y paso a cobro.
+- **Formatos**: barra de consumo por área, tabla comparativa, PDF del presupuesto, y la previsión de caja (usa Tesorería): «si haces estas tres inversiones, en marzo te quedas en X €».
+- **Avisos**: te pasas del presupuesto, presupuesto de proveedor sin respuesta a los 3 días, presupuesto a punto de caducar.
+
+### Inversión
+Ya existe el plan de inversiones (rojo, ámbar, verde). Se añade:
+- coste con y sin IVA;
+- financiación (al contado, préstamo o renting), que **se da de alta sola en Gestión Económica → Inversiones**;
+- **retorno**: ahorro o ingreso al mes y meses para recuperarla;
+- prioridad;
+- presupuestos comparados;
+- foto del antes;
+- estado: idea → aprobada → comprada → instalada → amortizándose.
+
+### Reunión
+- **Datos**: tipo (presencial, videollamada o WhatsApp), fecha, hora, duración y lugar o enlace; asistentes; **orden del día** (lo prepara el coach con los objetivos y las tareas atrasadas ya puestos).
+- **Durante la reunión**: guion por puntos, notas, dictado por voz y decisiones; cada decisión se convierte en tarea u objetivo con un toque.
+- **Después**:
+  - **acta** con decisiones, tareas y responsables, firmable por los dos;
+  - envío por WhatsApp o en PDF;
+  - la próxima reunión queda propuesta.
+- **Formatos**: archivo de calendario, recordatorio el día antes, acta en PDF y resumen en la campana.
+
+### Día y semana del programa
+- **Día**: lo que toca (reunión, tareas), el foco del día y el color de la prioridad. Lo que ya está hecho, lo pendiente y una nota del día.
+- **Semana**: la **misión de la semana**, un resumen al cerrarla (lo hecho, lo que queda, cómo van las cifras) y la semana siguiente ya preparada. Los días cerrados del local se saltan.
+
+### Vistas: la misma información, de la forma que mejor sirva
+- **Hoy**: lo mío de hoy y lo atrasado.
+- **Tablero**: columnas por estado, arrastrables.
+- **Cronograma**: las 4 semanas con las tareas como barras y las dependencias.
+- **Calendario**: mes y semana.
+- **Por área**: la rueda del 360.
+- **Por responsable**: qué tiene cada persona del equipo.
+- **Por objetivo**: qué tareas empujan cada uno.
+- **Matriz impacto × esfuerzo**.
+- **Lista para imprimir**.
+
+Todas con filtros, buscador y el mismo menú ⋯.
+
+### Las demás piezas, con la misma exigencia
+- **Indicador o KPI**: de dónde sale el dato, su fórmula explicada, cada cuánto se actualiza, una referencia del sector con su fuente, una gráfica, el umbral de alerta, y quién lo vigila.
+- **Alerta**: qué la dispara, a quién le llega (coach, dueño o equipo), qué hacer (con un botón que crea la tarea), y cuándo desaparece sola.
+- **Recurso o plantilla**: para qué sirve, en qué momento del programa se usa, y la pantalla de la app que abre. Se puede rellenar, imprimir o descargar, y lleva versión.
+- **Formación**: lección corta (texto, imágenes, vídeo enlazado), test, quién la ha hecho, certificado y recordatorio a quien falta.
+- **Checklist de implantación** (APPCC, carta nueva, apertura y cierre…): casillas, responsable, foto de evidencia, firma, y repetición.
+- **Evidencia (foto o documento)**: antes y después emparejados, comentario, y a qué tarea u objetivo pertenece. Va a la galería del cierre.
+- **Mensaje coach ↔ negocio**: en hilo por tarea u objetivo (no un chat suelto), con voz, adjuntos y «leído».
+- **Informe** (diagnóstico, semanal, de cierre, trimestral): plantilla común con portada, radar, cifras, objetivos, fotos y siguientes pasos. En PDF, en modo presentación y como resumen para WhatsApp.
+- **Cobro**: concepto, importe, IVA, vencimiento, estado, recordatorio y factura con número, con exportación para el gestor.
+- **Ficha del cliente para el coach**: fase, salud del cliente (actividad, cumplimiento, cifras), próximo hito, cobros, notas privadas e historial de todo lo hecho.
+
+### Lo que todas las piezas comparten
+Plantillas reutilizables, duplicar, historial de cambios, comentarios, adjuntos, imprimir o PDF, enviar por WhatsApp, buscador global, el «⋯» de acciones, funcionar sin conexión, sincronizar por id (sin pisarse), los tres idiomas, el aviso de cambios sin guardar y la norma móvil (lo denso se pliega).
+
+### Por qué esto hace fluido el trabajo del hostelero
+Abre la app y en «Hoy» ve **qué toca, por qué, cuánto cuesta, quién lo hace y cómo va**. Cada tarea le lleva a la pantalla donde se hace, sus cifras se mueven solas y el coach se entera sin que nadie llame. Nada se apunta dos veces.
