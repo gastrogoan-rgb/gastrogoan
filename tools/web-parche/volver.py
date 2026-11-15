@@ -32,6 +32,20 @@ nav>div>a:first-child{display:inline-flex;align-items:center;min-height:44px}
 .gg-metodo{padding-top:clamp(34px,4.2vw,54px)!important}
 .gg-fin{padding-top:clamp(44px,5.4vw,76px)!important;padding-bottom:clamp(26px,3vw,40px)!important}
 .ev-fin{padding-top:clamp(44px,5.4vw,76px)!important}
+/* ===== Fuera lo que «huele a plantilla de IA» (revisión del 17/11) =====
+   Brillos que barren los botones, botones que laten, flechas que empujan solas, iconos que flotan,
+   resplandores de colores, tarjetas que se inclinan con el ratón y etiquetas con una raya a cada lado.
+   Se sustituye por lo que hace la app de GastroGoan: botón plano que pasa a oliva al pasar, flecha que
+   avanza SOLO al pasar, filetes finos y el punto verde del logotipo delante de cada etiqueta. */
+.gg-app-btn.prim::after,.gg-fin-btn::after,.gg-pc-btn::after,.gg-bur-1::after,.gg-pl-btn::after,.ev-btn.prim::after,.ev-oc-btn::after,.ev-fin-b.prim::after{display:none!important}
+.gg-app-btn.prim,.gg-app-btn.prim .gg-flecha,.gg-fin-btn,.gg-fin-btn .gg-flecha,.gg-pc-btn,.gg-pc-btn .gg-flecha,.gg-bur-1,.gg-bur-1 .gg-flecha,.gg-pl-btn,.gg-pl-btn .gg-flecha,.ev-btn.prim,.ev-btn.prim .gg-flecha,.ev-oc-btn,.ev-fin-b.prim,.ev-fin-b.prim .gg-flecha,.gg-in-ic svg,.ev-oc-ic svg{animation:none!important}
+.gg-gl-in::before,.gg-pl-precio::after{display:none!important}
+.gg-in-card{background-image:none!important}
+.gg-in-grid{perspective:none!important}
+.gg-in-card,.gg-js .gg-in-card.gg-app-rev.gg-vis{transform:none!important}
+.gg-in-card:hover,.gg-js .gg-in-card.gg-app-rev.gg-vis:hover{transform:translateY(-3px)!important}
+.gg-met-et::after,.gg-sobre-et::after,.ev-cm-et::after{display:none!important}
+.gg-met-et::before,.gg-sobre-et::before,.ev-cm-et::before,.gg-pc-et::before{width:7px!important;height:7px!important;border-radius:50%;background:currentColor!important}
 </style>'''
 
 
