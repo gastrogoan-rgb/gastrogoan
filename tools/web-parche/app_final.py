@@ -21,7 +21,7 @@ STRIPE = 'https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03'
 FAQ = {
  'es': ('Preguntas frecuentes', [
   ('¿Cómo recibo la app tras el pago?', 'En menos de 24 horas recibes tu acceso: usuario, PIN y el código de tu negocio. Entras en app.gastrogoan.com desde cualquier aparato y una guía te lleva paso a paso. No hay nada que descargar.'),
-  ('¿Cuánto cuesta de verdad?', '240 € + IVA al año; el primer año, 300 € + IVA. Sin comisiones por reserva ni por pedido. Si cobras online con tarjeta, la comisión es la de tu propia cuenta de Stripe.'),
+  ('¿Cuánto cuesta de verdad?', '240 € + IVA al año, más 60 € + IVA de instalación solo el primer año. Sin comisiones por reserva ni por pedido. Si cobras online con tarjeta, la comisión es la de tu propia cuenta de Stripe.'),
   ('¿Funciona sin conexión a internet?', 'Sí. La app guarda una copia en cada aparato y sigue funcionando si se cae la conexión. Cuando vuelve, se sincroniza sola con la nube de tu negocio.'),
   ('¿De quién son mis datos?', 'Tuyos. Cada negocio guarda sus datos en su propia nube, un proyecto gratuito a su nombre. GastroGoan no los guarda ni los vende.'),
   ('¿Cuántos usuarios pueden usarla?', 'Sin límite de aparatos ni de empleados. Cada persona entra con su PIN y ve lo de su área: cocina, sala o gestión.'),
@@ -34,7 +34,7 @@ FAQ = {
  ]),
  'ca': ('Preguntes freqüents', [
   ("Com rebo l'app després del pagament?", "En menys de 24 hores reps el teu accés: usuari, PIN i el codi del teu negoci. Entres a app.gastrogoan.com des de qualsevol aparell i una guia et porta pas a pas. No cal descarregar res."),
-  ('Quant costa de debò?', "240 € + IVA l'any; el primer any, 300 € + IVA. Sense comissions per reserva ni per comanda. Si cobres en línia amb targeta, la comissió és la del teu propi compte d'Stripe."),
+  ('Quant costa de debò?', "240 € + IVA l'any, més 60 € + IVA d'instal·lació només el primer any. Sense comissions per reserva ni per comanda. Si cobres en línia amb targeta, la comissió és la del teu propi compte d'Stripe."),
   ('Funciona sense connexió a internet?', "Sí. L'app guarda una còpia a cada aparell i continua funcionant si cau la connexió. Quan torna, se sincronitza sola amb el núvol del teu negoci."),
   ('De qui són les meves dades?', 'Teves. Cada negoci guarda les seves dades al seu propi núvol, un projecte gratuït al seu nom. GastroGoan no les guarda ni les ven.'),
   ('Quants usuaris la poden fer servir?', "Sense límit d'aparells ni d'empleats. Cada persona entra amb el seu PIN i veu el de la seva àrea: cuina, sala o gestió."),
@@ -47,7 +47,7 @@ FAQ = {
  ]),
  'en': ('Frequently asked questions', [
   ('How do I get the app after paying?', 'Within 24 hours you receive your login: username, PIN and your business code. You sign in at app.gastrogoan.com from any device and a guide takes you step by step. Nothing to download.'),
-  ('What does it really cost?', '€240 + VAT per year; the first year, €300 + VAT. No fees per booking or order. If you take card payments online, the fee is your own Stripe account’s.'),
+  ('What does it really cost?', '€240 + VAT per year, plus a €60 + VAT setup fee in the first year only. No fees per booking or order. If you take card payments online, the fee is your own Stripe account’s.'),
   ('Does it work without internet?', 'Yes. The app keeps a copy on every device and keeps working if the connection drops. When it comes back, it syncs with your business’s cloud on its own.'),
   ('Who owns my data?', 'You do. Each business keeps its data in its own cloud, a free project in its own name. GastroGoan does not store or sell it.'),
   ('How many users can use it?', 'No limit on devices or staff. Each person signs in with their PIN and sees their own area: kitchen, floor or management.'),

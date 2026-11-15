@@ -102,7 +102,7 @@ def textos(l):
    'Una <b>licencia anual de uso de la App GastroGoan</b> para <b>un negocio</b> (un local). Incluye todas las herramientas de la App, todas las actualizaciones que publiquemos mientras la licencia esté en vigor y ayuda por WhatsApp y email. Cada local adicional necesita su propia licencia.',
    'La App la usan negocios: se contrata como empresario o profesional, para la actividad de tu negocio.']),
   ('Precio y pago', [
-   'El primer año: <b>300 € + IVA</b>. Cada renovación anual siguiente: <b>240 € + IVA</b>. El IVA aplicable es el vigente en la fecha de la factura.',
+   '<b>240 € + IVA al año</b>, más <b>60 € + IVA de instalación</b> (la puesta en marcha) solo el primer año: el primer pago es de 300 € + IVA. Cada renovación anual siguiente: <b>240 € + IVA</b>. El IVA aplicable es el vigente en la fecha de la factura.',
    'El pago se hace en línea con tarjeta a través de Stripe, como una suscripción anual. Recibirás la factura en el email que indiques.',
    '<b>No están incluidos</b>: el equipo (tablet, móvil, impresora, cajón), las comisiones de Stripe u otros servicios que el negocio contrate para cobrar a sus clientes, ni los costes de Google si el uso de tu proyecto de Firebase supera su plan gratuito.']),
   ('Cómo se contrata', [
@@ -171,7 +171,7 @@ def textos(l):
    'Una <b>llicència anual d’ús de l’App GastroGoan</b> per a <b>un negoci</b> (un local). Inclou totes les eines de l’App, totes les actualitzacions que publiquem mentre la llicència sigui vigent i ajuda per WhatsApp i correu. Cada local addicional necessita la seva pròpia llicència.',
    'L’App la fan servir negocis: es contracta com a empresari o professional, per a l’activitat del teu negoci.']),
   ('Preu i pagament', [
-   'El primer any: <b>300 € + IVA</b>. Cada renovació anual següent: <b>240 € + IVA</b>. L’IVA aplicable és el vigent en la data de la factura.',
+   '<b>240 € + IVA l’any</b>, més <b>60 € + IVA d’instal·lació</b> (la posada en marxa) només el primer any: el primer pagament és de 300 € + IVA. Cada renovació anual següent: <b>240 € + IVA</b>. L’IVA aplicable és el vigent en la data de la factura.',
    'El pagament es fa en línia amb targeta a través de Stripe, com una subscripció anual. Rebràs la factura al correu que indiquis.',
    '<b>No hi són inclosos</b>: l’equip (tauleta, mòbil, impressora, calaix), les comissions de Stripe o d’altres serveis que el negoci contracti per cobrar als seus clients, ni els costos de Google si l’ús del teu projecte de Firebase supera el pla gratuït.']),
   ('Com es contracta', [
@@ -239,7 +239,7 @@ def textos(l):
    'An <b>annual licence to use the GastroGoan App</b> for <b>one business</b> (one venue). It includes every tool in the App, every update we release while the licence is active, and help by WhatsApp and email. Each additional venue needs its own licence.',
    'The App is for businesses: it is bought as a business or professional, for your business activity.']),
   ('Price and payment', [
-   'First year: <b>€300 + VAT</b>. Each following annual renewal: <b>€240 + VAT</b>. VAT is charged at the rate in force on the invoice date.',
+   '<b>€240 + VAT per year</b>, plus a <b>€60 + VAT setup fee</b> in the first year only: the first payment is €300 + VAT. Each following annual renewal: <b>€240 + VAT</b>. VAT is charged at the rate in force on the invoice date.',
    'Payment is made online by card through Stripe, as an annual subscription. You will receive the invoice at the email address you provide.',
    '<b>Not included</b>: hardware (tablet, phone, printer, cash drawer), Stripe fees or other services the business uses to charge its own customers, or Google charges if your Firebase project goes beyond its free plan.']),
   ('How the contract is made', [
