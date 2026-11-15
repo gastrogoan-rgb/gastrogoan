@@ -5,7 +5,7 @@
   importe editable («pon tus cifras»). El total al mes y al año se recalcula al momento.
 - La transacción: el interruptor «Lo que pagas hoy | Con GastroGoan App». Al pasar a GastroGoan,
   las líneas se tachan una a una con un sello «Incluido», el total se tacha y aparece 240 €/año.
-  Pasa sola la primera vez que el recibo entra en pantalla; luego la decide quien mira.
+  NO pasa sola (17/11): la decide quien mira, con el interruptor o el botón «Pásalo a GastroGoan App».
 - Debajo, la cuenta final con lo que ESA persona ha puesto: antes / con GastroGoan / te ahorras.
 Sin JavaScript se ve el recibo típico con su total, y la solución con sus cifras."""
 
@@ -134,14 +134,9 @@ def cuenta(l):
         var b=e.target.closest&&e.target.closest('.gg-pr-sw-b'); if(b){{modo(b.dataset.modo);return}}
         if(e.target.closest&&e.target.closest('.gg-pr-pide')) modo('gg');
       }});
-      /* La primera vez que el recibo se ve entero (y quieto un momento), la cuenta pasa sola a GastroGoan */
-      var visto=0;
-      function mira(){{
-        var s=S(); if(!s||s.dataset.auto) return; var r=s.querySelector('.gg-pr-hoja').getBoundingClientRect();
-        if(r.top<innerHeight*0.55&&r.bottom>0){{ if(!visto) visto=setTimeout(function(){{var s2=S(); if(s2&&!s2.dataset.auto) modo('gg')}},1400) }}
-      }}
-      addEventListener('scroll',mira,{{passive:true}});
-      var k=0, iv=setInterval(function(){{recalcula();mira();if(++k>20)clearInterval(iv)}},300);
+      /* Ya NO pasa sola a «Con GastroGoan App» (lo pidió el dueño, 17/11): la cuenta se queda en «Lo que pagas
+         hoy» para que el visitante ponga sus cifras, y cambia SOLO cuando pulsa el interruptor o «Pásalo a GastroGoan App». */
+      var k=0, iv=setInterval(function(){{recalcula();if(++k>20)clearInterval(iv)}},300);
     }})();
     </script>
   </section>
