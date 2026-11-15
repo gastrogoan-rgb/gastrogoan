@@ -53,10 +53,10 @@ main{flex:1}
 .puerta::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--oliva);transition:width .38s var(--ease)}
 .puerta:hover,.puerta:focus-visible{background:var(--blanco)}
 .puerta:hover::before,.puerta:focus-visible::before{width:5px}
-/* el mono queda para etiquetas cortas (el número); la frase va en Schibsted, como en la app */
+/* el mono en mayúsculas ES parte de la tipografía de GastroGoan: también en las descripciones */
 .puerta .n{font:400 12px/1 var(--mono);letter-spacing:.1em;color:var(--muted);transition:color .25s}
 .puerta h3{margin:0;font-size:clamp(1.6rem,1.05rem + 2vw,2.5rem);line-height:1.1;font-weight:600;letter-spacing:-.035em;justify-self:start;padding-bottom:3px;background:linear-gradient(var(--oliva),var(--oliva)) 0 100%/0 2px no-repeat;transition:background-size .45s var(--ease)}
-.puerta p{grid-column:2;margin:0;font-size:clamp(.95rem,.9rem + .2vw,1.05rem);line-height:1.45;color:var(--cuerpo);max-width:46ch;text-wrap:pretty}
+.puerta p{grid-column:2;margin:0;font:400 12px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);max-width:60ch}
 .puerta .fl{grid-column:3;grid-row:1;font-size:clamp(1.3rem,1rem + 1vw,1.8rem);color:var(--muted);transition:transform .38s var(--ease),color .25s}
 .puerta:hover h3,.puerta:focus-visible h3{background-size:100% 2px}
 .puerta:hover .fl,.puerta:focus-visible .fl{transform:translateX(9px);color:var(--oliva)}
