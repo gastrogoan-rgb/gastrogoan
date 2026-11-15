@@ -11,7 +11,7 @@ Uso: python3 tools/web-parche/eventos.py
 import re, json, os, subprocess, sys
 from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(__file__))
-import volver
+import volver, eventos_secciones
 from asesoria_extras import WA
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'eventos', 'ca': 'ca-esdeveniments', 'en': 'en-events'}
@@ -98,12 +98,18 @@ def procesar(l):
     # 1) cabecera
     i = t.index('<header'); j = t.index('</header>', i) + len('</header>')
     t = t[:i] + cabecera(t[i:j], l) + t[j:]
+    # 3) servicios con más juego y «Cómo funciona» paso a paso
+    i = t.index('<!-- serv'); j = t.index('<!-- c', i + 5)
+    t = t[:i] + eventos_secciones.servicios(t[i:j], l) + t[j:]
+    i = t.index('<!-- c', i + 5); j = t.index('<!-- form', i)
+    t = t[:i] + eventos_secciones.como(t[i:j], l) + t[j:]
+    t = t.replace('</header>', '</header>' + eventos_secciones.JS, 1)
     # ancla para «Ver menús»
     k = t.index('<!-- men'); k = t.index('<section', k)
     t = t[:k] + '<section id="ev-menus"' + t[k + len('<section'):]
     # 2) volver
     t = volver.aplicar(t)
-    t = t.replace('</helmet>', CSS + '\n</helmet>', 1)
+    t = t.replace('</helmet>', CSS.replace('</style>', eventos_secciones.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch)
