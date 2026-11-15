@@ -27,6 +27,8 @@ export const VISTAS = [
   ['minegocio', "currentFolder='gestion'; navigate('minegocio')"], ['plan360', "currentFolder='gestion'; navigate('plan360')"],
 ];
 
+// EXTRA='nombre=js;;nombre2=js2' añade pantallas o estados a medida (se ejecutan tal cual en la página).
+if(process.env.EXTRA) process.env.EXTRA.split(';;').forEach(x => { const i = x.indexOf('='); VISTAS.push([x.slice(0, i), x.slice(i + 1)]); });
 const browser = await puppeteer.launch({executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'], headless: 'new'});
 const page = await browser.newPage();
 await page.setViewport({width: ANCHO, height: ALTO, isMobile: true, hasTouch: true, deviceScaleFactor: 2});
@@ -58,6 +60,7 @@ const irA = y => page.evaluate(y => { const c = document.getElementById('content
 const indice = [];
 for(const [nombre, js] of VISTAS){
   if(SOLO && !SOLO.includes(nombre)) continue;
+  try{ await page.evaluate(() => { try{ closeModal(); }catch(e){} }); }catch(e){}
   try{ await page.evaluate(js); }catch(e){ indice.push(`${nombre}: ERROR al abrir ${e.message}`); continue; }
   await new Promise(r => setTimeout(r, 1300));
   const total = await alto(); const paso = Math.round(ALTO * 0.82); const n = Math.min(MAX_FOTOS, Math.max(1, Math.ceil(total / paso)));

@@ -400,7 +400,7 @@
   .seg{display:flex;border:1px solid var(--ink);margin:0 0 14px;background:var(--surface)}
   .seg button{flex:1 1 0;min-height:48px;border:0;background:var(--surface);color:var(--ink);font:600 14px/1.2 inherit;font-family:inherit;cursor:pointer;padding:0 8px}
   .seg button+button{border-left:1px solid var(--ink)}
-  .seg button.on{background:var(--ink);color:#fff}
+  .seg button.on{background:var(--olive);color:#fff}
   .seg button:focus-visible{outline:2px solid var(--olive);outline-offset:-4px}
   .seg .cnt{font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.7;margin-left:6px}
   .srch{position:relative;margin:0 0 14px}
@@ -1039,6 +1039,36 @@
   .tv-board li.tv-vacio{border:0;background:none;color:var(--muted)}
   @media (max-width:700px){.tv-board{grid-template-columns:1fr}}
   .ent-cesta{margin-top:6px}.ent-cesta button{font:inherit;font-size:13px;color:var(--olive);background:none;border:0;text-decoration:underline;cursor:pointer;min-height:36px}
+
+  /* ═══ MÓVIL (14/11, revisión visual): lo elegido en oliva, cabecera compacta dentro de un pedido/reserva, chips en línea, bandeja que no desborda ═══ */
+  .wz-prog li.done .n{background:var(--olive);border-color:var(--olive)}
+  input[type=checkbox],input[type=radio]{accent-color:var(--olive)}
+  .btn.cal-on{background:var(--olive);border-color:var(--olive);color:#fff}
+  .mesa-opt.on{background:var(--olive);border-color:var(--olive)}
+  .tray,.tray-h{max-width:100%;box-sizing:border-box}
+  .tray{min-width:0;overflow:hidden}
+  .tray-h{min-width:0}
+  .tray-b{max-height:min(38vh,260px)}
+  @media (max-width:759px){
+    /* Dentro del flujo la cabecera es UNA fila (nombre + idioma): los datos del local ya se vieron en la entrada. */
+    body:has(.wz-prog) header .sub{display:none}
+    body:has(.wz-prog) header{padding:8px 16px;min-height:0}
+    body:has(.wz-prog) #biz-logo img{max-height:34px;margin:0 auto}
+    body:has(.wz-prog) header h1,body:has(.wz-prog) header.hd-conlogo h1{font-size:16px;margin:0;padding:0 56px;line-height:1.2}
+    body:has(.wz-prog) header.hd-conlogo h1{display:none}
+    body:has(.wz-prog) header #lang-switcher{top:4px}
+    /* En la entrada: datos en una fila que envuelve, sin mayúsculas mono anchas. */
+    header .sub{font-family:inherit;text-transform:none;letter-spacing:0;font-size:12.5px;gap:2px 12px}
+    header .sub .hi{letter-spacing:0;text-transform:none;font-family:inherit}
+    .chips{gap:5px}
+    .chip{min-height:30px;padding:4px 9px;font-size:11px;letter-spacing:.02em}
+    .ent-cesta{margin-top:0}
+    .ent-cesta button{min-height:36px;padding:0}
+    .tray-h{min-height:48px;padding:4px 10px;gap:8px}
+    .tray-k{font-size:11px;letter-spacing:.04em}
+    .tray-r{display:none}
+    .tray-t{margin-left:auto}
+  }
 </style>
 </head>
 <body>
@@ -2288,7 +2318,7 @@ function comprobarPagoOnline(){
 function renderHeader(){
   const b = DB.business || {};
   if(b.logo){
-    document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}" onload="ggTonoLogo(this)">`;
+    document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}" onload="ggTonoLogo(this)" onerror="this.remove();document.querySelector('header')?.classList.remove('hd-conlogo')">`;
     const hd0 = document.querySelector('header'); if(hd0) hd0.classList.add('hd-conlogo');
   } else {
     document.getElementById('biz-logo').innerHTML = '';
@@ -3527,7 +3557,7 @@ function renderReservaCalendar(){
   }
   const tabs = `
     <div style="display:flex;gap:6px;margin-bottom:10px">
-      ${['dia','semana','mes'].map(v => `<button type="button" class="btn btn-sm" style="flex:1;${calView===v?'background:var(--ink);color:#fff':''}" onclick="calSetView('${v}')">${t('cal.'+v)}</button>`).join('')}
+      ${['dia','semana','mes'].map(v => `<button type="button" style="flex:1" class="btn btn-sm${calView===v?' cal-on':''}" aria-pressed="${calView===v}" onclick="calSetView('${v}')">${t('cal.'+v)}</button>`).join('')}
     </div>`;
   let body = '';
   if(calView === 'dia'){
@@ -3553,7 +3583,7 @@ function renderReservaCalendar(){
           // para "esto es lo activo" — no depende de ninguna marca y nunca
           // se puede confundir con el verde/rojo de disponibilidad.
           const estilo = selected
-            ? 'background:var(--ink);color:#fff;border-color:var(--ink)'
+            ? 'background:var(--olive);color:#fff;border-color:var(--olive)'
             : libre
               ? 'background:var(--green-l);border-color:var(--green);color:var(--ink)'
               : 'background:var(--red-l);border-color:var(--red);color:var(--red);text-decoration:line-through';

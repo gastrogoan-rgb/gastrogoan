@@ -135,6 +135,8 @@ function entBarraHtml(){
   <div class="ent-barra" id="ent-barra">
     <div class="ent-sonido" id="ent-aviso-reloj" hidden></div>
     ${!entSonidoActivo() ? `<div class="ent-sonido"><i class="ti ti-volume-off"></i><span>${escapeHtml(gl({es:'El sonido de avisos está desactivado en este aparato: toca para activarlo y mantener la pantalla encendida.', ca:'El so d\'avisos està desactivat en aquest aparell: toca per activar-lo i mantenir la pantalla encesa.', en:'Alert sound is off on this device: tap to turn it on and keep the screen awake.'}))}</span><button type="button" class="btn btn-fino is-lim" id="ent-activar-sonido" onclick="entActivarSonido()">${escapeHtml(gl({es:'Activar sonido', ca:'Activar so', en:'Turn sound on'}))}</button></div>` : ''}
+    <details class="ent-herr"${window.innerWidth > 720 || oc || pT || pD ? ' open' : ''}>
+    <summary class="btn btn-sm btn-fino"><i class="ti ti-adjustments-horizontal"></i> ${escapeHtml(gl({es:'Herramientas de pedidos', ca:'Eines de comandes', en:'Order tools'}))}${oc || pT || pD ? ' <b class="ent-herr-on">' + escapeHtml(gl({es:'activo', ca:'actiu', en:'on'})) + '</b>' : ''}</summary>
     <div class="ent-fila">
       <span class="ent-rot">${escapeHtml(gl({es:'Cocina saturada', ca:'Cuina saturada', en:'Kitchen busy'}))}</span>
       <span class="ent-chips" role="group">${extraBtn(10)}${extraBtn(15)}${extraBtn(20)}</span>
@@ -154,6 +156,7 @@ function entBarraHtml(){
       <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirKit()"><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Captación', ca:'Captació', en:'Acquisition'}))}</button>
       <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirAnalitica()"><i class="ti ti-chart-line"></i> ${escapeHtml(gl({es:'Tiempos', ca:'Temps', en:'Timings'}))}</button>
     </div>
+    </details>
   </div>`;
 }
 
