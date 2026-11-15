@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /gracias
+Disallow: /gracias.html
+
+Sitemap: https://gastrogoan.com/sitemap.xml

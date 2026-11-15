@@ -24,3 +24,6 @@ anuncios/capturas/
 tools/libro-marca/salida/
 test/.scratch-*/
 test/.ux-tmp/
+
+__pycache__/
+*.pyc

@@ -1,0 +1,24 @@
+# Dos contenedores: Caddy (HTTPS y sitios estaticos) y el Worker de pagos.
+# Arranque: docker compose up -d   (desde /srv/gastrogoan)
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sitios:/srv/sitios:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+  pagos:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "servidor.mjs"]
+    env_file: ./pagos.env
+    volumes:
+      - ./pagos:/app:ro
+    expose: ["8787"]
+volumes:
+  caddy_datos:
+  caddy_config:
