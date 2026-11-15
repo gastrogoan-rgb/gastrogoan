@@ -26,11 +26,25 @@ DESC = {
 }
 PRECIO = {'es': '240 € + IVA / año', 'ca': "240 € + IVA / any", 'en': '€240 + VAT / year'}
 NOTA = {'es': 'El primer año, 300 € + IVA', 'ca': 'El primer any, 300 € + IVA', 'en': 'First year, €300 + VAT'}
+DATOS = {  # todo verificable: lo dicen la FAQ, las condiciones y la propia app
+ 'es': [('21', 'herramientas en una sola app'), ('0 €', 'de comisión por reserva o por pedido'), ('20 min', 'para ponerla en marcha, con guía'), ('100 %', 'tus datos, en tu propia nube')],
+ 'ca': [('21', 'eines en una sola app'), ('0 €', 'de comissió per reserva o per comanda'), ('20 min', 'per posar-la en marxa, amb guia'), ('100 %', 'les teves dades, al teu propi núvol')],
+ 'en': [('21', 'tools in one single app'), ('€0', 'commission per booking or order'), ('20 min', 'to get it running, with a guide'), ('100%', 'your data, in your own cloud')],
+}
 DEMO = {'es': 'Hola Marcos, me gustaría ver una demo de la App GastroGoan.',
         'ca': "Hola Marcos, m'agradaria veure una demo de l'App GastroGoan.",
         'en': "Hi Marcos, I'd like to see a demo of the GastroGoan App."}
 
 CSS = '''<style data-gg="app">
+.gg-app-izq{display:flex;flex-direction:column;gap:22px;min-width:0}
+/* La mitad derecha de la cabecera estaba vacía en PC: cuatro datos clave (17/11). En móvil no salen. */
+.gg-app-cab{display:grid;grid-template-columns:1fr;gap:clamp(28px,4vw,56px);align-items:center}
+.gg-app-datos{display:none;list-style:none;margin:0;padding:0 0 0 clamp(24px,3vw,40px);border-left:1px solid rgba(250,248,244,.16)}
+.gg-app-datos li{display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid rgba(250,248,244,.1)}
+.gg-app-datos li:last-child{border-bottom:0}
+.gg-app-datos b{flex:none;min-width:3.4em;font-size:clamp(26px,2.6vw,34px);font-weight:600;letter-spacing:-.03em;color:#FAF8F4;font-variant-numeric:tabular-nums}
+.gg-app-datos span{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#B7AFA0;line-height:1.45}
+@media (min-width:900px){.gg-app-cab{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}.gg-app-datos{display:block}}
 .gg-app-h1{margin:0;font-size:clamp(28px,5vw,56px);font-weight:700;letter-spacing:-.035em;line-height:1.2;color:#FAF8F4}
 .gg-app-hl{display:inline-block;line-height:1;padding:.05em .16em .03em;border-radius:2px;color:#FAF8F4;background:linear-gradient(#4A5D4E,#4A5D4E) 0 0/100% 100% no-repeat}
 .gg-app-desc{margin:0;font-size:clamp(16px,1.9vw,18px);line-height:1.6;color:#C9C2B6;max-width:640px;text-wrap:pretty}
@@ -88,7 +102,9 @@ def cabecera(h, l):
     h1 = re.sub(r'<span style="background:#4A5D4E;[^"]*">', '<span class="gg-app-hl">', h1, count=1)
     comprar = re.search(r'<a href="https://buy\.stripe[^>]*>([^<]+)</a>', h).group(1).split('—')[0].strip()
     demo = re.search(r'<a href="https://wa\.me[^>]*>([^<]+)</a>', h).group(1).strip()
-    return f'''<header style="background:#1C1A17;padding:clamp(28px,4vw,48px) clamp(24px,6vw,64px) clamp(30px,4vw,52px);display:flex;flex-direction:column;gap:22px;">
+    datos = ''.join(f'<li class="gg-app-rev" style="--d:{.3 + k * .1:.2f}s"><b>{n}</b><span>{t}</span></li>' for k, (n, t) in enumerate(DATOS[l]))
+    return f'''<header class="gg-app-cab" style="background:#1C1A17;padding:clamp(28px,4vw,48px) clamp(24px,6vw,64px) clamp(30px,4vw,52px);">
+    <div class="gg-app-izq">
     <span class="gg-app-rev" style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#8A857C;">{et.group(2)}</span>
     <h1 class="app-hero-title gg-app-h1 gg-app-rev" style="--d:.08s">{h1}</h1>
     <p class="gg-app-desc gg-app-rev" style="--d:.2s">{DESC[l]}</p>
@@ -96,6 +112,8 @@ def cabecera(h, l):
       <a class="gg-app-btn prim" href="{STRIPE}" target="_blank" rel="noopener">{comprar}<span class="gg-flecha" aria-hidden="true">→</span></a>
       <a class="gg-app-btn sec" href="{wa}" target="_blank" rel="noopener">{WA}{demo}</a>
     </div>
+    </div>
+    <ul class="gg-app-datos" aria-label="GastroGoan App">{datos}</ul>
     {JS}
   </header>'''
 
