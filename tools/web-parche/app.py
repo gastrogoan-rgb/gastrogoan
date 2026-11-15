@@ -11,7 +11,7 @@ Uso: python3 tools/web-parche/app.py
 import re, json, os, subprocess, sys
 from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(__file__))
-import volver
+import volver, app_cuenta
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'app', 'ca': 'ca-app', 'en': 'en-app'}
 BASE_GIT = 'a152bda'
@@ -69,9 +69,13 @@ JS = '''<script>
 (function(){
   if(window.__ggApp) return; window.__ggApp=1;
   document.documentElement.classList.add('gg-js');
-  function pinta(){ document.documentElement.classList.add('gg-js');
-    document.querySelectorAll('.gg-app-rev:not(.gg-vis)').forEach(function(e){e.classList.add('gg-vis')}); }
-  var n=0, iv=setInterval(function(){ requestAnimationFrame(pinta); if(++n>40) clearInterval(iv) },150);
+  /* Cada bloque entra al llegar a la pantalla; a los 15 s se enseña todo pase lo que pase */
+  function pinta(todo){ document.documentElement.classList.add('gg-js');
+    document.querySelectorAll('.gg-app-rev:not(.gg-vis)').forEach(function(e){
+      if(todo||e.getBoundingClientRect().top<innerHeight*0.9) e.classList.add('gg-vis')}); }
+  addEventListener('scroll',function(){requestAnimationFrame(function(){pinta()})},{passive:true});
+  var n=0, iv=setInterval(function(){ requestAnimationFrame(function(){pinta()}); if(++n>40) clearInterval(iv) },150);
+  setTimeout(function(){pinta(1)},15000);
 })();
 </script>'''
 
@@ -108,9 +112,12 @@ def procesar(l):
     n = t.count(STRIPE_VIEJO); t = t.replace(STRIPE_VIEJO, STRIPE)
     t = t.replace('100 €', '240 €').replace('€100', '€240').replace('100&nbsp;€', '240&nbsp;€')
     assert '100 €' not in t
+    # 4) El problema + Tu solución → una sola sección que se toca
+    i = t.index('<!-- problema'); j = t.index('<!--', t.index('<!--', i + 5) + 5)
+    t = t[:i] + app_cuenta.cuenta(l) + t[j:]
     # 3) volver
     t = volver.aplicar(t)
-    t = t.replace('</helmet>', CSS + '\n</helmet>', 1)
+    t = t.replace('</helmet>', CSS.replace('</style>', app_cuenta.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch, '· enlaces de compra cambiados:', n)
