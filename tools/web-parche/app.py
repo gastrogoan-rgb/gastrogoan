@@ -44,8 +44,12 @@ CSS = '''<style data-gg="app">
 .gg-app-btn .gg-flecha{display:inline-block;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
 .gg-app-btn:hover .gg-flecha{transform:translateX(5px)}
 .gg-app-nota{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8A857C}
-@media (max-width:520px){.gg-app-acc{flex-direction:column}.gg-app-btn{width:100%;box-sizing:border-box}}
-@media (max-width:370px){.gg-app-btn{padding:0 12px;letter-spacing:.05em;font-size:12px}}
+/* Móvil: los dos botones uno al lado del otro (pedido del dueño) */
+/* Móvil: los dos botones uno al lado del otro (pedido del dueño). Si no cabe, primero se va el icono
+   y, en 320, el texto puede ir en dos líneas (nunca cortado ni partido a media palabra). */
+@media (max-width:520px){.gg-app-acc{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gg-app-btn{min-width:0;padding:0 10px;letter-spacing:.05em;font-size:12px;gap:7px;box-sizing:border-box}}
+@media (max-width:420px){.gg-app-btn svg{display:none}}
+@media (max-width:360px){.gg-app-btn{white-space:normal;text-align:center;line-height:1.25;font-size:11.5px;letter-spacing:.03em}}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-app-brillo{0%,72%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
   @keyframes gg-app-empuja{0%,80%,100%{transform:none}88%{transform:translateX(5px)}}
@@ -85,7 +89,7 @@ def cabecera(h, l):
     <h1 class="app-hero-title gg-app-h1 gg-app-rev" style="--d:.08s">{h1}</h1>
     <p class="gg-app-desc gg-app-rev" style="--d:.2s">{DESC[l]}</p>
     <div class="gg-app-acc gg-app-rev" style="--d:.32s">
-      <a class="gg-app-btn prim" href="{STRIPE}" target="_blank" rel="noopener">{comprar} · {PRECIO[l]}<span class="gg-flecha" aria-hidden="true">→</span></a>
+      <a class="gg-app-btn prim" href="{STRIPE}" target="_blank" rel="noopener">{comprar}<span class="gg-flecha" aria-hidden="true">→</span></a>
       <a class="gg-app-btn sec" href="{wa}" target="_blank" rel="noopener">{WA}{demo}</a>
     </div>
     {JS}
