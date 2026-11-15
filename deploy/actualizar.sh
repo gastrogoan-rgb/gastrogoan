@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 bash build.sh
 cp dist/index.html dist/sw.js dist/version.json dist/tutorial-netlify.html deploy/app/public/
 cp dist/reservagastrogoan.html deploy/reservas/public/index.html
+cp dist/sw-reservas.js deploy/reservas/public/sw-reservas.js
 # La misma pagina como 404: el hosting la sirve cuando la direccion no es un
 # archivo, y asi el enlace corto (reservas.gastrogoan.com/casapaco) funciona
 # sin depender de reglas de redireccion, que cada proveedor entiende a su

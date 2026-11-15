@@ -1692,3 +1692,11 @@ Todo a coste cero por licencia (marcas de tiempo, estados y el navegador del cli
 - **Bizum / Apple Pay / Google Pay**: el Worker NO fija `payment_method_types`, así que Stripe enseña los métodos que el restaurante tenga activos en SU cuenta. Bizum con Connect v2 sigue sin verificarse.
 - **Sigue sin hacerse**: fidelización visible al pagar (el programa es por visitas y habría que leer la ficha del cliente en público), pedido en grupo con pagos repartidos (pide estado compartido y reglas nuevas), mapa en vivo.
 
+
+## Bloqueos de LaLiga a Cloudflare (15/11)
+
+En los partidos algunos operadores españoles bloquean IP de Cloudflare y caen webs legítimas (permiso judicial hasta junio de 2027). Al dueño le pasó un sábado: la web de reservas no abría.
+- **La app del hostelero ya aguanta**: `sw.js` sirve la copia guardada y los datos viven en IndexedDB. Lo demuestra `test/sw-app-offline.mjs` (con el service worker instalado y sin red, recarga y carga `DB`). ⚠️ El service worker se desactiva en `localhost` a propósito: las pruebas usan `127.0.0.2`.
+- **La web de reservas guarda su copia en el móvil del cliente** (`sw-reservas.js`, registrado en `reservagastrogoan.html`; HTML bajo `'/'` con actualización en segundo plano; Firebase nunca pasa por él). Solo ayuda a quien ya la abrió antes: **un cliente nuevo durante un bloqueo sigue sin poder entrar**. `test/sw-reservas.mjs`. Un fichero de este tipo se copia en `build.sh` y `deploy/actualizar.sh`.
+- **Descartado**: VPN dentro de la app (una web no puede crearla), plan de Route 53 con failover DNS (de pago, y el dominio está registrado en Cloudflare, que obliga a su DNS), «apagar el proxy» (Pages no tiene IP propia).
+- **Pendiente, sin decidir**: probar en un partido real si la dirección `*.pages.dev` de cada proyecto se libra del bloqueo (gratis) y, si no, un servidor con IP propia (Oracle Always Free, o uno de pago). Apuntar día, hora y operador de cada fallo.

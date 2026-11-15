@@ -6719,6 +6719,11 @@ async function cancelMyReservation(){
 }
 
 init();
+
+/* Copia de la web en el móvil (ver sw-reservas.js): para que un bloqueo de LaLiga no deje sin web a quien ya la abrió. */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+  window.addEventListener('load', () => { try{ navigator.serviceWorker.register('/sw-reservas.js').catch(() => {}); }catch(e){} });
+}
 </script>
 
 </body>
