@@ -21,21 +21,21 @@ T = {
             total='Total', al_mes='al mes', al_anio='al año', todo='Todo lo anterior', pide='Pásalo a GastroGoan App',
             et2='Tu solución', antes='Antes · varias apps', antes_s='Cada mes. Para siempre.', con='Con GastroGoan App',
             con_s='Cada año. Todo incluido.', ahorras='Te ahorras', cada_anio='cada año', loc='es-ES', pre='', suf=' €',
-            casilla='¿Pagas {n}?', importe='Importe al mes de {n}'),
+            pista='Toca una cifra para poner la tuya', casilla='¿Pagas {n}?', importe='Importe al mes de {n}'),
  'ca': dict(et='El problema', h2='Quantes apps estàs pagant ara?',
             p="Cada mes, gairebé sense adonar-te'n, les subscripcions es queden una part del que has guanyat. Aquest és el compte típic d'un local. <b>Marca les que pagues i posa-hi les teves xifres.</b>",
             hoy='El que pagues avui', gg='Amb GastroGoan App', recibo='Les teves subscripcions', mes='€/mes', inc='Inclòs',
             total='Total', al_mes='al mes', al_anio="a l'any", todo='Tot això', pide='Passa-ho a GastroGoan App',
             et2='La teva solució', antes='Abans · diverses apps', antes_s='Cada mes. Per sempre.', con='Amb GastroGoan App',
             con_s='Cada any. Tot inclòs.', ahorras="T'estalvies", cada_anio='cada any', loc='ca-ES', pre='', suf=' €',
-            casilla='Pagues {n}?', importe='Import al mes de {n}'),
+            pista='Toca una xifra per posar-hi la teva', casilla='Pagues {n}?', importe='Import al mes de {n}'),
  'en': dict(et='The problem', h2='How many apps are you paying for right now?',
             p="Every month, almost without noticing, subscriptions take a cut of what you've earned. This is the typical bill for a venue. <b>Tick the ones you pay and enter your own figures.</b>",
             hoy='What you pay today', gg='With GastroGoan App', recibo='Your subscriptions', mes='€/month', inc='Included',
             total='Total', al_mes='per month', al_anio='per year', todo='All of the above', pide='Switch to GastroGoan App',
             et2='Your solution', antes='Before · several apps', antes_s='Every month. Forever.', con='With GastroGoan App',
             con_s='Every year. Everything included.', ahorras='You save', cada_anio='every year', loc='en-GB', pre='€', suf='',
-            casilla='Do you pay for {n}?', importe='Monthly cost of {n}'),
+            pista='Tap a figure to enter your own', casilla='Do you pay for {n}?', importe='Monthly cost of {n}'),
 }
 PRECIO = 240
 
@@ -48,7 +48,7 @@ def cuenta(l):
     tot = sum(v for _, v in filas)
     lis = ''.join(f'''<li class="gg-pr-fila" style="--k:{k}">
           <label class="gg-pr-chk"><input type="checkbox" data-on="1" aria-label="{x['casilla'].format(n=n)}"><span class="gg-pr-box" aria-hidden="true"></span><span class="gg-pr-n">{n}</span></label>
-          <span class="gg-pr-imp"><input type="number" min="0" max="9999" step="1" inputmode="numeric" value="{v}" aria-label="{x['importe'].format(n=n)}"><span class="gg-pr-u">{x['mes']}</span></span>
+          <span class="gg-pr-imp"><input type="number" min="0" max="9999" step="1" inputmode="numeric" data-v="{v}" aria-label="{x['importe'].format(n=n)}"><span class="gg-pr-u">{x['mes']}</span></span>
           <span class="gg-pr-inc" aria-hidden="true">{x['inc']}</span>
         </li>''' for k, (n, v) in enumerate(filas))
     return f'''<!-- problema y solución: la cuenta que se toca -->
@@ -68,38 +68,21 @@ def cuenta(l):
       <div class="gg-pr-hoja">
         <div class="gg-pr-tit"><span>{x['recibo']}</span><span class="gg-pr-cnt"><b class="gg-pr-num">{len(filas)}</b> / {len(filas)}</span></div>
         <ul class="gg-pr-lista">{lis}</ul>
+        <p class="gg-pr-pista"><span aria-hidden="true">✎</span> {x['pista']}</p>
         <div class="gg-pr-total">
           <span class="gg-pr-tl">{x['total']}</span>
           <span class="gg-pr-tv"><b class="gg-pr-mes">{din(tot)}</b> <small>{x['al_mes']}</small></span>
           <span class="gg-pr-ta"><b class="gg-pr-anio">{din(tot * 12)}</b> {x['al_anio']}</span>
         </div>
-        <div class="gg-pr-gg" aria-live="polite">
+        <div class="gg-pr-gg" aria-live="polite"><div class="gg-pr-gg-in">
           <span class="gg-pr-gg-l"><span class="gg-pr-logo">gastro<b>goan</b><i>.</i></span> {x['todo']}</span>
           <span class="gg-pr-gg-v"><b>{din(PRECIO)}</b> {x['al_anio']}</span>
-        </div>
+          <span class="gg-pr-gg-ah">{x['ahorras']} <b class="gg-pr-ah-v">{din(tot * 12 - PRECIO)}</b> {x['al_anio']}</span>
+        </div></div>
       </div>
       <button type="button" class="gg-pr-pide">{x['pide']} <span class="gg-flecha" aria-hidden="true">→</span></button>
     </div>
 
-    <div class="gg-pr-sol gg-app-rev" style="--d:.1s">
-      <span class="gg-met-et">{x['et2']}</span>
-      <div class="gg-pr-caja">
-        <div class="gg-pr-antes">
-          <span class="gg-pr-k">{x['antes']}</span>
-          <span class="gg-pr-big"><s class="gg-pr-antes-v">{din(tot * 12)}</s><small> {x['al_anio']}</small></span>
-          <span class="gg-pr-s">{x['antes_s']}</span>
-        </div>
-        <div class="gg-pr-con">
-          <span class="gg-pr-k">{x['con']}</span>
-          <span class="gg-pr-big">{din(PRECIO)}<small> {x['al_anio']}</small></span>
-          <span class="gg-pr-s">{x['con_s']}</span>
-        </div>
-        <div class="gg-pr-ahorro">
-          <span class="gg-pr-k">{x['ahorras']}</span>
-          <span class="gg-pr-ah"><b class="gg-pr-ah-v">{din(tot * 12 - PRECIO)}</b> {x['cada_anio']}</span>
-        </div>
-      </div>
-    </div>
     <script>
     /* La cuenta: delegación en document y todo se lee del DOM vivo (la página se monta dos veces). */
     (function(){{
@@ -120,6 +103,8 @@ def cuenta(l):
           var c=li.querySelector('input[type=checkbox]'), v=li.querySelector('input[type=number]');
           /* el empaquetador de la página se come el atributo «checked»: se marca aquí la primera vez */
           if(c.dataset.on){{c.checked=true;delete c.dataset.on}}
+          /* ni «value»: el montador de la página lo reponía en cada tecla y no se podía cambiar la cifra */
+          if(v.dataset.v!=null){{v.value=v.dataset.v;delete v.dataset.v}}
           var x=Math.max(0,Math.min(9999,parseFloat(v.value)||0));
           li.classList.toggle('off',!c.checked); v.disabled=!c.checked;
           if(c.checked){{tot+=x;n++}}
@@ -127,7 +112,7 @@ def cuenta(l):
         var precio=+s.dataset.precio, ah=Math.max(0,tot*12-precio);
         s.querySelector('.gg-pr-num').textContent=n;
         cuenta(s.querySelector('.gg-pr-mes'),tot,s); cuenta(s.querySelector('.gg-pr-anio'),tot*12,s);
-        cuenta(s.querySelector('.gg-pr-antes-v'),tot*12,s); cuenta(s.querySelector('.gg-pr-ah-v'),ah,s);
+        cuenta(s.querySelector('.gg-pr-ah-v'),ah,s);
         s.classList.toggle('sin-ahorro',ah<=0);
       }}
       function modo(m){{
@@ -138,6 +123,11 @@ def cuenta(l):
       }}
       document.addEventListener('input',function(e){{if(e.target.closest&&e.target.closest('.gg-pr-fila'))recalcula()}});
       document.addEventListener('change',function(e){{if(e.target.closest&&e.target.closest('.gg-pr-fila'))recalcula()}});
+      /* Tocar una fila con la cuenta ya pasada a GastroGoan la devuelve a «Lo que pagas hoy» para poder cambiarla */
+      document.addEventListener('pointerdown',function(e){{
+        var f=e.target.closest&&e.target.closest('.gg-pr-fila'), r=f&&f.closest('.gg-pr-recibo');
+        if(r&&r.dataset.modo==='gg') modo('hoy');
+      }});
       document.addEventListener('click',function(e){{
         var b=e.target.closest&&e.target.closest('.gg-pr-sw-b'); if(b){{modo(b.dataset.modo);return}}
         if(e.target.closest&&e.target.closest('.gg-pr-pide')) modo('gg');
@@ -197,6 +187,9 @@ CSS = '''
 .gg-pr-u{font-size:11px;letter-spacing:.06em;color:#716C65;white-space:nowrap}
 .gg-pr-fila.off .gg-pr-n,.gg-pr-fila.off .gg-pr-imp{opacity:.4}
 .gg-pr-inc{position:absolute;right:0;top:50%;transform:translateY(-50%) rotate(-4deg) scale(.6);opacity:0;padding:4px 10px;border:1.5px solid #4A5D4E;border-radius:2px;color:#4A5D4E;background:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
+.gg-pr-pista{margin:10px 0 0;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#4A5D4E;transition:opacity .3s}
+[data-modo="gg"] .gg-pr-pista{opacity:0}
+.gg-pr-imp input{border-style:dashed;border-color:#C9C2B6}
 .gg-pr-total{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:2px 12px;padding-top:16px}
 .gg-pr-tl{font-weight:700;font-size:15px}
 .gg-pr-tv{justify-self:end;font-size:clamp(24px,3vw,30px);font-weight:700;letter-spacing:-.02em;color:#1C1A17;position:relative}
@@ -204,13 +197,17 @@ CSS = '''
 .gg-pr-ta{grid-column:1/-1;justify-self:end;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#716C65}
 .gg-pr-ta b{color:#1C1A17;font-weight:600}
 .gg-pr-gg{display:grid;grid-template-rows:0fr;opacity:0;margin-top:0;transition:grid-template-rows .5s cubic-bezier(.65,0,.35,1),opacity .4s,margin-top .5s}
-.gg-pr-gg>*{overflow:hidden}
-.gg-pr-gg{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;background:#4A5D4E;color:#FAF8F4;border-radius:2px;padding:0 16px}
+.gg-pr-gg>*{overflow:hidden;min-height:0}
+.gg-pr-gg-in{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px}
+.gg-pr-gg{background:#4A5D4E;color:#FAF8F4;border-radius:2px;padding:0 16px}
 .gg-pr-gg-l{font-size:14px}
 .gg-pr-logo{font-size:15px;letter-spacing:-.02em;margin-right:6px}
 .gg-pr-logo b{font-weight:600}
 .gg-pr-logo i{font-style:normal;color:#C5D6BF}
 .gg-pr-gg-v{font-size:13px;white-space:nowrap}
+.gg-pr-gg-ah{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid rgba(250,248,244,.25);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#E4EBE2}
+.gg-pr-gg-ah b{font-family:'Schibsted Grotesk',sans-serif;font-size:clamp(24px,3vw,30px);letter-spacing:-.02em;text-transform:none;color:#FAF8F4;margin-left:auto}
+.gg-pr.sin-ahorro .gg-pr-gg-ah{display:none}
 .gg-pr-gg-v b{font-size:22px;letter-spacing:-.02em}
 .gg-pr-pide{align-self:center;display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 22px;border:0;border-radius:3px;background:#1C1A17;color:#FAF8F4;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:background .25s,transform .25s,opacity .3s}
 .gg-pr-pide:hover,.gg-pr-pide:focus-visible{background:#4A5D4E;transform:translateY(-2px)}
@@ -245,10 +242,6 @@ CSS = '''
 .gg-pr-ah{font-size:clamp(20px,2.6vw,28px);letter-spacing:-.02em}
 .gg-pr-ah b{font-weight:700}
 .gg-pr.sin-ahorro .gg-pr-ahorro{background:#716C65}
-@media (min-width:1000px){
-  .gg-pr{grid-template-columns:minmax(0,1fr) minmax(0,560px);column-gap:clamp(40px,5vw,72px);align-items:center;justify-items:stretch}
-  .gg-pr-cab{align-items:flex-start;text-align:left}
-  .gg-pr-sol{grid-column:1/-1;justify-self:center}
 }
 @media (max-width:620px){.gg-pr-caja{grid-template-columns:1fr}.gg-pr-antes{border-right:0;border-bottom:1px solid #E7E2D9}}
 @media (max-width:400px){.gg-pr-imp input{width:58px}.gg-pr-u{display:none}.gg-pr-sw-b{font-size:11px;letter-spacing:.04em}}

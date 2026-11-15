@@ -109,6 +109,9 @@ H = [
  ('offline', 'siempre', 0, {'es': ('Sigue sin internet', 'Si se cae la conexión, el servicio no para. Y tus datos viven en tu propia nube.'),
                             'ca': ('Continua sense internet', 'Si cau la connexió, el servei no s’atura. I les teves dades viuen al teu propi núvol.'),
                             'en': ('Works offline', 'If the connection drops, service keeps going. And your data lives in your own cloud.')}),
+ ('idiomas', 'siempre', 0, {'es': ('En tres idiomas', 'La app y tu web de reservas y pedidos, en castellano, catalán e inglés. Cada uno la usa en el suyo.'),
+                            'ca': ('En tres idiomes', "L'app i la teva web de reserves i comandes, en castellà, català i anglès. Cadascú la fa servir en el seu."),
+                            'en': ('In three languages', 'The app and your booking and ordering site, in Spanish, Catalan and English. Everyone uses their own.')}),
 ]
 
 
@@ -221,7 +224,8 @@ CSS = '''
 .gg-in-chip.on{background:#4A5D4E;border-color:#4A5D4E;color:#FAF8F4}
 .gg-in-chip.on span{color:#C5D6BF}
 .gg-in-chip:focus-visible{outline:2px solid #4A5D4E;outline-offset:2px}
-.gg-in-grid{width:100%;max-width:1160px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));grid-auto-flow:dense;gap:14px}
+/* 21 herramientas = 7 filas de 3 (pedido del dueño): tres columnas fijas desde tablet */
+.gg-in-grid{width:100%;max-width:1080px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:dense;gap:14px}
 .gg-in-card{position:relative;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:22px 22px 18px;background:#fff;border:1px solid #E7E2D9;border-radius:3px;overflow:hidden;transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,border-color .35s}
 .gg-in-card::before{content:"";position:absolute;left:0;top:0;height:3px;width:0;background:#4A5D4E;transition:width .5s cubic-bezier(.65,0,.35,1)}
 .gg-in-grid{perspective:1200px}
@@ -276,8 +280,10 @@ CSS = '''
 }
 /* Móvil (norma «lo denso se pliega»): dos por fila con icono y título; un toque abre la frase.
    La abierta ocupa la fila entera. */
+@media (max-width:760px) and (min-width:561px){.gg-in-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gg-in-card:last-child{grid-column:1/-1}}
 @media (max-width:560px){
   .gg-in-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .gg-in-card:last-child:not(.abierta){grid-column:1/-1}
   .gg-in-chip{padding:0 12px;letter-spacing:.06em}
   .gg-in-card{padding:16px 14px 14px;gap:8px;cursor:pointer}
   .gg-in-card:not(.abierta) .gg-in-d,.gg-in-card:not(.abierta) .gg-in-z{display:none}
