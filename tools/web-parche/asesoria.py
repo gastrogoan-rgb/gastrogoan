@@ -30,7 +30,14 @@ CSS = '''<style data-gg="asesoria">
 @media (max-width:480px){.gg-sobre-foto{width:50px;height:50px;box-shadow:0 0 0 3px #FAF8F4,0 0 0 4px #C9D3CB}.gg-firma{gap:11px}.gg-cita{font-size:clamp(12px,3.55vw,14.5px);line-height:1.95}.gg-marca{padding:2px 5px 3px}}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  @keyframes gg-entra-foto{0%{opacity:0;transform:scale(.5) rotate(-12deg)}100%{opacity:1;transform:none}}
   .gg-sobre-foto{animation:gg-flotar 3.6s ease-in-out infinite}
+  /* Con JS: la miniatura entra con un giro y luego flota; el verde de la cita se «pinta» de
+     izquierda a derecha, como un rotulador, cuando la firma aparece. */
+  .gg-js .gg-firma .gg-sobre-foto{opacity:0}
+  .gg-js .gg-firma.gg-vis .gg-sobre-foto{animation:gg-entra-foto .6s cubic-bezier(.2,.9,.25,1.2) .35s both,gg-flotar 3.6s ease-in-out 1s infinite}
+  .gg-js .gg-marca{background:linear-gradient(#4A5D4E,#4A5D4E) 0 0/0% 100% no-repeat;color:#1C1A17;transition:background-size .9s cubic-bezier(.65,0,.35,1) .55s,color .35s ease .95s}
+  .gg-js .gg-firma.gg-vis .gg-marca{background-size:100% 100%;color:#FAF8F4}
 }
 </style>'''
 
@@ -51,13 +58,13 @@ def sobre(sec, l):
     ps = re.findall(r'<p[^>]*>(.*?)</p>', sec, re.S)
     m = re.search(r'((?:Si |If )[^.]*[.!?])\s*$', ps[0], re.S)
     cita = m.group(1) if m else ''
-    texto = ''.join(f'<p style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;">{p}</p>' for p in BIO[l])
-    return f'''<section class="aseso-sobre" style="padding:clamp(40px,5.5vw,72px) clamp(24px,6vw,64px);border-bottom:1px solid #E7E2D9;">
+    texto = ''.join(f'<p class="gg-rev" style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;--d:{0.16 + k * 0.08:.2f}s">{p}</p>' for k, p in enumerate(BIO[l]))
+    return f'''<section class="aseso-sobre gg-anim" style="padding:clamp(40px,5.5vw,72px) clamp(24px,6vw,64px);border-bottom:1px solid #E7E2D9;">
     <div class="gg-sobre-txt">
-      <span class="gg-sobre-et">{et}</span>
-      <h2 style="margin:0;font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-0.02em;">{nombre}</h2>
+      <span class="gg-sobre-et gg-rev">{et}</span>
+      <h2 class="gg-rev" style="margin:0;font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-0.02em;--d:.08s">{nombre}</h2>
       {texto}
-      <div class="gg-firma">
+      <div class="gg-firma gg-rev" style="--d:.3s">
         <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"></figure>
         {f'<blockquote class="gg-cita gg-cita-{l}"><span class="gg-marca">{cita}</span></blockquote>' if cita else ''}
       </div>
