@@ -90,7 +90,7 @@ T = {
             llevas='Te llevas', items=['El Libro de marca de tu negocio', 'Un plan de acción para cada área', 'El informe de cierre: antes y después, con tus cifras'],
             precio='950', pre='', suf=' €', iva='+ IVA', prog='Programa completo · 2 días + 1 mes',
             mant='Después, si quieres, seguimos: mantenimiento por 75 € + IVA al mes.',
-            gancho='Dentro de un mes puedes seguir igual.', gancho2='O tener otro negocio.',
+            gancho='Un mes trabajando juntos.', gancho2='Un plan que te queda para siempre.',
             btn='Quiero mi Plan 360º', dudas='Antes, tengo dudas',
             msg='Hola Marcos, quiero el Plan 360º para mi local.', msg_areas=' Me reconozco en: {a}.',
             msg_dudas='Hola Marcos, tengo algunas dudas sobre el Plan 360º.'),
@@ -107,7 +107,7 @@ T = {
             llevas='T’endús', items=['El Llibre de marca del teu negoci', 'Un pla d’acció per a cada àrea', 'L’informe de tancament: abans i després, amb les teves xifres'],
             precio='950', pre='', suf=' €', iva='+ IVA', prog='Programa complet · 2 dies + 1 mes',
             mant='Després, si vols, continuem: manteniment per 75 € + IVA al mes.',
-            gancho='D’aquí a un mes pots continuar igual.', gancho2='O tenir un altre negoci.',
+            gancho='Un mes treballant junts.', gancho2='Un pla que et queda per sempre.',
             btn='Vull el meu Pla 360º', dudas='Abans, tinc dubtes',
             msg='Hola Marcos, vull el Pla 360º per al meu local.', msg_areas=' M’hi reconec en: {a}.',
             msg_dudas='Hola Marcos, tinc alguns dubtes sobre el Pla 360º.'),
@@ -124,7 +124,7 @@ T = {
             llevas='You get', items=['Your business’s Brand book', 'An action plan for each area', 'The closing report: before and after, with your figures'],
             precio='950', pre='€', suf='', iva='+ VAT', prog='Full programme · 2 days + 1 month',
             mant='Afterwards, if you want, we carry on: maintenance for €75 + VAT a month.',
-            gancho='A month from now you can be exactly where you are.', gancho2='Or running a different business.',
+            gancho='One month working together.', gancho2='A plan you keep for good.',
             btn='I want my 360º Plan', dudas='I have questions first',
             msg='Hi Marcos, I want the 360º Plan for my venue.', msg_areas=' I recognise myself in: {a}.',
             msg_dudas='Hi Marcos, I have a few questions about the 360º Plan.'),
@@ -198,7 +198,6 @@ def plan(l):
         <span class="gg-pl-cifra"><b>{x['pre']}{x['precio']}{x['suf']}</b> <small>{x['iva']}</small></span>
         <p class="gg-pl-gancho">{x['gancho']}<br><span class="gg-pl-subr">{x['gancho2']}</span></p>
         <a class="gg-pl-btn" data-wa="1" href="{wa(x['msg'])}" target="_blank" rel="noopener">{WAICON}{x['btn']}<span class="gg-flecha" aria-hidden="true">→</span></a>
-        <a class="gg-pl-dudas" href="{wa(x['msg_dudas'])}" target="_blank" rel="noopener">{x['dudas']}</a>
         <p class="gg-pl-mant">{x['mant']}</p>
       </div>
     </div>
@@ -344,7 +343,7 @@ CSS = '''
 .gg-pl-llevas ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .gg-pl-llevas li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.45;color:#1C1A17}
 .gg-pl-llevas .gg-gl-ok{width:20px;height:20px;color:#4A5D4E}
-.gg-pl-precio{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:clamp(20px,2.6vw,30px);background:#1C1A17;color:#FAF8F4;border-radius:3px;overflow:hidden}
+.gg-pl-precio{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;padding:clamp(20px,2.6vw,30px);background:#1C1A17;color:#FAF8F4;border-radius:3px;overflow:hidden}
 .gg-pl-precio::after{content:"";position:absolute;right:-30%;top:-30%;width:70%;aspect-ratio:1;background:radial-gradient(closest-side,rgba(126,155,132,.22),transparent);pointer-events:none}
 .gg-pl-precio .gg-gn-k{color:#7E9B84}
 .gg-pl-cifra{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
