@@ -7,7 +7,11 @@ oliva, esquinas rectas, grano de papel y luz cálida, y tamaños que se ajustan
 solos al ancho. El contenido va en el HTML (se ve y se indexa sin JavaScript).
 Uso: python3 tools/web-parche/inicio.py
 """
-import html, os
+import html, os, json
+from urllib.parse import quote
+# Contacto con el mensaje ya escrito (revisión final, 16/11)
+MSGI = {'es': 'Hola, me gustaría información sobre GastroGoan.', 'ca': "Hola, m'agradaria informació sobre GastroGoan.", 'en': "Hi, I'd like some information about GastroGoan."}
+ASUI = {'es': 'Información sobre GastroGoan', 'ca': 'Informació sobre GastroGoan', 'en': 'Information about GastroGoan'}
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..', 'deploy', 'web', 'public')
 BASE = 'https://gastrogoan.com'
 
@@ -159,7 +163,8 @@ def pagina(l):
 <meta property="og:type" content="website"><meta property="og:site_name" content="GastroGoan">
 <meta property="og:title" content="{e(t['title'])}"><meta property="og:description" content="{e(t['desc'])}">
 <meta property="og:url" content="{URLS[l]}"><meta property="og:locale" content="{t['loc']}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{BASE}/img/og-gastrogoan.jpg"><meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{json.dumps({"@context":"https://schema.org","@type":"Organization","name":"GastroGoan","url":BASE+"/","logo":BASE+"/favicon.png","telephone":"+34622390245","sameAs":["https://instagram.com/gastrogoan"],"founder":{"@type":"Person","name":"Marcos González"}}, ensure_ascii=False)}</script>
 <style>{CSS}</style>
 </head>
 <body>
@@ -177,7 +182,7 @@ def pagina(l):
 </main>
 <footer class="pie">
   <span class="logo">gastro<b>goan</b><i>.</i></span>
-  <nav aria-label="Contacto"><a href="https://wa.me/34622390245" rel="noopener">{t['wa']} · +34 622 390 245</a><a href="mailto:gastrogoan@gmail.com">gastrogoan@gmail.com</a><a href="https://instagram.com/gastrogoan" rel="noopener">@gastrogoan</a></nav>
+  <nav aria-label="Contacto"><a href="https://wa.me/34622390245?text={quote(MSGI[l])}" target="_blank" rel="noopener">{t['wa']} · +34 622 390 245</a><a href="mailto:gastrogoan@gmail.com?subject={quote(ASUI[l])}&amp;body={quote(MSGI[l])}">gastrogoan@gmail.com</a><a href="https://ig.me/m/gastrogoan" target="_blank" rel="noopener">@gastrogoan</a></nav>
 </footer>
 </body>
 </html>
