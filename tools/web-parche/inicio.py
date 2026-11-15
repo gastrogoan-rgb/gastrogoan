@@ -115,7 +115,10 @@ main{flex:1}
   }
 }
 /* pie */
-.pie{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 24px;background:var(--tinta);color:#B7AFA0;padding:clamp(16px,2.4vw,26px) var(--lado);font:400 12px/1.4 var(--mono);letter-spacing:.04em}
+.pie{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 24px;background:var(--tinta);color:#B7AFA0;padding:clamp(16px,2.4vw,26px) var(--lado) calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px));font:400 12px/1.4 var(--mono);letter-spacing:.04em}
+/* Tablet y móvil: la barra del sistema (p. ej. la de tareas de Samsung) puede tapar el final de la página.
+   Aire bajo el pie para que siempre se pueda subir y leer entero (lo vio el dueño, 16/11). */
+@media (pointer:coarse){.pie{padding-bottom:calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px) + 64px)}}
 .pie .logo{color:var(--crema)}.pie .logo i{color:var(--oliva-claro)}
 .pie nav{display:flex;flex-wrap:wrap;gap:0 18px}
 .pie nav a{display:inline-flex;align-items:center;min-height:44px;transition:color .25s}
@@ -153,7 +156,7 @@ def pagina(l):
 <html lang="{t['lang']}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{e(t['title'])}</title>
 <meta name="description" content="{e(t['desc'])}">
 <meta name="theme-color" content="#1C1A17">
