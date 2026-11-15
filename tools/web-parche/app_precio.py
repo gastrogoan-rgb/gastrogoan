@@ -9,17 +9,17 @@ textos al día y sin promesas que la app no cumpla (pedido del dueño, 16/11):
 
 STRIPE = 'https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03'
 T = {
- 'es': dict(et='Precio', h2='Sin trucos.<br> Sin letra pequeña.',
+ 'es': dict(et='Precio', h2='Un precio claro,<br>todo incluido.',
             p='Un precio al año con todo incluido: todas las herramientas y todas las actualizaciones. Recibes tu acceso y una guía para ponerla en marcha en unos 20 minutos.',
             num='240', pre='', suf=' €', iva='+ IVA / año', linea='Pago anual · Todo incluido · Sin comisiones',
             primer='El primer año: 300 € + IVA.', ahorro='Ahorro con tu cuenta:', ah='3.696 €', ah_s='/año',
             reto='No te lo pienses más.', btn='Comprar ahora', seguro='Pago seguro con Stripe', desde='3.936', sep='.'),
- 'ca': dict(et='Preu', h2='Sense trucs.<br> Sense lletra petita.',
+ 'ca': dict(et='Preu', h2='Un preu clar,<br>tot inclòs.',
             p="Un preu a l'any amb tot inclòs: totes les eines i totes les actualitzacions. Reps el teu accés i una guia per posar-la en marxa en uns 20 minuts.",
             num='240', pre='', suf=' €', iva='+ IVA / any', linea='Pagament anual · Tot inclòs · Sense comissions',
             primer='El primer any: 300 € + IVA.', ahorro='Estalvi amb el teu compte:', ah='3.696 €', ah_s='/any',
             reto="No t'ho pensis més.", btn='Comprar ara', seguro='Pagament segur amb Stripe', desde='3.936', sep='.'),
- 'en': dict(et='Price', h2='No tricks.<br> No small print.',
+ 'en': dict(et='Price', h2='One clear price,<br>everything included.',
             p='One yearly price with everything included: every tool and every update. You get your login and a guide to set it up in about 20 minutes.',
             num='240', pre='€', suf='', iva='+ VAT / year', linea='Annual payment · Everything included · No commissions',
             primer='First year: €300 + VAT.', ahorro='Your saving:', ah='€3,696', ah_s='/year',

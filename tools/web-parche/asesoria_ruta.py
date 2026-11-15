@@ -6,11 +6,11 @@ ha arrancado (clase gg-js)."""
 import re, math, html as H
 
 T = {
- 'es': dict(et='Método 360º', hook='Un método. Seis áreas. <span class="gg-hl">Ningún ángulo muerto.</span>',
+ 'es': dict(et='Método 360º', hook='Miro tu negocio <span class="gg-hl">entero</span>, no solo lo que se ve.',
             areas='Las seis áreas que evalúo', centro='de tu negocio', fases_sub='Cinco fases, de la primera visita al cambio hecho'),
- 'ca': dict(et='Mètode 360º', hook='Un mètode. Sis àrees. <span class="gg-hl">Cap angle mort.</span>',
+ 'ca': dict(et='Mètode 360º', hook='Miro el teu negoci <span class="gg-hl">sencer</span>, no només el que es veu.',
             areas='Les sis àrees que avaluo', centro='del teu negoci', fases_sub='Cinc fases, de la primera visita al canvi fet'),
- 'en': dict(et='The 360º method', hook='One method. Six areas. <span class="gg-hl">No blind spots.</span>',
+ 'en': dict(et='The 360º method', hook='I look at your <span class="gg-hl">whole</span> business, not just what shows.',
             areas='The six areas I evaluate', centro='of your business', fases_sub='Five phases, from the first visit to the change done'),
 }
 

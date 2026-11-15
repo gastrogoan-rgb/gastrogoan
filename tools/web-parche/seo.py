@@ -100,7 +100,7 @@ def bloque(grupo, l):
 def limpia(s):
     s = re.sub(r'<!-- gg-seo -->.*?<!-- /gg-seo -->', '', s, flags=re.S)
     s = re.sub(r'<!-- gg-legal -->.*?<!-- /gg-legal -->', '', s, flags=re.S)
-    s = re.sub(r'<span class="gg-logo-info">(.*?</a>)<details class="gg-info">.*?</details></span>', r'\\1', s, flags=re.S)
+    s = re.sub(r'<span class="gg-logo-info">(.*?</a>)<details class="gg-info">.*?</details></span>', r'\1', s, flags=re.S)
     # Las tipografías ya van dentro de la página: avisar a Google de antemano mandaba la IP del visitante
     # a Google sin necesidad (privacidad, 16/11)
     return re.sub(r'\s*<link rel="preconnect" href="https://fonts\.(?:googleapis|gstatic)\.com"[^>]*>', '', s)
@@ -131,6 +131,9 @@ def procesar(grupo, l):
     t = re.sub(r'<html[^>]*>', f'<html lang="{l}">', t, count=1)
     t = t.replace('</head>', bloque(grupo, l) + '</head>', 1)
     t = legal_pie(t, l)   # «i» con los enlaces legales junto al logo del pie
+    # Los incisos entre rayas largas (« — a, b, c — ») son marca de texto generado: van entre paréntesis (17/11)
+    t = re.sub(r' — ([^—<>]{1,140}?) — ', r' (\1) ', t)
+    t = t.replace(' — para ', ', para ').replace(' — perquè ', ', perquè ').replace(' — so ', ', so ')
     if grupo == 'asesoria':
         t = t.replace('href="https://wa.me/34622390245"', f'href="https://wa.me/34622390245?text={quote(APERTURAS[l])}" target="_blank" rel="noopener"')
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')

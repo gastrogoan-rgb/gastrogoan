@@ -11,7 +11,7 @@ Uso: python3 tools/web-parche/eventos.py
 import re, json, os, subprocess, sys
 from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(__file__))
-import volver, eventos_secciones, eventos_ocasiones
+import volver, eventos_secciones, eventos_ocasiones, eventos_menus
 from asesoria_extras import WA
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'eventos', 'ca': 'ca-esdeveniments', 'en': 'en-events'}
@@ -180,16 +180,12 @@ def procesar(l):
     # 5) Cierre como en Asesoría y App: frase, «Reserva tu fecha» subrayado y WhatsApp/email/Instagram
     i = t.index('<!-- cta'); j = t.index('</section>', i) + len('</section>')
     t = t[:i] + eventos_ocasiones.cierre(t[i:j], l) + t[j:]
-    # menús de ejemplo con más nivel
-    for viejo, nuevo in MENUS_TOP[l]:
-        assert viejo in t, ('menú', l, viejo)
-        t = t.replace(viejo, nuevo)
-    # ancla para «Ver menús»
-    k = t.index('<!-- men'); k = t.index('<section', k)
-    t = t[:k] + '<section id="ev-menus"' + t[k + len('<section'):]
+    # menús de ejemplo: los MISMOS ocho en los tres idiomas, con su ancla para «Ver menús» (17/11)
+    k = t.index('<!-- men'); k = t.index('<section', k); j = t.index('</section>', k) + len('</section>')
+    t = t[:k] + eventos_menus.menus(l) + t[j:]
     # 2) volver
     t = volver.aplicar(t)
-    t = t.replace('</helmet>', CSS.replace('</style>', eventos_secciones.CSS + eventos_ocasiones.CSS + '</style>') + '\n</helmet>', 1)
+    t = t.replace('</helmet>', CSS.replace('</style>', eventos_secciones.CSS + eventos_ocasiones.CSS + eventos_menus.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch)
