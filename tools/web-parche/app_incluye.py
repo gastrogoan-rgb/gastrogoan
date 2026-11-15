@@ -79,9 +79,6 @@ H = [
  ('ia', 'cocina', 1, {'es': ('I+D con inteligencia artificial', 'Crea platos, menús y cartas con tus ingredientes, tus precios y tu estilo. La app calcula el coste de cada propuesta.'),
                       'ca': ('R+D amb intel·ligència artificial', "Crea plats, menús i cartes amb els teus ingredients, els teus preus i el teu estil. L'app calcula el cost de cada proposta."),
                       'en': ('R&D with artificial intelligence', 'Create dishes, set menus and full menus with your ingredients, prices and style. The app costs every proposal.')}),
- ('resultados', 'gestion', 1, {'es': ('Cuenta de resultados de verdad', 'La del gestor: según tu forma jurídica, con impuestos, amortizaciones y lo que te queda de verdad cada mes.'),
-                               'ca': ('Compte de resultats de debò', 'La del gestor: segons la teva forma jurídica, amb impostos, amortitzacions i el que et queda de debò cada mes.'),
-                               'en': ('A real profit & loss', 'Your accountant’s version: by legal form, with taxes, depreciation and what you really keep each month.')}),
  ('tesoreria', 'gestion', 0, {'es': ('Tesorería y previsión', 'El dinero que no es tuyo, los pagos a Hacienda y la caja de los próximos 90 días.'),
                               'ca': ('Tresoreria i previsió', "Els diners que no són teus, els pagaments a Hisenda i la caixa dels propers 90 dies."),
                               'en': ('Cash flow & forecast', 'The money that is not yours, tax payments due and your cash for the next 90 days.')}),
@@ -94,6 +91,9 @@ H = [
  ('panel', 'gestion', 0, {'es': ('Panel de control', 'Punto de equilibrio, ventas, gastos y lo que necesita tu atención hoy, de un vistazo.'),
                           'ca': ('Tauler de control', "Punt d'equilibri, vendes, despeses i el que necessita la teva atenció avui, d'un cop d'ull."),
                           'en': ('Dashboard', 'Break-even, sales, costs and what needs your attention today, at a glance.')}),
+ ('resultados', 'gestion', 1, {'es': ('Cuenta de resultados de verdad', 'La del gestor: según tu forma jurídica, con impuestos, amortizaciones y lo que te queda de verdad cada mes.'),
+                               'ca': ('Compte de resultats de debò', 'La del gestor: segons la teva forma jurídica, amb impostos, amortitzacions i el que et queda de debò cada mes.'),
+                               'en': ('A real profit & loss', 'Your accountant’s version: by legal form, with taxes, depreciation and what you really keep each month.')}),
  ('clientes', 'clientes', 0, {'es': ('Ficha de cada cliente', 'Visitas, gasto, alergias y quién hace tiempo que no viene.'),
                               'ca': ('Fitxa de cada client', 'Visites, despesa, al·lèrgies i qui fa temps que no ve.'),
                               'en': ('Customer profiles', 'Visits, spend, allergies and who has not been back for a while.')}),
@@ -109,9 +109,6 @@ H = [
  ('offline', 'siempre', 0, {'es': ('Sigue sin internet', 'Si se cae la conexión, el servicio no para. Y tus datos viven en tu propia nube.'),
                             'ca': ('Continua sense internet', 'Si cau la connexió, el servei no s’atura. I les teves dades viuen al teu propi núvol.'),
                             'en': ('Works offline', 'If the connection drops, service keeps going. And your data lives in your own cloud.')}),
- ('idiomas', 'siempre', 0, {'es': ('En tres idiomas', 'Castellano, catalán e inglés, para ti, tu equipo y tus clientes.'),
-                            'ca': ('En tres idiomes', 'Castellà, català i anglès, per a tu, el teu equip i els teus clients.'),
-                            'en': ('In three languages', 'Spanish, Catalan and English, for you, your team and your customers.')}),
 ]
 
 
@@ -124,16 +121,11 @@ def incluye(l):
     cards = ''
     for n, (ic, zona, dest, tx) in enumerate(H):
         t, d = tx[l]
-        cards += f'''<article class="gg-in-card{' dest' if dest else ''} gg-app-rev" style="--d:{(n % 6) * 0.06:.2f}s;--f:{(n * 0.37) % 3:.2f}s">
+        cards += f'''<article class="gg-in-card{' osc' if n % 2 == 0 else ''} gg-app-rev" style="--d:{(n % 6) * 0.06:.2f}s;--f:{(n * 0.37) % 3:.2f}s">
           <span class="gg-in-ic">{svg(ic)}</span>
           <h3 class="gg-in-t">{t}</h3>
           <p class="gg-in-d">{d}</p>
         </article>'''
-    # Cinta que corre con los nombres de todo lo que incluye (dos filas, sentidos contrarios)
-    nombres = [tx[l][0] for _, _, _, tx in H]
-    def fila(lista):
-        return ''.join(f'<span>{x}</span><i aria-hidden="true">✦</i>' for x in lista)
-    m1 = fila(nombres[:11]); m2 = fila(nombres[11:] + nombres[:2])
     return f'''<!-- qué incluye: todas las herramientas -->
   <section class="gg-in">
     <div class="gg-in-cab">
@@ -144,10 +136,6 @@ def incluye(l):
         <span class="gg-in-num-t"><span>{c['n']}</span><strong>{c['una']}</strong></span>
       </div>
     </div>
-    <div class="gg-in-cinta" aria-hidden="true">
-      <div class="gg-in-fila"><div>{m1}{m1}</div></div>
-      <div class="gg-in-fila al-reves"><div>{m2}{m2}</div></div>
-    </div>
     <div class="gg-in-grid">{cards}</div>
     <script>
     /* Cifra que cuenta (como un marcador), luz que sigue al ratón por la parrilla y, en móvil,
@@ -156,10 +144,25 @@ def incluye(l):
       if(window.__ggIn) return; window.__ggIn=1;
       var quieto=matchMedia('(prefers-reduced-motion: reduce)').matches;
       document.addEventListener('click',function(e){{
-        var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c||c.classList.contains('dest')) return;
+        var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c) return;
         if(!matchMedia('(max-width:560px)').matches) return;
-        c.classList.toggle('abierta'); c.setAttribute('aria-expanded',c.classList.contains('abierta'));
+        c.classList.toggle('abierta'); c.setAttribute('aria-expanded',c.classList.contains('abierta')); damero();
       }});
+      /* Negro y blanco alternos como un tablero, midiendo dónde cae cada tarjeta: así sale bien en 4, 3 o 2
+         columnas y aunque una tarjeta abierta en móvil ocupe la fila entera (pedido del dueño). */
+      function damero(){{
+        var cs=[].slice.call(document.querySelectorAll('.gg-in-card')); if(!cs.length) return;
+        var fila=-1, top=null, col=0, prev=null;
+        cs.forEach(function(c){{
+          var t=c.offsetTop;
+          if(top===null||Math.abs(t-top)>4){{fila++;top=t;col=0}}
+          var osc=((fila+col)%2===0);
+          if(c.getBoundingClientRect().width>c.parentNode.getBoundingClientRect().width*0.75) osc=!(prev&&prev.classList.contains('osc'));
+          c.classList.toggle('osc',osc); col++; prev=c;
+        }});
+      }}
+      addEventListener('resize',damero);
+      var dj=0, dv=setInterval(function(){{damero();if(++dj>20)clearInterval(dv)}},300);
       document.addEventListener('pointermove',function(e){{
         var c=e.target.closest&&e.target.closest('.gg-in-card'); if(!c||e.pointerType!=='mouse') return;
         var r=c.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
@@ -221,7 +224,7 @@ CSS = '''
 .gg-in-card::before{content:"";position:absolute;left:0;top:0;height:3px;width:0;background:#4A5D4E;transition:width .5s cubic-bezier(.65,0,.35,1)}
 .gg-in-grid{perspective:1200px}
 .gg-in-card{transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));background-image:radial-gradient(260px circle at var(--mx,-999px) var(--my,-999px),rgba(74,93,78,.10),transparent 60%)}
-.gg-in-card.dest{background-image:radial-gradient(300px circle at var(--mx,-999px) var(--my,-999px),rgba(126,155,132,.22),transparent 60%)}
+.gg-in-card.osc{background-image:radial-gradient(300px circle at var(--mx,-999px) var(--my,-999px),rgba(126,155,132,.22),transparent 60%)}
 .gg-in-card:hover{transform:translateY(-4px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));border-color:#C9D3CB;box-shadow:0 22px 40px -26px rgba(28,26,23,.45)}
 .gg-in-card:hover::before{width:100%}
 .gg-in-ic{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#EEF2EC;color:#4A5D4E;transition:background .3s,color .3s,transform .4s cubic-bezier(.2,.9,.25,1.3)}
@@ -231,15 +234,21 @@ CSS = '''
 .gg-in-d{margin:0;flex:1;font-size:14.5px;line-height:1.55;color:#3D3A34;text-wrap:pretty}
 /* (sin zona: el dueño quitó las etiquetas) */
 .gg-in-z{display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
-/* Las destacadas: en tinta, más anchas */
-.gg-in-card.dest{background-color:#1C1A17;border-color:#1C1A17}
-.gg-in-card.dest .gg-in-t{color:#FAF8F4;font-size:clamp(19px,1.9vw,22px)}
-.gg-in-card.dest .gg-in-d{color:#C9C2B6;font-size:15px}
-.gg-in-card.dest .gg-in-z{color:#7E9B84}
-.gg-in-card.dest .gg-in-ic{background:#4A5D4E;color:#FAF8F4}
-.gg-in-card.dest::before{background:#7E9B84}
-.gg-in-card.dest:hover{border-color:#4A5D4E}
-@media (min-width:900px){.gg-in-card.dest{grid-column:span 2}}
+/* Tablero: una en tinta, una en blanco. Al pasar el ratón, la blanca se vuelve verde. */
+.gg-in-card.osc{background-color:#1C1A17;border-color:#1C1A17}
+.gg-in-card.osc .gg-in-t{color:#FAF8F4}
+.gg-in-card.osc .gg-in-d{color:#C9C2B6}
+.gg-in-card.osc .gg-in-ic{background:#4A5D4E;color:#FAF8F4}
+.gg-in-card.osc::before{background:#7E9B84}
+.gg-in-card.osc::after{color:#C9C2B6}
+.gg-in-card.osc:hover{border-color:#4A5D4E}
+.gg-in-card:not(.osc):hover{background-color:#4A5D4E;border-color:#4A5D4E}
+.gg-in-card:not(.osc):hover .gg-in-t{color:#FAF8F4}
+.gg-in-card:not(.osc):hover .gg-in-d{color:#E4EBE2}
+.gg-in-card:not(.osc):hover .gg-in-ic{background:#FAF8F4;color:#4A5D4E}
+.gg-in-card:not(.osc):hover::before{background:#C5D6BF}
+.gg-in-card{transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,border-color .35s,background-color .3s}
+.gg-in-t,.gg-in-d{transition:color .3s}
 .gg-in-card.fuera{display:none}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-in-entra{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
@@ -255,20 +264,23 @@ CSS = '''
   .gg-js .gg-in-num.fin .gg-in-num-t strong::before{transform:scaleX(1)}
   .gg-js .gg-in-num.fin .gg-in-cuenta{animation:gg-in-pop .5s cubic-bezier(.2,.9,.25,1.4)}
   @keyframes gg-in-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+  .gg-js .gg-in-card.gg-app-rev{transform:translateY(34px) scale(.96)}
+  .gg-js .gg-in-card.gg-app-rev.gg-vis{transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))}
+  .gg-js .gg-in-card.gg-app-rev.gg-vis:hover{transform:translateY(-4px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))}
   .gg-in-card.entra{animation:gg-in-entra .45s cubic-bezier(.2,.7,.2,1) var(--e,0s) both}
   .gg-js .gg-in-card.gg-app-rev .gg-in-ic{transform:scale(.4) rotate(-30deg);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.25,1.3) calc(var(--d,0s) + .2s),opacity .3s calc(var(--d,0s) + .2s),background .3s,color .3s}
   .gg-js .gg-in-card.gg-app-rev.gg-vis .gg-in-ic{transform:none;opacity:1}
   .gg-js .gg-in-card.gg-app-rev.gg-vis:hover .gg-in-ic{transform:rotate(-8deg) scale(1.06)}
 }
 /* Móvil (norma «lo denso se pliega»): dos por fila con icono y título; un toque abre la frase.
-   Las destacadas van a lo ancho y abiertas. */
+   La abierta ocupa la fila entera. */
 @media (max-width:560px){
   .gg-in-grid{grid-template-columns:1fr 1fr;gap:10px}
   .gg-in-chip{padding:0 12px;letter-spacing:.06em}
   .gg-in-card{padding:16px 14px 14px;gap:8px;cursor:pointer}
-  .gg-in-card:not(.dest):not(.abierta) .gg-in-d,.gg-in-card:not(.dest):not(.abierta) .gg-in-z{display:none}
-  .gg-in-card.dest,.gg-in-card.abierta{grid-column:1/-1}
-  .gg-in-card:not(.dest)::after{content:"+";position:absolute;right:12px;top:10px;font-family:'IBM Plex Mono',monospace;font-size:18px;color:#716C65;transition:transform .3s}
+  .gg-in-card:not(.abierta) .gg-in-d,.gg-in-card:not(.abierta) .gg-in-z{display:none}
+  .gg-in-card.abierta{grid-column:1/-1}
+  .gg-in-card::after{content:"+";position:absolute;right:12px;top:10px;font-family:'IBM Plex Mono',monospace;font-size:18px;color:#716C65;transition:transform .3s}
   .gg-in-card.abierta::after{transform:rotate(45deg)}
   .gg-in-t{font-size:15px}
   .gg-in-ic{width:40px;height:40px}
