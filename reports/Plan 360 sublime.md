@@ -82,5 +82,60 @@ Pruebas nuevas: abrir dos clientes seguidos; coach borra/inserta tarea mientras 
 
 - **Duración: 4 semanas.** Unificar web, contrato, carta, app, panel y manual con esa cifra (2 días presenciales dentro de las 4 semanas).
 - **El informe de cierre NO lleva la oferta de mantenimiento.** Orden: primero se enseña el informe de cierre; el paso SIGUIENTE (pantalla aparte) es ofrecer el mantenimiento.
+- **LO PRINCIPAL ES AÑADIR Y MULTIPLICAR VALOR** (aclarado por el dueño): funcionalidades y formatos nuevos que de verdad sumen al programa. Quitar es secundario. Ver la sección «Multiplicar el valor» al final.
 - **Quitar lo que ya no sirva**, comprobándolo antes (p. ej. el «borrador en PDF» antiguo del libro de marca, código muerto de presenciales, plantillas duplicadas): asegurarse de que nada lo usa.
 - **Mandato de fondo**: «ultra top» en funcionamiento y utilidades, *absolutamente todo*. No quedarse con lo que hay: entender primero la FUNCIÓN del método (diagnóstico 360 → plan por áreas → implementación acompañada → resultado medible → continuidad) y añadir lo que haga falta para que sirva de verdad trabajando cara a cara con el hostelero. Las fases de arriba son el mínimo, no el techo: al retomarlo, empezar por una pasada de diseño del método (qué necesita el coach en cada momento de la relación) y ampliar el plan con lo que salga.
+
+---
+
+## Multiplicar el valor: funcionalidades y formatos nuevos
+
+La ventaja que no tiene ningún consultor de hostelería: **el Plan 360º vive dentro de la app con la que el negocio trabaja cada día**. Ventas, escandallos, personal, mermas, proveedores, reservas y clientes ya están ahí. Así el diagnóstico, el plan y los resultados se apoyan en datos reales y se miden solos, no en lo que el hostelero recuerda. Todo lo de abajo nace de esa ventaja y no cuesta nada por cliente (la IA solo es opcional, con la clave de quien la use).
+
+### 1. Diagnóstico que impresiona el día 1
+- **Radar 360 del negocio**: una puntuación de 0 a 100 por área. Se calcula con tres fuentes: el cliente misterioso, el cuestionario y los **datos reales de la app** (food cost, coste de personal sobre ventas, ticket medio, rotación de mesas, NPS, mermas, subidas de proveedores, no-shows). Se compara con rangos orientativos del sector, con su fuente, y se repite el día 28 y cada trimestre.
+- **Diagnóstico automático con sus datos**: ingeniería de carta (matriz de popularidad × margen: estrellas, caballos, puzles y perros, sacada de las ventas y del Escandallo), horas y días flojos, peso de cada canal, clientes en riesgo, proveedores que más suben y platos con peor food cost. El coach llega al día 1 sabiendo ya dónde está el dinero.
+- **«Dinero sobre la mesa»**: cada hallazgo se traduce a € al año con los números del propio negocio («tu food cost está 4 puntos por encima del objetivo: 11.800 € al año»).
+- **Encuesta a clientes** (NPS por QR en mesa, que ya existe) y **encuesta anónima al equipo** (clima, por enlace) como parte del diagnóstico.
+- **Fotos anotadas** del recorrido del misterioso, que servirán para el antes y después.
+- **Modo presentación**: el diagnóstico en pantalla grande (TV o tablet) para enseñárselo al dueño y al equipo, una idea por pantalla.
+
+### 2. Un plan que se entiende y se mide solo
+- **Hoja de ruta por área** con semáforo y fechas, imprimible como póster para la oficina o la cocina.
+- **Objetivos SMART enganchados a un dato de la app** (food cost, ticket medio, coste de personal, NPS, mermas, reseñas): se miden solos cada día, sin teclear nada.
+- **Biblioteca de palancas**: acciones tipo por área, cada una con su impacto estimado con SUS números (por ejemplo, «+0,50 € de ticket medio con tus 9.000 tickets = 4.500 €/año»). El coach elige en la mesa y la palanca se convierte en objetivo y tareas.
+- **Simulador «¿y si…?» en la mesa** (reutiliza `peCalcular`): precio, food cost, plantilla, plazas, rotación, días de apertura. Se toca una cifra y se ve el resultado al momento.
+- **Plan de inversiones con retorno**: plazo de recuperación de cada inversión.
+
+### 3. Implementación acompañada (las 4 semanas)
+- **Acta en vivo → tareas con responsable**, y cada tarea sale en el «Mi puesto» de ese empleado. Una tarea sabe dónde se hace en la app: «Ir a Escandallo», «Ir a Fichas», «Ir a Limpieza».
+- **Misión de la semana**, con su progreso y un recordatorio en la campana.
+- **Formación del equipo**: microlecciones (la masterclass ya existe) con un test corto, registro de quién la ha hecho y certificado imprimible.
+- **Recursos que son herramientas vivas**: las plantillas de Recursos abren la pantalla de la app que les corresponde (la del escandallo abre Escandallo, la del APPCC abre Limpieza), en vez de quedarse en texto.
+- **Canal «Coach»** dentro del chat interno, con notas de voz y adjuntos, para hablar coach ↔ negocio sin salir de la app.
+- **Antes y después en fotos** (sala, cámara, carta, pase).
+- **Rediseño de carta asistido**: propuesta de carta nueva con precios, orden y descripciones, a partir de la ingeniería de carta, y se aplica a Oferta con un toque.
+
+### 4. Resultados que se ven cada semana
+- **Marcador semanal automático** frente al Día 1 (ventas, ticket, food cost, personal, NPS, mermas) con su gráfica, y «€ ganados desde que empezamos» acumulado.
+- **Informe semanal listo para WhatsApp** (texto + imagen), para el dueño y para el coach.
+
+### 5. Cierre y continuidad
+- **Informe de cierre en PDF**, tipo libro (radar antes y después, cifras, objetivos, lo implantado, fotos, qué vigilar). **Después**, en pantalla aparte, la oferta de mantenimiento, argumentada con los objetivos que quedaron a medias.
+- **Sello «Plan 360º completado»** para el local (diploma imprimible y pegatina digital para redes) y **caso de éxito** con permiso del cliente, para la web de la Asesoría. Petición de reseña y testimonio.
+- **Revisión trimestral 360**: el radar se repite y se compara.
+- **Alertas al coach** cuando un indicador se desvía (food cost +3 puntos, ventas −15 %, NPS en caída): el coach llama antes de que el dueño lo note. Es el gran argumento del mantenimiento.
+- **Recomendación**: un cliente que recomienda a otro tiene su ventaja; se registra en el panel.
+
+### 6. Herramientas del coach para escalar el negocio
+- **Embudo de clientes** en el panel: contacto → diagnóstico exprés → propuesta → firma → 360 → mantenimiento.
+- **Diagnóstico exprés** (15-20 preguntas, unos 15 minutos) que genera un PDF con el «potencial de mejora en €», para captar clientes en la primera visita. Se puede enlazar desde la web de la Asesoría.
+- **Propuesta comercial y contrato** generados desde el diagnóstico exprés.
+- **Plantilla de programa**, **guiones de cada reunión**, **banco de tareas y palancas por área**, y **modo sesión sin conexión**.
+- **Cartera**: ingresos (360 + mantenimiento), cobros, facturas y CSV para el gestor, clientes por fase y **resultados medios de los clientes** («de media, nuestros clientes ganan X € al mes»): la mejor frase de venta.
+
+### Formatos
+PDF (diagnóstico, plan, informe semanal, informe de cierre, certificados), modo presentación en pantalla, póster imprimible, resumen para WhatsApp, notas de voz, fotos de antes y después, checklists imprimibles y microlecciones.
+
+### Orden al retomarlo
+Primero la Fase 0 (que nada falle). Después, en este orden: diagnóstico con datos reales y el radar (es lo que vende) → objetivos que se miden solos y el marcador semanal → acta en vivo y tareas al equipo → informe de cierre y lo que viene después → herramientas del coach (diagnóstico exprés y embudo) → el resto. Cada bloque, con su prueba y sus capturas.
