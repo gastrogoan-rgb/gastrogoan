@@ -74,25 +74,13 @@ a.logo{display:inline-flex;align-items:center;min-height:44px}
    finísimo de papel (--entry-bg), la lámpara que respira, las gg en su caja blanca flotando, el
    logotipo con sus pesos, la etiqueta mono en verde y la frase con su raya, que llega la última. */
 .hero{position:relative;overflow:hidden;color:#F1EFE9;text-align:center;padding:clamp(36px,6vw,76px) var(--lado);
-  --bh:clamp(26px,4.6vw,50px);--bgap:10px;--bkit:26px;
   background:radial-gradient(ellipse 46% 52% at 50% -8%,rgba(241,232,210,.13),rgba(241,232,210,.04) 45%,transparent 72%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,linear-gradient(180deg,#1C1A17,#24221D)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 60% at 50% 0%,rgba(255,224,170,.09),transparent 70%)}
 .hero>*{position:relative}
-.marca{display:flex;align-items:center;justify-content:center;gap:clamp(12px,1.6vw,18px)}
-.gg{flex:none;box-sizing:border-box;width:calc(var(--bh) + var(--bgap) + var(--bkit));height:calc(var(--bh) + var(--bgap) + var(--bkit));padding:6px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35)}
-.gg img{display:block;width:100%;height:100%;object-fit:contain}
-.marca-txt{display:flex;flex-direction:column;align-items:flex-start;gap:var(--bgap);min-width:0}
-h1{margin:0;white-space:nowrap;font-size:var(--bh);line-height:1;font-weight:400;letter-spacing:-.03em;color:#fff}
+h1{margin:0;white-space:nowrap;font-size:clamp(1.3rem,6.3vw,3.4rem);line-height:1;font-weight:400;letter-spacing:-.03em;color:#fff}
 h1 b{font-weight:600}h1 i{font-style:normal;color:#8FA593}
-.kit{display:inline-flex;align-items:center;height:var(--bkit);padding:0 12px;font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:#C3D4C8;background:rgba(126,155,132,.20);border:1px solid rgba(126,155,132,.55)}
 .sub{display:flex;flex-direction:column;align-items:center;gap:12px;margin:clamp(22px,3vw,34px) auto 0;max-width:34em;font-size:clamp(1rem,.92rem + .4vw,1.2rem);line-height:1.5;color:#F1EFE9;text-wrap:balance}
 .sub::before{content:"";width:28px;height:2px;background:#6F8A74}
-@media (max-width:620px){
-  .hero{--bh:clamp(21px,6.4vw,34px);--bkit:24px}
-  .marca{flex-direction:column}
-  .marca-txt{align-items:center}
-  .gg{width:64px;height:64px}
-}
 /* puertas */
 main{flex:1}
 .pregunta{display:flex;justify-content:center;padding:clamp(18px,2.6vw,28px) var(--lado)}
@@ -133,10 +121,8 @@ main{flex:1}
   @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
   @keyframes gg-lampara{0%,100%{opacity:.55}50%{opacity:1}}
   .hero::before{animation:gg-lampara 8s ease-in-out infinite}
-  .gg{animation:gg-rise .5s .06s cubic-bezier(.2,.7,.2,1) backwards,gg-flotar 3.6s 1.2s ease-in-out infinite}
   .hero h1{animation:gg-rise .55s .12s cubic-bezier(.2,.7,.2,1) backwards}
-  .kit{animation:gg-rise .5s .18s cubic-bezier(.2,.7,.2,1) backwards}
-  .sub{animation:gg-rise .7s .5s cubic-bezier(.2,.7,.2,1) backwards}
+  .sub{animation:gg-rise .7s .3s cubic-bezier(.2,.7,.2,1) backwards}
   .pregunta{animation:gg-rise .6s .6s cubic-bezier(.2,.7,.2,1) backwards}
   .puerta{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
   .puerta:nth-child(1){animation-delay:.68s}.puerta:nth-child(2){animation-delay:.74s}.puerta:nth-child(3){animation-delay:.8s}
@@ -176,13 +162,7 @@ def pagina(l):
   <nav class="idiomas" aria-label="{t['idioma']}">{idi}</nav>
 </header>
 <section class="hero">
-  <div class="marca">
-    <div class="gg"><img src="favicon.png" alt="" width="128" height="128"></div>
-    <div class="marca-txt">
-      <h1>{e(t['h1'])} Gastro<b>Goan</b><i>.</i></h1>
-      <span class="kit">{e(t['kit'])}</span>
-    </div>
-  </div>
+  <h1>{e(t['h1'])} Gastro<b>Goan</b><i>.</i></h1>
   <p class="sub">{e(t['sub'])}</p>
 </section>
 <main>
