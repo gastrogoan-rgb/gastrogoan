@@ -1707,3 +1707,10 @@ El 15/11 se rehízo toda la web comercial de golpe y al dueño **no le gustó en
 - ⚠️ **No volver a rediseñar la web por la noche y en bloque.** Ahora: una página cada vez, el dueño supervisa y aprueba cada cambio antes de publicar.
 - `tools/web/` (generador, `web.css`, `web.js`, `contenido.mjs`) se conserva solo como material por si el dueño quiere recuperar alguna pieza; no se publica.
 - Las páginas antiguas aún enseñan el precio viejo (100 €) y el enlace de pago antiguo (`aFa6oGeSK44jaFw1mvdwc01`); el vigente es `https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03` (300 € + IVA el primer año, 240 € + IVA después). Se corrige con el dueño, página a página.
+
+## Pendiente (16/11): sacar la web de reservas —y más adelante TODO— de las IP de Cloudflare
+
+Conclusión tras hablar con el soporte de Cloudflare y buscar: el bloqueo de LaLiga es **por IP**, no por DNS ni por registrador. En el plan gratuito no hay IP dedicada (solo Enterprise/BYOIP, descartado: pago recurrente). Cambiar de registrador (IONOS…) no sirve; WARP/VPN tampoco (lo tendría que instalar el comensal; una web no puede crear una VPN).
+- **Solución prevista**: VPS con IP propia (Hetzner ~5 €/mes u Oracle Always Free), Caddy con HTTPS, y `reservas.gastrogoan.com` como registro A en **nube gris** (solo DNS) en Cloudflare. Mejor aún, dos servidores en proveedores distintos con dos registros A. Antes de contratar, mirar la IP en `hayahora.futbol` y probar en un sábado de partido. No está garantizado que LaLiga no la bloquee.
+- **Fase 1**: solo `reservagastrogoan.html` + `fonts/` + `sw-reservas.js`. **Fase 2 (pendiente, «en un tiempo X», decisión del dueño)**: migrar TODO (app de gestión, web comercial, panel de admin). Ojo: el Worker de pagos de Stripe vive en Cloudflare y habría que valorar moverlo; Firebase es de Google (no comprobado si se ve afectado). Un solo servidor es punto único de fallo.
+- Aún no se ha contratado nada. Espera la respuesta del amigo informático del dueño.
