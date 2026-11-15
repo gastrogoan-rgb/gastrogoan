@@ -62,8 +62,17 @@ def servicios(sec, l):
     return out
 
 
+DATOS = {
+ 'es': [('Zona', 'Cataluña'), ('Dónde', 'En tu casa, tu local o el espacio que elijas'), ('Comensales', 'De 2 a 50 personas'), ('A medida', 'Cada menú se diseña para tu ocasión')],
+ 'ca': [('Zona', 'Catalunya'), ('On', "A casa teva, al teu local o a l'espai que triïs"), ('Comensals', 'De 2 a 50 persones'), ('A mida', 'Cada menú es dissenya per a la teva ocasió')],
+ 'en': [('Area', 'Catalonia'), ('Where', 'At your home, your venue or the space you choose'), ('Guests', 'From 2 to 50 people'), ('Bespoke', 'Every menu is designed for your occasion')],
+}
 FICHA = {'es': 'Tu evento', 'ca': 'El teu esdeveniment', 'en': 'Your event'}
-ICON_DATO = ['<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.8.4 5 2.8 5 5.8"/>',
+ICON_DATO = ['<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>',
+             '<path d="M4 11l8-6 8 6v9H4z"/><path d="M10 20v-5h4v5"/>',
+             '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.8.4 5 2.8 5 5.8"/>',
+             '<path d="M6 4h11a1 1 0 0 1 1 1v15H8a2 2 0 0 1-2-2z"/><path d="M9 8h6M9 12h5"/>']
+ICON_VIEJO = ['<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.8.4 5 2.8 5 5.8"/>',
              '<path d="M4 11l8-6 8 6v9H4z"/><path d="M10 20v-5h4v5"/>',
              '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>']
 
@@ -94,18 +103,11 @@ def como(sec, l, datos=None):
           <h3>{t}</h3>
           <p>{d}</p>
         </div>''' for k, (n, t, d) in enumerate(pasos))
-    ficha = ''
-    if datos:
-        cols = ''.join(f'''<div class="ev-fi-d" style="--k:{k}">
+    filas = ''.join(f'''<li class="ev-fi-d" style="--k:{k}">
           <span class="ev-fi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{ICON_DATO[k]}</svg></span>
-          <span class="ev-fi-k">{a}</span>
-          <span class="ev-fi-v{' ev-fi-larga' if not c else ''}"{' data-cuenta="1"' if '–' in b else ''}>{b}</span>
-          {f'<span class="ev-fi-n">{c}</span>' if c else ''}
-        </div>''' for k, (a, b, c) in enumerate(datos))
-        ficha = f'''<div class="ev-fi">
-        <span class="ev-fi-t">{FICHA[l]}</span>
-        <div class="ev-fi-cols">{cols}</div>
-      </div>'''
+          <span class="ev-fi-tx"><span class="ev-fi-k">{a}</span><span class="ev-fi-v">{b}</span></span>
+        </li>''' for k, (a, b) in enumerate(DATOS[l]))
+    ficha = f'<ul class="ev-fi">{filas}</ul>'
     return f'''<!-- cómo funciona: los tres pasos se recorren solos -->
   <section class="ev-cm" style="border-bottom:1px solid #E7E2D9;">
     <div class="ev-cm-cab ev-rev">
@@ -139,7 +141,7 @@ def como(sec, l, datos=None):
         var p=v.textContent.split('–'), a=+p[0], b=+p[1]; if(quieto||!b) return; var t0=performance.now();
         (function f(t){{var q=Math.min(1,(t-t0)/1200),e=1-Math.pow(1-q,3);v.textContent=a+'–'+Math.round(a+(b-a)*e);if(q<1&&document.body.contains(v))requestAnimationFrame(f)}})(t0);
       }}
-      addEventListener('scroll',cuenta,{{passive:true}}); setInterval(cuenta,400);
+      
       setInterval(function(){{
         var S=document.querySelector('.ev-cm'); if(!S||quieto||Date.now()<pausa) return;
         var r=S.getBoundingClientRect(); if(r.top>innerHeight*0.6||r.bottom<innerHeight*0.3) return;
@@ -205,35 +207,20 @@ CSS = '''
 .ev-cm-nodo:focus-visible .ev-cm-c{outline:2px solid #4A5D4E;outline-offset:4px}
 .ev-cm-bloque{width:100%;max-width:760px;display:flex;flex-direction:column;filter:drop-shadow(0 26px 40px rgba(28,26,23,.12))}
 .ev-cm-paneles{display:grid;width:100%}
-/* La ficha del evento: un resguardo en tinta que cuelga del panel, con la línea de puntos de cortar */
-.ev-fi{position:relative;background:#1C1A17;color:#FAF8F4;border-radius:0 0 3px 3px;padding:clamp(22px,3vw,30px) clamp(18px,3vw,34px) clamp(20px,3vw,28px)}
-.ev-fi::before{content:"";position:absolute;left:14px;right:14px;top:0;border-top:2px dashed rgba(250,248,244,.35)}
-.ev-fi::after{content:"";position:absolute;left:-9px;right:-9px;top:-9px;height:18px;background:radial-gradient(circle at 9px 9px,#FAF8F4 8px,transparent 8.5px) 0 0/100% 18px no-repeat,radial-gradient(circle at calc(100% - 9px) 9px,#FAF8F4 8px,transparent 8.5px) 0 0/100% 18px no-repeat}
-.ev-fi-t{display:block;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#7E9B84;margin-bottom:16px}
-.ev-fi-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.ev-fi-d{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:0 clamp(8px,2vw,18px)}
-.ev-fi-d+.ev-fi-d{border-left:1px dashed rgba(250,248,244,.18)}
-.ev-fi-ic{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#4A5D4E;color:#FAF8F4;margin-bottom:4px}
-.ev-fi-ic svg{width:20px;height:20px}
-.ev-fi-k{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7E9B84}
-.ev-fi-v{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:600;font-size:clamp(30px,3.6vw,42px);line-height:1;font-variant-numeric:tabular-nums}
-.ev-fi-v.ev-fi-larga{font-size:clamp(17px,1.9vw,22px);line-height:1.2;text-wrap:balance}
-.ev-fi-n{font-size:13.5px;color:#C9C2B6;line-height:1.35}
-@media (max-width:560px){
-  .ev-fi-cols{grid-template-columns:1fr;gap:0}
-  .ev-fi-d{display:grid;grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:14px;row-gap:2px;align-items:center;text-align:left;padding:14px 0}
-  .ev-fi-d+.ev-fi-d{border-left:0;border-top:1px dashed rgba(250,248,244,.18)}
-  .ev-fi-ic{grid-row:1/4;margin:0}
-  .ev-fi-v{font-size:28px}
-  .ev-fi-v.ev-fi-larga{font-size:19px}
-  .ev-fi-t{margin-bottom:4px}
-}
+.ev-fi{list-style:none;margin:0;padding:6px clamp(18px,3vw,34px) 10px;background:#fff;border:1px solid #E7E2D9;border-top:1px dashed #D5CFC4;border-radius:0 0 3px 3px;display:grid;grid-template-columns:1fr}
+.ev-fi-d{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:16px;padding:14px 0}
+.ev-fi-d+.ev-fi-d{border-top:1px solid #F1EFE9}
+.ev-fi-ic{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#EEF2EC;color:#4A5D4E;transition:background .3s,color .3s,transform .4s cubic-bezier(.2,.9,.25,1.3)}
+.ev-fi-ic svg{width:21px;height:21px}
+.ev-fi-d:hover .ev-fi-ic{background:#4A5D4E;color:#FAF8F4;transform:rotate(-8deg) scale(1.06)}
+.ev-fi-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ev-fi-k{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
+.ev-fi-v{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:600;font-size:clamp(20px,2.2vw,24px);line-height:1.2;color:#1C1A17;text-wrap:balance}
 @media (prefers-reduced-motion:no-preference){
-  .ev-js .ev-fi-d{opacity:0;transform:translateY(14px);transition:opacity .6s calc(.35s + var(--k)*.15s),transform .6s cubic-bezier(.2,.7,.2,1) calc(.35s + var(--k)*.15s)}
+  .ev-js .ev-fi-d{opacity:0;transform:translateX(-14px);transition:opacity .6s calc(.3s + var(--k)*.12s),transform .6s cubic-bezier(.2,.7,.2,1) calc(.3s + var(--k)*.12s)}
   .ev-js .ev-cm-bloque.ev-vis .ev-fi-d{opacity:1;transform:none}
-  .ev-js .ev-fi::before{transform:scaleX(0);transition:transform 1s cubic-bezier(.65,0,.35,1) .2s}
-  .ev-js .ev-cm-bloque.ev-vis .ev-fi::before{transform:scaleX(1)}
 }
+.ev-cm-paneles{display:grid;width:100%}
 .ev-cm-panel{grid-area:1/1;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:clamp(22px,3vw,32px) clamp(18px,3vw,36px);background:#fff;border:1px solid #E7E2D9;border-bottom:0;border-radius:3px 3px 0 0;opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .5s,transform .5s cubic-bezier(.2,.7,.2,1),visibility 0s .5s}
 .ev-cm-panel.on{opacity:1;visibility:visible;transform:none;transition:opacity .5s .1s,transform .5s cubic-bezier(.2,.7,.2,1) .1s,visibility 0s}
 .ev-cm-pn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
