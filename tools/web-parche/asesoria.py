@@ -9,7 +9,7 @@ Uso: python3 tools/web-parche/asesoria.py
 """
 import re, json, os, subprocess, sys
 sys.path.insert(0, os.path.dirname(__file__))
-import asesoria_ruta, asesoria_extras, asesoria_dif, asesoria_test, asesoria_cta, volver
+import asesoria_ruta, asesoria_plan, asesoria_extras, asesoria_dif, asesoria_test, asesoria_cta, volver
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'asesoria', 'ca': 'ca-assessoria', 'en': 'en-advisory'}
 BASE_GIT = 'a152bda'
@@ -86,6 +86,9 @@ def procesar(l):
     # 3) «La ruta 360º» → «Método 360º» (centrado, visual y con movimiento)
     i = t.index('<!-- ruta 360 -->'); j = t.index('<!--', i + 10)  # el siguiente bloque (extras / extres)
     t = t[:i] + asesoria_ruta.ruta(t[i:j], l) + t[j:]
+    # 3b) Lo que gana el hostelero (las seis áreas y en global) y el Plan 360º con su precio, justo después
+    i = t.index('<!--', t.index('<!-- ruta 360 -->') + 10)
+    t = t[:i] + asesoria_plan.plan(l) + t[i:]
     # 4) «Extras que suman» → la carta de extras
     i = t.index('<!-- extras -->') if '<!-- extras -->' in t else t.index('<!-- extres -->'); j = t.index('<!--', i + 10)
     t = t[:i] + asesoria_extras.extras(t[i:j], l) + t[j:]
@@ -98,7 +101,7 @@ def procesar(l):
     # 7) Cierre: titular en dos líneas con «Hablemos» subrayado y burbujas de WhatsApp y email
     i = t.index('<!-- cta -->'); j = t.index('</section>', i) + len('</section>')
     t = t[:i] + asesoria_cta.cta(t[i:j], l) + t[j:]
-    t = t.replace('</helmet>', CSS.replace('</style>', asesoria_ruta.CSS + asesoria_extras.CSS + asesoria_dif.CSS + asesoria_test.CSS + asesoria_cta.CSS + '</style>') + '\n</helmet>', 1)
+    t = t.replace('</helmet>', CSS.replace('</style>', asesoria_ruta.CSS + asesoria_plan.CSS + asesoria_extras.CSS + asesoria_dif.CSS + asesoria_test.CSS + asesoria_cta.CSS + '</style>') + '\n</helmet>', 1)
     t = volver.aplicar(t)   # 8) «Volver» como botón visible
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
