@@ -1701,20 +1701,9 @@ En los partidos algunos operadores españoles bloquean IP de Cloudflare y caen w
 - **Descartado**: VPN dentro de la app (una web no puede crearla), plan de Route 53 con failover DNS (de pago, y el dominio está registrado en Cloudflare, que obliga a su DNS), «apagar el proxy» (Pages no tiene IP propia).
 - **Pendiente, sin decidir**: probar en un partido real si la dirección `*.pages.dev` de cada proyecto se libra del bloqueo (gratis) y, si no, un servidor con IP propia (Oracle Always Free, o uno de pago). Apuntar día, hora y operador de cada fallo.
 
-## Web comercial renovada con el diseño de la app (15/11, `tools/web/`, `test/web-comercial.mjs`)
+## Web comercial: REVERTIDO el rediseño (16/11), se trabaja página a página con el dueño
 
-Pedido del dueño: «trasladar el diseño nuevo de la app a TODA la web, a cualquier botón y rincón, y revisar los textos para una oratoria perfecta».
-- ⚠️ **Los `.html` de `deploy/web/public` (13: portada, App, Asesoría y Le Petit Comité × es/ca/en, más `gracias.html`) SE GENERAN** con `node tools/web/generar.mjs`
-  desde `tools/web/contenido.mjs` (textos en los tres idiomas), `web.css` y `web.js` (que el generador copia). **No editarlos a mano.** Antes eran ficheros empaquetados de 570 KB que
-  cargaban React desde `unpkg.com` (una CDN en Cloudflare: un bloqueo de LaLiga la dejaba en BLANCO); ahora pesan ~20 KB y no cargan nada de fuera.
-- Sistema de diseño = el de la app: crema `#FAF8F4`, tinta `#1C1A17`, oliva `#4A5D4E`, Schibsted Grotesk + IBM Plex Mono (fuentes en `deploy/web/public/fonts`), esquinas de 3-4 px, botones de caja
-  blanca fina (el primario en tinta que pasa a oliva), rótulos en mono mayúsculas, zonas oscuras con la luz cálida y el grano de la entrada de la app, `gg-rise` al entrar, todo lo que se mueve
-  dentro de «sin reducir movimiento». Sin JavaScript la página se ve entera (las pestañas se ocultan y las capturas se apilan).
-- **Precio y flujo reales**: 300 € + IVA el primer año (240 € licencia + 60 € puesta a punto), 240 € + IVA desde el segundo; enlace de pago `https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03`
-  (constante `STRIPE` en `contenido.mjs`); el cliente paga → `gracias.html` → reserva su reunión de configuración (`CALENDARIO` en `generar.mjs`, Google Calendar de GastroGoan).
-- **Textos corregidos** por no ser ciertos: «recibes la app en tu email en 24 h» (ahora hay reunión), «sin nube obligatoria» (cada negocio usa SU Firebase gratuito) y «ahorro de 3.600 €» (ahora
-  «orientativo», más de 3.000 €). **Los testimonios de la antigua Asesoría se QUITARON**: no constaba que fueran reales y un testimonio inventado es un riesgo legal; se vuelven a poner cuando haya
-  uno verificable.
-- Capturas de la app (`img/app-*.webp`, `img/hero-*.webp`) sacadas del negocio de demostración (`dist/ggburger.json`) con Chromium; se recortan sin la barra superior (allí sale un aviso de nube propio del entorno de pruebas).
-- Prueba `test/web-comercial.mjs` (P202): páginas, SEO (título, descripción, canónica, hreflang), cero cargas externas, enlaces, enlace de pago vigente, 7 anchos sin desbordes, 44 px, letra ≥ 11 px,
-  pestañas con teclado, sin JS, reducir movimiento, barra de compra del móvil.
+El 15/11 se rehízo toda la web comercial de golpe y al dueño **no le gustó en absoluto**: «es mejor cuando te superviso el trabajo». Se restauró `deploy/web/public` tal cual estaba (commit `a152bda`: las páginas empaquetadas de antes + `gracias.html`) y se quitó `test/web-comercial.mjs` de la batería.
+- ⚠️ **No volver a rediseñar la web por la noche y en bloque.** Ahora: una página cada vez, el dueño supervisa y aprueba cada cambio antes de publicar.
+- `tools/web/` (generador, `web.css`, `web.js`, `contenido.mjs`) se conserva solo como material por si el dueño quiere recuperar alguna pieza; no se publica.
+- Las páginas antiguas aún enseñan el precio viejo (100 €) y el enlace de pago antiguo (`aFa6oGeSK44jaFw1mvdwc01`); el vigente es `https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03` (300 € + IVA el primer año, 240 € + IVA después). Se corrige con el dueño, página a página.
