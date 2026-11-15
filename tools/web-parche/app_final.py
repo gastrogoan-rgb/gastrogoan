@@ -156,7 +156,7 @@ footer>div{align-items:center;row-gap:0}
 .gg-fin-c:hover,.gg-fin-c:focus-visible{background:#4A5D4E;border-color:#4A5D4E;transform:translateY(-2px)}
 .gg-fin-c:focus-visible{outline:2px solid #7E9B84;outline-offset:3px}
 .gg-fin-pie{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8A857C}
-@media (max-width:600px){.gg-fin-h{font-size:5.4vw}.gg-fin-l2{font-size:1.45em}.gg-fin-btn{width:100%;max-width:340px;min-width:0}.gg-fin-cont{max-width:340px}}
+@media (max-width:600px){.gg-fin-h{font-size:7.2vw}.gg-fin-l2{font-size:1.2em}.gg-fin-btn{width:100%;max-width:340px;min-width:0}.gg-fin-cont{max-width:340px}}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-fin-brillo{0%,70%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
   @keyframes gg-fin-empuja{0%,80%,100%{transform:none}88%{transform:translateX(6px)}}

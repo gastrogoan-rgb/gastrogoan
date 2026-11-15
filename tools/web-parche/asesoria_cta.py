@@ -60,7 +60,7 @@ CSS = '''
 .gg-bur:hover .gg-flecha{transform:translateX(5px)}
 .gg-bur:focus-visible{outline:2px solid #7E9B84;outline-offset:3px}
 @media (min-width:601px){.gg-cta-bur{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:640px}.gg-bur{min-width:0;padding:0 14px}}
-@media (max-width:600px){.gg-cta-h{font-size:5.4vw}.gg-cta-l2{font-size:1.6em}.gg-cta-bur{flex-direction:column;align-items:stretch;width:100%;max-width:340px;box-sizing:border-box}.gg-bur{width:100%;min-width:0;box-sizing:border-box}}
+@media (max-width:600px){.gg-cta-h{font-size:7.2vw}.gg-cta-l2{font-size:1.3em}.gg-cta-bur{flex-direction:column;align-items:stretch;width:100%;max-width:340px;box-sizing:border-box}.gg-bur{width:100%;min-width:0;box-sizing:border-box}}
 @media (prefers-reduced-motion:no-preference){
   /* Llamada a la acción: un brillo cruza el botón principal cada pocos segundos y la flecha empuja */
   @keyframes gg-brillo{0%,72%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
