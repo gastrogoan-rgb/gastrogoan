@@ -89,6 +89,10 @@ def procesar(l):
     # 3b) Lo que gana el hostelero (las seis áreas y en global) y el Plan 360º con su precio, justo después
     i = t.index('<!--', t.index('<!-- ruta 360 -->') + 10)
     t = t[:i] + asesoria_plan.plan(l) + t[i:]
+    # «Aperturas» deja la ruta y pasa al final del bloque del plan, debajo del precio (pedido del dueño)
+    k = t.index('<div class="gg-aperturas gg-rev">'); ap = asesoria_ruta.div_equilibrado(t, k)
+    t = t[:k] + t[k + len(ap):]
+    t = t.replace('<!--aperturas-->', ap, 1)
     # 4) «Extras que suman» → la carta de extras
     i = t.index('<!-- extras -->') if '<!-- extras -->' in t else t.index('<!-- extres -->'); j = t.index('<!--', i + 10)
     t = t[:i] + asesoria_extras.extras(t[i:j], l) + t[j:]

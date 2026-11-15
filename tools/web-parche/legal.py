@@ -16,9 +16,9 @@ e = lambda x: html.escape(x, quote=True)
 # ---- Datos del titular: los que faltan salen como [PENDIENTE] ----
 PEND = '[PENDIENTE]'
 DATOS = dict(
-    titular=PEND,          # nombre y apellidos (autónomo) o razón social (sociedad)
-    nif=PEND,
-    domicilio=PEND,        # dirección completa
+    titular='Marcos González Anguiano',   # autónomo; Le Petit Comité es del mismo titular
+    nif='47668150Y',
+    domicilio='Plaza Marià Manent, 13, 08720 Vilafranca del Penedès (Barcelona)',
     registro='',           # solo si es sociedad: «Inscrita en el Registro Mercantil de …, tomo …, folio …, hoja …»
     email='gastrogoan@gmail.com',
     tel='+34 622 390 245',
@@ -103,7 +103,7 @@ def textos(l):
    'La App la usan negocios: se contrata como empresario o profesional, para la actividad de tu negocio.']),
   ('Precio y pago', [
    'El primer año: <b>300 € + IVA</b>. Cada renovación anual siguiente: <b>240 € + IVA</b>. El IVA aplicable es el vigente en la fecha de la factura.',
-   'El pago se hace en línea con tarjeta a través de Stripe. Recibirás la factura en el email que indiques.',
+   'El pago se hace en línea con tarjeta a través de Stripe, como una suscripción anual. Recibirás la factura en el email que indiques.',
    '<b>No están incluidos</b>: el equipo (tablet, móvil, impresora, cajón), las comisiones de Stripe u otros servicios que el negocio contrate para cobrar a sus clientes, ni los costes de Google si el uso de tu proyecto de Firebase supera su plan gratuito.']),
   ('Cómo se contrata', [
    'El contrato se celebra por medios electrónicos y es válido sin firma (art. 23 de la Ley 34/2002). Al pagar, marcas la casilla de aceptación de estas condiciones; Stripe guarda la fecha y hora de esa aceptación. Estas condiciones quedan publicadas en esta dirección y puedes guardarlas o imprimirlas.',
@@ -112,7 +112,7 @@ def textos(l):
    'Para usar la App necesitas un navegador actualizado y conexión a internet para sincronizar entre aparatos (sin conexión, la App sigue funcionando y sube los cambios al volver).',
    'Es obligatorio crear un <b>proyecto gratuito de Firebase en tu cuenta de Google</b>: ahí se guardan tus datos. La guía explica cómo, paso a paso.']),
   ('Duración, renovación y baja', [
-   'La licencia dura un año desde el pago. Antes del vencimiento te avisaremos para renovar; si no renuevas, la licencia termina en su fecha. No se devuelve la parte no consumida del año en curso.',
+   'La licencia dura un año y <b>se renueva automáticamente cada año</b> como suscripción de Stripe: en cada aniversario se cobran 240 € + IVA a la tarjeta con la que pagaste. Puedes cancelar la renovación cuando quieras escribiéndonos antes de esa fecha; la licencia seguirá activa hasta el final del año ya pagado.', 'Los pagos <b>no son reembolsables</b>: no se devuelve el importe pagado ni la parte no usada del año en curso.',
    'Tus datos son tuyos y siguen en tu proyecto de Firebase cuando la licencia termina; puedes exportarlos desde la App (por ejemplo, el paquete para el gestor) mientras esté activa.']),
   ('Uso correcto y suspensión', [
    'La licencia es personal del negocio, no exclusiva e intransferible. No se puede copiar, revender, ceder ni intentar sortear los controles de licencia de la App. En caso de impago o de un uso así podremos suspender o revocar la licencia, avisando antes cuando sea posible.']),
@@ -172,7 +172,7 @@ def textos(l):
    'L’App la fan servir negocis: es contracta com a empresari o professional, per a l’activitat del teu negoci.']),
   ('Preu i pagament', [
    'El primer any: <b>300 € + IVA</b>. Cada renovació anual següent: <b>240 € + IVA</b>. L’IVA aplicable és el vigent en la data de la factura.',
-   'El pagament es fa en línia amb targeta a través de Stripe. Rebràs la factura al correu que indiquis.',
+   'El pagament es fa en línia amb targeta a través de Stripe, com una subscripció anual. Rebràs la factura al correu que indiquis.',
    '<b>No hi són inclosos</b>: l’equip (tauleta, mòbil, impressora, calaix), les comissions de Stripe o d’altres serveis que el negoci contracti per cobrar als seus clients, ni els costos de Google si l’ús del teu projecte de Firebase supera el pla gratuït.']),
   ('Com es contracta', [
    'El contracte se celebra per mitjans electrònics i és vàlid sense signatura (art. 23 de la Llei 34/2002). En pagar, marques la casella d’acceptació d’aquestes condicions; Stripe guarda la data i l’hora d’aquesta acceptació. Aquestes condicions queden publicades en aquesta adreça i les pots desar o imprimir.',
@@ -181,7 +181,7 @@ def textos(l):
    'Per fer servir l’App necessites un navegador actualitzat i connexió a internet per sincronitzar entre aparells (sense connexió, l’App continua funcionant i puja els canvis en tornar).',
    'És obligatori crear un <b>projecte gratuït de Firebase al teu compte de Google</b>: s’hi guarden les teves dades. La guia explica com fer-ho, pas a pas.']),
   ('Durada, renovació i baixa', [
-   'La llicència dura un any des del pagament. Abans del venciment t’avisarem per renovar; si no renoves, la llicència acaba en la seva data. No es retorna la part no consumida de l’any en curs.',
+   'La llicència dura un any i <b>es renova automàticament cada any</b> com a subscripció d’Stripe: a cada aniversari es cobren 240 € + IVA a la targeta amb què vas pagar. Pots cancel·lar la renovació quan vulguis escrivint-nos abans d’aquesta data; la llicència continuarà activa fins al final de l’any ja pagat.', 'Els pagaments <b>no són reemborsables</b>: no es retorna l’import pagat ni la part no utilitzada de l’any en curs.',
    'Les teves dades són teves i continuen al teu projecte de Firebase quan la llicència acaba; les pots exportar des de l’App (per exemple, el paquet per al gestor) mentre estigui activa.']),
   ('Ús correcte i suspensió', [
    'La llicència és personal del negoci, no exclusiva i intransferible. No es pot copiar, revendre, cedir ni intentar eludir els controls de llicència de l’App. En cas d’impagament o d’un ús així podrem suspendre o revocar la llicència, avisant abans quan sigui possible.']),
@@ -240,7 +240,7 @@ def textos(l):
    'The App is for businesses: it is bought as a business or professional, for your business activity.']),
   ('Price and payment', [
    'First year: <b>€300 + VAT</b>. Each following annual renewal: <b>€240 + VAT</b>. VAT is charged at the rate in force on the invoice date.',
-   'Payment is made online by card through Stripe. You will receive the invoice at the email address you provide.',
+   'Payment is made online by card through Stripe, as an annual subscription. You will receive the invoice at the email address you provide.',
    '<b>Not included</b>: hardware (tablet, phone, printer, cash drawer), Stripe fees or other services the business uses to charge its own customers, or Google charges if your Firebase project goes beyond its free plan.']),
   ('How the contract is made', [
    'The contract is concluded electronically and is valid without a signature (Art. 23, Spanish Law 34/2002). When paying, you tick the box accepting these terms; Stripe records the date and time of that acceptance. These terms remain published at this address and you can save or print them.',
@@ -249,7 +249,7 @@ def textos(l):
    'To use the App you need an up-to-date browser and an internet connection to sync between devices (offline, the App keeps working and uploads changes when the connection returns).',
    'You must create a <b>free Firebase project in your Google account</b>: that is where your data is stored. The guide explains how, step by step.']),
   ('Term, renewal and cancellation', [
-   'The licence lasts one year from payment. Before it expires we will remind you to renew; if you do not renew, the licence ends on that date. The unused part of the current year is not refunded.',
+   'The licence lasts one year and <b>renews automatically every year</b> as a Stripe subscription: on each anniversary €240 + VAT is charged to the card you paid with. You can cancel the renewal at any time by writing to us before that date; the licence stays active until the end of the year already paid.', 'Payments are <b>non-refundable</b>: neither the amount paid nor the unused part of the current year is refunded.',
    'Your data is yours and remains in your Firebase project when the licence ends; you can export it from the App (for example, the accountant package) while it is active.']),
   ('Proper use and suspension', [
    'The licence belongs to the business and is non-exclusive and non-transferable. It may not be copied, resold, assigned, or used to get around the App’s licence controls. In case of non-payment or such use we may suspend or revoke the licence, giving notice beforehand where possible.']),

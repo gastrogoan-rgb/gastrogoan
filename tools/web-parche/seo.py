@@ -105,7 +105,7 @@ def limpia(s):
     return re.sub(r'\s*<link rel="preconnect" href="https://fonts\.(?:googleapis|gstatic)\.com"[^>]*>', '', s)
 
 
-LEGAL_CSS = ('.gg-legal{display:flex;flex-wrap:wrap;justify-content:center;gap:0 18px;padding:14px clamp(20px,6vw,64px) calc(14px + env(safe-area-inset-bottom,0px));'
+LEGAL_CSS = ('.gg-legal{display:flex!important;flex-wrap:wrap!important;justify-content:center;gap:0 18px;padding:14px clamp(20px,6vw,64px) calc(14px + env(safe-area-inset-bottom,0px));'
              "border-top:1px solid #E7E2D9;background:#FAF8F4;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em}"
              '.gg-legal a,.gg-legal span{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap;color:#716C65;text-decoration:none}.gg-legal a:hover{color:#4A5D4E;text-decoration:underline}'
              '@media (pointer:coarse){.gg-legal{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px) + 72px)}}')

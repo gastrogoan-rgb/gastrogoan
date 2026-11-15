@@ -51,7 +51,7 @@ def ruta(sec, l):
           <div class="gg-fase-card gg-rev" style="--d:{0.1 + i * 0.12:.2f}s"><span class="gg-fase-et">{et}</span><h4>{ti}</h4><p>{tx}</p></div>
         </li>'''
     return f'''<!-- ruta 360 -->
-  <section class="gg-metodo gg-anim" style="border-bottom:1px solid #E7E2D9;">
+  <section class="gg-metodo gg-anim">
     <header class="gg-met-cab">
       <span class="gg-met-et gg-rev">{t['et']}</span>
       <h2 class="gg-met-hook gg-rev" style="--d:.08s">{t['hook']}</h2>
