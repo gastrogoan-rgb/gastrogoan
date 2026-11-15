@@ -14,43 +14,52 @@ BASE_GIT = 'a152bda'
 ALT = {'es': 'Retrato ilustrado de Marcos González', 'ca': 'Retrat il·lustrat de Marcos González', 'en': 'Illustrated portrait of Marcos González'}
 
 CSS = '''<style data-gg="asesoria">
-.gg-sobre{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:clamp(28px,5vw,72px);align-items:center;max-width:1040px;isolation:isolate}
-.gg-sobre-foto{position:relative;margin:0;aspect-ratio:431/580;background:#F1EFE9;border:1px solid #E7E2D9}
-.gg-sobre-foto::before{content:"";position:absolute;inset:14px -14px -14px 14px;border:1px solid #4A5D4E;z-index:-1}
-.gg-sobre-foto img{position:absolute;inset:6% 6% 0;width:88%;height:94%;object-fit:contain;object-position:bottom}
-.gg-sobre-foto figcaption{position:absolute;left:0;bottom:-34px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#716C65}
-.gg-sobre-txt{display:flex;flex-direction:column;gap:16px;max-width:600px}
+.gg-sobre{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(28px,5vw,64px);align-items:center;max-width:980px}
+/* Retrato en un círculo con el borde verde de la marca y SIN fondo: la imagen es transparente
+   y se ve el crema de la página detrás. */
+.gg-sobre-foto{margin:0;width:clamp(200px,22vw,260px);aspect-ratio:1;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 8px #FAF8F4,0 0 0 9px #C9D3CB}
+.gg-sobre-foto img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 8%}
+.gg-sobre-txt{display:flex;flex-direction:column;gap:14px;max-width:600px}
 .gg-sobre-et{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
 .gg-sobre-et::before{content:"";width:28px;height:2px;background:#4A5D4E}
-.gg-cita{margin:6px 0;padding:2px 0 2px 18px;border-left:3px solid #4A5D4E;font-size:clamp(19px,1.1rem + .6vw,24px);line-height:1.35;font-weight:600;letter-spacing:-.015em;color:#1C1A17;text-wrap:balance}
+.gg-cita{margin:8px 0 0;padding:2px 0 2px 18px;border-left:3px solid #4A5D4E;font-size:clamp(19px,1.1rem + .6vw,24px);line-height:1.35;font-weight:600;letter-spacing:-.015em;color:#1C1A17;text-wrap:balance}
 @media (max-width:720px){
-  .gg-sobre{grid-template-columns:1fr;justify-items:center;gap:68px}
-  .gg-sobre-foto{width:min(240px,64vw)}
+  .gg-sobre{grid-template-columns:1fr;justify-items:center;gap:32px}
+  .gg-sobre-foto{width:min(220px,60vw)}
   .gg-sobre-txt{max-width:none;width:100%}
 }
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-  .gg-sobre-foto img{animation:gg-flotar 3.6s ease-in-out infinite}
+  .gg-sobre-foto{animation:gg-flotar 3.6s ease-in-out infinite}
 }
 </style>'''
+
+# Lo que cuenta «Sobre mí»: quién es, su formación y sus valores (pedido del dueño, 16/11); el
+# método ya se explica en «La ruta 360º». Debajo, solo la cita.
+BIO = {
+ 'es': ['Ocho años de formación en las mejores escuelas de hostelería de España y trayectoria en restaurantes de renombre. Especializado en gestión de empresa: números, equipos y procesos que hacen que un local funcione y gane dinero.',
+        'Trabajo desde tres valores: honestidad para decir las cosas como son, exigencia con el oficio y cercanía con quien lleva el negocio.'],
+ 'ca': ["Vuit anys de formació a les millors escoles d'hostaleria d'Espanya i trajectòria en restaurants de renom. Especialitzat en gestió d'empresa: números, equips i processos que fan que un local funcioni i guanyi diners.",
+        "Treballo des de tres valors: honestedat per dir les coses com són, exigència amb l'ofici i proximitat amb qui porta el negoci."],
+ 'en': ["Eight years of training at Spain's best hospitality schools and experience in renowned restaurants. Specialised in business management: the numbers, teams and processes that make a venue work and make money.",
+        'I work from three values: honesty to say things as they are, high standards for the craft, and closeness to the people who run the business.'],
+}
 
 def sobre(sec, l):
     et = re.search(r'<span[^>]*>([^<]+)</span>', sec).group(1)
     nombre = re.search(r'<h2[^>]*>([^<]+)</h2>', sec).group(1)
     ps = re.findall(r'<p[^>]*>(.*?)</p>', sec, re.S)
-    # La última frase del primer párrafo («Si buscas…, no soy tu asesor») pasa a ser la cita.
-    m = re.match(r'(.*[.!?])\s+((?:Si |If )[^.]*[.!?])\s*$', ps[0], re.S)
-    p1, cita = (m.group(1), m.group(2)) if m else (ps[0], '')
-    resto = ''.join(f'<p style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;">{p}</p>' for p in ps[1:])
-    return f'''<section class="aseso-sobre" style="padding:clamp(40px,5.5vw,76px) clamp(24px,6vw,64px) clamp(56px,6.5vw,92px);border-bottom:1px solid #E7E2D9;">
+    m = re.search(r'((?:Si |If )[^.]*[.!?])\s*$', ps[0], re.S)
+    cita = m.group(1) if m else ''
+    texto = ''.join(f'<p style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;">{p}</p>' for p in BIO[l])
+    return f'''<section class="aseso-sobre" style="padding:clamp(40px,5.5vw,76px) clamp(24px,6vw,64px);border-bottom:1px solid #E7E2D9;">
     <div class="gg-sobre">
-      <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"><figcaption>{nombre} · GastroGoan</figcaption></figure>
+      <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"></figure>
       <div class="gg-sobre-txt">
         <span class="gg-sobre-et">{et}</span>
         <h2 style="margin:0;font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-0.02em;">{nombre}</h2>
-        <p style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;">{p1}</p>
+        {texto}
         {f'<blockquote class="gg-cita">{cita}</blockquote>' if cita else ''}
-        {resto}
       </div>
     </div>
   </section>'''
