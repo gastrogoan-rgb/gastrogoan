@@ -9,6 +9,9 @@ from asesoria_extras import WA
 MAIL = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M3.5 6.5h17v11h-17z M3.8 7l8.2 6.2L20.2 7"/></svg>')
 ETQ_WA = {'es': 'WhatsApp', 'ca': 'WhatsApp', 'en': 'WhatsApp'}
 ETQ_MAIL = {'es': 'Email', 'ca': 'Correu', 'en': 'Email'}
+# Instagram: ig.me/m/<usuario> abre directamente el chat privado (en la app si está instalada)
+IG = ('<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="12" cy="12" r="4"/></g><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor"/></svg>')
+ETQ_IG = {'es': 'Instagram', 'ca': 'Instagram', 'en': 'Instagram'}
 # Mensaje ya escrito al pulsar (pedido del dueño): el cliente solo tiene que enviarlo
 MSG = {'es': 'Hola Marcos, me gustaría hablar de mi local.',
        'ca': "Hola Marcos, m'agradaria parlar del meu local.",
@@ -26,9 +29,11 @@ def cta(sec, l):
     sec = re.sub(r'<p style="[^"]*">.*?</p>', '', sec, count=1, flags=re.S)   # fuera la frase: titular y botones
     wa = re.search(r'href="(https://wa\.me/[^"?]*)', sec).group(1) + '?text=' + quote(MSG[l])
     mail = re.search(r'href="(mailto:[^"?]*)', sec).group(1) + '?subject=' + quote(ASUNTO[l]) + '&body=' + quote(MSG[l])
+    ig = 'https://ig.me/m/' + re.search(r'instagram\.com/([A-Za-z0-9_.]+)', sec).group(1)
     burbujas = f'''<div class="gg-cta-bur gg-rev" style="--d:.35s">
       <a class="gg-bur gg-bur-1" href="{wa}" target="_blank" rel="noopener">{WA}<span>{ETQ_WA[l]}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
       <a class="gg-bur gg-bur-2" href="{mail}">{MAIL}<span>{ETQ_MAIL[l]}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
+      <a class="gg-bur gg-bur-2" href="{ig}" target="_blank" rel="noopener">{IG}<span>{ETQ_IG[l]}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
     </div>'''
     i = sec.index('<div style="display:flex;gap:28px;')
     j = sec.index('</div>', i) + len('</div>')
@@ -46,13 +51,14 @@ CSS = '''
 .gg-cta-pt{color:#7E9B84}
 /* Botones como los de la página (rectos, 3 px, mono en mayúsculas); el de WhatsApp es el principal */
 .gg-cta-bur{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:clamp(8px,2vw,18px)}
-.gg-bur{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;min-width:190px;padding:0 24px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;transition:background .25s,color .25s,border-color .25s,transform .25s,box-shadow .25s}
+.gg-bur{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:50px;min-width:180px;padding:0 24px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;transition:background .25s,color .25s,border-color .25s,transform .25s,box-shadow .25s}
 .gg-bur svg{width:18px;height:18px;flex:none}
 .gg-bur-1{background:#FAF8F4;color:#1C1A17;border:1px solid #FAF8F4}
 .gg-bur-2{background:transparent;color:#FAF8F4;border:1px solid rgba(250,248,244,.35)}
 .gg-bur:hover,.gg-bur:focus-visible{background:#4A5D4E;border-color:#4A5D4E;color:#FAF8F4;transform:translateY(-2px);box-shadow:0 16px 30px -16px rgba(0,0,0,.8)}
 .gg-bur:hover .gg-flecha{transform:translateX(5px)}
 .gg-bur:focus-visible{outline:2px solid #7E9B84;outline-offset:3px}
+@media (min-width:601px){.gg-cta-bur{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:640px}.gg-bur{min-width:0;padding:0 14px}}
 @media (max-width:600px){.gg-cta-h{font-size:5.4vw}.gg-cta-l2{font-size:1.6em}.gg-cta-bur{flex-direction:column;align-items:stretch;width:100%;max-width:340px;box-sizing:border-box}.gg-bur{width:100%;min-width:0;box-sizing:border-box}}
 @media (prefers-reduced-motion:no-preference){
   /* Llamada a la acción: un brillo cruza el botón principal cada pocos segundos y la flecha empuja */
