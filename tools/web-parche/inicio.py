@@ -93,16 +93,22 @@ main{flex:1}
 /* el mono en mayúsculas ES parte de la tipografía de GastroGoan: también en las descripciones */
 .puerta .n{font:400 12px/1 var(--mono);letter-spacing:.1em;color:var(--muted);transition:color .25s}
 .puerta h3{margin:0;font-size:clamp(1.6rem,1.05rem + 2vw,2.5rem);line-height:1.1;font-weight:600;letter-spacing:-.035em;justify-self:start;padding-bottom:3px;background:linear-gradient(var(--oliva),var(--oliva)) 0 100%/0 2px no-repeat;transition:background-size .45s var(--ease)}
-.puerta p{grid-column:2;margin:0;font:400 12px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#3D3A34;max-width:60ch}
+.puerta p{grid-column:2;margin:0;font:400 12px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#3D3A34}
 .puerta .fl{grid-column:3;grid-row:1;font-size:clamp(1.3rem,1rem + 1vw,1.8rem);color:var(--muted);transition:transform .38s var(--ease),color .25s}
 .puerta:hover h3,.puerta:focus-visible h3{background-size:100% 2px}
 .puerta:hover .fl,.puerta:focus-visible .fl{transform:translateX(9px);color:var(--oliva)}
 .puerta:hover .n,.puerta:focus-visible .n{color:var(--oliva)}
 /* En pantalla ancha la frase va a la derecha del título: se acaba el hueco vacío de la fila */
-@media (min-width:900px){
+@media (min-width:1100px){
+  /* Las tres filas comparten columnas (subgrid): la columna del título mide lo que el título más
+     largo y la descripción usa todo lo demás, así cabe en una línea siempre que se pueda. */
   .puerta{grid-template-columns:auto minmax(0,1fr) minmax(0,1.15fr) auto;align-items:center}
   .puerta p{grid-column:3;grid-row:1;justify-self:start}
   .puerta .fl{grid-column:4}
+  @supports (grid-template-columns:subgrid){
+    .puertas{display:grid;grid-template-columns:auto max-content minmax(0,1fr) auto}
+    .puerta{grid-column:1/-1;grid-template-columns:subgrid}
+  }
 }
 /* pie */
 .pie{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 24px;background:var(--tinta);color:#B7AFA0;padding:clamp(16px,2.4vw,26px) var(--lado);font:400 12px/1.4 var(--mono);letter-spacing:.04em}
