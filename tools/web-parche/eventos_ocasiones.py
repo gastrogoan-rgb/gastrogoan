@@ -165,11 +165,11 @@ CSS = '''
 
 # ---------- Cierre (como en Asesoría y App, con la letra de Le Petit Comité) ----------
 FIN = {
- 'es': dict(l1='Tu próxima mesa empieza con un mensaje.', l2='Reserva tu fecha', msg='Hola, quiero reservar una fecha con Le Petit Comité.',
+ 'es': dict(l1='Tu próxima experiencia empieza aquí.', l2='Reserva tu fecha', msg='Hola, quiero reservar una fecha con Le Petit Comité.',
             asunto='Reservar una fecha', wa='WhatsApp', mail='Email', ig='Instagram', pie='Propuesta en 48 horas · Sin compromiso'),
- 'ca': dict(l1='La teva propera taula comença amb un missatge.', l2='Reserva la teva data', msg='Hola, vull reservar una data amb Le Petit Comité.',
+ 'ca': dict(l1='La teva propera experiència comença aquí.', l2='Reserva la teva data', msg='Hola, vull reservar una data amb Le Petit Comité.',
             asunto='Reservar una data', wa='WhatsApp', mail='Correu', ig='Instagram', pie='Proposta en 48 hores · Sense compromís'),
- 'en': dict(l1='Your next table starts with a message.', l2='Book your date', msg="Hi, I'd like to book a date with Le Petit Comité.",
+ 'en': dict(l1='Your next experience starts here.', l2='Book your date', msg="Hi, I'd like to book a date with Le Petit Comité.",
             asunto='Booking a date', wa='WhatsApp', mail='Email', ig='Instagram', pie='Proposal in 48 hours · No commitment'),
 }
 MAIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M3.5 6.5h17v11h-17z M3.8 7l8.2 6.2L20.2 7"/></svg>'
