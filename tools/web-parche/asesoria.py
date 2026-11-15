@@ -14,27 +14,19 @@ BASE_GIT = 'a152bda'
 ALT = {'es': 'Retrato ilustrado de Marcos González', 'ca': 'Retrat il·lustrat de Marcos González', 'en': 'Illustrated portrait of Marcos González'}
 
 CSS = '''<style data-gg="asesoria">
-.gg-sobre{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(28px,5vw,64px);align-items:center;max-width:980px}
-/* Retrato en un círculo con el borde verde de la marca y SIN fondo: la imagen es transparente
-   y se ve el crema de la página detrás. */
-.gg-sobre-foto{margin:0 0 0 9px;width:clamp(150px,14vw,172px);aspect-ratio:1;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 8px #FAF8F4,0 0 0 9px #C9D3CB}
-.gg-sobre-foto img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 8%}
-.gg-sobre-txt{display:flex;flex-direction:column;gap:14px;max-width:600px}
+/* «Sobre mí»: el texto y, debajo, una firma: la foto en miniatura (círculo con borde verde) y al
+   lado la cita en cursiva subrayada en verde. Igual en cualquier pantalla. */
+.gg-sobre-txt{display:flex;flex-direction:column;gap:14px;max-width:640px}
 .gg-sobre-et{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
 .gg-sobre-et::before{content:"";width:28px;height:2px;background:#4A5D4E}
-.gg-sobre-izq{display:flex;flex-direction:column;align-items:flex-start;gap:16px;width:clamp(312px,28vw,330px)}
-.gg-cita{margin:0;padding:2px 0 2px 14px;border-left:2px solid #4A5D4E;font-size:14.5px;line-height:1.45;font-weight:400;font-style:italic;letter-spacing:0;color:#3D3A34;text-wrap:balance;max-width:100%}
-@media (max-width:720px){
-  .gg-sobre{grid-template-columns:1fr;justify-items:center;gap:32px}
-  .gg-sobre-foto{width:min(220px,60vw)}
-  .gg-sobre-izq{width:min(320px,100%);align-items:center;order:2}
-  .gg-sobre-txt{order:1}
-  .gg-cita{font-size:14px}
-  .gg-sobre-foto{margin:0}
-  .gg-sobre-txt{max-width:none;width:100%}
-}
+.gg-firma{display:flex;align-items:center;gap:16px;margin-top:10px}
+.gg-sobre-foto{flex:none;margin:0;width:68px;height:68px;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 4px #FAF8F4,0 0 0 5px #C9D3CB}
+.gg-sobre-foto img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 6%}
+.gg-cita{margin:0;font-size:15.5px;line-height:1.7;font-weight:400;font-style:italic;color:#1C1A17;text-wrap:balance;
+  text-decoration:underline;text-decoration-color:#4A5D4E;text-decoration-thickness:2px;text-underline-offset:5px;text-decoration-skip-ink:none}
+@media (max-width:420px){.gg-sobre-foto{width:58px;height:58px}.gg-cita{font-size:14.5px}.gg-firma{gap:13px}}
 @media (prefers-reduced-motion:no-preference){
-  @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   .gg-sobre-foto{animation:gg-flotar 3.6s ease-in-out infinite}
 }
 </style>'''
@@ -57,16 +49,14 @@ def sobre(sec, l):
     m = re.search(r'((?:Si |If )[^.]*[.!?])\s*$', ps[0], re.S)
     cita = m.group(1) if m else ''
     texto = ''.join(f'<p style="margin:0;font-size:16px;line-height:1.65;color:#3D3A34;text-wrap:pretty;">{p}</p>' for p in BIO[l])
-    return f'''<section class="aseso-sobre" style="padding:clamp(40px,5.5vw,76px) clamp(24px,6vw,64px);border-bottom:1px solid #E7E2D9;">
-    <div class="gg-sobre">
-      <div class="gg-sobre-izq">
+    return f'''<section class="aseso-sobre" style="padding:clamp(40px,5.5vw,72px) clamp(24px,6vw,64px);border-bottom:1px solid #E7E2D9;">
+    <div class="gg-sobre-txt">
+      <span class="gg-sobre-et">{et}</span>
+      <h2 style="margin:0;font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-0.02em;">{nombre}</h2>
+      {texto}
+      <div class="gg-firma">
         <figure class="gg-sobre-foto"><img src="img/slot-marcos-retrato.webp" alt="{ALT[l]}" width="431" height="580" loading="lazy"></figure>
         {f'<blockquote class="gg-cita">{cita}</blockquote>' if cita else ''}
-      </div>
-      <div class="gg-sobre-txt">
-        <span class="gg-sobre-et">{et}</span>
-        <h2 style="margin:0;font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-0.02em;">{nombre}</h2>
-        {texto}
       </div>
     </div>
   </section>'''
