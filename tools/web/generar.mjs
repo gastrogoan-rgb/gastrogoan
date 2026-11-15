@@ -92,6 +92,7 @@ function secCab(eyebrow, h2, lead) {
 /* ───────────────────────── PORTADA ───────────────────────── */
 function home(t) {
   const h = t.home, r = RUTAS[t.lang];
+  const suf = t.lang === 'es' ? '' : '-' + t.lang;
   return head(t, h, 'home') + cab(t, 'home', null) + `
 <section class="ink hero"><div class="wrap hero-g">
   <div>
@@ -100,7 +101,7 @@ function home(t) {
     <p class="lead">${esc(h.lead)}</p>
     <div class="ctas">${btn(r.app, h.cta1, 'btn-claro brillo')}${btn(WA, h.cta2, 'btn-linea', ext)}</div>
   </div>
-  <div class="escaparate rv" style="--d:.15s"><div class="ventana"><img src="img/hero-panel.webp" width="1462" height="952" alt="GastroGoan" fetchpriority="high"></div><div class="movil" aria-hidden="true"><img src="img/app-tpv-m.webp" width="780" height="1520" alt=""></div></div>
+  <div class="escaparate rv" style="--d:.15s"><div class="ventana"><img src="img/hero-panel${suf}.webp" width="1462" height="952" alt="GastroGoan" fetchpriority="high"></div><div class="movil" aria-hidden="true"><img src="img/app-tpv-m${suf}.webp" width="780" height="1520" alt=""></div></div>
 </div></section>
 <section class="sec" style="padding-top:clamp(40px,5vw,64px);padding-bottom:0"><div class="wrap">
   <div class="kpis rv" style="--n:3">${h.kpis.map(k => `<div class="kpi"><div class="k">${esc(k.k)}</div><div class="v">${esc(k.v)}</div><div class="d">${esc(k.d)}</div></div>`).join('')}</div>
@@ -120,9 +121,10 @@ function home(t) {
 /* ───────────────────────── APP ───────────────────────── */
 function app(t) {
   const a = t.app, r = RUTAS[t.lang];
-  const heroImg = `<div class="escaparate rv"><div class="ventana"><img src="img/hero-tpv.webp" width="1462" height="952" alt="${esc(a.escaparate.tabs[0].label)} · GastroGoan" fetchpriority="high"></div><div class="movil" aria-hidden="true"><img src="img/app-tpv-m.webp" width="780" height="1520" alt=""></div></div>`;
+  const suf = t.lang === 'es' ? '' : '-' + t.lang; // capturas de la app en el idioma de la página
+  const heroImg = `<div class="escaparate rv"><div class="ventana"><img src="img/hero-tpv${suf}.webp" width="1462" height="952" alt="${esc(a.escaparate.tabs[0].label)} · GastroGoan" fetchpriority="high"></div><div class="movil" aria-hidden="true"><img src="img/app-tpv-m${suf}.webp" width="780" height="1520" alt=""></div></div>`;
   const tabs = a.escaparate.tabs;
-  const paneles = tabs.map((x, i) => `<div class="panel-esc" id="esc-${x.id}" role="tabpanel" aria-labelledby="tab-${x.id}"><div class="escaparate"><div class="ventana"><img src="img/app-${x.id}-d.webp" width="1870" height="1030" alt="${esc(x.label)} · GastroGoan" loading="${i === 0 ? 'eager' : 'lazy'}"></div><div class="movil" aria-hidden="true"><img src="img/app-${x.id}-m.webp" width="780" height="1520" alt="" loading="lazy"></div></div><div class="pie-esc"><p>${esc(x.cap)}</p></div></div>`).join('');
+  const paneles = tabs.map((x, i) => `<div class="panel-esc" id="esc-${x.id}" role="tabpanel" aria-labelledby="tab-${x.id}"><div class="escaparate"><div class="ventana"><img src="img/app-${x.id}-d${suf}.webp" width="1870" height="1030" alt="${esc(x.label)} · GastroGoan" loading="${i === 0 ? 'eager' : 'lazy'}"></div><div class="movil" aria-hidden="true"><img src="img/app-${x.id}-m${suf}.webp" width="780" height="1520" alt="" loading="lazy"></div></div><div class="pie-esc"><p>${esc(x.cap)}</p></div></div>`).join('');
   const p = a.problema;
   return head(t, a, 'app') + cab(t, 'app', 'app') + `
 <section class="ink hero"><div class="wrap hero-g">
