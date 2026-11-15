@@ -22,24 +22,24 @@ URLS = {'es': BASE + '/', 'ca': BASE + '/ca-inici', 'en': BASE + '/en-home'}
 TXT = {
  'es': dict(lang='es', loc='es_ES', title='GastroGoan · Asesoría, app y eventos gastronómicos',
    desc='Asesoramos, gestionamos y creamos experiencias gastronómicas: asesoría 360º para restaurantes, la app de gestión GastroGoan y los eventos de Le Petit Comité.',
-   h1='Bienvenido a GastroGoan', sub='Asesoramos, gestionamos y creamos experiencias gastronómicas.', ask='¿Por dónde empezamos?',
-   idioma='Idioma', ir='Ir a',
+   h1='Bienvenido a', sub='Asesoramos, gestionamos y creamos experiencias gastronómicas.', ask='¿Por dónde empezamos?',
+   idioma='Idioma', ir='Ir a', kit='Asesoría · App · Eventos',
    rows=[('asesoria.html','01','Asesoría','Para restaurantes, bares y cafeterías que necesitan un cambio real'),
          ('app.html','02','App','La app que usan los restaurantes que de verdad quieren ganar dinero'),
          ('eventos.html','03','Le Petit Comité','Eventos gastronómicos que no te dejarán indiferente')],
    wa='WhatsApp', noscript=''),
  'ca': dict(lang='ca', loc='ca_ES', title='GastroGoan · Assessoria, app i esdeveniments gastronòmics',
    desc='Assessorem, gestionem i creem experiències gastronòmiques: assessoria 360º per a restaurants, l’app de gestió GastroGoan i els esdeveniments de Le Petit Comité.',
-   h1='Benvingut a GastroGoan', sub='Assessorem, gestionem i creem experiències gastronòmiques.', ask='Per on comencem?',
-   idioma='Idioma', ir='Anar a',
+   h1='Benvingut a', sub='Assessorem, gestionem i creem experiències gastronòmiques.', ask='Per on comencem?',
+   idioma='Idioma', ir='Anar a', kit='Assessoria · App · Esdeveniments',
    rows=[('ca-assessoria.html','01','Assessoria','Per a restaurants, bars i cafeteries que necessiten un canvi real'),
          ('ca-app.html','02','App','L’app que fan servir els restaurants que de veritat volen guanyar diners'),
          ('ca-esdeveniments.html','03','Le Petit Comité','Esdeveniments gastronòmics que no et deixaran indiferent')],
    wa='WhatsApp', noscript=''),
  'en': dict(lang='en', loc='en_GB', title='GastroGoan · Advisory, app and gastronomic events',
    desc='We advise, manage and create gastronomic experiences: 360º advisory for restaurants, the GastroGoan management app and Le Petit Comité events.',
-   h1='Welcome to GastroGoan', sub='We advise, manage and create gastronomic experiences.', ask='Where do we start?',
-   idioma='Language', ir='Go to',
+   h1='Welcome to', sub='We advise, manage and create gastronomic experiences.', ask='Where do we start?',
+   idioma='Language', ir='Go to', kit='Advisory · App · Events',
    rows=[('en-advisory.html','01','Advisory','For restaurants, bars and cafés that need real change'),
          ('en-app.html','02','App','The app used by restaurants that truly want to make money'),
          ('en-events.html','03','Le Petit Comité','Gastronomic events that won’t leave you indifferent')],
@@ -69,17 +69,30 @@ a.logo{display:inline-flex;align-items:center;min-height:44px}
 .idiomas a:hover{color:var(--oliva)}
 .idiomas [aria-current]{color:var(--tinta)}
 .idiomas svg{border-radius:1px;flex:none}
-/* franja oscura: luz cálida desde arriba y grano de papel, como la entrada de la app */
-.hero{position:relative;overflow:hidden;background:var(--tinta);color:var(--crema);text-align:center;display:flex;flex-direction:column;justify-content:center;min-height:clamp(230px,26vw,330px);padding:clamp(34px,6vw,72px) var(--lado)}
-/* foto real de cocina (la misma de la página de eventos) bajo un velo de tinta: es lo que da cercanía */
-.hero .foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:62% 58%;opacity:.34;filter:grayscale(.25) contrast(1.05)}
-.hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(180deg,rgba(28,26,23,.55),rgba(28,26,23,.15) 45%,rgba(28,26,23,.7)),radial-gradient(ellipse 70% 120% at 50% -20%,rgba(214,186,140,.18),transparent 70%)}
-.hero::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.10;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
-.hero>:not(.foto){position:relative;z-index:2}
-h1{margin:0 auto;white-space:nowrap;font-size:clamp(1.3rem,6.3vw,3.4rem);line-height:1.08;font-weight:600;letter-spacing:-.035em}
-h1 i{font-style:normal;color:var(--oliva-claro)}
-.sub{margin:clamp(12px,1.8vw,20px) auto 0;max-width:34em;font-size:clamp(1rem,.9rem + .5vw,1.3rem);line-height:1.4;font-weight:400;color:#DDD5C6;text-wrap:balance}
-.sub::before{content:"";display:block;width:40px;height:2px;margin:0 auto clamp(12px,1.8vw,18px);background:var(--oliva-claro)}
+/* Franja oscura = la pantalla de entrada de la app, con sus mismos efectos (css/styles.css,
+   «Fondo de entrada» y «Movimiento de la entrada»): luz cálida de lámpara sobre el pase y grano
+   finísimo de papel (--entry-bg), la lámpara que respira, las gg en su caja blanca flotando, el
+   logotipo con sus pesos, la etiqueta mono en verde y la frase con su raya, que llega la última. */
+.hero{position:relative;overflow:hidden;color:#F1EFE9;text-align:center;padding:clamp(36px,6vw,76px) var(--lado);
+  --bh:clamp(26px,4.6vw,50px);--bgap:10px;--bkit:26px;
+  background:radial-gradient(ellipse 46% 52% at 50% -8%,rgba(241,232,210,.13),rgba(241,232,210,.04) 45%,transparent 72%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,linear-gradient(180deg,#1C1A17,#24221D)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 60% at 50% 0%,rgba(255,224,170,.09),transparent 70%)}
+.hero>*{position:relative}
+.marca{display:flex;align-items:center;justify-content:center;gap:clamp(12px,1.6vw,18px)}
+.gg{flex:none;box-sizing:border-box;width:calc(var(--bh) + var(--bgap) + var(--bkit));height:calc(var(--bh) + var(--bgap) + var(--bkit));padding:6px;background:#fff;box-shadow:0 0 0 8px rgba(255,255,255,.05),0 18px 40px rgba(0,0,0,.35)}
+.gg img{display:block;width:100%;height:100%;object-fit:contain}
+.marca-txt{display:flex;flex-direction:column;align-items:flex-start;gap:var(--bgap);min-width:0}
+h1{margin:0;white-space:nowrap;font-size:var(--bh);line-height:1;font-weight:400;letter-spacing:-.03em;color:#fff}
+h1 b{font-weight:600}h1 i{font-style:normal;color:#8FA593}
+.kit{display:inline-flex;align-items:center;height:var(--bkit);padding:0 12px;font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:#C3D4C8;background:rgba(126,155,132,.20);border:1px solid rgba(126,155,132,.55)}
+.sub{display:flex;flex-direction:column;align-items:center;gap:12px;margin:clamp(22px,3vw,34px) auto 0;max-width:34em;font-size:clamp(1rem,.92rem + .4vw,1.2rem);line-height:1.5;color:#F1EFE9;text-wrap:balance}
+.sub::before{content:"";width:28px;height:2px;background:#6F8A74}
+@media (max-width:620px){
+  .hero{--bh:clamp(21px,6.4vw,34px);--bkit:24px}
+  .marca{flex-direction:column}
+  .marca-txt{align-items:center}
+  .gg{width:64px;height:64px}
+}
 /* puertas */
 main{flex:1}
 .pregunta{display:flex;justify-content:center;padding:clamp(18px,2.6vw,28px) var(--lado)}
@@ -116,15 +129,17 @@ main{flex:1}
 }
 /* movimiento: solo si la persona no ha pedido reducirlo */
 @media (prefers-reduced-motion:no-preference){
-  @keyframes gg-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  @keyframes gg-lampara{0%,100%{opacity:.85}50%{opacity:1}}
-  .hero .foto{animation:gg-foto 1.6s ease both}
-  @keyframes gg-foto{from{opacity:0;transform:scale(1.04)}to{opacity:.34;transform:none}}
-  .hero h1{animation:gg-rise .8s var(--ease) both}
-  .hero .sub{animation:gg-rise .8s .12s var(--ease) both}
-  .pregunta{animation:gg-rise .7s .24s var(--ease) both}
-  .puerta{animation:gg-rise .7s var(--ease) both}
-  .puerta:nth-child(1){animation-delay:.32s}.puerta:nth-child(2){animation-delay:.42s}.puerta:nth-child(3){animation-delay:.52s}
+  @keyframes gg-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  @keyframes gg-lampara{0%,100%{opacity:.55}50%{opacity:1}}
+  .hero::before{animation:gg-lampara 8s ease-in-out infinite}
+  .gg{animation:gg-rise .5s .06s cubic-bezier(.2,.7,.2,1) backwards,gg-flotar 3.6s 1.2s ease-in-out infinite}
+  .hero h1{animation:gg-rise .55s .12s cubic-bezier(.2,.7,.2,1) backwards}
+  .kit{animation:gg-rise .5s .18s cubic-bezier(.2,.7,.2,1) backwards}
+  .sub{animation:gg-rise .7s .5s cubic-bezier(.2,.7,.2,1) backwards}
+  .pregunta{animation:gg-rise .6s .6s cubic-bezier(.2,.7,.2,1) backwards}
+  .puerta{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
+  .puerta:nth-child(1){animation-delay:.68s}.puerta:nth-child(2){animation-delay:.74s}.puerta:nth-child(3){animation-delay:.8s}
 }
 '''
 
@@ -161,8 +176,13 @@ def pagina(l):
   <nav class="idiomas" aria-label="{t['idioma']}">{idi}</nav>
 </header>
 <section class="hero">
-  <img class="foto" src="img/chef-privado.jpg" alt="" width="1024" height="683" fetchpriority="high">
-  <h1>{e(t['h1'])}<i>.</i></h1>
+  <div class="marca">
+    <div class="gg"><img src="favicon.png" alt="" width="128" height="128"></div>
+    <div class="marca-txt">
+      <h1>{e(t['h1'])} Gastro<b>Goan</b><i>.</i></h1>
+      <span class="kit">{e(t['kit'])}</span>
+    </div>
+  </div>
   <p class="sub">{e(t['sub'])}</p>
 </section>
 <main>
