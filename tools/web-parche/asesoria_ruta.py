@@ -52,6 +52,7 @@ def ruta(sec, l):
         </li>'''
     return f'''<!-- ruta 360 -->
   <section class="gg-metodo gg-anim">
+    <div class="gg-met-fila">
     <header class="gg-met-cab">
       <span class="gg-met-et gg-rev">{t['et']}</span>
       <h2 class="gg-met-hook gg-rev" style="--d:.08s">{t['hook']}</h2>
@@ -65,6 +66,7 @@ def ruta(sec, l):
         <div class="gg-anillo-giro"><svg viewBox="0 0 200 200"><circle class="gg-anillo-base" cx="100" cy="100" r="96"/><circle class="gg-anillo-trazo" cx="100" cy="100" r="96"/></svg>
         {puntos}</div>
       </div>
+    </div>
     </div>
 
     <div class="gg-fases-bloque">
@@ -172,6 +174,16 @@ CSS = '''
   .gg-fase-card:hover{transform:translateY(-4px)}
 }
 .gg-aperturas{width:100%;max-width:1080px;text-align:left}
+/* PC y tablet ancha: título y texto a la izquierda, la rueda de las seis áreas a la derecha (pedido del dueño, 17/11) */
+.gg-met-fila{width:100%;max-width:1080px;display:flex;flex-direction:column;align-items:center;gap:clamp(30px,4vw,48px)}
+@media (min-width:900px){
+  .gg-met-fila{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(32px,5vw,72px)}
+  .gg-met-fila .gg-met-cab{align-items:flex-start;text-align:left;max-width:none}
+  .gg-met-fila .gg-met-cab .gg-met-et::after{display:none}
+  .gg-met-fila .gg-met-hook{text-wrap:pretty;font-size:clamp(28px,3.3vw,44px)}
+  .gg-met-fila .gg-areas-bloque{gap:8px}
+  .gg-met-fila .gg-areas-bloque>.gg-met-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;color:#4A5D4E}
+}
 @media (max-width:720px){
   .gg-anillo{width:min(250px,66vw);margin:40px 0 46px}
   .gg-anillo-in{max-width:92px;padding:5px 9px;font-size:12px;gap:5px;border-radius:16px}

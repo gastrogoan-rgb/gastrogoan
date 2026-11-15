@@ -12,7 +12,9 @@ RAIZ = os.path.join(os.path.dirname(__file__), '..', '..', 'deploy', 'web', 'pub
 OTRAS = ['app.html', 'ca-app.html', 'en-app.html', 'eventos.html', 'ca-esdeveniments.html', 'en-events.html']
 
 CSS = '''<style data-gg="volver">
-.gg-volver{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;box-sizing:border-box;border:1px solid #D5CFC4;border-radius:3px;background:#fff;color:#1C1A17;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;text-decoration:none;transition:background .25s,color .25s,border-color .25s}
+/* Más pequeño a la vista (lo pidió el dueño, 17/11); la zona de toque sigue siendo de 44 px con ::after */
+.gg-volver{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 11px;box-sizing:border-box;border:1px solid #D5CFC4;border-radius:3px;background:#fff;color:#1C1A17;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;text-decoration:none;transition:background .25s,color .25s,border-color .25s}
+.gg-volver::after{content:"";position:absolute;inset:-5px -2px}
 .gg-volver-f{display:inline-block;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
 .gg-volver:hover,.gg-volver:focus-visible{background:#4A5D4E;border-color:#4A5D4E;color:#FAF8F4}
 .gg-volver:hover .gg-volver-f{transform:translateX(-4px)}
@@ -24,7 +26,12 @@ nav>div>a:first-child{display:inline-flex;align-items:center;min-height:44px}
 /* Tablet y móvil: la barra del sistema puede tapar el final de la página; aire bajo el último bloque (16/11) */
 @media (pointer:coarse){.gg-cta,.ev-fin,footer{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important}}
 @media (max-width:420px){.gg-nav-izq{gap:12px!important}}
-@media (max-width:359px){.gg-volver{padding:0;width:44px;justify-content:center}.gg-volver-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+@media (max-width:359px){.gg-volver{padding:0;width:36px;justify-content:center}.gg-volver-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+/* Menos espacio entre bloques en TODA la web (17/11): de 76 px a ~54 px en PC; el cierre de la App, de 110 a ~76 */
+.aseso-sobre,.gg-carta,.gg-mf,.gg-ts,.gg-pr,.gg-in,.gg-pc,.gg-fq,.ev-cm,.ev-oc{padding-top:clamp(34px,4.2vw,54px)!important;padding-bottom:clamp(34px,4.2vw,54px)!important}
+.gg-metodo{padding-top:clamp(34px,4.2vw,54px)!important}
+.gg-fin{padding-top:clamp(44px,5.4vw,76px)!important;padding-bottom:clamp(44px,5.4vw,76px)!important}
+.ev-fin{padding-top:clamp(44px,5.4vw,76px)!important}
 </style>'''
 
 

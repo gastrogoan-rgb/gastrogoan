@@ -56,6 +56,7 @@ BIO = {
 def sobre(sec, l):
     et = re.search(r'<span[^>]*>([^<]+)</span>', sec).group(1)
     nombre = re.search(r'<h2[^>]*>([^<]+)</h2>', sec).group(1)
+    if nombre.strip() == 'Marcos González': nombre = 'Marcos González Anguiano'   # con los dos apellidos (17/11)
     ps = re.findall(r'<p[^>]*>(.*?)</p>', sec, re.S)
     m = re.search(r'((?:Si |If )[^.]*[.!?])\s*$', ps[0], re.S)
     cita = m.group(1) if m else ''
