@@ -21,7 +21,6 @@ def extras(sec, l):
           <p class="gg-plato-d">{tx}</p>
           <div class="gg-plato-pie">
             <a class="gg-plato-btn" href="{href}" target="_blank" rel="noopener">{WA}<span>{ln}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
-            <span class="gg-plato-nota">{NOTA[l]}</span>
           </div>
         </li>'''
     return f'''<!-- extras -->
@@ -54,8 +53,10 @@ CSS = '''
 .gg-plato-num{flex:none;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;color:#4A5D4E}
 .gg-plato-d{margin:0;font-size:14.5px;line-height:1.55;color:#3D3A34;max-width:56ch;text-wrap:pretty}
 .gg-plato-pie{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin-top:6px}
-.gg-plato-btn{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0 16px;box-sizing:border-box;border:1.5px solid #4A5D4E;border-radius:3px;background:#fff;color:#4A5D4E;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;transition:background .25s,color .25s,box-shadow .25s,transform .25s}
-.gg-wa{width:16px;height:16px;flex:none}
+/* Botón fino: la caja visible mide ~30 px, pero la zona de toque sigue en 44 (::after invisible) */
+.gg-plato-btn{position:relative;display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:0 11px;box-sizing:border-box;border:1px solid #4A5D4E;border-radius:3px;background:#fff;color:#4A5D4E;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;transition:background .25s,color .25s,box-shadow .25s,transform .25s}
+.gg-plato-btn::after{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
+.gg-wa{width:13px;height:13px;flex:none}
 .gg-flecha{display:inline-block;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
 .gg-plato-btn:hover,.gg-plato-btn:focus-visible{background:#4A5D4E;color:#FAF8F4;box-shadow:0 10px 22px -14px rgba(28,26,23,.6);transform:translateY(-1px)}
 .gg-plato-btn:hover .gg-flecha,.gg-plato-btn:focus-visible .gg-flecha{transform:translateX(5px)}
