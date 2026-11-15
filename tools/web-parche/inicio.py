@@ -77,17 +77,17 @@ a.logo{display:inline-flex;align-items:center;min-height:44px}
    «Fondo de entrada» y «Movimiento de la entrada»): luz cálida de lámpara sobre el pase y grano
    finísimo de papel (--entry-bg), la lámpara que respira, las gg en su caja blanca flotando, el
    logotipo con sus pesos, la etiqueta mono en verde y la frase con su raya, que llega la última. */
-.hero{position:relative;overflow:hidden;color:#F1EFE9;text-align:center;padding:clamp(36px,6vw,76px) var(--lado);
+.hero{position:relative;overflow:hidden;color:#F1EFE9;text-align:center;padding:clamp(26px,3.6vw,46px) var(--lado);
   background:radial-gradient(ellipse 46% 52% at 50% -8%,rgba(241,232,210,.13),rgba(241,232,210,.04) 45%,transparent 72%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0/220px 220px,linear-gradient(180deg,#1C1A17,#24221D)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 60% at 50% 0%,rgba(255,224,170,.09),transparent 70%)}
 .hero>*{position:relative}
 h1{margin:0;white-space:nowrap;font-size:clamp(1.3rem,6.3vw,3.4rem);line-height:1;font-weight:600;letter-spacing:-.03em;color:#fff}
 h1 b{font-weight:600}h1 i{font-style:normal;color:#8FA593}
-.sub{display:flex;flex-direction:column;align-items:center;gap:12px;margin:clamp(22px,3vw,34px) auto 0;max-width:34em;font-size:clamp(1rem,.92rem + .4vw,1.2rem);line-height:1.5;color:#F1EFE9;text-wrap:balance}
+.sub{display:flex;flex-direction:column;align-items:center;gap:10px;margin:clamp(16px,2.2vw,24px) auto 0;max-width:34em;font-size:clamp(1rem,.92rem + .4vw,1.2rem);line-height:1.5;color:#F1EFE9;text-wrap:balance}
 .sub::before{content:"";width:28px;height:2px;background:#6F8A74}
 /* puertas */
 main{flex:1}
-.pregunta{display:flex;justify-content:center;padding:clamp(18px,2.6vw,28px) var(--lado)}
+.pregunta{display:flex;justify-content:center;padding:clamp(14px,2vw,22px) var(--lado)}
 .pregunta h2{margin:0;font:400 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--crema);background:var(--oliva);padding:8px 12px;border-radius:3px}
 .puertas{border-top:1px solid var(--linea)}
 .puerta{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;column-gap:clamp(12px,2vw,24px);row-gap:6px;padding:clamp(20px,3vw,34px) var(--lado);border-bottom:1px solid var(--linea);transition:background .3s ease}
