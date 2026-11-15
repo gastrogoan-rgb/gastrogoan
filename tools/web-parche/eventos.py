@@ -101,8 +101,12 @@ def procesar(l):
     # 3) servicios con más juego y «Cómo funciona» paso a paso
     i = t.index('<!-- serv'); j = t.index('<!-- c', i + 5)
     t = t[:i] + eventos_secciones.servicios(t[i:j], l) + t[j:]
-    i = t.index('<!-- c', i + 5); j = t.index('<!-- form', i)
-    t = t[:i] + eventos_secciones.como(t[i:j], l) + t[j:]
+    # La franja negra de datos (comensales, dónde, zona) pasa a ser la ficha del evento dentro de
+    # «Cómo funciona» (pedido del dueño): se leen sus textos y se quita la franja.
+    fi = t.index('<!-- form'); fj = t.index('<!--', fi + 5)
+    datos = eventos_secciones.datos_de(t[fi:fj]); t = t[:fi] + t[fj:]
+    i = t.index('<!-- c', i + 5); j = t.index('<!-- men', i)
+    t = t[:i] + eventos_secciones.como(t[i:j], l, datos) + t[j:]
     t = t.replace('</header>', '</header>' + eventos_secciones.JS, 1)
     # ancla para «Ver menús»
     k = t.index('<!-- men'); k = t.index('<section', k)
