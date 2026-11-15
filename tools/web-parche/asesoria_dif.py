@@ -1,53 +1,54 @@
-"""«Lo que nos diferencia» como manifiesto: las ocho frases en grande, centradas y en gris; al ir
-bajando, cada una se «enciende» (pasa a tinta y se le pinta el resaltado verde de rotulador, el
-mismo de la cita de «Sobre mí»). Sin JavaScript o con «reducir movimiento» se ven todas encendidas."""
+"""«Lo que nos diferencia» como una hoja que se escribe a máquina: al llegar, las ocho frases se
+teclean una detrás de otra, letra a letra, con un cursor verde que parpadea; al terminar cada una
+aparece su tick. Letra fina (IBM Plex Mono, la de la marca) y todo dentro de una hoja blanca, para
+que quede integrado. Sin JavaScript o con «reducir movimiento» se ven todas escritas.
+⚠️ Para que la hoja no «salte» mientras se escribe, cada frase lleva una copia invisible que reserva
+su sitio (.gg-tw-fant) y el texto tecleado se pinta encima, en la misma celda."""
 import re
-
-ET = {'es': 'Manifiesto', 'ca': 'Manifest', 'en': 'Manifesto'}
 
 
 def dif(sec, l):
     h2 = re.search(r'<h2[^>]*>([^<]+)</h2>', sec).group(1)
     frases = re.findall(r'<li[^>]*>.*?<span>(.*?)</span></li>', sec, re.S)
     assert len(frases) == 8, len(frases)
-    lis = ''.join(f'<li class="gg-mf-l"><span class="gg-mf-n">{k + 1:02d}</span><span class="gg-mf-t">{t}</span></li>' for k, t in enumerate(frases))
+    lis = ''.join(
+        f'<li class="gg-mf-l" aria-label="{t}"><span class="gg-mf-n">{k + 1:02d}</span>'
+        f'<span class="gg-mf-t" aria-hidden="true"><span class="gg-tw-fant">{t}</span><span class="gg-tw">{t}</span></span>'
+        f'<span class="gg-mf-ok" aria-hidden="true"></span></li>' for k, t in enumerate(frases))
     return f'''<!-- lo que nos diferencia -->
   <section class="gg-mf gg-anim" style="border-bottom:1px solid #E7E2D9;">
-    <header class="gg-carta-cab">
-      <span class="gg-met-et gg-rev">{ET[l]}</span>
-      <h2 class="gg-carta-h gg-rev" style="--d:.08s">{h2}</h2>
-    </header>
-    <ol class="gg-mf-lista">{lis}</ol>
+    <span class="gg-met-et gg-rev">{h2}</span>
+    <ol class="gg-mf-lista gg-rev" style="--d:.1s">{lis}</ol>
     <script>
-    /* Cada frase se enciende al cruzar el 70 % de la pantalla y se queda encendida.
-       Delegación por consulta en cada fotograma: la página se monta dos veces. */
+    /* Máquina de escribir: arranca cuando la hoja entra en pantalla. Se busca lo vivo en cada paso
+       (la página se monta dos veces) y la hoja marcada con data-tw no vuelve a empezar. */
     (function(){{
       if(window.__ggMf) return; window.__ggMf=1;
       var quieto=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-      function trocea(L){{
-        // cada palabra en su caja, para que entren una detrás de otra
-        L.querySelectorAll('.gg-mf-t:not([data-w])').forEach(function(t){{
-          t.setAttribute('data-w','1');
-          t.innerHTML=t.textContent.trim().split(/\s+/).map(function(w,i){{return '<span class="gg-w" style="--i:'+i+'">'+w.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>'}}).join(' ');
-        }});
+      function escribe(L){{
+        L.dataset.tw='1'; L.classList.add('gg-tw-js');
+        var lis=[].slice.call(L.querySelectorAll('.gg-mf-l')), k=0;
+        lis.forEach(function(li){{var t=li.querySelector('.gg-tw'); t.dataset.full=t.textContent; t.textContent=''}});
+        function linea(){{
+          if(k>=lis.length){{L.classList.add('fin');return}}
+          var li=lis[k], t=li.querySelector('.gg-tw'), full=t.dataset.full, n=0;
+          li.classList.add('escribiendo');
+          (function letra(){{
+            if(!document.body.contains(li)) return;            // la página se volvió a montar
+            n++; t.textContent=full.slice(0,n);
+            if(n<full.length) setTimeout(letra, 18+Math.random()*30);
+            else {{li.classList.remove('escribiendo');li.classList.add('hecha');k++;setTimeout(linea,160)}}
+          }})();
+        }}
+        linea();
       }}
-      function pinta(){{
-        var L=document.querySelector('.gg-mf-lista'); if(!L) return;
-        if(quieto) return;
-        if(!L.classList.contains('gg-mf-js')){{trocea(L);L.classList.add('gg-mf-js')}}
-        var vh=innerHeight, lim=vh*0.78, centro=vh*0.5, mejor=null, dist=1e9;
-        L.querySelectorAll('.gg-mf-l').forEach(function(li){{
-          var r=li.getBoundingClientRect(), m=r.top+r.height/2;
-          if(m<lim) li.classList.add('on');
-          var d=Math.abs(m-centro); if(li.classList.contains('on')&&d<dist){{dist=d;mejor=li}}
-        }});
-        // la frase más cercana al centro es la «actual»: tinta, resaltado y un punto más grande
-        L.querySelectorAll('.gg-mf-l').forEach(function(li){{li.classList.toggle('actual',li===mejor)}});
+      function mira(){{
+        var L=document.querySelector('.gg-mf-lista'); if(!L||L.dataset.tw) return;
+        if(quieto){{L.dataset.tw='1';return}}
+        if(L.getBoundingClientRect().top<innerHeight*0.8) escribe(L);
       }}
-      var pend=false; addEventListener('scroll',function(){{if(!pend){{pend=true;requestAnimationFrame(function(){{pend=false;pinta()}})}}}},{{passive:true}});
-      var n=0, iv=setInterval(function(){{pinta(); if(++n>40) clearInterval(iv)}},250);
-      // red de seguridad: si no hay scroll, a los 15 s se encienden todas
-      setTimeout(function(){{var L=document.querySelector('.gg-mf-lista'); if(L) L.querySelectorAll('.gg-mf-l').forEach(function(li){{li.classList.add('on')}})}},15000);
+      addEventListener('scroll',mira,{{passive:true}});
+      var n=0, iv=setInterval(function(){{mira(); if(++n>60) clearInterval(iv)}},250);
     }})();
     </script>
   </section>
@@ -56,23 +57,21 @@ def dif(sec, l):
 
 
 CSS = '''
-/* ---------- Manifiesto: lo que nos diferencia ---------- */
-.gg-mf{padding:clamp(56px,7vw,96px) clamp(20px,6vw,64px);display:flex;flex-direction:column;align-items:center;gap:clamp(28px,4vw,48px);text-align:center}
-.gg-mf-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2vw,22px);max-width:900px}
-.gg-mf-l{display:flex;flex-direction:column;align-items:center;gap:2px}
-.gg-mf-n{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5D4E}
-.gg-mf-t{font-size:clamp(21px,3vw,36px);line-height:1.25;font-weight:700;letter-spacing:-.025em;color:#1C1A17;text-wrap:balance;
-  padding:0 .12em;-webkit-box-decoration-break:clone;box-decoration-break:clone;
-  background:linear-gradient(transparent 58%,#C5D6BF 58%,#C5D6BF 92%,transparent 92%) 0 0/100% 100% no-repeat}
-/* Con JS (y sin «reducir movimiento»): las palabras salen de un desenfoque una a una; la frase del
-   centro de la pantalla manda (tinta, resaltado, un 4 % más grande) y las ya leídas quedan en gris,
-   como un teleprompter. Sin JS o con «reducir movimiento» se ven todas en tinta y resaltadas. */
-.gg-mf-js .gg-mf-l{transition:transform .6s cubic-bezier(.2,.7,.2,1);transform-origin:center}
-.gg-mf-js .gg-mf-t{color:#A8A196;background-size:0% 100%;transition:color .5s ease,background-size .9s cubic-bezier(.65,0,.35,1) .25s}
-.gg-mf-js .gg-mf-n{color:#C9C2B6;transition:color .5s ease}
-.gg-mf-js .gg-w{display:inline-block;opacity:0;filter:blur(8px);transform:translateY(.45em);transition:opacity .55s ease calc(var(--i)*55ms),filter .55s ease calc(var(--i)*55ms),transform .6s cubic-bezier(.2,.7,.2,1) calc(var(--i)*55ms)}
-.gg-mf-js .gg-mf-l.on .gg-w{opacity:1;filter:none;transform:none}
-.gg-mf-js .gg-mf-l.actual{transform:scale(1.04)}
-.gg-mf-js .gg-mf-l.actual .gg-mf-t{color:#1C1A17;background-size:100% 100%}
-.gg-mf-js .gg-mf-l.actual .gg-mf-n{color:#4A5D4E}
+/* ---------- Lo que nos diferencia: hoja escrita a máquina ---------- */
+.gg-mf{padding:clamp(48px,6vw,84px) clamp(20px,6vw,64px);display:flex;flex-direction:column;align-items:center;gap:clamp(20px,3vw,30px)}
+.gg-mf-lista{box-sizing:border-box;list-style:none;margin:0;width:100%;max-width:760px;padding:clamp(10px,2vw,18px) clamp(18px,3.4vw,40px);background:#fff;border:1px solid #E7E2D9;border-radius:3px;box-shadow:0 22px 44px -36px rgba(28,26,23,.45)}
+.gg-mf-l{display:grid;grid-template-columns:30px minmax(0,1fr) 18px;align-items:baseline;gap:12px;padding:13px 0;border-bottom:1px dashed #E7E2D9}
+.gg-mf-l:last-child{border-bottom:0}
+.gg-mf-n{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;color:#4A5D4E;font-weight:600}
+.gg-mf-t{display:grid;font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,1.1rem,16px);line-height:1.5;color:#1C1A17}
+.gg-mf-t>span{grid-area:1/1}
+.gg-tw-fant{visibility:hidden}
+.gg-mf-ok{width:14px;height:8px;border-left:2px solid #4A5D4E;border-bottom:2px solid #4A5D4E;transform:rotate(-45deg) translateY(-3px);align-self:center}
+/* Con JS: cursor verde que parpadea en la frase que se escribe; el tick aparece al terminarla */
+.gg-tw-js .gg-mf-ok{opacity:0;transform:rotate(-45deg) translateY(-3px) scale(.4);transition:opacity .3s,transform .35s cubic-bezier(.2,.9,.25,1.3)}
+.gg-tw-js .gg-mf-l.hecha .gg-mf-ok{opacity:1;transform:rotate(-45deg) translateY(-3px)}
+.gg-tw-js .gg-mf-n{color:#C9C2B6;transition:color .3s}
+.gg-tw-js .gg-mf-l.escribiendo .gg-mf-n,.gg-tw-js .gg-mf-l.hecha .gg-mf-n{color:#4A5D4E}
+.gg-tw-js .gg-mf-l.escribiendo .gg-tw::after{content:"";display:inline-block;width:.55em;height:1.05em;margin-left:2px;vertical-align:-.15em;background:#4A5D4E;animation:gg-cursor .8s steps(1) infinite}
+@keyframes gg-cursor{50%{opacity:0}}
 '''
