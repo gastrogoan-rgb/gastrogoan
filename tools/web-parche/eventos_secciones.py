@@ -142,12 +142,36 @@ def como(sec, l, datos=None):
         (function f(t){{var q=Math.min(1,(t-t0)/1200),e=1-Math.pow(1-q,3);v.textContent=a+'–'+Math.round(a+(b-a)*e);if(q<1&&document.body.contains(v))requestAnimationFrame(f)}})(t0);
       }}
       
-      setInterval(function(){{
-        var S=document.querySelector('.ev-cm'); if(!S||quieto||Date.now()<pausa) return;
-        var r=S.getBoundingClientRect(); if(r.top>innerHeight*0.6||r.bottom<innerHeight*0.3) return;
-        if(!S.dataset.va){{S.dataset.va=1;pon(0);return}}
-        pon((k+1)%3);
-      }},2800);
+      /* Corre solo, a ritmo de lectura (pedido del dueño): la raya se va llenando de un paso al siguiente
+         de forma continua y, al llegar, el paso se enciende. Al terminar el tercero espera, se vacía y vuelve
+         a empezar. Solo mientras la sección se ve; tocar un paso lo elige y se queda ahí un rato. */
+      var POR=4200, FIN=5200, p=0, paso=0, ult=performance.now(), espera=0;
+      function raya(S,x){{var r=S.querySelector('.ev-cm-raya span'); if(r) r.style.transform='scaleX('+(x/2)+')'}}
+      function marca(S,n){{
+        if(S.dataset.k==String(n)) return; S.dataset.k=n; k=n;
+        S.querySelectorAll('.ev-cm-nodo').forEach(function(b,i){{b.classList.toggle('on',i===n);b.classList.toggle('hecho',i<n);b.setAttribute('aria-pressed',i===n)}});
+        S.querySelectorAll('.ev-cm-panel').forEach(function(q,i){{q.classList.toggle('on',i===n)}});
+      }}
+      pon=function(n){{var S=document.querySelector('.ev-cm'); if(!S) return; p=n; paso=n; espera=0; S.dataset.k=''; S.classList.add('a-mano'); raya(S,n); marca(S,n)}};
+      function bucle(t){{
+        var dt=Math.min(100,t-ult); ult=t; requestAnimationFrame(bucle);
+        var S=document.querySelector('.ev-cm'); if(!S) return;
+        if(!S.dataset.listo){{S.dataset.listo=1; S.dataset.k=''; marca(S,Math.floor(p)); raya(S,p)}}
+        cuenta();
+        if(quieto||Date.now()<pausa) return;
+        S.classList.remove('a-mano');
+        var r=S.getBoundingClientRect(); if(r.top>innerHeight*0.8||r.bottom<innerHeight*0.2) return;
+        /* el paso va aparte de la raya: deducirlo de la raya hacía saltar del 1 al 3 */
+        var n=paso; espera+=dt;
+        if(n>=2){{ if(espera>FIN){{espera=0;p=0;S.classList.add('vacia');setTimeout(function(){{var s=document.querySelector('.ev-cm');if(s)s.classList.remove('vacia')}},450);p=0;paso=0;raya(S,0);marca(S,0)}} return }}
+        /* se queda en cada paso lo justo para leerlo y luego la raya corre hasta el siguiente */
+        var HOLD=POR*0.6, TRAV=POR*0.4;
+        if(espera<HOLD) return;
+        var q=Math.min(1,(espera-HOLD)/TRAV), e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
+        p=n+e; raya(S,p);
+        if(q>=1){{p=paso=n+1;espera=0;marca(S,n+1)}}
+      }}
+      requestAnimationFrame(bucle);
     }})();
     </script>
   </section>
@@ -192,7 +216,8 @@ CSS = '''
 .ev-cm-h{margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:clamp(36px,4.6vw,58px);line-height:1.05;color:#1C1A17}
 .ev-cm-pista{position:relative;width:100%;max-width:860px;display:grid;grid-template-columns:repeat(3,1fr)}
 .ev-cm-raya{position:absolute;left:16.66%;right:16.66%;top:38px;height:2px;background:#E7E2D9}
-.ev-cm-raya span{position:absolute;inset:0;background:#4A5D4E;transform-origin:left;transform:scaleX(0);transition:transform .9s cubic-bezier(.65,0,.35,1)}
+.ev-cm-raya span{position:absolute;inset:0;background:#4A5D4E;transform-origin:left;transform:scaleX(0)}
+.ev-cm.vacia .ev-cm-raya span,.ev-cm.a-mano .ev-cm-raya span{transition:transform .45s cubic-bezier(.65,0,.35,1)}
 .ev-cm-nodo{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 6px;border:0;background:none;cursor:pointer;font:inherit;color:inherit}
 .ev-cm-c{position:relative;width:78px;height:78px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#FAF8F4;border:1.5px solid #D5CFC4;color:#716C65;transition:background .45s,border-color .45s,color .45s,transform .45s cubic-bezier(.2,.9,.25,1.3),box-shadow .45s}
 .ev-cm-n{position:absolute;top:-10px;right:-6px;min-width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #D5CFC4;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#3D3A34;transition:background .45s,color .45s,border-color .45s}

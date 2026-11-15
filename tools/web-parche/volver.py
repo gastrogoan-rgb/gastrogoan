@@ -23,6 +23,7 @@ nav>div>a:first-child{display:inline-flex;align-items:center;min-height:44px}
 .lang-drop a{min-height:44px;box-sizing:border-box}
 /* Tablet y móvil: la barra del sistema puede tapar el final de la página; aire bajo el último bloque (16/11) */
 @media (pointer:coarse){.gg-cta,.ev-fin,footer{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 88px)!important}}
+@media (max-width:420px){.gg-nav-izq{gap:12px!important}}
 @media (max-width:359px){.gg-volver{padding:0;width:44px;justify-content:center}.gg-volver-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 </style>'''
 
@@ -34,7 +35,11 @@ def aplicar(t):
     assert m, 'no encuentro el «Volver»'
     href, txt = m.group(1), m.group(2).strip()
     boton = f'<a class="gg-volver" href="{href}" aria-label="{txt}"><span class="gg-volver-f" aria-hidden="true">←</span><span class="gg-volver-t">{txt}</span></a>'
-    t = t[:m.start()] + boton + t[m.end():]
+    t = t[:m.start()] + t[m.end():]
+    # Junto al logo, no junto a los idiomas (pedido del dueño): es «salir de aquí», va con la marca
+    i = t.index('<nav'); k = t.index('</a>', i) + len('</a>')
+    t = t[:k] + boton + t[k:]
+    t = t.replace('<div style="display:flex;align-items:baseline;gap:24px;flex-wrap:wrap;">', '<div class="gg-nav-izq" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">', 1)
     # Le Petit Comité tenía el menú pegado a la izquierda: el botón va siempre al otro lado
     t = t.replace('<nav style="display:flex;justify-content:flex-start;', '<nav style="display:flex;justify-content:space-between;', 1)
     return t.replace('</helmet>', CSS + '\n</helmet>', 1)
