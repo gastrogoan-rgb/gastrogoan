@@ -82,7 +82,7 @@ main{flex:1}
 .pie{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 24px;background:var(--tinta);color:#B7AFA0;padding:clamp(16px,2.4vw,26px) var(--lado) calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px));font:400 12px/1.4 var(--mono);letter-spacing:.04em}
 /* Tablet y móvil: la barra del sistema (p. ej. la de tareas de Samsung) puede tapar el final de la página.
    Aire bajo el pie para que siempre se pueda subir y leer entero (lo vio el dueño, 16/11). */
-@media (pointer:coarse){.pie{padding-bottom:calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px) + 64px)}}
+@media (pointer:coarse){.pie{padding-bottom:calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px) + 20px)}}
 .pie .logo{color:var(--crema)}.pie .logo i{color:var(--oliva-claro)}
 .pie nav{display:flex;flex-wrap:wrap;gap:0 18px}
 .pie nav a{display:inline-flex;align-items:center;min-height:44px;transition:color .25s}
@@ -105,7 +105,7 @@ main{flex:1}
   .puerta{animation:gg-rise .5s cubic-bezier(.2,.7,.2,1) backwards}
   .puerta:nth-child(1){animation-delay:.68s}.puerta:nth-child(2){animation-delay:.74s}.puerta:nth-child(3){animation-delay:.8s}
 }
-</style>
+.gg-logo-info{position:relative;display:inline-flex;align-items:center;gap:6px}.gg-logo-info>a{color:#FAF8F4!important;text-decoration:none}.gg-info{position:static;display:inline-block}.gg-info>summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;cursor:pointer;color:#8A857C;border-radius:50%}.gg-info>summary::-webkit-details-marker{display:none}.gg-info>summary svg{width:20px;height:20px;transition:color .2s}.gg-info>summary:hover,.gg-info[open]>summary{color:#FAF8F4}.gg-info>summary:focus-visible{outline:2px solid #7E9B84;outline-offset:-4px}.gg-info-pop{position:absolute;left:-6px;bottom:calc(100% + 4px);z-index:40;display:flex;flex-direction:column;box-sizing:border-box;width:max-content;max-width:calc(100vw - 28px);padding:6px;background:#FAF8F4;border:1px solid #E7E2D9;border-radius:3px;box-shadow:0 18px 40px -16px rgba(0,0,0,.6)}.gg-info-pop a{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:2px;color:#1C1A17;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;text-decoration:none}.gg-info-pop a:hover,.gg-info-pop a:focus-visible{background:#EEF2EC;color:#4A5D4E}.gg-info-pop span{padding:8px 12px 6px;border-top:1px solid #E7E2D9;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#716C65}</style>
 </head>
 <body>
 <header class="cab">
@@ -121,9 +121,9 @@ main{flex:1}
   <div class="puertas"><a class="puerta" href="asesoria.html"><span class="n">01</span><h3>Asesoría</h3><span class="fl" aria-hidden="true">→</span><p>Para restaurantes, bares y cafeterías que necesitan un cambio real</p></a><a class="puerta" href="app.html"><span class="n">02</span><h3>App</h3><span class="fl" aria-hidden="true">→</span><p>La app que usan los restaurantes que de verdad quieren ganar dinero</p></a><a class="puerta" href="eventos.html"><span class="n">03</span><h3>Le Petit Comité</h3><span class="fl" aria-hidden="true">→</span><p>Eventos gastronómicos que no te dejarán indiferente</p></a></div>
 </main>
 <footer class="pie">
-  <span class="logo">gastro<b>goan</b><i>.</i></span>
+  <span class="gg-logo-info"><span class="logo">gastro<b>goan</b><i>.</i></span><details class="gg-info"><summary aria-label="Información legal" title="Información legal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/></svg></summary><div class="gg-info-pop"><a href="aviso-legal">Aviso legal</a><a href="privacidad">Privacidad y cookies</a><a href="condiciones">Condiciones de compra de la App</a><span>© 2026 GastroGoan</span></div></details></span>
   <nav aria-label="Contacto"><a href="https://wa.me/34622390245?text=Hola%2C%20me%20gustar%C3%ADa%20informaci%C3%B3n%20sobre%20GastroGoan." target="_blank" rel="noopener">WhatsApp · +34 622 390 245</a><a href="mailto:gastrogoan@gmail.com?subject=Informaci%C3%B3n%20sobre%20GastroGoan&amp;body=Hola%2C%20me%20gustar%C3%ADa%20informaci%C3%B3n%20sobre%20GastroGoan.">gastrogoan@gmail.com</a><a href="https://ig.me/m/gastrogoan" target="_blank" rel="noopener">@gastrogoan</a></nav>
-  <nav class="legal" aria-label="Legal"><a href="aviso-legal">Aviso legal</a><a href="privacidad">Privacidad y cookies</a><a href="condiciones">Condiciones de compra de la App</a></nav>
 </footer>
+<script>(function(){if(window.__ggInfo)return;window.__ggInfo=1;document.addEventListener('click',function(e){document.querySelectorAll('.gg-info[open]').forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')})});document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.gg-info[open]').forEach(function(d){d.removeAttribute('open')})})})();</script>
 </body>
 </html>

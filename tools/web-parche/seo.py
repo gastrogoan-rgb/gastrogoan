@@ -100,6 +100,7 @@ def bloque(grupo, l):
 def limpia(s):
     s = re.sub(r'<!-- gg-seo -->.*?<!-- /gg-seo -->', '', s, flags=re.S)
     s = re.sub(r'<!-- gg-legal -->.*?<!-- /gg-legal -->', '', s, flags=re.S)
+    s = re.sub(r'<span class="gg-logo-info">(.*?</a>)<details class="gg-info">.*?</details></span>', r'\\1', s, flags=re.S)
     # Las tipografías ya van dentro de la página: avisar a Google de antemano mandaba la IP del visitante
     # a Google sin necesidad (privacidad, 16/11)
     return re.sub(r'\s*<link rel="preconnect" href="https://fonts\.(?:googleapis|gstatic)\.com"[^>]*>', '', s)
@@ -111,9 +112,13 @@ LEGAL_CSS = ('.gg-legal{display:flex!important;flex-wrap:wrap!important;justify-
              '@media (pointer:coarse){.gg-legal{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px) + 72px)}}')
 
 
-def legal_pie(l):
-    enl = ''.join(f'<a href="{legal.PAGS[k][l]}">{legal.NOMBRES[k][l]}</a>' for k in legal.PAGS)
-    return f'<!-- gg-legal --><style>{LEGAL_CSS}</style><nav class="gg-legal" aria-label="Legal"><span>© 2026 GastroGoan</span>{enl}</nav><!-- /gg-legal -->'
+def legal_pie(t, l):
+    """La «i» con los enlaces legales, pegada al logo del pie (el último logo de la página)."""
+    ms = list(re.finditer(r'<a href="(?:index|ca-inici|en-home)\.html" style="font-size:18px[^"]*">.*?</a>', t, re.S))
+    assert ms, 'no encuentro el logo del pie'
+    m = ms[-1]
+    extra = f'<!-- gg-legal --><style>{legal.INFO_CSS}</style>{legal.INFO_JS}<!-- /gg-legal -->'
+    return t[:m.start()] + '<span class="gg-logo-info">' + m.group(0) + legal.info_html(l) + '</span>' + extra + t[m.end():]
 
 
 def procesar(grupo, l):
@@ -125,7 +130,7 @@ def procesar(grupo, l):
     t = limpia(t)
     t = re.sub(r'<html[^>]*>', f'<html lang="{l}">', t, count=1)
     t = t.replace('</head>', bloque(grupo, l) + '</head>', 1)
-    t = t.replace('</x-dc>', legal_pie(l) + '</x-dc>', 1)   # enlaces legales al pie de cada página
+    t = legal_pie(t, l)   # «i» con los enlaces legales junto al logo del pie
     if grupo == 'asesoria':
         t = t.replace('href="https://wa.me/34622390245"', f'href="https://wa.me/34622390245?text={quote(APERTURAS[l])}" target="_blank" rel="noopener"')
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')

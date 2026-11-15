@@ -121,7 +121,7 @@ main{flex:1}
 .pie{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 24px;background:var(--tinta);color:#B7AFA0;padding:clamp(16px,2.4vw,26px) var(--lado) calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px));font:400 12px/1.4 var(--mono);letter-spacing:.04em}
 /* Tablet y móvil: la barra del sistema (p. ej. la de tareas de Samsung) puede tapar el final de la página.
    Aire bajo el pie para que siempre se pueda subir y leer entero (lo vio el dueño, 16/11). */
-@media (pointer:coarse){.pie{padding-bottom:calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px) + 64px)}}
+@media (pointer:coarse){.pie{padding-bottom:calc(clamp(16px,2.4vw,26px) + env(safe-area-inset-bottom,0px) + 20px)}}
 .pie .logo{color:var(--crema)}.pie .logo i{color:var(--oliva-claro)}
 .pie nav{display:flex;flex-wrap:wrap;gap:0 18px}
 .pie nav a{display:inline-flex;align-items:center;min-height:44px;transition:color .25s}
@@ -172,7 +172,7 @@ def pagina(l):
 <meta property="og:url" content="{URLS[l]}"><meta property="og:locale" content="{t['loc']}">
 <meta property="og:image" content="{BASE}/img/og-gastrogoan.jpg"><meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{json.dumps({"@context":"https://schema.org","@type":"Organization","name":"GastroGoan","url":BASE+"/","logo":BASE+"/favicon.png","telephone":"+34622390245","sameAs":["https://instagram.com/gastrogoan"],"founder":{"@type":"Person","name":"Marcos González"}}, ensure_ascii=False)}</script>
-<style>{CSS}</style>
+<style>{CSS}{legal.INFO_CSS}</style>
 </head>
 <body>
 <header class="cab">
@@ -188,10 +188,10 @@ def pagina(l):
   <div class="puertas">{filas}</div>
 </main>
 <footer class="pie">
-  <span class="logo">gastro<b>goan</b><i>.</i></span>
+  <span class="gg-logo-info"><span class="logo">gastro<b>goan</b><i>.</i></span>{legal.info_html(l)}</span>
   <nav aria-label="Contacto"><a href="https://wa.me/34622390245?text={quote(MSGI[l])}" target="_blank" rel="noopener">{t['wa']} · +34 622 390 245</a><a href="mailto:gastrogoan@gmail.com?subject={quote(ASUI[l])}&amp;body={quote(MSGI[l])}">gastrogoan@gmail.com</a><a href="https://ig.me/m/gastrogoan" target="_blank" rel="noopener">@gastrogoan</a></nav>
-  <nav class="legal" aria-label="Legal">{LEGAL[l]}</nav>
 </footer>
+{legal.INFO_JS}
 </body>
 </html>
 '''

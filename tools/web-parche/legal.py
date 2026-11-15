@@ -347,6 +347,30 @@ def pie_html(l, oscuro=False):
     return ' · '.join(f'<a href="{PAGS[k][l]}">{NOMBRES[k][l]}</a>' for k in PAGS)
 
 
+INFO_ARIA = {'es': 'Información legal', 'ca': 'Informació legal', 'en': 'Legal information'}
+INFO_CSS = (".gg-logo-info{position:relative;display:inline-flex;align-items:center;gap:6px}.gg-logo-info>a{color:#FAF8F4!important;text-decoration:none}"
+  ".gg-info{position:static;display:inline-block}"
+  ".gg-info>summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;cursor:pointer;color:#8A857C;border-radius:50%}"
+  ".gg-info>summary::-webkit-details-marker{display:none}"
+  ".gg-info>summary svg{width:20px;height:20px;transition:color .2s}"
+  ".gg-info>summary:hover,.gg-info[open]>summary{color:#FAF8F4}"
+  ".gg-info>summary:focus-visible{outline:2px solid #7E9B84;outline-offset:-4px}"
+  ".gg-info-pop{position:absolute;left:-6px;bottom:calc(100% + 4px);z-index:40;display:flex;flex-direction:column;box-sizing:border-box;width:max-content;max-width:calc(100vw - 28px);padding:6px;background:#FAF8F4;border:1px solid #E7E2D9;border-radius:3px;box-shadow:0 18px 40px -16px rgba(0,0,0,.6)}"
+  ".gg-info-pop a{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:2px;color:#1C1A17;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;text-decoration:none}"
+  ".gg-info-pop a:hover,.gg-info-pop a:focus-visible{background:#EEF2EC;color:#4A5D4E}"
+  ".gg-info-pop span{padding:8px 12px 6px;border-top:1px solid #E7E2D9;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#716C65}")
+INFO_JS = ("<script>(function(){if(window.__ggInfo)return;window.__ggInfo=1;"
+  "document.addEventListener('click',function(e){document.querySelectorAll('.gg-info[open]').forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')})});"
+  "document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.gg-info[open]').forEach(function(d){d.removeAttribute('open')})})})();</script>")
+INFO_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/></svg>'
+
+
+def info_html(l):
+    """«i» junto al logo del pie: al tocarla salen aviso legal, privacidad y condiciones (pedido del dueño, 17/11)."""
+    enl = ''.join(f'<a href="{PAGS[k][l]}">{NOMBRES[k][l]}</a>' for k in PAGS)
+    return f'<details class="gg-info"><summary aria-label="{INFO_ARIA[l]}" title="{INFO_ARIA[l]}">{INFO_SVG}</summary><div class="gg-info-pop">{enl}<span>© 2026 GastroGoan</span></div></details>'
+
+
 if __name__ == '__main__':
     falta = [k for k, v in DATOS.items() if v == PEND]
     for pag in PAGS:

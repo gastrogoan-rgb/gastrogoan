@@ -22,7 +22,7 @@ nav>div>a:first-child{display:inline-flex;align-items:center;min-height:44px}
 .lang-drop>summary{min-height:44px;box-sizing:border-box;cursor:pointer}
 .lang-drop a{min-height:44px;box-sizing:border-box}
 /* Tablet y móvil: la barra del sistema puede tapar el final de la página; aire bajo el último bloque (16/11) */
-@media (pointer:coarse){.gg-cta,.ev-fin,footer{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 88px)!important}}
+@media (pointer:coarse){.gg-cta,.ev-fin,footer{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important}}
 @media (max-width:420px){.gg-nav-izq{gap:12px!important}}
 @media (max-width:359px){.gg-volver{padding:0;width:44px;justify-content:center}.gg-volver-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 </style>'''
