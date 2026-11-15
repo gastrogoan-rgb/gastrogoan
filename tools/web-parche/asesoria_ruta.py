@@ -42,7 +42,7 @@ def ruta(sec, l):
     for i, (n, nombre) in enumerate(areas):
         a = math.radians(-90 + i * 60)
         x, y = 50 + 50 * math.cos(a), 50 + 50 * math.sin(a)
-        puntos += f'<span class="gg-anillo-p" data-i="{i}" style="left:{x:.2f}%;top:{y:.2f}%;--d:{0.35 + i * 0.18:.2f}s"><em>{n}</em>{nombre}</span>'
+        puntos += f'<span class="gg-anillo-p" data-i="{i}" style="left:{x:.2f}%;top:{y:.2f}%;--d:{0.35 + i * 0.18:.2f}s"><span class="gg-anillo-in"><em>{n}</em>{nombre}</span></span>'
     filas = ''
     for i, (et, ti, tx) in enumerate(fases):
         lado = 'izq' if i % 2 == 0 else 'der'
@@ -61,9 +61,9 @@ def ruta(sec, l):
     <div class="gg-areas-bloque">
       <h3 class="gg-met-sub gg-rev">{t['areas']}</h3>
       <div class="gg-anillo gg-rev">
-        <svg viewBox="0 0 200 200"><circle class="gg-anillo-base" cx="100" cy="100" r="96"/><circle class="gg-anillo-trazo" cx="100" cy="100" r="96"/></svg>
-        {puntos}
-        <div class="gg-anillo-centro"><b><span class="gg-cuenta" data-final="360">360</span>º</b><small>{t['centro']}</small></div>
+        <div class="gg-anillo-centro"><b>360º</b><small>{t['centro']}</small></div>
+        <div class="gg-anillo-giro"><svg viewBox="0 0 200 200"><circle class="gg-anillo-base" cx="100" cy="100" r="96"/><circle class="gg-anillo-trazo" cx="100" cy="100" r="96"/></svg>
+        {puntos}</div>
       </div>
     </div>
 
@@ -108,12 +108,6 @@ def ruta(sec, l):
           }}
           linea.style.setProperty('--p',p.toFixed(4));
         }}
-        var c=q('.gg-cuenta',S), an=q('.gg-anillo',S);
-        if(c&&an&&!c.dataset.hecho&&an.classList.contains('gg-vis')){{
-          c.dataset.hecho=1; var fin=+c.dataset.final;
-          if(quieto){{c.textContent=fin}} else {{var a=performance.now();
-            (function paso(t){{var k=Math.min(1,(t-a)/1500);c.textContent=Math.round(fin*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(paso);else c.textContent=fin}})(a);}}
-        }}
       }}
 {extras_js}      var pend=false; function pide(){{if(!pend){{pend=true;requestAnimationFrame(function(){{pend=false;pinta()}})}}}}
       addEventListener('scroll',pide,{{passive:true}}); addEventListener('resize',pide);
@@ -139,17 +133,23 @@ CSS = '''
 .gg-met-mini{margin:-8px 0 0;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#716C65}
 .gg-areas-bloque,.gg-fases-bloque{display:flex;flex-direction:column;align-items:center;gap:22px;width:100%;max-width:1080px}
 /* anillo de las seis áreas: cada punto lleva el número y el nombre del área */
-.gg-anillo{position:relative;width:clamp(200px,30vw,300px);aspect-ratio:1;margin:30px 0 34px}
+.gg-anillo{position:relative;width:clamp(260px,38vw,320px);aspect-ratio:1;margin:30px 0 34px}
 .gg-anillo svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
 .gg-anillo-base{fill:none;stroke:#E7E2D9;stroke-width:2}
 .gg-anillo-trazo{fill:none;stroke:#4A5D4E;stroke-width:2.5;stroke-dasharray:603.2;stroke-dashoffset:0;stroke-linecap:round}
-.gg-anillo-p{position:absolute;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:7px;max-width:150px;padding:7px 13px;border-radius:999px;background:#FAF8F4;border:2px solid #4A5D4E;font-size:14px;font-weight:600;letter-spacing:-.01em;color:#1C1A17;line-height:1.15;text-align:left;white-space:nowrap;transition:background .25s,color .25s,box-shadow .25s}
+/* El centro va DEBAJO y no recibe el ratón: antes tapaba media pastilla y solo se marcaban
+   en verde las que se tocaban por el borde de fuera. */
+.gg-anillo-giro{position:absolute;inset:0;z-index:1}
+.gg-anillo-centro{z-index:0;pointer-events:none}
+.gg-anillo-p{position:absolute;transform:translate(-50%,-50%);display:block;cursor:default}
+/* la pastilla se dibuja en el interior, que gira al revés: así queda siempre derecha */
+.gg-anillo-in{display:inline-flex;align-items:center;gap:7px;max-width:124px;padding:7px 13px;border-radius:999px;background:#FAF8F4;border:2px solid #4A5D4E;font-size:14px;font-weight:600;letter-spacing:-.01em;color:#1C1A17;line-height:1.15;text-align:left;white-space:normal;transition:background .25s,color .25s,box-shadow .25s}
 .gg-anillo-p em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:400;color:#4A5D4E;transition:color .25s}
-.gg-anillo-p:hover{background:#4A5D4E;color:#FAF8F4;box-shadow:0 10px 22px -14px rgba(28,26,23,.6)}
+.gg-anillo-p:hover .gg-anillo-in{background:#4A5D4E;color:#FAF8F4;box-shadow:0 10px 22px -14px rgba(28,26,23,.6)}
 .gg-anillo-p:hover em{color:#C9D3CB}
 .gg-anillo-centro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .gg-anillo-centro b{font-size:clamp(38px,5.4vw,58px);font-weight:700;letter-spacing:-.04em;line-height:1;color:#1C1A17;font-variant-numeric:tabular-nums}
-.gg-anillo-centro small{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#716C65}
+.gg-anillo-centro small{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#716C65;max-width:104px;text-align:center;line-height:1.35}
 /* ruta de las cinco fases: vertical en móvil y tablet, horizontal en PC (sin huecos en blanco) */
 .gg-fases{position:relative;list-style:none;margin:6px 0 0;padding:0;width:100%;max-width:720px;display:flex;flex-direction:column;gap:18px}
 .gg-fases-linea{position:absolute;left:22px;top:0;bottom:0;width:2px;margin-left:-1px;background:#E7E2D9}
@@ -173,9 +173,17 @@ CSS = '''
 }
 .gg-aperturas{width:100%;max-width:1080px;text-align:left}
 @media (max-width:720px){
-  .gg-anillo{width:min(210px,58vw);margin:34px 0 40px}
-  .gg-anillo-p{max-width:104px;padding:5px 9px;font-size:12px;white-space:normal;gap:5px}
+  .gg-anillo{width:min(250px,66vw);margin:40px 0 46px}
+  .gg-anillo-in{max-width:92px;padding:5px 9px;font-size:12px;gap:5px;border-radius:16px}
   .gg-anillo-p em{font-size:11px}
+}
+/* Móvil estrecho: sin el número (ya va en orden) y centro más pequeño, para que al girar ninguna
+   pastilla pise a la de al lado ni al 360º. */
+@media (max-width:420px){
+  .gg-anillo-p em{display:none}
+  .gg-anillo-in{text-align:center;justify-content:center}
+  .gg-anillo-centro b{font-size:32px}
+  .gg-anillo-centro small{letter-spacing:.06em;max-width:96px;text-align:center;line-height:1.35}
 }
 /* movimiento: solo con JS en marcha y sin «reducir movimiento» */
 @media (prefers-reduced-motion:no-preference){
@@ -185,6 +193,13 @@ CSS = '''
   .gg-js .gg-anillo.gg-vis .gg-anillo-trazo{stroke-dashoffset:0}
   .gg-js .gg-anillo .gg-anillo-p{opacity:0}
   .gg-js .gg-anillo.gg-vis .gg-anillo-p{animation:gg-pop .55s cubic-bezier(.2,.9,.25,1.25) var(--d) both}
+  /* La rueda gira despacio todo el rato; los nombres giran al revés para leerse siempre de pie.
+     Al pasar el ratón se para, para poder señalar cada área. */
+  @keyframes gg-gira{to{transform:rotate(360deg)}}
+  @keyframes gg-gira-inv{to{transform:rotate(-360deg)}}
+  .gg-anillo-giro{animation:gg-gira 60s linear infinite}
+  .gg-anillo-in{animation:gg-gira-inv 60s linear infinite}
+  .gg-anillo:hover .gg-anillo-giro,.gg-anillo:hover .gg-anillo-in{animation-play-state:paused}
   @keyframes gg-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}100%{opacity:1;transform:translate(-50%,-50%)}}
 }
 '''

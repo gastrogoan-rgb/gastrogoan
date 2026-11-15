@@ -24,31 +24,39 @@ def dif(sec, l):
        (la página se monta dos veces) y la hoja marcada con data-tw no vuelve a empezar. */
     (function(){{
       if(window.__ggMf) return; window.__ggMf=1;
+      /* El estado (frase y letra) vive aquí, no en los elementos: si la página se vuelve a montar a
+         mitad, se sigue en la hoja nueva donde iba. Antes se paraba y dejaba la hoja en blanco. */
       var quieto=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-      function escribe(L){{
-        L.dataset.tw='1'; L.classList.add('gg-tw-js');
-        var lis=[].slice.call(L.querySelectorAll('.gg-mf-l')), k=0;
-        lis.forEach(function(li){{var t=li.querySelector('.gg-tw'); t.dataset.full=t.textContent; t.textContent=''}});
-        function linea(){{
-          if(k>=lis.length){{L.classList.add('fin');return}}
-          var li=lis[k], t=li.querySelector('.gg-tw'), full=t.dataset.full, n=0;
-          li.classList.add('escribiendo');
-          (function letra(){{
-            if(!document.body.contains(li)) return;            // la página se volvió a montar
-            n++; t.textContent=full.slice(0,n);
-            if(n<full.length) setTimeout(letra, 18+Math.random()*30);
-            else {{li.classList.remove('escribiendo');li.classList.add('hecha');k++;setTimeout(linea,160)}}
-          }})();
+      var ini=false, fin=false, k=0, n=0;
+      function hoja(){{
+        var L=document.querySelector('.gg-mf-lista'); if(!L) return null;
+        if(!L.dataset.tw){{
+          L.dataset.tw='1'; L.classList.add('gg-tw-js');
+          [].forEach.call(L.querySelectorAll('.gg-mf-l'),function(li,i){{
+            var t=li.querySelector('.gg-tw'); t.dataset.full=t.textContent;
+            if(i<k){{li.classList.add('hecha')}} else t.textContent=(i===k?t.dataset.full.slice(0,n):'');
+          }});
+          if(fin) L.classList.add('fin');
         }}
-        linea();
+        return L;
+      }}
+      function paso(){{
+        var L=hoja(); if(!L) return setTimeout(paso,200);
+        var lis=L.querySelectorAll('.gg-mf-l');
+        if(k>=lis.length){{fin=true;L.classList.add('fin');return}}
+        var li=lis[k], t=li.querySelector('.gg-tw'), full=t.dataset.full;
+        li.classList.add('escribiendo'); n=Math.min(full.length,n+1); t.textContent=full.slice(0,n);
+        if(n<full.length) setTimeout(paso,10+Math.random()*16);
+        else {{li.classList.remove('escribiendo');li.classList.add('hecha');k++;n=0;setTimeout(paso,110)}}
       }}
       function mira(){{
-        var L=document.querySelector('.gg-mf-lista'); if(!L||L.dataset.tw) return;
-        if(quieto){{L.dataset.tw='1';return}}
-        if(L.getBoundingClientRect().top<innerHeight*0.8) escribe(L);
+        if(ini) {{ if(!fin) hoja(); return }}
+        var L=document.querySelector('.gg-mf-lista'); if(!L) return;
+        if(quieto) return;
+        if(L.getBoundingClientRect().top<innerHeight*0.85){{ini=true;hoja();paso()}}
       }}
       addEventListener('scroll',mira,{{passive:true}});
-      var n=0, iv=setInterval(function(){{mira(); if(++n>60) clearInterval(iv)}},250);
+      setInterval(mira,250);
     }})();
     </script>
   </section>

@@ -20,9 +20,9 @@ STRIPE = 'https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03'
 
 # Mismo formato que el original (dos frases cortas); solo cambia el final, que hablaba de «un solo pago»
 DESC = {
- 'es': 'La hostelería se ha vuelto un negocio de suscripciones.<br>GastroGoan App las sustituye todas con una sola.',
- 'ca': "L'hostaleria s'ha convertit en un negoci de subscripcions.<br>GastroGoan App les substitueix totes amb una de sola.",
- 'en': 'Hospitality has become a subscription business.<br>GastroGoan App replaces them all with just one.',
+ 'es': 'La hostelería se ha vuelto un negocio de suscripciones.<br>GastroGoan App las sustituye todas en un único sistema.',
+ 'ca': "L'hostaleria s'ha convertit en un negoci de subscripcions.<br>GastroGoan App les substitueix totes en un únic sistema.",
+ 'en': 'Hospitality has become a subscription business.<br>GastroGoan App replaces them all with a single system.',
 }
 PRECIO = {'es': '240 € + IVA / año', 'ca': "240 € + IVA / any", 'en': '€240 + VAT / year'}
 NOTA = {'es': 'El primer año, 300 € + IVA', 'ca': 'El primer any, 300 € + IVA', 'en': 'First year, €300 + VAT'}
