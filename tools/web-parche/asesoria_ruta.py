@@ -24,6 +24,8 @@ def div_equilibrado(s, i):
     raise ValueError('div sin cerrar')
 
 def ruta(sec, l):
+    import asesoria_extras
+    extras_js = asesoria_extras.JS.replace('{{', '{').replace('}}', '}')
     t = T[l]
     h2 = re.search(r'<h2[^>]*>([^<]+)</h2>', sec).group(1)
     intro = re.search(r'<p[^>]*>(.*?)</p>', sec, re.S).group(1)
@@ -113,7 +115,7 @@ def ruta(sec, l):
             (function paso(t){{var k=Math.min(1,(t-a)/1500);c.textContent=Math.round(fin*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(paso);else c.textContent=fin}})(a);}}
         }}
       }}
-      var pend=false; function pide(){{if(!pend){{pend=true;requestAnimationFrame(function(){{pend=false;pinta()}})}}}}
+{extras_js}      var pend=false; function pide(){{if(!pend){{pend=true;requestAnimationFrame(function(){{pend=false;pinta()}})}}}}
       addEventListener('scroll',pide,{{passive:true}}); addEventListener('resize',pide);
       // mientras la página termina de montarse, y por si no hay scroll
       var n=0, iv=setInterval(function(){{pinta(); if(++n>40) clearInterval(iv)}},250);
