@@ -30,7 +30,7 @@ nav>div>a:first-child{display:inline-flex;align-items:center;min-height:44px}
 /* Menos espacio entre bloques en TODA la web (17/11): de 76 px a ~54 px en PC; el cierre de la App, de 110 a ~76 */
 .aseso-sobre,.gg-carta,.gg-mf,.gg-ts,.gg-pr,.gg-in,.gg-pc,.gg-fq,.ev-cm,.ev-oc{padding-top:clamp(34px,4.2vw,54px)!important;padding-bottom:clamp(34px,4.2vw,54px)!important}
 .gg-metodo{padding-top:clamp(34px,4.2vw,54px)!important}
-.gg-fin{padding-top:clamp(44px,5.4vw,76px)!important;padding-bottom:clamp(44px,5.4vw,76px)!important}
+.gg-fin{padding-top:clamp(44px,5.4vw,76px)!important;padding-bottom:clamp(26px,3vw,40px)!important}
 .ev-fin{padding-top:clamp(44px,5.4vw,76px)!important}
 </style>'''
 

@@ -141,7 +141,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
 footer>a{color:#FAF8F4}
 footer>div{align-items:center;row-gap:0}
 /* ---------- Cierre (igual que en Asesoría) ---------- */
-.gg-fin{background:#1C1A17;color:#FAF8F4;padding:clamp(64px,9vw,110px) clamp(24px,6vw,64px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(22px,3vw,30px);overflow:hidden}
+.gg-fin{background:#1C1A17;color:#FAF8F4;padding:clamp(64px,9vw,110px) clamp(24px,6vw,64px) clamp(26px,3vw,40px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(22px,3vw,30px);overflow:hidden}
 .gg-fin-h{margin:0;display:flex;flex-direction:column;align-items:center;gap:.14em;font-size:clamp(30px,5vw,58px);font-weight:700;letter-spacing:-.03em;line-height:1.08}
 .gg-fin-l1{white-space:nowrap}
 .gg-fin-hl{padding:0 .1em;background:linear-gradient(transparent 62%,#4A5D4E 62%,#4A5D4E 94%,transparent 94%) 0 0/100% 100% no-repeat;-webkit-box-decoration-break:clone;box-decoration-break:clone}
