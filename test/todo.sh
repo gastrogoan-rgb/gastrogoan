@@ -205,6 +205,7 @@ lanzar; node test/entregas.mjs > "$SALIDA/entregas.txt" 2>&1 & P198=$!
 lanzar; node test/entregas-veracidad.mjs > "$SALIDA/entregasver.txt" 2>&1 & P199=$!
 lanzar; node test/sw-reservas.mjs > "$SALIDA/swreservas.txt" 2>&1 & P200=$!
 lanzar; node test/sw-app-offline.mjs > "$SALIDA/swappoff.txt" 2>&1 & P201=$!
+lanzar; node test/web-comercial.mjs > "$SALIDA/webcom.txt" 2>&1 & P202=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -440,5 +441,6 @@ espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana p
 espera $P199 "Veracidad del seguimiento: estados, ventana, llegada estimada y latido son hechos reales, no relleno" "$SALIDA/entregasver.txt" "es veraz"
 espera $P200 "La web de reservas abre sin red tras la primera visita (bloqueos de LaLiga)" "$SALIDA/swreservas.txt" "abre sin red tras la primera visita"
 espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALIDA/swappoff.txt" "abre sin red una vez instalada"
+espera $P202 "Web comercial: 13 páginas, sin cargas externas, sin desbordes en móvil, enlace de pago vigente" "$SALIDA/webcom.txt" "la web comercial está completa"
 
 exit $FALLOS
