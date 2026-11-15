@@ -7,7 +7,9 @@ vuelve a empaquetar. Idempotente: parte siempre de la versión guardada en git (
     app), cita destacada con la raya oliva y la columna de texto al lado.
 Uso: python3 tools/web-parche/asesoria.py
 """
-import re, json, os, subprocess
+import re, json, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(__file__))
+import asesoria_ruta
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'asesoria', 'ca': 'ca-assessoria', 'en': 'en-advisory'}
 BASE_GIT = 'a152bda'
@@ -73,7 +75,10 @@ def procesar(l):
     # 2) sobre mí
     i = t.index('<section class="aseso-sobre"'); j = t.index('</section>', i) + len('</section>')
     t = t[:i] + sobre(t[i:j], l) + t[j:]
-    t = t.replace('</helmet>', CSS + '\n</helmet>', 1)
+    # 3) «La ruta 360º» → «Método 360º» (centrado, visual y con movimiento)
+    i = t.index('<!-- ruta 360 -->'); j = t.index('<!--', i + 10)  # el siguiente bloque (extras / extres)
+    t = t[:i] + asesoria_ruta.ruta(t[i:j], l) + t[j:]
+    t = t.replace('</helmet>', CSS.replace('</style>', asesoria_ruta.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch, '· cita:', bool(re.search('gg-cita', t)))
