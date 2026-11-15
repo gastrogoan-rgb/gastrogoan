@@ -1,0 +1,59 @@
+# GastroGoan · servidor con IP propia (Caddy).
+# Caddy saca y renueva solo los certificados HTTPS (Let's Encrypt). Las
+# cabeceras son las mismas que llevan los _headers de deploy/*/public.
+# Los sitios estan en /srv/sitios/<nombre> (los sube publicar.sh).
+
+(seguras) {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	# El programa se revalida siempre (barato: 304); las fuentes, un año.
+	@html path *.html / /sw.js /sw-reservas.js /version.json
+	header @html Cache-Control "no-cache"
+	@fuentes path /fonts/*
+	header @fuentes Cache-Control "public, max-age=31536000, immutable"
+}
+
+# Web publica de reservas y pedidos. Se puede incrustar (el restaurante la
+# mete en su web), asi que SIN X-Frame-Options. Cualquier ruta que no sea un
+# fichero devuelve la misma pagina: asi funciona el enlace corto
+# reservas.gastrogoan.com/casapaco, igual que con el 404.html de Pages.
+reservas.gastrogoan.com {
+	import seguras
+	root * /srv/sitios/reservas
+	try_files {path} /index.html
+	file_server
+}
+
+# App de gestion y panel privado: no se pueden incrustar (clickjacking).
+app.gastrogoan.com {
+	import seguras
+	header X-Frame-Options DENY
+	root * /srv/sitios/app
+	file_server
+}
+
+admin.gastrogoan.com {
+	import seguras
+	header X-Frame-Options DENY
+	root * /srv/sitios/admin
+	file_server
+}
+
+# Web comercial. Los .html se sirven tambien sin extension (/app, /asesoria).
+gastrogoan.com, www.gastrogoan.com {
+	import seguras
+	root * /srv/sitios/web
+	try_files {path} {path}.html
+	file_server
+}
+
+# Pagos con Stripe: el Worker de Cloudflare, corriendo aqui (ver pagos/).
+pagos.gastrogoan.com {
+	import seguras
+	reverse_proxy pagos:8787
+}
