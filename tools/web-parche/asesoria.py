@@ -18,16 +18,16 @@ ALT = {'es': 'Retrato ilustrado de Marcos González', 'ca': 'Retrat il·lustrat 
 CSS = '''<style data-gg="asesoria">
 /* «Sobre mí»: el texto y, debajo, una firma: la foto en miniatura (círculo con borde verde) y al
    lado la cita en cursiva subrayada en verde. Igual en cualquier pantalla. */
-.gg-sobre-txt{display:flex;flex-direction:column;gap:14px;max-width:640px}
+.gg-sobre-txt{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;max-width:660px;margin:0 auto}
 .gg-sobre-et{display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E}
-.gg-sobre-et::before{content:"";width:28px;height:2px;background:#4A5D4E}
-.gg-firma{display:flex;align-items:center;gap:16px;margin-top:10px}
-.gg-sobre-foto{flex:none;margin:0;width:68px;height:68px;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 4px #FAF8F4,0 0 0 5px #C9D3CB}
+.gg-sobre-et::before,.gg-sobre-et::after{content:"";width:28px;height:2px;background:#4A5D4E}
+.gg-firma{display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:14px}
+.gg-sobre-foto{flex:none;margin:0;width:112px;height:112px;border-radius:50%;border:2px solid #4A5D4E;overflow:hidden;background:transparent;box-shadow:0 0 0 4px #FAF8F4,0 0 0 5px #C9D3CB}
 .gg-sobre-foto img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 6%}
 .gg-cita{margin:0;font-size:15.5px;line-height:2;font-weight:400;font-style:italic;color:#1C1A17;text-wrap:balance}
 /* Subrayado de rotulador: una franja verde detrás de la mitad baja de las letras, no una línea. */
 .gg-marca{background:#4A5D4E;color:#FAF8F4;-webkit-box-decoration-break:clone;box-decoration-break:clone;padding:3px 8px 4px;border-radius:2px}
-@media (max-width:480px){.gg-sobre-foto{width:50px;height:50px;box-shadow:0 0 0 3px #FAF8F4,0 0 0 4px #C9D3CB}.gg-firma{gap:11px}.gg-cita{font-size:clamp(12px,3.55vw,14.5px);line-height:1.95}.gg-marca{padding:2px 5px 3px}}
+@media (max-width:480px){.gg-sobre-foto{width:96px;height:96px}.gg-firma{gap:14px}.gg-cita{font-size:clamp(12px,3.55vw,14.5px);line-height:1.95}.gg-marca{padding:2px 5px 3px}}
 @media (prefers-reduced-motion:no-preference){
   @keyframes gg-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   @keyframes gg-entra-foto{0%{opacity:0;transform:scale(.5) rotate(-12deg)}100%{opacity:1;transform:none}}
@@ -41,6 +41,7 @@ CSS = '''<style data-gg="asesoria">
 }
 </style>'''
 
+# Todo centrado y en columna (pedido del dueño): etiqueta, nombre, texto, foto y la cita.
 # Lo que cuenta «Sobre mí»: quién es, su formación y sus valores (pedido del dueño, 16/11); el
 # método ya se explica en «La ruta 360º». Debajo, solo la cita.
 BIO = {
