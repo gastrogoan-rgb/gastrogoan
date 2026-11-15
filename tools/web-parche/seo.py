@@ -121,6 +121,19 @@ def legal_pie(t, l):
     return t[:m.start()] + '<span class="gg-logo-info">' + m.group(0) + legal.info_html(l) + '</span>' + extra + t[m.end():]
 
 
+def guiones_sin_partir(t):
+    """Una palabra con guion («pop-ups», «show-cooking», «posa-hi») no se parte al final de la línea:
+    el navegador cortaba justo en el guion (norma: una palabra NUNCA se parte). Solo en el TEXTO visible,
+    nunca dentro de etiquetas, estilos ni scripts. Idempotente."""
+    t = re.sub(r'<span style="white-space:nowrap">([^<]*)</span>', r'\1', t)   # deshacer la pasada anterior
+    partes = re.split(r'(<script\b.*?</script>|<style\b.*?</style>|<[^>]+>)', t, flags=re.S)
+    for k, p in enumerate(partes):
+        if p.startswith('<') or '-' not in p:
+            continue
+        partes[k] = re.sub(r'(?<![\w-])(\w+(?:-\w+)+[.,;:!?»)]?)', r'<span style="white-space:nowrap">\1</span>', p)
+    return ''.join(partes)
+
+
 def procesar(grupo, l):
     arch = GRUPOS[grupo][l][0] + '.html'; ruta = os.path.join(RAIZ, arch)
     s = open(ruta, encoding='utf-8').read()
@@ -131,6 +144,7 @@ def procesar(grupo, l):
     t = re.sub(r'<html[^>]*>', f'<html lang="{l}">', t, count=1)
     t = t.replace('</head>', bloque(grupo, l) + '</head>', 1)
     t = legal_pie(t, l)   # «i» con los enlaces legales junto al logo del pie
+    t = guiones_sin_partir(t)
     # Los incisos entre rayas largas (« — a, b, c — ») son marca de texto generado: van entre paréntesis (17/11)
     t = re.sub(r' — ([^—<>]{1,140}?) — ', r' (\1) ', t)
     t = t.replace(' — para ', ', para ').replace(' — perquè ', ', perquè ').replace(' — so ', ', so ')
