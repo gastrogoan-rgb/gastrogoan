@@ -12,7 +12,9 @@ Open Graph/Twitter con su imagen y datos estructurados (schema.org).
 Además genera robots.txt y sitemap.xml (con las alternativas de idioma de cada página).
 Uso: python3 tools/web-parche/seo.py
 """
-import re, json, os, html
+import re, json, os, html, sys
+sys.path.insert(0, os.path.dirname(__file__))
+import legal
 from urllib.parse import quote
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..', 'deploy', 'web', 'public')
 BASE = 'https://gastrogoan.com'
@@ -96,7 +98,22 @@ def bloque(grupo, l):
 
 
 def limpia(s):
-    return re.sub(r'<!-- gg-seo -->.*?<!-- /gg-seo -->', '', s, flags=re.S)
+    s = re.sub(r'<!-- gg-seo -->.*?<!-- /gg-seo -->', '', s, flags=re.S)
+    s = re.sub(r'<!-- gg-legal -->.*?<!-- /gg-legal -->', '', s, flags=re.S)
+    # Las tipografías ya van dentro de la página: avisar a Google de antemano mandaba la IP del visitante
+    # a Google sin necesidad (privacidad, 16/11)
+    return re.sub(r'\s*<link rel="preconnect" href="https://fonts\.(?:googleapis|gstatic)\.com"[^>]*>', '', s)
+
+
+LEGAL_CSS = ('.gg-legal{display:flex!important;flex-wrap:wrap!important;justify-content:center;gap:0 18px;padding:14px clamp(20px,6vw,64px) calc(14px + env(safe-area-inset-bottom,0px));'
+             "border-top:1px solid #E7E2D9;background:#FAF8F4;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em}"
+             '.gg-legal a,.gg-legal span{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap;color:#716C65;text-decoration:none}.gg-legal a:hover{color:#4A5D4E;text-decoration:underline}'
+             '@media (pointer:coarse){.gg-legal{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px) + 72px)}}')
+
+
+def legal_pie(l):
+    enl = ''.join(f'<a href="{legal.PAGS[k][l]}">{legal.NOMBRES[k][l]}</a>' for k in legal.PAGS)
+    return f'<!-- gg-legal --><style>{LEGAL_CSS}</style><nav class="gg-legal" aria-label="Legal"><span>© 2026 GastroGoan</span>{enl}</nav><!-- /gg-legal -->'
 
 
 def procesar(grupo, l):
@@ -108,6 +125,7 @@ def procesar(grupo, l):
     t = limpia(t)
     t = re.sub(r'<html[^>]*>', f'<html lang="{l}">', t, count=1)
     t = t.replace('</head>', bloque(grupo, l) + '</head>', 1)
+    t = t.replace('</x-dc>', legal_pie(l) + '</x-dc>', 1)   # enlaces legales al pie de cada página
     if grupo == 'asesoria':
         t = t.replace('href="https://wa.me/34622390245"', f'href="https://wa.me/34622390245?text={quote(APERTURAS[l])}" target="_blank" rel="noopener"')
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
@@ -133,6 +151,9 @@ def sitemap():
         for l, (_, ruta) in idiomas.items():
             pr = '1.0' if (grupo == 'inicio' and l == 'es') else ('0.9' if l == 'es' else '0.7')
             filas.append(f'  <url>\n    <loc>{BASE + ruta}</loc>{alt}\n    <changefreq>monthly</changefreq>\n    <priority>{pr}</priority>\n  </url>')
+    for pag, idi in legal.PAGS.items():
+        for l, slug in idi.items():
+            filas.append(f'  <url>\n    <loc>{BASE}/{slug}</loc>\n    <changefreq>yearly</changefreq>\n    <priority>0.2</priority>\n  </url>')
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
            'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' + '\n'.join(filas) + '\n</urlset>\n')
     open(os.path.join(RAIZ, 'sitemap.xml'), 'w').write(xml)

@@ -7,4 +7,5 @@ python3 tools/web-parche/inicio.py
 python3 tools/web-parche/asesoria.py
 python3 tools/web-parche/app.py
 python3 tools/web-parche/eventos.py
+python3 tools/web-parche/legal.py
 python3 tools/web-parche/seo.py

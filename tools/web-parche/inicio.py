@@ -7,7 +7,10 @@ oliva, esquinas rectas, grano de papel y luz cálida, y tamaños que se ajustan
 solos al ancho. El contenido va en el HTML (se ve y se indexa sin JavaScript).
 Uso: python3 tools/web-parche/inicio.py
 """
-import html, os, json
+import html, os, json, sys
+sys.path.insert(0, os.path.dirname(__file__))
+import legal
+LEGAL = {k: ''.join(f'<a href="{legal.PAGS[p][k]}">{legal.NOMBRES[p][k]}</a>' for p in legal.PAGS) for k in ('es', 'ca', 'en')}
 from urllib.parse import quote
 # Contacto con el mensaje ya escrito (revisión final, 16/11)
 MSGI = {'es': 'Hola, me gustaría información sobre GastroGoan.', 'ca': "Hola, m'agradaria informació sobre GastroGoan.", 'en': "Hi, I'd like some information about GastroGoan."}
@@ -123,6 +126,7 @@ main{flex:1}
 .pie nav{display:flex;flex-wrap:wrap;gap:0 18px}
 .pie nav a{display:inline-flex;align-items:center;min-height:44px;transition:color .25s}
 .pie nav a:hover{color:var(--crema)}
+.pie .legal{flex-basis:100%;gap:0 18px;white-space:nowrap;border-top:1px solid rgba(250,248,244,.1);font-size:11px}
 @media (max-width:560px){
   .puerta{grid-template-columns:auto 1fr}
   .puerta .fl{grid-column:2;grid-row:auto;justify-self:end;margin-top:-2.2em}
@@ -186,6 +190,7 @@ def pagina(l):
 <footer class="pie">
   <span class="logo">gastro<b>goan</b><i>.</i></span>
   <nav aria-label="Contacto"><a href="https://wa.me/34622390245?text={quote(MSGI[l])}" target="_blank" rel="noopener">{t['wa']} · +34 622 390 245</a><a href="mailto:gastrogoan@gmail.com?subject={quote(ASUI[l])}&amp;body={quote(MSGI[l])}">gastrogoan@gmail.com</a><a href="https://ig.me/m/gastrogoan" target="_blank" rel="noopener">@gastrogoan</a></nav>
+  <nav class="legal" aria-label="Legal">{LEGAL[l]}</nav>
 </footer>
 </body>
 </html>
