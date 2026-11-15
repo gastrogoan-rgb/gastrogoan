@@ -124,9 +124,11 @@ def cuenta(l):
       document.addEventListener('input',function(e){{if(e.target.closest&&e.target.closest('.gg-pr-fila'))recalcula()}});
       document.addEventListener('change',function(e){{if(e.target.closest&&e.target.closest('.gg-pr-fila'))recalcula()}});
       /* Tocar una fila con la cuenta ya pasada a GastroGoan la devuelve a «Lo que pagas hoy» para poder cambiarla */
-      document.addEventListener('pointerdown',function(e){{
+      /* Solo un TOQUE de verdad (click), nunca al empezar a arrastrar: en el móvil, bajar la página
+         con el dedo sobre la lista devolvía la cuenta a «Lo que pagas hoy» (lo vio el dueño, 17/11). */
+      document.addEventListener('click',function(e){{
         var f=e.target.closest&&e.target.closest('.gg-pr-fila'), r=f&&f.closest('.gg-pr-recibo');
-        if(r&&r.dataset.modo==='gg') modo('hoy');
+        if(r&&r.dataset.modo==='gg'){{ e.preventDefault(); modo('hoy');   /* ese primer toque solo vuelve a «hoy», no desmarca nada */ var i=f.querySelector('.gg-pr-imp input'); if(i&&!e.target.closest('label')) setTimeout(function(){{i.focus()}},50); }}
       }});
       document.addEventListener('click',function(e){{
         var b=e.target.closest&&e.target.closest('.gg-pr-sw-b'); if(b){{modo(b.dataset.modo);return}}
