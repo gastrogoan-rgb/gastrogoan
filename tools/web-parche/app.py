@@ -11,7 +11,7 @@ Uso: python3 tools/web-parche/app.py
 import re, json, os, subprocess, sys
 from urllib.parse import quote
 sys.path.insert(0, os.path.dirname(__file__))
-import volver, app_cuenta, app_incluye, app_precio
+import volver, app_cuenta, app_incluye, app_precio, app_final
 RAIZ = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGS = {'es': 'app', 'ca': 'ca-app', 'en': 'en-app'}
 BASE_GIT = 'a152bda'
@@ -121,9 +121,12 @@ def procesar(l):
     # 6) Precio: misma franja, textos al día, cifra que cae y reto centrado
     i = t.index('<!-- pre'); j = t.index('<!--', i + 5)
     t = t[:i] + app_precio.precio(l) + t[j:]
+    # 7) Preguntas frecuentes (revisadas) y cierre como el de Asesoría
+    i = t.index('<!-- faq'); j = t.index('<!-- footer')
+    t = t[:i] + app_final.faq(l) + app_final.cta(l) + t[j:]
     # 3) volver
     t = volver.aplicar(t)
-    t = t.replace('</helmet>', CSS.replace('</style>', app_cuenta.CSS + app_incluye.CSS + app_precio.CSS + '</style>') + '\n</helmet>', 1)
+    t = t.replace('</helmet>', CSS.replace('</style>', app_cuenta.CSS + app_incluye.CSS + app_precio.CSS + app_final.CSS + '</style>') + '\n</helmet>', 1)
     nuevo = json.dumps(t, ensure_ascii=False).replace('</', '<\\u002F')
     open(ruta, 'w', encoding='utf-8').write(s[:m.start(2)] + nuevo + s[m.end(2):])
     print('OK', arch, '· enlaces de compra cambiados:', n)

@@ -18,9 +18,9 @@ ZN = {
  'en': {'todo': 'All', 'sala': 'Front of house', 'cocina': 'Kitchen', 'gestion': 'Management', 'clientes': 'Customers', 'siempre': 'Always'},
 }
 CAB = {
- 'es': dict(et='Qué incluye', h2='Tu restaurante bajo control', n='herramientas.', una='Una sola app.', filtro='Ver por zona del local'),
- 'ca': dict(et='Què inclou', h2='El teu restaurant sota control', n='eines.', una='Una sola app.', filtro='Veure per zona del local'),
- 'en': dict(et="What's included", h2='Your restaurant, under control', n='tools.', una='One single app.', filtro='View by area'),
+ 'es': dict(et='Qué incluye', h2='Tu restaurante <span class="gg-hl">bajo control</span>', n='herramientas.', una='Una sola app.', filtro='Ver por zona del local'),
+ 'ca': dict(et='Què inclou', h2='El teu restaurant <span class="gg-hl">sota control</span>', n='eines.', una='Una sola app.', filtro='Veure per zona del local'),
+ 'en': dict(et="What's included", h2='Your restaurant, <span class="gg-hl">under control</span>', n='tools.', una='One single app.', filtro='View by area'),
 }
 
 I = {  # iconos de trazo (24×24)
@@ -195,6 +195,8 @@ def incluye(l):
 
 
 CSS = '''
+/* Mismo resaltado verde que los titulares de Asesoría */
+.gg-hl{display:inline;background:#4A5D4E;color:#FAF8F4;padding:0 .14em;-webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:2px}
 /* ---------- Qué incluye ---------- */
 .gg-in{padding:clamp(48px,6vw,84px) clamp(20px,6vw,64px);border-bottom:1px solid #E7E2D9;display:flex;flex-direction:column;align-items:center;gap:clamp(22px,3vw,32px)}
 .gg-in-cab{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}

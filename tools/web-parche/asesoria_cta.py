@@ -44,6 +44,7 @@ def cta(sec, l):
 
 CSS = '''
 /* ---------- Cierre ---------- */
+.gg-cta a[href$=".html"]{display:inline-flex;align-items:center;min-height:44px}
 .gg-cta>.gg-cta-h,.gg-cta>.gg-cta-bur{align-self:center;text-align:center}
 .gg-cta-h{margin:clamp(10px,2vw,24px) 0 0;display:flex;flex-direction:column;align-items:center;gap:.12em;font-size:clamp(30px,5vw,58px);font-weight:700;letter-spacing:-.03em;line-height:1.08;color:#FAF8F4}
 .gg-cta-l1{white-space:nowrap}
