@@ -78,6 +78,9 @@ Pruebas nuevas: abrir dos clientes seguidos; coach borra/inserta tarea mientras 
 - Una fase cada vez, en este orden; cada una con su prueba permanente en `test/` y en `todo.sh` (las dos listas).
 - Antes de dar una fase por buena: `bash test/todo.sh`, el emulador de dos aparatos para todo lo que sincroniza, capturas a 390 y 1280 px de cada pantalla tocada (y sus ventanas), y la norma de espacios muertos.
 - Publicar por tandas (cada 4-5 cambios): build, `deploy/actualizar.sh`, merge a `main`, y decir al dueño qué ver y dónde (panel en `admin.gastrogoan.com`).
+
+> **NORMA EXIGIBLE DEL DUEÑO (15/11): mejorar sobre la marcha.** Mientras se construye, cualquier idea, mejora o funcionalidad que beneficie al programa **se aplica en el momento**, sin esperar a que esté en este plan ni a pedir permiso. Este documento es el suelo, no el techo. Cada mejora añadida se apunta al final, en «Añadido sobre la marcha» (qué, por qué y dónde), para que el dueño la vea al revisar.
+
 ## Decisiones del dueño (15/11) — ya tomadas, no volver a preguntar
 
 - **Duración: 4 semanas.** Unificar web, contrato, carta, app, panel y manual con esa cifra (2 días presenciales dentro de las 4 semanas).
@@ -270,3 +273,9 @@ Plantillas reutilizables, duplicar, historial de cambios, comentarios, adjuntos,
 
 ### Por qué esto hace fluido el trabajo del hostelero
 Abre la app y en «Hoy» ve **qué toca, por qué, cuánto cuesta, quién lo hace y cómo va**. Cada tarea le lleva a la pantalla donde se hace, sus cifras se mueven solas y el coach se entera sin que nadie llame. Nada se apunta dos veces.
+
+---
+
+## Añadido sobre la marcha
+
+(Se rellena al construir: cada mejora aplicada que no estaba en el plan.)
