@@ -61,14 +61,23 @@ def precio(l):
         var s=document.querySelector('.gg-pc'), o=document.querySelector('.gg-pr-ah-v'), d=s&&s.querySelector('.gg-pc-ah-v');
         if(o&&d&&d.textContent!==o.textContent) d.textContent=o.textContent;
       }}
-      function cae(){{
-        var s=document.querySelector('.gg-pc'); if(!s||s.dataset.hecho) return;
-        var el=s.querySelector('.gg-pc-n'); if(el.getBoundingClientRect().top>innerHeight*0.8) return;
-        s.dataset.hecho=1; s.classList.add('vivo'); if(quieto) return;
-        var fin=+el.dataset.n, ini=Math.max(hoy(),fin*4), t0=performance.now();
-        (function p(t){{var q=Math.min(1,(t-t0)/1500),e=1-Math.pow(1-q,4);el.textContent=fmt(ini+(fin-ini)*e,s);
-          if(q<1&&document.body.contains(el))requestAnimationFrame(p); else s.classList.add('fin')}})(t0);
+      /* El estado vive aquí y no en el elemento: si la página se vuelve a montar a mitad de la caída, la copia
+         nueva heredaba la cifra a medias («3.357 €») y la marca de hecho, y se quedaba congelada. */
+      var t0=0, ini=0, FIN=240, DUR=1500;
+      function pinta(){{
+        var s=document.querySelector('.gg-pc'); if(!s) return; var el=s.querySelector('.gg-pc-n'); if(!el) return;
+        FIN=+el.dataset.n;
+        if(!t0) return;
+        var q=quieto?1:Math.min(1,(performance.now()-t0)/DUR), e=1-Math.pow(1-q,4);
+        el.textContent=fmt(ini+(FIN-ini)*e,s); s.classList.add('vivo');
+        if(q>=1) s.classList.add('fin');
       }}
+      function cae(){{
+        var s=document.querySelector('.gg-pc'); if(!s) return;
+        if(!t0){{ var el=s.querySelector('.gg-pc-n'); if(!el||el.getBoundingClientRect().top>innerHeight*0.8) return;
+          t0=performance.now(); ini=Math.max(hoy(),(+el.dataset.n)*4) }}
+      }}
+      (function bucle(){{ pinta(); requestAnimationFrame(bucle) }})();
       addEventListener('scroll',cae,{{passive:true}});
       var i=0,iv=setInterval(function(){{ahorro();cae();if(++i>80)clearInterval(iv)}},250);
       document.addEventListener('input',function(){{setTimeout(ahorro,600)}});
