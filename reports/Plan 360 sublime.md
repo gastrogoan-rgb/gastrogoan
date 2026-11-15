@@ -1,6 +1,6 @@
 # Plan 360º sublime — plan de trabajo
 
-**Estado: EN ESPERA** (15/11). El dueño lo aprobó como dirección («dale caña a todo y no pares hasta acabar»), pero pidió dejarlo aparcado hasta terminar un par de cosas antes. Cuando se retome, se ejecuta entero, fase a fase, sin pararse a preguntar salvo en las decisiones marcadas con ❓.
+**Estado: EN ESPERA** (15/11, decisiones del dueño ya recogidas abajo). El dueño lo aprobó como dirección («dale caña a todo y no pares hasta acabar»), pero pidió dejarlo aparcado hasta terminar un par de cosas antes. Cuando se retome, se ejecuta entero, fase a fase, sin pararse a preguntar salvo en las decisiones marcadas con ❓.
 
 Base: revisión en profundidad del 15/11 (panel del coach `admin-panel/plan360.html` + app del negocio `js/app.js` 5596-7263, `js/core.js`, `js/finance.js`). 15 problemas en el panel y 12 en la app; los más graves, reproducidos.
 
@@ -78,4 +78,9 @@ Pruebas nuevas: abrir dos clientes seguidos; coach borra/inserta tarea mientras 
 - Una fase cada vez, en este orden; cada una con su prueba permanente en `test/` y en `todo.sh` (las dos listas).
 - Antes de dar una fase por buena: `bash test/todo.sh`, el emulador de dos aparatos para todo lo que sincroniza, capturas a 390 y 1280 px de cada pantalla tocada (y sus ventanas), y la norma de espacios muertos.
 - Publicar por tandas (cada 4-5 cambios): build, `deploy/actualizar.sh`, merge a `main`, y decir al dueño qué ver y dónde (panel en `admin.gastrogoan.com`).
-- ❓ Decisiones del dueño pendientes: duración oficial del programa; si el informe de cierre lleva o no la oferta de mantenimiento dentro; si se quita el «borrador en PDF» antiguo del libro de marca.
+## Decisiones del dueño (15/11) — ya tomadas, no volver a preguntar
+
+- **Duración: 4 semanas.** Unificar web, contrato, carta, app, panel y manual con esa cifra (2 días presenciales dentro de las 4 semanas).
+- **El informe de cierre NO lleva la oferta de mantenimiento.** Orden: primero se enseña el informe de cierre; el paso SIGUIENTE (pantalla aparte) es ofrecer el mantenimiento.
+- **Quitar lo que ya no sirva**, comprobándolo antes (p. ej. el «borrador en PDF» antiguo del libro de marca, código muerto de presenciales, plantillas duplicadas): asegurarse de que nada lo usa.
+- **Mandato de fondo**: «ultra top» en funcionamiento y utilidades, *absolutamente todo*. No quedarse con lo que hay: entender primero la FUNCIÓN del método (diagnóstico 360 → plan por áreas → implementación acompañada → resultado medible → continuidad) y añadir lo que haga falta para que sirva de verdad trabajando cara a cara con el hostelero. Las fases de arriba son el mínimo, no el techo: al retomarlo, empezar por una pasada de diseño del método (qué necesita el coach en cada momento de la relación) y ampliar el plan con lo que salga.
