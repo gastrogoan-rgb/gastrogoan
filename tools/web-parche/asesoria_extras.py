@@ -5,7 +5,9 @@ los puntos se «dibujan» al aparecer."""
 import re
 
 SUB = {'es': 'A la carta', 'ca': 'A la carta', 'en': 'À la carte'}
-PANEL = {'es': '¿Qué necesitas? Elige un servicio', 'ca': 'Què necessites? Tria un servei', 'en': 'What do you need? Pick a service'}
+TITULO = {'es': 'Cuéntanos tu caso', 'ca': "Explica'ns el teu cas", 'en': 'Tell us about your case'}
+ELIGE = {'es': 'Elige un servicio', 'ca': 'Tria un servei', 'en': 'Choose a service'}
+ENVIAR = {'es': 'Escribir', 'ca': 'Escriure', 'en': 'Message'}
 GENERICO = {'es': 'Hola%20Marcos%2C%20me%20interesa%20uno%20de%20tus%20servicios',
             'ca': 'Hola%20Marcos%2C%20m%27interessa%20un%20dels%20teus%20serveis',
             'en': 'Hi%20Marcos%2C%20I%27m%20interested%20in%20one%20of%20your%20services'}
@@ -16,15 +18,14 @@ def extras(sec, l):
     h2 = re.search(r'<h2[^>]*>([^<]+)</h2>', sec).group(1)
     items = re.findall(r'<h3[^>]*>([^<]+)</h3>\s*<p[^>]*>(.*?)</p>\s*<a href="([^"]+)"[^>]*>([^<]+)</a>', sec, re.S)
     assert len(items) == 8, len(items)
-    lis = ''; chips = ''
-    ln = items[0][3].replace('→', '').strip()
+    lis = ''; ops = ''
     for k, (ti, tx, href, _ln) in enumerate(items):
-        # Tocar un servicio de la carta lo elige en el panel de abajo (data-i)
+        # Tocar un servicio de la carta lo elige en el desplegable del pie (data-i)
         lis += f'''<li class="gg-plato gg-rev" data-i="{k}" style="--d:{(k % 4) * 0.08:.2f}s">
           <div class="gg-plato-fila"><h3 class="gg-plato-n">{ti}</h3><span class="gg-puntos" aria-hidden="true"></span><span class="gg-plato-num">{k + 1:02d}</span></div>
           <p class="gg-plato-d">{tx}</p>
         </li>'''
-        chips += f'<button type="button" class="gg-pide-chip" data-i="{k}" data-wa="{href}" aria-pressed="false">{ti}</button>'
+        ops += f'<option value="{k}" data-wa="{href}">{k + 1:02d} · {ti}</option>'
     generico = 'https://wa.me/34622390245?text=' + GENERICO[l]
     return f'''<!-- extras -->
   <section class="gg-carta gg-anim" style="border-bottom:1px solid #E7E2D9;">
@@ -34,29 +35,34 @@ def extras(sec, l):
     </header>
     <div class="gg-carta-hoja gg-rev" style="--d:.12s">
       <ol class="gg-carta-lista">{lis}</ol>
-    </div>
-    <div class="gg-pide gg-rev" data-generico="{generico}">
-      <span class="gg-pide-t">{PANEL[l]}</span>
-      <div class="gg-pide-chips">{chips}</div>
-      <a class="gg-pide-btn" href="{generico}" target="_blank" rel="noopener">{WA}<span>{ln}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
+      <div class="gg-pide" data-generico="{generico}">
+        <h3 class="gg-pide-t">{TITULO[l]}</h3>
+        <div class="gg-pide-acc">
+          <label class="gg-pide-sel"><span class="gg-vh">{ELIGE[l]}</span>
+            <select class="gg-pide-select" aria-label="{ELIGE[l]}"><option value="">{ELIGE[l]}</option>{ops}</select>
+          </label>
+          <a class="gg-pide-btn" href="{generico}" target="_blank" rel="noopener">{WA}<span>{ENVIAR[l]}</span><span class="gg-flecha" aria-hidden="true">→</span></a>
+        </div>
+      </div>
     </div>
     <script>
-    /* Un servicio elegido (en el panel o tocando la carta) cambia el mensaje de WhatsApp del botón.
+    /* El servicio elegido (en el desplegable o tocando la carta) cambia el mensaje de WhatsApp.
        Delegación en document: la página se monta dos veces y no se guardan referencias. */
     (function(){{
       if(window.__ggPide) return; window.__ggPide=1;
-      function elige(i){{
+      function aplica(){{
         var P=document.querySelector('.gg-pide'); if(!P) return;
-        var btn=P.querySelector('.gg-pide-btn'), sel=null;
-        P.querySelectorAll('.gg-pide-chip').forEach(function(c){{var on=c.dataset.i===String(i)&&c.getAttribute('aria-pressed')!=='true';c.setAttribute('aria-pressed',on?'true':'false');if(on)sel=c}});
-        document.querySelectorAll('.gg-plato').forEach(function(li){{li.classList.toggle('elegido',!!sel&&li.dataset.i===sel.dataset.i)}});
-        btn.href=sel?sel.dataset.wa:P.dataset.generico;
+        var s=P.querySelector('.gg-pide-select'), btn=P.querySelector('.gg-pide-btn'), o=s.options[s.selectedIndex];
+        btn.href=(o&&o.dataset.wa)||P.dataset.generico;
+        document.querySelectorAll('.gg-plato').forEach(function(li){{li.classList.toggle('elegido',li.dataset.i===s.value)}});
         btn.classList.remove('late'); void btn.offsetWidth; btn.classList.add('late');
       }}
+      document.addEventListener('change',function(ev){{ if(ev.target.closest&&ev.target.closest('.gg-pide-select')) aplica(); }});
       document.addEventListener('click',function(ev){{
-        var c=ev.target.closest&&ev.target.closest('.gg-pide-chip'); if(c){{elige(c.dataset.i);return}}
-        var li=ev.target.closest&&ev.target.closest('.gg-plato[data-i]');
-        if(li){{elige(li.dataset.i); var P=document.querySelector('.gg-pide'); if(P&&P.getBoundingClientRect().top>innerHeight-80) P.scrollIntoView({{behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'}})}}
+        var li=ev.target.closest&&ev.target.closest('.gg-plato[data-i]'); if(!li) return;
+        var P=document.querySelector('.gg-pide'), s=P&&P.querySelector('.gg-pide-select'); if(!s) return;
+        s.value=(s.value===li.dataset.i)?'':li.dataset.i; aplica();
+        if(P.getBoundingClientRect().top>innerHeight-80) P.scrollIntoView({{behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'}});
       }});
     }})();
     </script>
@@ -84,16 +90,17 @@ CSS = '''
 .gg-plato:hover .gg-plato-n,.gg-plato.elegido .gg-plato-n{color:#4A5D4E}
 .gg-plato:hover .gg-puntos,.gg-plato.elegido .gg-puntos{border-color:#4A5D4E}
 .gg-plato.elegido .gg-plato-num{background:#4A5D4E;color:#FAF8F4;padding:1px 6px;border-radius:2px}
-/* Un solo panel bajo la carta: eliges servicio y el botón abre WhatsApp con su mensaje */
-.gg-pide{width:100%;max-width:760px;display:flex;flex-direction:column;align-items:center;gap:16px}
-.gg-pide-t{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#716C65}
-.gg-pide-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
-.gg-pide-chip{position:relative;min-height:34px;padding:0 13px;border:1px solid #D5CFC4;border-radius:999px;background:#fff;color:#3D3A34;font:inherit;font-size:13.5px;cursor:pointer;transition:border-color .2s,background .2s,color .2s}
-.gg-pide-chip::after{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
-.gg-pide-chip:hover{border-color:#4A5D4E;color:#4A5D4E}
-.gg-pide-chip[aria-pressed="true"]{background:#4A5D4E;border-color:#4A5D4E;color:#FAF8F4}
-.gg-pide-chip:focus-visible{outline:2px solid #4A5D4E;outline-offset:2px}
-.gg-pide-btn{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 24px;margin-top:4px;border-radius:3px;background:#1C1A17;color:#FAF8F4;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;transition:background .25s,transform .25s,box-shadow .25s}
+/* Pie de la carta, dentro del mismo recuadro: «Cuéntanos tu caso» + desplegable de servicios + botón */
+.gg-pide{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px 24px;margin-top:26px;padding-top:22px;border-top:2px solid #1C1A17;text-align:left}
+.gg-pide-t{margin:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:-.02em;color:#1C1A17}
+.gg-pide-acc{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gg-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.gg-pide-sel{position:relative;display:inline-flex}
+.gg-pide-sel::after{content:"";position:absolute;right:15px;top:50%;width:7px;height:7px;margin-top:-6px;border-right:1.5px solid #4A5D4E;border-bottom:1.5px solid #4A5D4E;transform:rotate(45deg);pointer-events:none}
+.gg-pide-select{appearance:none;-webkit-appearance:none;min-height:46px;min-width:250px;padding:0 40px 0 14px;border:1px solid #D5CFC4;border-radius:3px;background:#FAF8F4;color:#1C1A17;font:inherit;font-size:16px;cursor:pointer;transition:border-color .2s}
+.gg-pide-select:hover{border-color:#4A5D4E}
+.gg-pide-select:focus-visible{outline:2px solid #4A5D4E;outline-offset:2px}
+.gg-pide-btn{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 22px;border-radius:3px;background:#1C1A17;color:#FAF8F4;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;transition:background .25s,transform .25s,box-shadow .25s}
 .gg-pide-btn:hover,.gg-pide-btn:focus-visible{background:#4A5D4E;transform:translateY(-2px);box-shadow:0 14px 26px -16px rgba(28,26,23,.6)}
 .gg-pide-btn:focus-visible{outline:2px solid #4A5D4E;outline-offset:3px}
 .gg-wa{width:16px;height:16px;flex:none}
@@ -104,6 +111,7 @@ CSS = '''
   .gg-pide-btn.late{animation:gg-late .45s cubic-bezier(.2,.9,.25,1.2)}
 }
 @media (min-width:900px){.gg-carta-lista{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.gg-pide-acc,.gg-pide-sel,.gg-pide-select,.gg-pide-btn{width:100%}.gg-pide-select{min-width:0}.gg-pide-btn{justify-content:center}}
 @media (prefers-reduced-motion:no-preference){
   .gg-js .gg-plato .gg-puntos{transform:scaleX(0)}
   .gg-js .gg-plato.gg-vis .gg-puntos{transform:none}
