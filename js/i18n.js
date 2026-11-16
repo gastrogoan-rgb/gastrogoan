@@ -118,9 +118,16 @@ function tItem(item){
 }
 function showToast(msg, duration){
   const toastEl = document.getElementById('toast');
+  /* Un aviso sin texto salía como un rectángulo negro vacío (se vio en la
+     carga de la app, en el vídeo de móvil del 15/11): si no hay nada que decir,
+     no se enseña nada. */
+  if(msg == null || String(msg).trim() === ''){ if(toastEl){ toastEl.classList.remove('show'); } return; }
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(showToast._t);
+  /* Tope de 5 s: los avisos largos (6 s «descarga el CSV…») ya no se
+     quedan tapando la pantalla. En móvil el aviso va ARRIBA (ver CSS «VIDEO-MÓVIL»). */
+  duration = Math.min(duration || 2200, 5000);
   // Cada aviso se muestra el tiempo que pide y punto. Hubo un intento de
   // añadir un tope absoluto de 6 s como red de seguridad contra un aviso que
   // se quedara pegado en pantalla, pero ese temporizador extra no se
@@ -490,6 +497,8 @@ const I18N = {
     'plan360.overdueShort': 'Atrasado',
     'plan360.overdueOneDay': '1 día de retraso',
     'plan360.overdueDays': '${n} días de retraso',
+    'plan360.legend.presencial': 'Presencial', 'plan360.legend.today': 'Hoy', 'plan360.legend.overdue': 'Con tareas atrasadas',
+    'plan360.overdueClosed': 'Sin cerrar', 'plan360.overdueMore': 'Ver las ${n} restantes', 'plan360.overdueLess': 'Ver menos',
     'plan360.taskStatus.pendiente': 'Pendiente', 'plan360.taskStatus.hecha': 'Hecha', 'plan360.taskStatus.no_hecha': 'No hecha',
     'plan360.summaryTitle': 'Resumen del programa', 'plan360.noObjectives': 'Todavía no hay objetivos definidos',
     'plan360.tasksDone': 'Tareas completadas',
@@ -695,7 +704,7 @@ const I18N = {
     'tour.s31.title': 'El Manual de Uso: tu guía completa',
     'tour.s31.desc': 'En Gestión → Manual de Uso tienes un capítulo por pantalla, con pasos, consejos y qué hacer si algo no va. Busca por palabra, salta entre apartados y repite este tour con «Iniciar tour guiado».',
     'tour.phase.intro': 'Empezar', 'tour.phase.cocina': 'Cocina', 'tour.phase.sala': 'Sala', 'tour.phase.gestion': 'Gestión', 'tour.phase.ayuda': 'Ayuda',
-    'tour.stepCount': 'Paso ${n} de ${total}',
+    'tour.stepCount': 'Paso ${n} de ${total}', 'tour.more': 'Leer más', 'tour.less': 'Leer menos',
     'tour.s33.title': '¡Ya estás listo para volar!',
     'tour.s33.desc': 'Has visto Cocina, Sala y Gestión funcionando. No hace falta memorizar nada: el Manual y el Centro de ayuda están siempre a un clic, y el tour se repite cuando quieras desde Gestión → Manual de Uso. ¡A por el servicio!',
     'tour.finale.cta': 'Empezar a trabajar',
@@ -2182,7 +2191,7 @@ const I18N = {
     'hr.forecast.title': 'Previsión de tesorería',
     'hr.forecast.desc': 'Lo que entra es el ritmo medio de caja de los últimos 3 meses con actividad; lo que sale, los modelos del trimestre y los pagos periódicos con fecha. Orientativa, no una promesa.',
     'hr.forecast.days': 'A ${n} días',
-    'hr.te.otherExpenses': 'Otros Gastos (CAPEX + comisiones)',
+    'hr.te.otherExpenses': 'Otros Gastos (Inversiones + comisiones)',
     'hr.te.profitSavings': 'Beneficio / Ahorro',
     'hr.te.salesWithVat': 'Ventas con IVA',
     'hr.te.setAsideMonthly': 'Apartar cada mes',
@@ -2191,8 +2200,8 @@ const I18N = {
     'hr.te.vatReserve': 'Reserva IVA (modelo 303)',
     'hr.te.closeMonth': 'Cerrar mes',
     'hr.te.reopenMonth': 'Reabrir mes',
-    'hr.te.confirmCloseMonth': '¿Cerrar este mes? Los gastos variables y CAPEX de este mes quedarán bloqueados para edición y borrado, para proteger los datos ya enviados a la gestoría.',
-    'hr.te.confirmReopenMonth': '¿Reabrir este mes? Se podrá volver a editar y borrar gastos variables y CAPEX de este mes.',
+    'hr.te.confirmCloseMonth': '¿Cerrar este mes? Los gastos variables e Inversiones de este mes quedarán bloqueados para edición y borrado, para proteger los datos ya enviados a la gestoría.',
+    'hr.te.confirmReopenMonth': '¿Reabrir este mes? Se podrá volver a editar y borrar gastos variables e Inversiones de este mes.',
     'hr.te.monthClosedError': 'Este mes está cerrado y bloqueado para edición. Reábrelo primero en Tesorería si necesitas corregir algo.',
     'promo.newAction': 'Nueva Acción',
     'promo.print': 'Imprimir',
@@ -2403,7 +2412,7 @@ const I18N = {
     'empty.noPurchasesMonth': 'Sin compras registradas este mes.',
     'ge.monthlyResultChart': 'Resultado mensual',
     'ge.linkedBillingNote': 'Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables',
-    'ge.linkedResultNote': 'Calculado automáticamente de Cuenta de Resultados + CAPEX',
+    'ge.linkedResultNote': 'Calculado automáticamente de Cuenta de Resultados + Inversiones',
     'label.profitTax': 'Impuesto sobre beneficios (IRPF/IS)',
     'label.profitTaxSociedad': 'Impuesto de Sociedades',
     'hr.modulos.noAplica': 'Esta pestaña es para un autónomo que tributa por módulos. Elige tu forma jurídica y tu régimen fiscal en Mi Negocio para verla.',
@@ -2757,7 +2766,7 @@ const I18N = {
     'label.businessStatus': 'Estado del negocio',
     'label.vat': 'IVA',
     'label.financing': 'Financiación',
-    'ge.totalCapex': 'TOTAL CAPEX',
+    'ge.totalCapex': 'TOTAL INVERSIONES',
     'empty.noInvestments': 'Sin inversiones registradas',
     'tab.contentIdeas': 'Ideas de contenido',
     'manual.tourTitle': 'Tour guiado interactivo',
@@ -3020,7 +3029,7 @@ const I18N = {
     'dash.hero.vsLastWeek': 'vs. mismo día semana pasada',
     'dash.hero.ticketsToday': 'Tickets hoy',
     'dash.reviewFixedExpenses': 'Revisar Gastos Fijos →',
-    'dash.deepDiveHint': '(rentabilidad y ventas por plato — click para plegar)',
+    'dash.deepDiveHint': '(rentabilidad y ventas por plato)',
     'hr.gv.editPurchase': 'Editar compra',
     'hr.gv.searchPlaceholder': 'Buscar por proveedor o categoría...',
     'factura.attachLabel': 'Factura (foto o PDF)',
@@ -3461,6 +3470,8 @@ const I18N = {
     'plan360.overdueShort': 'Endarrerit',
     'plan360.overdueOneDay': '1 dia de retard',
     'plan360.overdueDays': '${n} dies de retard',
+    'plan360.legend.presencial': 'Presencial', 'plan360.legend.today': 'Avui', 'plan360.legend.overdue': 'Amb tasques endarrerides',
+    'plan360.overdueClosed': 'Sense tancar', 'plan360.overdueMore': 'Veure les ${n} restants', 'plan360.overdueLess': 'Veure menys',
     'plan360.taskStatus.pendiente': 'Pendent', 'plan360.taskStatus.hecha': 'Feta', 'plan360.taskStatus.no_hecha': 'No feta',
     'plan360.summaryTitle': 'Resum del programa', 'plan360.noObjectives': 'Encara no hi ha objectius definits',
     'plan360.tasksDone': 'Tasques completades',
@@ -3666,7 +3677,7 @@ const I18N = {
     'tour.s31.title': 'El Manual d\'Ús: la teva guia completa',
     'tour.s31.desc': 'A Gestió → Manual d\'Ús tens un capítol per pantalla, amb passos, consells i què fer si alguna cosa no va. Cerca per paraula, salta entre apartats i repeteix aquest tour amb «Iniciar tour guiat».',
     'tour.phase.intro': 'Començar', 'tour.phase.cocina': 'Cuina', 'tour.phase.sala': 'Sala', 'tour.phase.gestion': 'Gestió', 'tour.phase.ayuda': 'Ajuda',
-    'tour.stepCount': 'Pas ${n} de ${total}',
+    'tour.stepCount': 'Pas ${n} de ${total}', 'tour.more': 'Llegir més', 'tour.less': 'Llegir menys',
     'tour.s33.title': 'Ja estàs a punt per volar!',
     'tour.s33.desc': 'Has vist Cuina, Sala i Gestió funcionant. No cal memoritzar res: el Manual i el Centre d\'ajuda són sempre a un clic, i el tour es repeteix quan vulguis des de Gestió → Manual d\'Ús. Ara, al servei!',
     'tour.finale.cta': 'Començar a treballar',
@@ -5150,7 +5161,7 @@ const I18N = {
     'hr.forecast.title': 'Previsió de tresoreria',
     'hr.forecast.desc': 'El que entra és el ritme mitjà de caixa dels últims 3 mesos amb activitat; el que surt, els models del trimestre i els pagaments periòdics amb data. Orientativa, no una promesa.',
     'hr.forecast.days': 'A ${n} dies',
-    'hr.te.otherExpenses': 'Altres Despeses (CAPEX + comissions)',
+    'hr.te.otherExpenses': 'Altres Despeses (Inversions + comissions)',
     'hr.te.profitSavings': 'Benefici / Estalvi',
     'hr.te.salesWithVat': 'Vendes amb IVA',
     'hr.te.setAsideMonthly': 'Reservar cada mes',
@@ -5159,8 +5170,8 @@ const I18N = {
     'hr.te.vatReserve': 'Reserva IVA (model 303)',
     'hr.te.closeMonth': 'Tancar mes',
     'hr.te.reopenMonth': 'Reobrir mes',
-    'hr.te.confirmCloseMonth': 'Vols tancar aquest mes? Les despeses variables i CAPEX d\'aquest mes quedaran bloquejades per a edició i esborrat, per protegir les dades ja enviades a la gestoria.',
-    'hr.te.confirmReopenMonth': 'Vols reobrir aquest mes? Es podran tornar a editar i esborrar despeses variables i CAPEX d\'aquest mes.',
+    'hr.te.confirmCloseMonth': 'Vols tancar aquest mes? Les despeses variables i Inversions d\'aquest mes quedaran bloquejades per a edició i esborrat, per protegir les dades ja enviades a la gestoria.',
+    'hr.te.confirmReopenMonth': 'Vols reobrir aquest mes? Es podran tornar a editar i esborrar despeses variables i Inversions d\'aquest mes.',
     'hr.te.monthClosedError': 'Aquest mes està tancat i bloquejat per a edició. Reobre\'l primer a Tresoreria si necessites corregir alguna cosa.',
     'promo.newAction': 'Nova Acció',
     'promo.print': 'Imprimir',
@@ -5371,7 +5382,7 @@ const I18N = {
     'empty.noPurchasesMonth': 'Sense compres registrades aquest mes.',
     'ge.monthlyResultChart': 'Resultat mensual',
     'ge.linkedBillingNote': 'Facturació vinculada al TPV · Despeses vinculades a Despeses Fixes i Variables',
-    'ge.linkedResultNote': 'Calculat automàticament a partir del Compte de Resultats + CAPEX',
+    'ge.linkedResultNote': 'Calculat automàticament a partir del Compte de Resultats + Inversions',
     'label.profitTax': 'Impost sobre beneficis (IRPF/IS)',
     'label.profitTaxSociedad': 'Impost de Societats',
     'hr.modulos.noAplica': 'Aquesta pestanya és per a un autònom que tributa per mòduls. Tria la teva forma jurídica i el teu règim fiscal a Mi Negocio per veure-la.',
@@ -5725,7 +5736,7 @@ const I18N = {
     'label.businessStatus': 'Estat del negoci',
     'label.vat': 'IVA',
     'label.financing': 'Finançament',
-    'ge.totalCapex': 'TOTAL CAPEX',
+    'ge.totalCapex': 'TOTAL INVERSIONS',
     'empty.noInvestments': 'Sense inversions registrades',
     'tab.contentIdeas': 'Idees de contingut',
     'manual.tourTitle': 'Tour guiat interactiu',
@@ -5990,7 +6001,7 @@ const I18N = {
     'dash.hero.vsLastWeek': 'vs. mateix dia setmana passada',
     'dash.hero.ticketsToday': 'Tiquets avui',
     'dash.reviewFixedExpenses': 'Revisar Despeses Fixes →',
-    'dash.deepDiveHint': '(rendibilitat i vendes per plat — clic per plegar)',
+    'dash.deepDiveHint': '(rendibilitat i vendes per plat)',
     'hr.gv.editPurchase': 'Editar compra',
     'hr.gv.searchPlaceholder': 'Cercar per proveïdor o categoria...',
     'factura.attachLabel': 'Factura (foto o PDF)',
@@ -6432,6 +6443,8 @@ const I18N = {
     'plan360.overdueShort': 'Overdue',
     'plan360.overdueOneDay': '1 day overdue',
     'plan360.overdueDays': '${n} days overdue',
+    'plan360.legend.presencial': 'In person', 'plan360.legend.today': 'Today', 'plan360.legend.overdue': 'With overdue tasks',
+    'plan360.overdueClosed': 'Not closed', 'plan360.overdueMore': 'Show the other ${n}', 'plan360.overdueLess': 'Show fewer',
     'plan360.taskStatus.pendiente': 'Pending', 'plan360.taskStatus.hecha': 'Done', 'plan360.taskStatus.no_hecha': 'Not done',
     'plan360.summaryTitle': 'Program summary', 'plan360.noObjectives': 'No objectives defined yet',
     'plan360.tasksDone': 'Tasks completed',
@@ -6637,7 +6650,7 @@ const I18N = {
     'tour.s31.title': 'The User Manual: your complete guide',
     'tour.s31.desc': 'In Management → User Manual there\'s one chapter per screen, with steps, tips and what to do if something doesn\'t work. Search by word, jump between sections and repeat this tour with "Start guided tour".',
     'tour.phase.intro': 'Start', 'tour.phase.cocina': 'Kitchen', 'tour.phase.sala': 'Floor', 'tour.phase.gestion': 'Management', 'tour.phase.ayuda': 'Help',
-    'tour.stepCount': 'Step ${n} of ${total}',
+    'tour.stepCount': 'Step ${n} of ${total}', 'tour.more': 'Read more', 'tour.less': 'Read less',
     'tour.s33.title': 'You\'re ready to fly!',
     'tour.s33.desc': 'You\'ve seen Kitchen, Floor and Management at work. There\'s nothing to memorise: the Manual and Help centre are always one click away, and you can repeat the tour whenever you like from Management → User Manual. On to service!',
     'tour.finale.cta': 'Start working',
@@ -8122,7 +8135,7 @@ const I18N = {
     'hr.forecast.title': 'Cash flow forecast',
     'hr.forecast.desc': 'Money in is the average cash pace of the last 3 months with activity; money out is the quarter’s tax forms and dated periodic payments. A guide, not a promise.',
     'hr.forecast.days': 'In ${n} days',
-    'hr.te.otherExpenses': 'Other Expenses (CAPEX + commissions)',
+    'hr.te.otherExpenses': 'Other Expenses (Investments + commissions)',
     'hr.te.profitSavings': 'Profit / Savings',
     'hr.te.salesWithVat': 'Sales with VAT',
     'hr.te.setAsideMonthly': 'Set aside every month',
@@ -8131,8 +8144,8 @@ const I18N = {
     'hr.te.vatReserve': 'VAT reserve (form 303)',
     'hr.te.closeMonth': 'Close month',
     'hr.te.reopenMonth': 'Reopen month',
-    'hr.te.confirmCloseMonth': 'Close this month? Variable expenses and CAPEX for this month will be locked from editing and deletion, to protect data already sent to your accountant.',
-    'hr.te.confirmReopenMonth': 'Reopen this month? Variable expenses and CAPEX for this month can be edited and deleted again.',
+    'hr.te.confirmCloseMonth': 'Close this month? Variable expenses and Investments for this month will be locked from editing and deletion, to protect data already sent to your accountant.',
+    'hr.te.confirmReopenMonth': 'Reopen this month? Variable expenses and Investments for this month can be edited and deleted again.',
     'hr.te.monthClosedError': 'This month is closed and locked for editing. Reopen it first in Treasury if you need to fix something.',
     'promo.newAction': 'New Action',
     'promo.print': 'Print',
@@ -8343,7 +8356,7 @@ const I18N = {
     'empty.noPurchasesMonth': 'No purchases recorded this month.',
     'ge.monthlyResultChart': 'Monthly result',
     'ge.linkedBillingNote': 'Billing linked to the POS · Expenses linked to Fixed and Variable Expenses',
-    'ge.linkedResultNote': 'Automatically calculated from the Income Statement + CAPEX',
+    'ge.linkedResultNote': 'Automatically calculated from the Income Statement + Investments',
     'label.profitTax': 'Profit tax (income tax/corporate tax)',
     'label.profitTaxSociedad': 'Corporate tax',
     'hr.modulos.noAplica': 'This tab is for a self-employed person taxed under modules. Choose your legal form and tax regime in My Business to see it.',
@@ -8697,7 +8710,7 @@ const I18N = {
     'label.businessStatus': 'Business status',
     'label.vat': 'VAT',
     'label.financing': 'Financing',
-    'ge.totalCapex': 'TOTAL CAPEX',
+    'ge.totalCapex': 'TOTAL INVESTMENTS',
     'empty.noInvestments': 'No investments recorded',
     'tab.contentIdeas': 'Content ideas',
     'manual.tourTitle': 'Interactive guided tour',
@@ -8962,7 +8975,7 @@ const I18N = {
     'dash.hero.vsLastWeek': 'vs. same day last week',
     'dash.hero.ticketsToday': 'Tickets today',
     'dash.reviewFixedExpenses': 'Review Fixed Expenses →',
-    'dash.deepDiveHint': '(profitability and sales per dish — click to collapse)',
+    'dash.deepDiveHint': '(profitability and sales per dish)',
     'hr.gv.editPurchase': 'Edit purchase',
     'hr.gv.searchPlaceholder': 'Search by supplier or category...',
     'factura.attachLabel': 'Invoice (photo or PDF)',
@@ -9118,6 +9131,11 @@ function getLang(){
   return (DB && DB.business && DB.business.lang) || 'es';
 }
 // Para bloques largos de prosa (no cadenas cortas de UI): {es,ca,en} -> texto en el idioma activo.
+/* ¿El aparato principal es táctil (sin «pasar por encima»)? Los textos que hablan del ratón («pasa el ratón por…», «click para…») en un móvil
+   o una tablet sobran y suenan a app de PC: con esto se elige la frase que toca (vídeo en un móvil real, 15/11). */
+function ggTactil(){
+  try{ return !!(window.matchMedia && window.matchMedia('(hover:none)').matches); }catch(e){ return false; }
+}
 function gl(obj){
   const l = getLang();
   return obj[l] !== undefined ? obj[l] : obj.es;

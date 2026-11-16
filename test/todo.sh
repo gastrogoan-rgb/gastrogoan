@@ -206,6 +206,7 @@ lanzar; node test/entregas.mjs > "$SALIDA/entregas.txt" 2>&1 & P198=$!
 lanzar; node test/entregas-veracidad.mjs > "$SALIDA/entregasver.txt" 2>&1 & P199=$!
 lanzar; node test/sw-reservas.mjs > "$SALIDA/swreservas.txt" 2>&1 & P200=$!
 lanzar; node test/sw-app-offline.mjs > "$SALIDA/swappoff.txt" 2>&1 & P201=$!
+lanzar; node test/economia-movil.mjs > "$SALIDA/economiamovil.txt" 2>&1 & P202=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -228,6 +229,7 @@ lanzar; node test/qr-mesa.mjs > "$SALIDA/qr-mesa.txt" 2>&1 & P104=$!
 lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=$!
 lanzar; node test/preguntale.mjs > "$SALIDA/preguntale.txt" 2>&1 & P110=$!
 lanzar; node test/movil-nuevas.mjs > "$SALIDA/movil-nuevas.txt" 2>&1 & P112=$!
+lanzar; node test/video-movil-global.mjs > "$SALIDA/video-movil-global.txt" 2>&1 & PVM1=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -360,6 +362,7 @@ espera $P104 "Carta por QR en la mesa: token por mesa, precios de la carta, pago
 espera $P111 "Factura dentro del pedido: cuadre línea a línea, precios con historial, gasto sin duplicar, lo recibido no se pisa" "$SALIDA/factura-pedido.txt" "todos los casos de factura-pedido pasaron"
 espera $P110 "Pregúntale a tus números: clave de IA en Mi Negocio (solo en el aparato), cifras reales al modelo, empleado fuera, alta saltable" "$SALIDA/preguntale.txt" "todos los casos de pregúntale pasaron"
 espera $P112 "Pantallas nuevas en móvil (5 anchos): leer factura, cuadre del pedido, visión global, pregúntale, Mi Negocio, alta IA y web de la mesa" "$SALIDA/movil-nuevas.txt" "todos los casos de móvil nuevas pasaron"
+espera $PVM1 "Vídeo móvil, paquete 1: fila del selector, tablas, aviso arriba, fundidos, acceso, Volver único y tour" "$SALIDA/video-movil-global.txt" "todo en orden"
 espera $P121 "Cocina: un vale nuevo cada vez que la mesa pide otra vez, y la cabecera de la carta en verde como la del menú" "$SALIDA/vales-cocina.txt" "casos pasaron"
 espera $P122 "Oferta Gastronómica: horario semanal en una fila, aviso de cambios sin guardar, y raciones/agotado que mandan lo guardado" "$SALIDA/oferta.txt" "casos pasaron"
 espera $P123 "Iconos de la carta: catálogo de comida de trazo, «Sin icono» primero, emoji antiguos que se siguen viendo, web pública idéntica" "$SALIDA/iconos-comida.txt" "casos pasaron"
@@ -441,6 +444,7 @@ espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana p
 espera $P199 "Veracidad del seguimiento: estados, ventana, llegada estimada y latido son hechos reales, no relleno" "$SALIDA/entregasver.txt" "es veraz"
 espera $P200 "La web de reservas abre sin red tras la primera visita (bloqueos de LaLiga)" "$SALIDA/swreservas.txt" "abre sin red tras la primera visita"
 espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALIDA/swappoff.txt" "abre sin red una vez instalada"
+espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería sin cifras montadas, pestañas, nombres enteros, tablas sin cortar, deducible con botones" "$SALIDA/economiamovil.txt" "Panel en móvil: 5 anchos"
 
 espera $P202 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 exit $FALLOS

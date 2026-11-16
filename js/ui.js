@@ -221,7 +221,7 @@ const TOUR_STEPS = [
   {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock', phase:'cocina'},
   {icon:'ti-truck-delivery', titleKey:'tour.s43.title', descKey:'tour.s43.desc', folder:'cocina', view:'pedidos', phase:'cocina'},
   {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios', phase:'cocina'},
-  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios', phase:'cocina'},
+  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios', phase:'cocina', sinFocoMovil:true},
   {icon:'ti-list-check', titleKey:'tour.s44.title', descKey:'tour.s44.desc', folder:'cocina', view:'distribucion', phase:'cocina'},
   {icon:'ti-spray', titleKey:'tour.s45.title', descKey:'tour.s45.desc', folder:'cocina', view:'limpieza', phase:'cocina'},
   {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina', phase:'cocina'},
@@ -230,10 +230,10 @@ const TOUR_STEPS = [
   {icon:'ti-device-desktop', titleKey:'tour.s46.title', descKey:'tour.s46.desc', folder:'sala', target:'#folder-modules', phase:'sala'},
   {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', target:['.tp-cab', '#tpv-mesas-section'], phase:'sala'},
   {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
+  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
+  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
+  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
   {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv', target:'#tpv-togo-section', phase:'sala'},
   {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv', target:'#tpv-online-toggle-btn', phase:'sala'},
   {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv', target:'#tpv-close-cash-btn', phase:'sala'},
@@ -248,10 +248,10 @@ const TOUR_STEPS = [
   {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc', folder:'gestion', view:'dashboard', gestion:true, phase:'gestion'},
   {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc', folder:'gestion', view:'economia', gestion:true, phase:'gestion'},
   {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
-  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
+  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion', sinFocoMovil:true},
 
   // ---- Cabecera (siempre visible, en cualquier pantalla) ----
-  {icon:'ti-home', titleKey:'tour.s38.title', descKey:'tour.s38.desc', target:'#app-logo-icon', phase:'ayuda'},
+  {icon:'ti-home', titleKey:'tour.s38.title', descKey:'tour.s38.desc', target:['#app-logo-icon', '.app-header'], phase:'ayuda'},
   {icon:'ti-language', titleKey:'tour.s39.title', descKey:'tour.s39.desc', target:'#lang-btn', phase:'ayuda'},
   {icon:'ti-building-store', titleKey:'tour.s40.title', descKey:'tour.s40.desc', target:'#business-switch-btn', phase:'ayuda'},
   {icon:'ti-logout', titleKey:'tour.s41.title', descKey:'tour.s41.desc', target:'#logout-btn', phase:'ayuda'},
@@ -436,13 +436,22 @@ function tourApplyStep(step){
   // que es lo que de verdad se está explicando — no la pantalla entera ni un recuadro de otro diseño.
   const visible = n => { if(!n) return false; const r = n.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   let el = null;
+  // Pasos que explican algo que NO existe en la pantalla de fondo (la comanda de una mesa, una pestaña interna): en móvil
+  // enmarcar «la primera mesa» o un bloque cualquiera era un recuadro que no era lo explicado (vídeo del 15/11). Sin foco.
+  const sinFoco = !!(step.sinFocoMovil && window.innerWidth < 640);
+  if(sinFoco){
+    tourCurrentTargetEl = null;
+    return null;
+  }
   if(step.target){
     const lista = Array.isArray(step.target) ? step.target : [step.target];
     for(const sel of lista){ const n = document.querySelector(sel); if(visible(n)){ el = n; break; } }
     if(!el) el = document.querySelector(lista[0]);
   }else if(step.view){
     const vista = document.getElementById('view-' + step.view);
-    const bloque = vista && [...vista.children].find(n => !n.matches('.btn-back,.view-title,.view-subtitle,script,style') && visible(n));
+    // El primer bloque VISIBLE y con algo escrito dentro: un contenedor vacío o de solo huecos salía como un recuadro oscuro sin nada.
+    const conTexto = n => visible(n) && (n.innerText || '').trim().length > 0 && n.getBoundingClientRect().height >= 40;
+    const bloque = vista && [...vista.children].find(n => !n.matches('.btn-back,.view-title,.view-subtitle,script,style') && conTexto(n));
     el = bloque || (vista && (vista.querySelector('.card') || vista));
   }else if(step.folder){
     el = document.querySelector('#folder-modules .module-card') || document.querySelector('.folder-card.folder-' + step.folder);
@@ -537,6 +546,15 @@ function tourPositionUI(opts){
     spot.style.top = '50%'; spot.style.left = '50%'; spot.style.width = '0px'; spot.style.height = '0px';
     if(arrow) arrow.style.display = 'none';
     bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-sheet-top', 'tour-bubble-dock');
+    // En móvil, un paso sin foco usa la MISMA hoja compacta de abajo (sin cambiar de forma entre pasos); solo el final/primero van centrados.
+    const step = TOUR_STEPS[tourStepIndex];
+    if(movil && step && !step.finale && tourStepIndex > 0){
+      bubble.classList.remove('tour-bubble-centered'); bubble.classList.add('tour-bubble-sheet');
+      bubble.style.top = 'auto'; bubble.style.left = '0px';
+      const desc = bubble.querySelector('.tour-bubble-desc'), mas = bubble.querySelector('.tour-mas');
+      if(desc && mas){ const abierto = bubble.classList.contains('tour-texto-abierto'); mas.hidden = !abierto && desc.scrollHeight <= desc.clientHeight + 1; }
+      return;
+    }
     bubble.classList.add('tour-bubble-centered');
     return;
   }
@@ -548,14 +566,18 @@ function tourPositionUI(opts){
   if(movil){
     bubble.classList.add('tour-bubble-sheet'); bubble.classList.remove('tour-bubble-dock');
     bubble.style.top = 'auto'; bubble.style.left = '0px';
+    // «Leer más» solo si el texto recortado a 3 renglones de verdad no cabe entero.
+    const desc = bubble.querySelector('.tour-bubble-desc'), mas = bubble.querySelector('.tour-mas');
+    if(desc && mas){ const abierto = bubble.classList.contains('tour-texto-abierto'); mas.hidden = !abierto && desc.scrollHeight <= desc.clientHeight + 1; }
     if(arrow) arrow.style.display = 'none';
-    const limite = vh - bh - 14;
+    const bhHoja = bubble.offsetHeight;   // ya con la clase de hoja (y el texto recortado): se mide DESPUÉS de ponerla
+    const limite = vh - bhHoja - 14;
     bubble.classList.remove('tour-bubble-sheet-top');
     if(ajustar && el){ tourScrollTarget(el, 72, limite); rect = medir(); }
     // Si la página no deja subir lo explicado por encima de la hoja (ya está al final del scroll), la hoja pasa ARRIBA en vez de
     // taparlo: queda enfrente, en el hueco libre de la mitad que no ocupa el elemento.
     let arriba = rect.top - pad, abajo = Math.min(rect.bottom + pad, limite - 6);
-    if(rect.bottom + pad > limite - 6 && rect.top - pad > bh + 14){
+    if(rect.bottom + pad > limite - 6 && rect.top - pad > bhHoja + 14){
       bubble.classList.add('tour-bubble-sheet-top');
       abajo = rect.bottom + pad;
     }
@@ -638,7 +660,7 @@ function renderTourStep(){
     return `<button class="tour-phase-pill ${state}" onclick="tourJumpToPhase('${p.key}')" title="${escapeHtml(t(p.labelKey))}"><i class="ti ${p.icon}"></i><span>${escapeHtml(t(p.labelKey))}</span></button>`;
   }).join('');
 
-  bubble.classList.remove('tour-bubble-anim');
+  bubble.classList.remove('tour-bubble-anim', 'tour-texto-abierto');
   bubble.classList.toggle('tour-bubble-finale', !!step.finale);
   void bubble.offsetWidth; // fuerza reflow para poder relanzar la animación de entrada en cada paso
   bubble.classList.add('tour-bubble-anim');
@@ -654,6 +676,7 @@ function renderTourStep(){
       <button class="modal-close" onclick="finishTour()" aria-label="${escapeHtml(t('common.close'))}">&times;</button>
     </div>
     <p class="tour-bubble-desc">${escapeHtml(t(step.descKey))}</p>
+    ${step.finale ? '' : `<button type="button" class="tour-mas" onclick="tourAlternarTexto()">${escapeHtml(t('tour.more'))}</button>`}
     ${step.finale ? '' : `<div class="tour-progress"><div class="tour-progress-fill" style="width:${pct}%"></div></div>`}
     <div class="modal-footer tour-bubble-footer">
       ${step.finale
@@ -664,6 +687,14 @@ function renderTourStep(){
         `}
     </div>
   `;
+}
+/* Hoja del móvil: el texto va recortado a 3 renglones y este botón lo despliega (y lo vuelve a recoger). Los botones Anterior/Siguiente
+   no se mueven nunca: el cuerpo es lo único que hace scroll. */
+function tourAlternarTexto(){
+  const b = document.getElementById('tour-bubble'); if(!b) return;
+  const abierto = b.classList.toggle('tour-texto-abierto');
+  const btn = b.querySelector('.tour-mas'); if(btn) btn.textContent = t(abierto ? 'tour.less' : 'tour.more');
+  tourPositionUI();
 }
 function tourNext(){ tourStepIndex = Math.min(tourStepIndex+1, TOUR_STEPS.length-1); renderTourStep(); }
 function tourPrev(){ tourStepIndex = Math.max(tourStepIndex-1, 0); renderTourStep(); }
@@ -1575,6 +1606,32 @@ function switchChatTab(channel){
   markChatRead(channel);
   updateChatBadge();
 }
+/* Los mensajes AUTOMÁTICOS del chat (pedir ayuda, avisar de un pase, una incidencia, un aviso rápido a sala) se guardaban ya escritos
+   en el idioma del aparato que los mandó: un camarero con la app en inglés dejaba «Manager needs help right now» y el dueño lo leía en
+   inglés entre mensajes en castellano. Un dato guardado no se traduce, se traduce al mostrarlo (norma de i18n): el mensaje lleva
+   `sys` = {k, …parámetros} y se compone aquí en el idioma de quien lo lee. `text` se conserva como respaldo (otros aparatos con una
+   versión anterior, avisos del navegador) y para los mensajes antiguos, que se reconocen por su plantilla en cualquiera de los tres idiomas. */
+function chatNombreAutor(m){
+  return String(m && m.authorId) === 'owner' ? t('common.chef') : (m && m.authorName) || '';
+}
+function chatTextoDe(m){
+  if(!m) return '';
+  const s = m.sys;
+  if(s && s.k === 'urgentHelp') return t('chat.urgentDefaultText').replace('${name}', chatNombreAutor(m));
+  if(s && s.k === 'pase') return `🍳 ${s.titulo}: ${gl({es:'listo en el pase, venid a recogerlo', ca:'llest al pas, veniu a recollir-ho', en:'ready at the pass, come and collect'})}`;
+  if(s && s.k === 'avisoSala' && typeof AVISOS_SALA !== 'undefined' && AVISOS_SALA[s.i]) return '🍳 ' + gl(AVISOS_SALA[s.i]);
+  if(s && s.k === 'incidencia' && typeof incidenciaTipoLabel === 'function') return `⚠ ${s.titulo}: ${incidenciaTipoLabel(s.tipo)}${s.texto ? ' — ' + s.texto : ''}`;
+  // Mensajes de antes de `sys`: «<nombre> necesita ayuda ahora mismo» en cualquiera de los tres idiomas
+  if(m.urgent && !s){
+    for(const lg of ['es', 'ca', 'en']){
+      const plantilla = (I18N[lg] || {})['chat.urgentDefaultText'];
+      if(!plantilla) continue;
+      const [pre, post] = plantilla.split('${name}');
+      if(String(m.text).startsWith(pre) && String(m.text).endsWith(post)) return t('chat.urgentDefaultText').replace('${name}', chatNombreAutor(m));
+    }
+  }
+  return m.text;
+}
 function renderChatMessages(){
   const box = document.getElementById('chat-messages');
   const author = getChatAuthor();
@@ -1584,9 +1641,8 @@ function renderChatMessages(){
   const esNuevo = m => leido !== undefined && String(m.authorId) !== String(author) && (!leido || m.ts > leido);
   box.innerHTML = msgs.map(m => `
     <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}${esNuevo(m)?' chat-msg-new':''}">
-      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}</span>
-      ${escapeHtml(m.text)}
-      <button class="btn btn-sm txt-xs" style="margin-top:4px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
+      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(chatNombreAutor(m))} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}<button class="chat-pin" onclick="pinChatMessage(${m.id})" data-tip="${escapeHtml(t('chat.pinMessage'))}" aria-label="${escapeHtml(t('chat.pinMessage'))}"><i class="ti ti-pin"></i></button></span>
+      <span class="chat-txt">${escapeHtml(chatTextoDe(m))}</span>
     </div>
   `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
@@ -1623,7 +1679,7 @@ function renderChatPinned(){
   box.innerHTML = msg ? `
     <div class="chat-pinned-bar">
       <i class="ti ti-pin"></i>
-      <span style="flex:1"><strong>${escapeHtml(msg.authorName)}:</strong> ${escapeHtml(msg.text)}</span>
+      <span style="flex:1"><strong>${escapeHtml(chatNombreAutor(msg))}:</strong> ${escapeHtml(chatTextoDe(msg))}</span>
       <button class="btn btn-sm btn-icon" onclick="unpinChatMessage()"><i class="ti ti-x"></i></button>
     </div>` : '';
 }
@@ -1649,7 +1705,7 @@ function sendUrgentHelpAlert(){
   const authorName = getChatAuthorName(authorId);
   DB.chatMessages.push({
     id: genId(), channel: 'general', authorId, authorName,
-    text: t('chat.urgentDefaultText').replace('${name}', authorName),
+    text: t('chat.urgentDefaultText').replace('${name}', authorName), sys: {k: 'urgentHelp'},
     ts: new Date().toISOString(), urgent: true
   });
   saveDB();
@@ -2355,6 +2411,24 @@ if(typeof window !== 'undefined'){
 function ggAccPreparar(){
   if(!ggAccMovil()) return;
   const vista = document.querySelector('.view.active'); if(!vista) return;
+  /* TABLAS ANCHAS EN MÓVIL (vídeo del 15/11): una tabla de más de 3 columnas que no se apila en tarjetas (`.table-cards`) se queda dentro de su
+     `.table-wrap` con scroll horizontal, y se marca `.tbl-scroll` para que lleve la primera columna fija y una sombra que avisa de que hay más
+     a la derecha. Así ninguna cifra se monta encima de otra ni se corta sin señal. */
+  vista.querySelectorAll('.table-wrap > table:not(.table-cards)').forEach(tb => {
+    const wrap = tb.parentElement; if(wrap.classList.contains('tbl-scroll')) return;
+    const fila = tb.querySelector('thead tr') || tb.querySelector('tr');
+    if(fila && fila.children.length > 3) wrap.classList.add('tbl-scroll');
+  });
+  // Tiras de pestañas/filtros largas (`.gg-pest-col`): botón «Más / Menos» que despliega el resto (ver CSS, punto 9 de VIDEO-MÓVIL).
+  vista.querySelectorAll('.gg-pest-col').forEach(c => {
+    let b = c.querySelector(':scope > .gg-pest-mas');
+    if(!b){
+      b = document.createElement('button'); b.type = 'button'; b.className = 'gg-pest-mas';
+      b.addEventListener('click', () => { const ab = c.classList.toggle('gg-pest-abierta'); b.setAttribute('aria-expanded', ab ? 'true' : 'false'); b.textContent = ab ? gl({es:'Menos', ca:'Menys', en:'Less'}) : gl({es:'Más', ca:'Més', en:'More'}); });
+      b.setAttribute('aria-expanded', 'false'); b.textContent = gl({es:'Más', ca:'Més', en:'More'});
+      c.appendChild(b);
+    }
+  });
   vista.querySelectorAll('.gg-plegable').forEach(el => {
     const h = el.querySelector(':scope > .ge-sec-head, :scope > h3, :scope > h4'); if(!h) return;
     if(!h.classList.contains('gg-acc-h')){ h.classList.add('gg-acc-h'); h.setAttribute('role','button'); h.tabIndex = 0; }
