@@ -8,7 +8,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PUERTO = 8971;
+const PUERTO = parseInt(process.env.PUERTO) || 8971;
 const web = spawn('python3', ['-m', 'http.server', String(PUERTO)], {cwd: RAIZ, stdio: 'ignore'});
 await new Promise(r => setTimeout(r, 1200));
 const browser = await puppeteer.launch({executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'], headless: true});
@@ -113,10 +113,39 @@ await caso('Modo ocupado y pausa por canal: se activan y caducan solos', () => a
   return null;
 }));
 
-await caso('Barra de Para llevar/Delivery: sonido, ocupado, pausas, teléfono, mi reparto', async () => {
+await caso('Barra de Para llevar/Delivery (17/11): un botón por cosa, sueltos y sin el recuadro de herramientas', async () => {
   const h = await app.evaluate(() => entBarraHtml());
-  for(const k of ['ent-activar-sonido', 'ent-alarma-toggle', 'entNuevoPedidoTelefono', 'entAbrirRepartidor', '+10 min', 'Pausar para llevar']) if(!h.includes(k)) throw new Error('falta ' + k);
+  for(const k of ['ent-activar-sonido', 'entAbrirSaturada', 'ent-alarma-toggle', 'entNuevoPedidoTelefono', 'entAbrirRepartidor', 'entAbrirTablero']) if(!h.includes(k)) throw new Error('falta ' + k);
+  for(const k of ['ent-herr', 'Herramientas de pedidos', '+10 min', 'Pausar para llevar', 'Pausar domicilio', 'entAbrirKit', 'entAbrirAnalitica']) if(h.includes(k)) throw new Error('ya no debe estar en la barra: ' + k);
 });
+
+await caso('Cocina saturada: elegir canal y minutos con − y +, activar, y la web dice «la cocina está que arde… X minutos»', async () => {
+  const r = await app.evaluate(() => {
+    DB.business.pedidos = DB.business.pedidos || {}; DB.business.pedidos.pausaTakeawayHasta = ''; DB.business.pedidos.pausaDeliveryHasta = '';
+    entAbrirSaturada();
+    const ops = [...document.querySelectorAll('.ent-sat-op')].map(b => b.innerText.trim());
+    entSatSetCanal('delivery'); entSatCambiar(5); entSatCambiar(5); entSatCambiar(-5);   // 15 + 5 + 5 − 5 = 20
+    const antes = document.getElementById('ent-sat-min').textContent;
+    entSatActivar();
+    const est = entSatEstado();
+    return {ops, antes, delivery: !!entCanalPausado('delivery'), takeaway: !!entCanalPausado('takeaway'), mins: est && est.mins, canal: est && est.canal, barra: entBarraHtml().includes('Cocina saturada ·')};
+  });
+  if(r.ops.length !== 3) throw new Error('opciones: ' + r.ops.join('|'));
+  if(r.antes !== '20') throw new Error('minutos del modal: ' + r.antes);
+  if(!r.delivery || r.takeaway) throw new Error('solo debía pausarse domicilio: ' + JSON.stringify(r));
+  if(r.canal !== 'delivery' || r.mins < 19 || r.mins > 20) throw new Error('estado: ' + JSON.stringify(r));
+  if(!r.barra) throw new Error('la barra no enseña el estado activo');
+  // «Los dos» y reanudar
+  const r2 = await app.evaluate(() => { entAbrirSaturada(); entSatSetCanal('both'); entSatActivar(); const ambos = !!entCanalPausado('takeaway') && !!entCanalPausado('delivery'); entSatReanudar(); return {ambos, libre: !entSatEstado()}; });
+  if(!r2.ambos || !r2.libre) throw new Error('los dos / reanudar: ' + JSON.stringify(r2));
+});
+
+await caso('Mínimo y máximo de minutos de Cocina saturada: 5 y 180', () => app.evaluate(() => {
+  entAbrirSaturada(); for(let i = 0; i < 60; i++) entSatCambiar(-5); const min = entSatMin;
+  for(let i = 0; i < 100; i++) entSatCambiar(5); const max = entSatMin; closeModal();
+  if(min !== 5 || max !== 180) throw new Error(min + ' / ' + max);
+  return null;
+}));
 
 await caso('Alarma: con un pedido pendiente cuenta y marca el título; sin nada se apaga', () => app.evaluate(() => {
   DB.tpvOrders = [{id: 9, tipo: 'takeaway', status: 'pendiente-online', createdAt: new Date().toISOString(), date: todayStr(), time: '', items: []}];
@@ -240,10 +269,10 @@ await caso('Pantalla de listos: botón propio con enlace, copiar y abrir; ya no 
   return null;
 }));
 
-await caso('Kit de captación: un enlace por canal con `?origen=` y la barra enseña Captación', () => app.evaluate(() => {
+await caso('Kit de captación: un enlace por canal con `?origen=`; vive en Mi Negocio › Pedidos online (ya no en el TPV)', () => app.evaluate(() => {
   DB.business.publicId = 'pubentreg1';
   const u = entEnlaceOrigen('google'); if(!/origen=google$/.test(u)) throw new Error('enlace: ' + u);
-  if(!entBarraHtml().includes('entAbrirKit')) throw new Error('falta el botón');
+  if(entBarraHtml().includes('entAbrirKit')) throw new Error('el kit ya no va en la barra del TPV');
   entAbrirKit(); if(!document.body.textContent.includes('origen')) throw new Error('el kit no se abrió'); closeModal();
   return null;
 }));
@@ -385,6 +414,20 @@ await caso('Web: compartir la cesta por enlace y cargarla en otro móvil', async
   assert.ok(/cesta=11x2/.test(url), 'enlace: ' + url);
   const n = await pub.evaluate(() => { cart = []; history.replaceState(null, '', '?neg=pubentreg1&cesta=11x2'); entCestaCargar(); const r = JSON.stringify(cart.map(l => l.qty)); history.replaceState(null, '', '?neg=pubentreg1'); cart = []; return r; });
   assert.equal(n, '[2]');
+});
+
+await caso('Web: con la cocina saturada el cliente lee «la cocina está que arde… en aproximadamente X minutos» (17/11)', async () => {
+  const r = await pub.evaluate(() => {
+    const en = new Date(Date.now() + 14 * 60000 + 20000);
+    const entrega = mensajePausaCanal('delivery', en), llevar = mensajePausaCanal('takeaway', en);
+    return {entrega, llevar, titulo: t('error.pedidosPausados.title')};
+  });
+  assert.ok(/arde/i.test(r.titulo), r.titulo);
+  assert.ok(/aproximadamente 15 minutos/.test(r.entrega) && /domicilio/.test(r.entrega), r.entrega);
+  assert.ok(/aproximadamente 15 minutos/.test(r.llevar) && /llevar/.test(r.llevar), r.llevar);
+  // Y en inglés y catalán la misma idea
+  const idiomas = await pub.evaluate(() => { const o = {}; ['en', 'ca'].forEach(l => { currentLang = l; o[l] = mensajePausaCanal('delivery', new Date(Date.now() + 9 * 60000)); }); currentLang = 'es'; return o; });
+  assert.ok(/about \d+ minutes/.test(idiomas.en), idiomas.en); assert.ok(/uns \d+ minuts/.test(idiomas.ca), idiomas.ca);
 });
 
 await browser.close(); web.kill();

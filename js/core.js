@@ -10890,6 +10890,14 @@ function renderPedidosConfigCard(){
         <small style="color:var(--muted)">${escapeHtml(gl({es:'Una por línea: nombre | códigos postales | tarifa | mínimo | envío gratis desde. Lo que dejes vacío usa el valor general. La web y la app calculan el envío con estas mismas reglas.', ca:'Una per línia: nom | codis postals | tarifa | mínim | enviament gratuït des de. El que deixis buit fa servir el valor general. El web i l\'app calculen l\'enviament amb aquestes mateixes regles.', en:'One per line: name | postal codes | fee | minimum | free delivery from. Anything left empty uses the general value. The web and the app compute delivery with these same rules.'}))}</small>
       </div>` : ''}
       <div class="field">
+        <label>${escapeHtml(gl({es:'Captar pedidos y ver cómo vas', ca:'Captar comandes i veure com vas', en:'Win orders and see how you are doing'}))}</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn" style="min-height:44px" onclick="entAbrirKit()"><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Kit de captación', ca:'Kit de captació', en:'Acquisition kit'}))}</button>
+          <button type="button" class="btn" style="min-height:44px" onclick="entAbrirAnalitica()"><i class="ti ti-chart-line"></i> ${escapeHtml(gl({es:'Tiempos de entrega', ca:'Temps de lliurament', en:'Delivery times'}))}</button>
+        </div>
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'Kit de captación: el QR y el flyer para la bolsa, con un enlace que cuenta de dónde llegan los pedidos. Tiempos de entrega: cuánto tardáis de verdad en preparar y repartir cada pedido (por código postal), para prometer horas que se cumplan.', ca:'Kit de captació: el QR i el flyer per a la bossa, amb un enllaç que compta d\'on arriben les comandes. Temps de lliurament: quant trigueu de debò a preparar i repartir cada comanda (per codi postal), per prometre hores que es compleixin.', en:'Acquisition kit: the QR and the bag flyer, with a link that counts where orders come from. Delivery times: how long you really take to prepare and deliver each order (by postal code), so you promise times you keep.'}))}</small>
+      </div>
+      <div class="field">
         <label>${escapeHtml(gl({es:'Válvulas de cocina', ca:'Vàlvules de cuina', en:'Kitchen valves'}))}</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input type="number" id="mn-autopausan" min="0" max="50" step="1" value="${escapeHtml(p.autopausaN || 0)}" style="width:90px" aria-label="${escapeHtml(gl({es:'Autopausa', ca:'Autopausa', en:'Auto-pause'}))}">

@@ -6715,8 +6715,24 @@ small{font-size:max(.8333em, 11px)}
 /* ════ PARA LLEVAR Y DELIVERY (13/11, js/entregas.js, test/entregas.mjs) ════
    Franja de sonido + modo ocupado + pausas, alarma que parpadea, empaquetado, vista del repartidor y monedero. Letra mínima 11 px y
    toques de 44 px como en el resto de la app. */
-.ent-barra{display:flex;flex-direction:column;gap:8px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-m,4px);background:#fff}
-.ent-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+/* Botones de pedidos del TPV (17/11): sueltos, sin el recuadro de «Herramientas». Una rejilla que reparte el ancho: 5 en una fila en PC, 2-3 en móvil. */
+.ent-barra{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+.ent-botones{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.ent-bt{min-height:44px!important;height:auto!important;justify-content:center;white-space:normal;text-align:center;line-height:1.2}
+.ent-bt.ent-sat{font-weight:700}
+.ent-bt.ent-sat.is-lim,.ent-bt.ent-sat:hover{border-color:#C79A2E}
+.ent-sat-estado{padding:8px 10px;border:1px solid #E3CC8E;background:#FBF5E4;border-radius:var(--r-s,3px)}
+/* Ventana «Cocina saturada»: canal (tres opciones grandes) y minutos con − y + */
+.ent-sat-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ent-sat-op{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;padding:8px 6px;background:#fff;border:1.5px solid #CFC8BA;border-radius:6px;color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:center;overflow-wrap:break-word}
+.ent-sat-op .ti{font-size:22px;color:var(--olive)}
+.ent-sat-op.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.ent-sat-op.is-on .ti{color:#fff}
+.ent-sat-paso{display:flex;align-items:center;justify-content:center;gap:16px}
+.ent-sat-pm{min-width:64px;min-height:56px!important;height:56px!important;font-size:30px;font-weight:600;line-height:1;padding:0}
+.ent-sat-num{font-family:var(--mono);font-size:18px;color:var(--muted);min-width:110px;text-align:center}
+.ent-sat-num b{font-size:44px;line-height:1;color:var(--ink);letter-spacing:-.02em}
+@media (max-width:420px){.ent-sat-ops{grid-template-columns:1fr}.ent-sat-op{flex-direction:row;min-height:52px;gap:10px}}.ent-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .ent-rot{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .ent-chips{display:inline-flex;flex-wrap:wrap;gap:6px}
 .ent-estado{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 8px;border-radius:var(--r-s,3px);background:#F1EFE9}
