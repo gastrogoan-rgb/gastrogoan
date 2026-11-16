@@ -1430,7 +1430,7 @@ function renderBusinessSelectScreenHtml(){
         </div>
         <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:4px 0 16px">${t('bs.emptyDesc')}</p>
         <button class="btn btn-primary" style="width:100%" onclick="redeemFirstBusiness()"><i class="ti ti-ticket"></i> ${t('bs.redeemFirst')}</button>
-        <a href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+        <a href="https://buy.stripe.com/3cI5kCaCubwL9Bs3uDdwc04" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
         <!-- Sin esto, una cuenta recién creada se quedaba ATRAPADA aquí: la
              lista de negocios está vacía, así que no hay ninguna a la que ir,
              y la pantalla no tiene aspa ni botón de volver. Quien entraba con
@@ -1501,7 +1501,7 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
         <button class="btn" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
-      <a class="bs-buy" href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      <a class="bs-buy" href="https://buy.stripe.com/3cI5kCaCubwL9Bs3uDdwc04" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
       <div class="bs-foot">
         <button type="button" class="bs-footbtn" onclick="promptChangeOwnerPassword()"><i class="ti ti-key" aria-hidden="true"></i><span>${t('bs.changePassword')}</span></button>
         <button type="button" class="bs-footbtn" onclick="exitToAccessScreen()"><i class="ti ti-logout" aria-hidden="true"></i><span>${t('bs.exitAccount')}</span></button>
