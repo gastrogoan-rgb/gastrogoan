@@ -6873,7 +6873,40 @@ function updateSyncBadge(state){
   else { el.innerHTML = `<span class="hdr-text"> ${t('gate.cloudError')}</span>`; marcarEstado('error'); }
 }
 
-function refreshAfterRemoteChange(){
+/* ⚠️ PARPADEO (16/11, pedido del dueño: «a veces la app empieza a parpadear, pantallas, cifras»).
+   Cada cambio que llega de la nube repinta la vista ENTERA, y cada repintado vuelve a
+   crear las cifras y barras, que se animan otra vez desde cero (js/polish.js). Con UN
+   cambio suelto no se nota; si llegan varios seguidos (dos aparatos que se van
+   fusionando, un ráfaga de ventas, avisos…) la pantalla parpadea sin parar.
+   Dos defensas, que no dependen de saber qué las provoca:
+   1. Los repintados se AGRUPAN: el primero de una racha va al instante y los que
+      lleguen en los 250 ms siguientes se funden en uno solo. Si la racha no para
+      (más de 8 en 10 s), se espacian a 2,5 s hasta que se calme.
+   2. Un repintado por cambio REMOTO nunca vuelve a animar cifras ni barras: esas
+      animaciones son para cuando el usuario ENTRA en la pantalla.
+   Y queda un registro (`ggDiagRepintados()` en la consola) con qué lo provocó, para
+   que la próxima vez que pase se pueda ver de dónde viene. */
+let _refreshTimer = null, _refreshUltimo = 0;
+const _refreshLog = [];
+function ggDiagRepintados(){ return _refreshLog.slice(); }
+function refreshAfterRemoteChange(origen){
+  const ahora = Date.now();
+  _refreshLog.push({t: ahora, origen: origen || (new Error().stack || '').split('\n')[2] || ''});
+  while(_refreshLog.length > 40) _refreshLog.shift();
+  const enRacha = _refreshLog.filter(x => ahora - x.t < 10000).length;
+  const ventana = enRacha > 8 ? 2500 : 250;
+  if(_refreshTimer) return;                       // ya hay uno en camino: este se funde con él
+  const desdeElUltimo = ahora - _refreshUltimo;
+  if(desdeElUltimo >= ventana){ _refreshUltimo = ahora; repintarTrasCambioRemoto(); return; }
+  _refreshTimer = setTimeout(function(){
+    _refreshTimer = null; _refreshUltimo = Date.now(); repintarTrasCambioRemoto();
+  }, Math.max(50, ventana - desdeElUltimo));
+}
+function repintarTrasCambioRemoto(){
+  // Hasta que pasen dos fotogramas (cuando polish.js lanza sus animaciones) no se anima nada.
+  window.__ggSinAnimar = true;
+  clearTimeout(window.__ggSinAnimarT);
+  window.__ggSinAnimarT = setTimeout(function(){ window.__ggSinAnimar = false; }, 120);
   renderHeader();
   if(typeof chatAlLlegarDeLaNube === 'function') chatAlLlegarDeLaNube();
   renderModuleBadges();

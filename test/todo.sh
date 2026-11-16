@@ -186,6 +186,7 @@ lanzar; node test/gestion-scroll.mjs > "$SALIDA/gestionscroll.txt" 2>&1 & P179=$
 lanzar; node test/ge-prevision-caja.mjs > "$SALIDA/previsioncaja.txt" 2>&1 & P180=$!
 lanzar; node test/chat-avisos.mjs > "$SALIDA/chatavisos.txt" 2>&1 & P181=$!
 lanzar; node test/avisos-campana.mjs > "$SALIDA/avisoscampana.txt" 2>&1 & P182=$!
+lanzar; node test/parpadeo.mjs > "$SALIDA/parpadeo.txt" 2>&1 & PPARP=$!
 lanzar; node test/avisos-empleado.mjs > "$SALIDA/avisosempleado.txt" 2>&1 & P183=$!
 lanzar; node test/acceso-empleado-codigo.mjs > "$SALIDA/accempcodigo.txt" 2>&1 & P184=$!
 lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
@@ -425,6 +426,7 @@ espera $P179 "Gestión Económica: repintar una pestaña o cambiar un reparto/pe
 espera $P180 "Previsión de caja a 30/60/90 días: ritmo de caja, sin doble descuento de gastos periódicos y modelos del trimestre anterior (cuentas a mano)" "$SALIDA/previsioncaja.txt" "casos pasaron"
 espera $P181 "Chat: un mensaje de otro aparato enciende el aviso, se resalta como Nuevo (también con el panel abierto), se quita al entrar y aguanta relojes adelantados" "$SALIDA/chatavisos.txt" "todos los casos pasaron"
 espera $P182 "Campana de avisos: vacaciones y cambios de turno con Aceptar/Rechazar, reservas y pedidos web, informativos con «Visto», el empleado no ve lo del dueño, también desde la nube y en móvil" "$SALIDA/avisoscampana.txt" "todos los casos pasaron"
+espera $PPARP "Parpadeo: una ráfaga de cambios remotos se funde en un repintado y no vuelve a animar las cifras" "$SALIDA/parpadeo.txt" "todos los casos pasaron"
 espera $P183 "Avisos al empleado (respuesta a vacaciones y cambios de turno, mensajes directos) y mesas a cargo: selector por zona/mesa, Mis mesas del TPV y ayuda en mesas de compañeros sin bloqueo" "$SALIDA/avisosempleado.txt" "todos los casos pasaron"
 espera $P184 "Acceso de empleados: el código de negocio se recuerda y se ve (relleno + botones con el nombre, Otro negocio, móvil)" "$SALIDA/accempcodigo.txt" "todos los casos pasaron"
 espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide asistentes en un aparato nuevo, sin conexión no pregunta nada, los borrados llegan a todos (lápida + cola de reintentos) y el PIN ya cambiado no se vuelve a ofrecer" "$SALIDA/syncnegocios.txt" "todos los casos pasaron"

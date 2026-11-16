@@ -21,9 +21,11 @@ function parseDisplayNumber(text){
 
 function animateKpiNumbers(root){
   const scope = root || document;
+  const sinAnimar = !!window.__ggSinAnimar;   // repintado por un cambio remoto: las cifras se ponen ya, sin contar desde cero
   const els = scope.querySelectorAll('.kpi .value:not([data-cu]), .ge-kpi .val:not([data-cu]), .kpi-mini .v:not([data-cu])');
   els.forEach(function(el){
     el.setAttribute('data-cu','1');
+    if(sinAnimar) return;
     const parsed = parseDisplayNumber(el.textContent);
     if(!parsed || REDUCE_MOTION) return;
     const target = parsed.value;
@@ -46,10 +48,11 @@ function animateKpiNumbers(root){
 
 function animateBarFills(root){
   const scope = root || document;
+  const sinAnimar = !!window.__ggSinAnimar;
   const els = scope.querySelectorAll('.bar-fill:not([data-cu]), .te-bar-fill:not([data-cu])');
   els.forEach(function(el){
     el.setAttribute('data-cu','1');
-    if(REDUCE_MOTION) return;
+    if(REDUCE_MOTION || sinAnimar) return;
     const isWidthBar = el.classList.contains('te-bar-fill');
     const prop = isWidthBar ? 'width' : 'height';
     const target = el.style[prop];
