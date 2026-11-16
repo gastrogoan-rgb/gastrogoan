@@ -2258,7 +2258,7 @@ const GE = (function(){
     if(!hayDatos){ box.innerHTML = `<div class="empty gf-vacio"><i class="ti ti-chart-line"></i><span>${gl({es:'Todavía no hay ventas ni gastos en ' + cdrYear + '.', ca:'Encara no hi ha vendes ni despeses el ' + cdrYear + '.', en:'No sales or expenses in ' + cdrYear + ' yet.'})}</span></div>`; tit.innerHTML = ''; return; }
     dashSerieRegistrar('cdr-serie', serie);
     const total = serie.reduce((s, p) => s + p.value, 0);
-    tit.innerHTML = `<b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl({es:'en ' + cdrYear + ' · pasa el ratón por un mes', ca:'el ' + cdrYear + ' · passa el ratolí per un mes', en:'in ' + cdrYear + ' · hover a month'}))}</span>`;
+    tit.innerHTML = `<b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl(ggTactil() ? {es:'en ' + cdrYear + ' · toca un mes', ca:'el ' + cdrYear + ' · toca un mes', en:'in ' + cdrYear + ' · tap a month'} : {es:'en ' + cdrYear + ' · pasa el ratón por un mes', ca:'el ' + cdrYear + ' · passa el ratolí per un mes', en:'in ' + cdrYear + ' · hover a month'}))}</span>`;
     box.innerHTML = dashSerieHtml(serie, {id:'cdr-serie', cadaEtiqueta:1, tooltip:true});
   }
   /* ---- Explicaciones (detrás de botones, no a la vista) ---- */
@@ -3014,7 +3014,7 @@ const GE = (function(){
       const sr = serie(bcTab === 'caja' ? 'caja' : 'beneficio'); dashSerieRegistrar('bc-serie', sr);
       const tot = sr.reduce((a, p) => a + p.value, 0);
       document.getElementById('bc-evolucion').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-chart-line"></i> ${L({es:'Mes a mes: beneficio frente a caja', ca:'Mes a mes: benefici davant de caixa', en:'Month by month: profit vs cash'})}</h4><div class="dt-tabs">${tabs.map(([k, et]) => `<button type="button" class="btn btn-sm btn-fino${bcTab === k ? ' is-on' : ''}" aria-pressed="${bcTab === k}" onclick="GE.setBcTab('${k}')">${et}</button>`).join('')}</div></div>
-        <div class="dt-cab"><div class="dt-titular" data-dt-titular="bc-serie"><b>${escapeHtml(fm(tot))}</b> <span>${L({es:'en ' + bcYear + ' · pasa el ratón por un mes', ca:'el ' + bcYear + ' · passa el ratolí per un mes', en:'in ' + bcYear + ' · hover a month'})}</span></div></div>
+        <div class="dt-cab"><div class="dt-titular" data-dt-titular="bc-serie"><b>${escapeHtml(fm(tot))}</b> <span>${L(ggTactil() ? {es:'en ' + bcYear + ' · toca un mes', ca:'el ' + bcYear + ' · toca un mes', en:'in ' + bcYear + ' · tap a month'} : {es:'en ' + bcYear + ' · pasa el ratón por un mes', ca:'el ' + bcYear + ' · passa el ratolí per un mes', en:'in ' + bcYear + ' · hover a month'})}</span></div></div>
         ${dashSerieHtml(sr, {id:'bc-serie', cadaEtiqueta:1, tooltip:true})}
         <div class="bc-tabla"><div class="bc-tr bc-th"><span>${L({es:'Mes', ca:'Mes', en:'Month'})}</span><span>${L({es:'Beneficio', ca:'Benefici', en:'Profit'})}</span><span>${L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})}</span><span>${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}</span></div>
         ${todos.filter(d => d.hayDatos).map(d => `<div class="bc-tr"><span>${getMeses()[d.m]}</span><span class="${d.neto >= 0 ? 'is-ok' : 'is-ko'}" data-l="${L({es:'Beneficio', ca:'Benefici', en:'Profit'})}">${fm(d.neto)}</span><span class="${d.caja >= 0 ? 'is-ok' : 'is-ko'}" data-l="${L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})}">${fm(d.caja)}</span><span data-l="${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}">${sg(d.caja - d.neto)}</span></div>`).join('')}</div>`;

@@ -4618,7 +4618,7 @@ function renderPromoIdeas(){
     <div class="toolbar pm-barra">
       <div class="left">
         <input type="search" class="search-input st-buscar" id="promo-ideas-q" value="${escapeHtml(promoIdeasQuery)}" placeholder="${escapeHtml(gl({es:'Buscar entre las ideas…', ca:'Cercar entre les idees…', en:'Search the ideas…'}))}" aria-label="${escapeHtml(gl({es:'Buscar ideas', ca:'Cercar idees', en:'Search ideas'}))}" oninput="promoIdeasBuscar(this.value)">
-        ${promoIdeasCategory !== null && !q ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('promo.ideas.categories')}</button>` : ''}
+        ${promoIdeasCategory !== null && !q ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>` : ''}
       </div>
       <button type="button" class="owner-only btn btn-fino is-on" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> ${t('promo.ideas.surpriseMe')}</button>
     </div>`;

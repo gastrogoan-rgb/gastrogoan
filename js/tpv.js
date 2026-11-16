@@ -2611,7 +2611,7 @@ function renderMarkDishOutModal(){
       <h3><i class="ti ti-flame-off"></i> ${titulo}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    ${atras ? `<div class="dishout-nav"><button type="button" class="btn btn-sm btn-fino" onclick="${atras}"><i class="ti ti-arrow-left"></i> ${gl({es:'Atrás', ca:'Enrere', en:'Back'})}</button><span class="dishout-migas">${migas}</span></div>` : ayuda}
+    ${atras ? `<div class="dishout-nav"><button type="button" class="btn btn-sm btn-fino" onclick="${atras}"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button><span class="dishout-migas">${migas}</span></div>` : ayuda}
     <div class="dishout-lista">${cuerpo}</div>
     <div class="modal-footer">
       <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
