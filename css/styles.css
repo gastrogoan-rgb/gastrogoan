@@ -6801,7 +6801,7 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   /* Pestañas: rejilla de dos columnas del mismo ancho, siempre en el mismo orden (la activa no cambia de forma ni de sitio) */
   #view-economia .ge-tab-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
   #view-economia .ge-tab{flex:none;width:100%;min-width:0;justify-content:flex-start;padding:0 10px;white-space:normal;line-height:1.15;font-size:11.5px;letter-spacing:.02em}
-  #view-economia .ge-tab-row:not(:has(#ge-tab-modulos:not([style*="none"]))) .ge-tab:nth-child(8){grid-column:1 / -1}
+  #view-economia .ge-tab-row > .ge-tab:last-child:nth-child(odd){grid-column:1 / -1}   /* con «Módulos» visible son 9: la impar ocupa la fila */
   /* Tesorería: Objetivo, Real y Diferencia cada una en su renglón con su rótulo (en tres columnas de 100 px se pisaban) */
   #ge-tesoreria .te-row.te-dist{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"con pct" "obj obj" "real real" "dif dif";row-gap:0;padding:12px 14px 14px}
   #ge-tesoreria .te-row.te-dist .te-c-con{padding-bottom:8px}
