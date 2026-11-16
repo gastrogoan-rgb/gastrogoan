@@ -5,7 +5,7 @@ kicker: GastroGoan · Material comercial
 -->
 
 Pricing: **100 € pago único** · sin suscripción · sin comisiones · para siempre.
-Enlace de compra (Stripe): `https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01`
+Enlace de compra (Stripe): `https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03`
 
 ---
 
@@ -58,7 +58,7 @@ Enlace de compra (Stripe): `https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01`
 > Y lo mejor: **un solo pago de 100 €. Sin suscripción, sin comisiones, tuyo para siempre.**
 > Tus datos se quedan en tu dispositivo: nadie te los puede quitar.
 >
-> 👉 Comprar ahora: https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01
+> 👉 Comprar ahora: https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03
 >
 > ¿Prefieres verlo antes? Te enseño una demo rápida cuando quieras.
 >

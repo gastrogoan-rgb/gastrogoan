@@ -6539,7 +6539,6 @@ small{font-size:max(.8333em, 11px)}
 
 
 /* ═══ AVISOS (campana) ═══ */
-.app-header #avisos-fab.avisos-con{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
 .avisos-panel{display:none;position:fixed;top:calc(var(--header-h) + 10px);right:20px;width:400px;max-width:calc(100vw - 32px);max-height:calc(100dvh - var(--header-h) - 30px);
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden}
 .avisos-panel.active{display:flex}
@@ -6748,7 +6747,6 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   .tp-mesas-herr{flex-wrap:nowrap}
   .tp-mesas-herr .tp-buscar{flex:1 1 auto;width:auto;min-width:0}
   #avisos-fab .chat-badge,#chat-fab .chat-badge{top:-7px;right:-7px}
-  .app-header #avisos-fab.avisos-con{box-shadow:0 0 0 2px rgba(138,74,59,.38)}
   /* Cocina: dos filas de botones de UNA línea (icono fuera: el rótulo ya lo dice todo) */
   .kds-toolbar .btn.btn-fino{flex-direction:row;min-height:44px;padding:4px 4px;white-space:nowrap;font-size:12px}
   .kds-toolbar .btn.btn-fino .ti{display:none}
