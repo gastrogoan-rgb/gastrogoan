@@ -195,7 +195,7 @@ lanzar; node test/alta-generador.mjs > "$SALIDA/altagenerador.txt" 2>&1 & P188=$
 lanzar; node test/tpv-menu-pasos.mjs > "$SALIDA/tpvmenupasos.txt" 2>&1 & P189=$!
 lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impresos.txt" 2>&1 & P190=$!
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
-lanzar; node test/video-movil-paquete2.mjs > "$SALIDA/videom2.txt" 2>&1 & P202=$!
+lanzar; node test/video-movil-paquete2.mjs > "$SALIDA/videom2.txt" 2>&1 & PVM2=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -446,5 +446,5 @@ espera $P200 "La web de reservas abre sin red tras la primera visita (bloqueos d
 espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALIDA/swappoff.txt" "abre sin red una vez instalada"
 espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería sin cifras montadas, pestañas, nombres enteros, tablas sin cortar, deducible con botones" "$SALIDA/economiamovil.txt" "Panel en móvil: 5 anchos"
 
-espera $P202 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
+espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 exit $FALLOS
