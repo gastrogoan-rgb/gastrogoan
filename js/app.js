@@ -3957,7 +3957,7 @@ function promoTabsHtml(){
     ['clientes', 'ti-users', t('view.clientes.title')],
     ['ideas', 'ti-bulb', t('tab.contentIdeas')],
   ];
-  return `<div class="left">${tabs.map(([id, ic, txt, extra]) =>
+  return `<div class="left gg-pest-col">${tabs.map(([id, ic, txt, extra]) =>
     `<button type="button" class="btn btn-sm btn-fino${extra || ''}${promoTab===id ? ' is-on active' : ''}" id="promo-tab-${id}" aria-pressed="${promoTab===id}" onclick="setPromoTab('${id}')"><i class="ti ${ic}"></i> ${escapeHtml(txt)}</button>`).join('')}</div>`;
 }
 
@@ -4114,7 +4114,7 @@ function renderPromoSemana(){
               ${done ? '<i class="ti ti-check"></i>' : p.menuItemName ? '<i class="ti ti-discount-2"></i>' : p.recurrence === 'weekly' ? '<i class="ti ti-repeat"></i>' : ''}
               <span>${escapeHtml(p.titulo)}</span>
             </button>`; }).join('')}
-          <button type="button" class="pm-mas owner-only" aria-label="${escapeHtml(t('promo.newAction'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="openPromoModal(null,'${ds}')"><i class="ti ti-plus"></i></button>
+          <button type="button" class="pm-mas owner-only" aria-label="${escapeHtml(t('promo.newAction'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="openPromoModal(null,'${ds}')"><i class="ti ti-plus"></i> <span>${escapeHtml(gl({es:'Añadir', ca:'Afegir', en:'Add'}))}</span></button>
         </div>
       </section>`;
   }).join('');
@@ -4799,7 +4799,7 @@ function renderPromoClientes(){
   const inactivos = conDias.filter(x => x.days === null || x.days > 60).sort((a,b) => (b.days ?? -1) - (a.days ?? -1));
 
   const scores = DB.npsScores || [];
-  const npsMedia = scores.length ? (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1) : null;
+  const npsMedia = scores.length ? (scores.reduce((s,x)=>s+x.score,0) / scores.length).toLocaleString(localeActual(), {minimumFractionDigits:1, maximumFractionDigits:1}) : null;
 
   const tarjeta = (c, templateKey, badge) => {
     const registered = DB.promos.some(p => p.clienteId===c.id && p.ideaRef && p.ideaRef.clientTemplate===templateKey && p.fecha===todayStr());
@@ -4868,7 +4868,7 @@ function renderNpsSummaryHtml(){
   if(!scores.length){
     return `<div class="empty es-vacio"><i class="ti ti-chart-bar"></i>${t('nps.noResponsesYet')}</div>`;
   }
-  const avg = (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1);
+  const avg = (scores.reduce((s,x)=>s+x.score,0) / scores.length).toLocaleString(localeActual(), {minimumFractionDigits:1, maximumFractionDigits:1});
   const detractors = scores.filter(x=>x.score<=6).length;
   const withComments = [...scores].filter(x=>x.comment).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
   return `
