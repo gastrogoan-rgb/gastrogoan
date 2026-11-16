@@ -98,7 +98,6 @@ async function comprobarVersionPublicada(forzar){
          pulsar nada para tener la última versión. Solo se pregunta cuando
          interrumpir sería peor que esperar (ver esSeguroActualizarSolo). */
       if(esSeguroActualizarSolo() && !yaSeIntentoActualizarSola(j.build)) aplicarVersionNueva(true);
-      else if(estaEnLaEntradaSinTocar()) { /* sin barra: nadie trabaja aún y la app ya intentó (o intentará) actualizarse sola; la barra tapaba la frase del día (vídeo móvil 15/11) */ }
       else mostrarAvisoVersionNueva(j.build);
       return j.build;
     }
@@ -123,15 +122,6 @@ if(typeof window !== 'undefined'){
   window.ggHuboInteraccion = false;
   ['pointerdown','keydown','touchstart'].forEach(ev =>
     window.addEventListener(ev, () => { window.ggHuboInteraccion = true; }, {once: true, passive: true}));
-}
-/* Splash o pantalla de entrada y NADIE ha tocado nada: no hay trabajo que
-   proteger, así que preguntar con una barra (y encima «Más tarde») no tiene
-   sentido. Si la recarga automática ya se intentó, la barra tampoco ayuda:
-   se mirará en la próxima apertura o con el botón «Actualizar» de la cabecera. */
-function estaEnLaEntradaSinTocar(){
-  if(typeof window !== 'undefined' && window.ggHuboInteraccion) return false;
-  const vis = id => { const el = document.getElementById(id); return !!el && !el.classList.contains('hide') && el.getClientRects().length > 0; };
-  return vis('app-splash') || vis('access-select-screen');
 }
 function esSeguroActualizarSolo(){
   if(typeof window !== 'undefined' && window.ggHuboInteraccion) return false;

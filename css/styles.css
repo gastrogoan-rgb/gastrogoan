@@ -6922,3 +6922,5 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 .tour-bubble-sheet .tour-progress{display:none}
 .tour-bubble-sheet .tour-bubble-footer{flex:none;margin-top:4px}
 .tour-bubble-centered{max-height:calc(var(--vvh,100dvh) - 32px);overflow-y:auto}
+/* Selector de negocios en pantallas de 360 px o menos: sin el icono de la tienda el nombre gana ~44 px y un nombre de 20 letras cabe en un renglón */
+@media (max-width:360px){#business-select-screen .bs-item .gg-fila-nombre > .ti{display:none}}
