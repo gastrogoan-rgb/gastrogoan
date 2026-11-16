@@ -5399,7 +5399,7 @@ function reglasRender(){
           ${num(1, L({es:'¿Pulsaste <strong>«Publicar»</strong>? Hasta que no lo pulsas, Firebase no guarda nada.', ca:'Vas prémer <strong>«Publicar»</strong>? Fins que no el prems, Firebase no desa res.', en:'Did you click <strong>“Publish”</strong>? Until you do, Firebase saves nothing.'}))}
           ${num(2, L({es:'¿El cuadro tenía <strong>todo</strong> borrado antes de pegar? Si quedó texto antiguo, Firebase da error en rojo: vuelve a seleccionar todo, borra y pega.', ca:'El quadre tenia <strong>tot</strong> esborrat abans d\'enganxar? Si va quedar text antic, Firebase dóna error en vermell: torna a seleccionar-ho tot, esborra i enganxa.', en:'Was the box <strong>fully</strong> cleared before pasting? If old text remained, Firebase shows a red error: select all, delete and paste again.'}))}
           ${num(3, L({es:'¿Estás en el <strong>proyecto correcto</strong> (' + (proyecto || 'el tuyo') + ') y en la base de datos que acaba en «-default-rtdb»?', ca:'Ets al <strong>projecte correcte</strong> (' + (proyecto || 'el teu') + ') i a la base de dades que acaba en «-default-rtdb»?', en:'Are you in the <strong>right project</strong> (' + (proyecto || 'yours') + ') and the database ending in “-default-rtdb”?'}))}
-        </ol>`;
+        </ol>${reglasFallo ? `<p class="txt-xs" style="margin-top:10px"><strong>${L({es:'Lo que ha rechazado Firebase:', ca:'El que ha rebutjat Firebase:', en:'What Firebase rejected:'})}</strong> ${escapeHtml(reglasFallo.paso)}<br><span style="color:var(--muted)">${escapeHtml(String(reglasFallo.msg).slice(0, 160))}</span><br>${L({es:'Si el motivo es «permission_denied», lo publicado en Firebase no incluye ese apartado: vuelve a copiar las reglas desde el paso 4 y comprueba que el cuadro quedó con TODO el texto nuevo.', ca:'Si el motiu és «permission_denied», el que hi ha publicat a Firebase no inclou aquest apartat: torna a copiar les regles des del pas 4 i comprova que el quadre ha quedat amb TOT el text nou.', en:'If the reason is “permission_denied”, what is published in Firebase does not include that section: copy the rules again from step 4 and check the box has ALL the new text.'})}</p>` : ''}`;
       pie = `<button type="button" class="btn" onclick="reglasIr(5)">${L({es:'Volver al paso 5', ca:'Tornar al pas 5', en:'Back to step 5'})}</button><button type="button" class="btn btn-primary" onclick="reglasComprobar(false)">${L({es:'Comprobar otra vez', ca:'Comprovar una altra vegada', en:'Check again'})}</button>`;
     } else if(reglasVeredicto === 'error'){
       titulo = L({es:'No se ha podido comprobar', ca:'No s\'ha pogut comprovar', en:'Could not check'});
@@ -7189,6 +7189,10 @@ let espejoEnNubePropia = null;   // null = sin comprobar · true/false = comprob
 // El negocio tiene las reglas de una versión anterior: todo funciona, pero sus
 // reservas siguen pasando por la nube compartida. Hay que decírselo.
 let reglasAntiguas = false;
+/* Qué paso de la sonda rechazó Firebase y con qué mensaje (16/11, el dueño pegó las reglas y seguía diciendo «antiguas» sin decir por qué).
+   Con las reglas del repositorio la sonda pasa entera contra el emulador, así que si falla en una nube real es que lo PUBLICADO allí no es
+   lo mismo: ver este dato en el asistente dice cuál de los nodos no tiene permiso. */
+let reglasFallo = null;
 // La web pública (reservagastrogoan.html) anota aquí, en la propia nube del
 // negocio, cuando algún cliente se quedó sin poder cargar la carta durante
 // más de 8 segundos: puede ser un pico real de gente mirándola a la vez
@@ -7245,10 +7249,12 @@ async function comprobarEspejoEnNubePropia(){
     // de pisar la sonda del otro (que hacía fallar la comprobación de uno de
     // los dos esa vez, sin motivo real — el negocio sí tenía las reglas bien).
     const sondaId = '_prueba_' + getOrCreateDeviceId();
+    let paso = 'aforoHold (aforo de la web)';
     await base.child('aforoHold/' + sondaId + '/_prueba').set(0);
     await base.child('aforoHold/' + sondaId + '/_prueba').remove();
     // Y con los campos que el `.validate` de orderStatus espera, no un {ts}
     // inventado: si no, la sonda vuelve a fallar en cuanto ese validate exista.
+    paso = 'orderStatus (seguimiento del pedido)';
     await base.child('orderStatus/' + sondaId).set({status: '_prueba', updatedAt: Date.now()});
     await base.child('orderStatus/' + sondaId).remove();
     espejoEnNubePropia = true;
@@ -7271,6 +7277,7 @@ async function comprobarEspejoEnNubePropia(){
          usarlo aquí haría fallar la sonda siempre y todos los negocios verían
          el aviso de "reglas antiguas". Lo que se comprueba de verdad es que se
          pueda RECLAMAR y BORRAR una solicitud, que es el cambio reciente. */
+      paso = 'requests (reservas y pedidos que entran)';
       const sondaReqId = '_sonda_' + sondaId;
       const sonda = base.child('requests/' + sondaReqId);
       await sonda.set({type: 'reserva', createdAt: Date.now(), _sonda: true});
@@ -7284,12 +7291,14 @@ async function comprobarEspejoEnNubePropia(){
       /* ⚠️ El hijo mide 12+ caracteres: las reglas actuales exigen `$token.length >= 12` en este nodo. Con `_prueba` (8) la sonda
          FALLABA JUSTO CON LAS REGLAS NUEVAS y la app decía «Firebase todavía tiene las reglas antiguas» a quien las acababa de pegar
          bien (12/11). Lo vigila test/emulador/sonda-reglas.mjs contra las reglas reales. */
+      paso = 'reservationLookup («Accede a tu reserva»)';
       await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba_de_sonda').set(true);
       await base.child('reservationLookup/_sonda_' + sondaId + '/_prueba_de_sonda').remove();
       // Carta por QR (7/10): su nodo `mesaQr` y los tipos 'pedido_mesa' y
       // 'pago_mesa'. Solo se prueba si el negocio la tiene activada: a quien
       // no la usa no se le pide pegar reglas nuevas por ella.
       if(qrMesaConfig().activo){
+        paso = 'mesaQr (carta por QR)';
         const sondaMesa = base.child('mesaQr/_sonda_' + sondaId.padEnd(16, '_'));
         await sondaMesa.set({mesa: '_prueba', updatedAt: Date.now()});
         await sondaMesa.remove();
@@ -7298,10 +7307,10 @@ async function comprobarEspejoEnNubePropia(){
         await sondaPedidoMesa.child('_claimedAt').set(Date.now());
         await sondaPedidoMesa.remove();
       }
-      reglasAntiguas = false;
+      reglasAntiguas = false; reglasFallo = null;
     }catch(e2){
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
-      reglasAntiguas = true;
+      reglasAntiguas = true; reglasFallo = {paso, msg: String((e2 && e2.message) || e2)};
       // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
       // el oyente la ignora por el `_sonda`.
       try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
@@ -7318,7 +7327,7 @@ async function comprobarEspejoEnNubePropia(){
        jamás para él. Ahora se anota para poder decírselo en el panel de nube. */
     console.warn('La nube del negocio todavía no acepta el espejo público completo; se sigue usando la compartida', e && e.message);
     espejoEnNubePropia = false;
-    reglasAntiguas = true;
+    reglasAntiguas = true; reglasFallo = {paso: (typeof paso === 'string' ? paso : 'conexión'), msg: String((e && e.message) || e)};
     return false;
   }
 }
