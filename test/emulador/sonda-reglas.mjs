@@ -67,7 +67,16 @@ const pasos = await app.evaluate(async () => {
   return out;
 });
 pasos.forEach(p => console.log((/FALLA/.test(p) ? '❌ ' : '✅ ') + p));
-const v = await app.evaluate(async () => { reglasAntiguas = null; await comprobarEspejoEnNubePropia(); return {viejas: reglasAntiguas, propia: espejoEnNubePropia}; });
+/* CASO REAL (16/11, el dueño): un intento anterior, hecho cuando su Firebase aún tenía las reglas VIEJAS, dejó la solicitud de prueba atascada: se podía
+   crear pero no reclamar ni borrar. Con las reglas nuevas esa solicitud no se puede sobrescribir (solo se escribe si no existe) ni borrar sin estar
+   reclamada, así que CADA comprobación daba «permission denied» en `requests` aunque las reglas estuvieran perfectas. La sonda tiene que limpiarla. */
+await app.evaluate(async () => {
+  const base = firebase.app().database().ref('gastrogoan/public/' + getPublicId());
+  const id = '_prueba_' + getOrCreateDeviceId();
+  await base.child('requests/_sonda_' + id).set({type: 'reserva', createdAt: Date.now(), _sonda: true});
+  await base.child('requests/_sondamesa_' + id).set({type: 'pedido_mesa', createdAt: Date.now(), _sonda: true});
+});
+const v = await app.evaluate(async () => { reglasAntiguas = null; await comprobarEspejoEnNubePropia(); return {viejas: reglasAntiguas, propia: espejoEnNubePropia, fallo: reglasFallo}; });
 console.log('veredicto de la sonda de la app:', JSON.stringify(v));
 await browser.close();
 // Con las reglas REALES pegadas, la app tiene que decir que están al día (antes decía «antiguas» por un paso mal escrito de la sonda).
