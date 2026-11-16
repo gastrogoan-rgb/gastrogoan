@@ -42,7 +42,7 @@ await page.evaluate(()=>{
   DB.tpvOrders = [{id:901, tableId:1, tipo:'mesa', pax:4, status:'abierta', createdAt:new Date().toISOString(), valeActual:1, items:[
     L('Croquetas',111), L('Ensalada',112),
     L('Mojito',211,{tanda:'Bebidas'}),                         // una línea de Sala SIN la marca de bebida (líneas antiguas)
-    L('Caña',null,{bebida:true, tanda:'Bebidas'})]}];
+    L('Caña',null,{bebida:true, tanda:'Bebidas'})], tableAllergenList:['Frutos secos'], tableAllergenNote:'celíaca'}];
   saveDB(); currentFolder='cocina'; chaosCocina=false; navigate('comandascocina');
 });
 await new Promise(r=>setTimeout(r,700));
@@ -52,9 +52,10 @@ await caso('Cocina no enseña ninguna bebida, ni la que perdió su marca', async
   assert.ok(/Croquetas/.test(txt) && /Ensalada/.test(txt), 'los platos de cocina están');
   assert.ok(!/Mojito|Caña/.test(txt), 'ni rastro de las bebidas: ' + txt);
 });
-await caso('El aviso de alergias solo lleva las de cocina (las del mojito no)', async () => {
+await caso('El aviso de alergias lleva SOLO las de los comensales (las de la mesa), no las de los platos', async () => {
   const al = await page.evaluate(()=>(document.querySelector('.kt-alergia')||{}).innerText||'');
-  assert.ok(/gluten/i.test(al), 'gluten de las croquetas: ' + al);
+  assert.ok(/celíaca/i.test(al), 'la nota de la mesa: ' + al);
+  assert.ok(!/gluten/i.test(al), 'sin el gluten de las croquetas (es del plato): ' + al);
   assert.ok(!/sulfito/i.test(al), 'sin los sulfitos de la bebida: ' + al);
 });
 await caso('Ya no existe el botón grande de pase', async () => {

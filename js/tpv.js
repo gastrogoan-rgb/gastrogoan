@@ -3073,9 +3073,9 @@ function ticketAlergiaTextos(order){
     if(c && c.allergies) texts.push(c.allergies);
   }
   if(tableAllergensTexto(order)) texts.push(tableAllergensTexto(order));
-  const set = new Set();
-  (order.items||[]).forEach(l => { if(!esLineaDeBebida(l)) lineAllergens(l).forEach(a => set.add(allergenLabel(a))); });
-  if(set.size) texts.push(Array.from(set).join(', '));
+  /* ⚠️ Solo los alérgenos de las PERSONAS (ficha del cliente y los de la mesa), nunca los de los platos (decisión del dueño, 16/11:
+     «solo quiero ver los alérgenos de los comensales»). Los de los platos salían en cada ticket y, al estar siempre, no avisaban de nada:
+     cocina conoce sus platos; lo que NO sabe es quién de la mesa tiene una alergia. El detalle de los platos sigue en su ficha técnica. */
   return texts;
 }
 // Título grande y línea pequeña de un pedido, igual en todas las pantallas de cocina.
