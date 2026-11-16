@@ -7225,6 +7225,12 @@ function getPublicMirrorApp(){
    completo. Solo entonces se publica la guía que manda ahí a la web pública.
    Es la diferencia entre una migración que se verifica sola y una que se
    descubre rota cuando un cliente no puede reservar un sábado. */
+/* Borra una solicitud de prueba de la sonda, esté como esté: primero la «reclama» (una solicitud solo se borra si ya está reclamada) y luego la quita.
+   Si no existe, o no hay permiso, no pasa nada: es una limpieza, no una comprobación. */
+async function ggLimpiarSondaRequest(ref){
+  try{ await ref.child('_claimedAt').set(Date.now()); }catch(_){}
+  try{ await ref.remove(); }catch(_){}
+}
 async function comprobarEspejoEnNubePropia(){
   const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
   const publicId = getPublicId();
@@ -7280,6 +7286,11 @@ async function comprobarEspejoEnNubePropia(){
       paso = 'requests (reservas y pedidos que entran)';
       const sondaReqId = '_sonda_' + sondaId;
       const sonda = base.child('requests/' + sondaReqId);
+      /* ⚠️ Primero se limpia lo que un intento ANTERIOR pudo dejar atascado (16/11). Con las reglas viejas la sonda se podía crear pero no reclamar
+         ni borrar, y se quedaba ahí; con las reglas NUEVAS esa solicitud ya no se puede sobrescribir (solo se escribe si no existe) ni borrar sin
+         estar reclamada. Resultado: CADA comprobación daba «permission denied» en `requests` aunque las reglas estuvieran bien pegadas, y el
+         asistente decía «reglas antiguas» para siempre. Reclamarla (que sí se permite en un nodo existente) y borrarla lo resuelve. */
+      await ggLimpiarSondaRequest(sonda);
       await sonda.set({type: 'reserva', createdAt: Date.now(), _sonda: true});
       await sonda.child('_claimedAt').set(Date.now());
       await sonda.remove();
@@ -7303,6 +7314,7 @@ async function comprobarEspejoEnNubePropia(){
         await sondaMesa.set({mesa: '_prueba', updatedAt: Date.now()});
         await sondaMesa.remove();
         const sondaPedidoMesa = base.child('requests/_sondamesa_' + sondaId);
+        await ggLimpiarSondaRequest(sondaPedidoMesa);
         await sondaPedidoMesa.set({type: 'pedido_mesa', createdAt: Date.now(), _sonda: true});
         await sondaPedidoMesa.child('_claimedAt').set(Date.now());
         await sondaPedidoMesa.remove();
@@ -7313,9 +7325,9 @@ async function comprobarEspejoEnNubePropia(){
       reglasAntiguas = true; reglasFallo = {paso, msg: String((e2 && e2.message) || e2)};
       // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
       // el oyente la ignora por el `_sonda`.
-      try{ await base.child('requests/_sonda_' + sondaId).remove(); }catch(e3){}
+      await ggLimpiarSondaRequest(base.child('requests/_sonda_' + sondaId));
       try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
-      try{ await base.child('requests/_sondamesa_' + sondaId).remove(); }catch(e5){}
+      await ggLimpiarSondaRequest(base.child('requests/_sondamesa_' + sondaId));
     }
     return true;
   }catch(e){
