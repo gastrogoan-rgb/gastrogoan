@@ -2,7 +2,7 @@
 
 ## Paquetes aún por terminar
 - [x] Paquete 3 · Gestión Económica + Panel (juntado; quedan los puntos de abajo)
-- [ ] Paquete 2 · TPV, Comandas, Reservas, Promoción, Clientes (parado, su trabajo está en su worktree)
+- [x] Paquete 2 · TPV, Comandas, Reservas, Promoción, Clientes (juntado; quedan los puntos de abajo)
 - [ ] Paquete 4 · Cocina, Personal, Limpieza, Stock, Escandallo (parado, ídem)
 
 ## Lo que los paquetes 1 y 5 dejaron sin hacer
@@ -27,6 +27,14 @@
 - [ ] Contraste de ayudas en gris claro: revisión exhaustiva (solo se tocaron tres sitios).
 - [ ] Icono de «Análisis de Platos»: el que se puso no existe en la fuente recortada (revisar `tools/recortar-iconos.py`).
 - [ ] `economia-equilibrio` no terminó y `movil-lectura` no terminó en 270 s: correrlas enteras al juntar.
+
+## Lo que el paquete 2 dejó sin hacer
+- [ ] «Cobrar 0,00 €» desactivado con poco contraste en el TPV.
+- [ ] Estado vacío de «Mías + exterior» (mensaje poco claro).
+- [ ] Textos de las ventanas «Abrir mesa» y «Marcar bebida agotada».
+- [ ] Comprobar que el aviso negro ya no tapa «Cobrar» en el TPV (lo hizo el paquete 1; no se verificó en el TPV).
+- [ ] Correr `movil`, `movil-lectura` y `ventanas-visibles` enteras (no se corrieron).
+- [ ] Del resto de las 112 notas del vídeo (TPV, Reservas, Clientes) solo se hicieron los 11 puntos del encargo: repasar las notas de esos tramos y cerrar lo que quede.
 
 ## Al juntar todo (lo hago yo)
 - [ ] Batería completa `bash test/todo.sh` en verde (y con `GG_FECHA` de otra hora).
