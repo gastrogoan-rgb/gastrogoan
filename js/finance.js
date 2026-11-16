@@ -1108,8 +1108,8 @@ function dashSerieHtml(serie, o){
           <path d="${d}" class="dt-linea" vector-effect="non-scaling-stroke"/>
         </svg>
         ${serie.map((p, i) => o.estatico
-          ? `<span class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
-          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + (p.txt || fmtMoney(p.value)))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(p.txt || fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
+          ? `<span class="dt-punto${p.value < 0 ? ' neg' : p.value === 0 ? ' cero' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
+          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : p.value === 0 ? ' cero' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + (p.txt || fmtMoney(p.value)))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(p.txt || fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
         ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
       </div>
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
@@ -1283,7 +1283,7 @@ function renderDashboard(){
   const aCero = attentionItems.filter(i => i.count === 0);
   document.getElementById('dashboard-attention').innerHTML = `
     ${conAviso.length ? `<div class="att-list">${conAviso.map(chipAtencion).join('')}</div>` : `<div class="att-quiet-msg">${t('dash.att.allQuiet')}</div>`}
-    ${aCero.length ? `<div class="att-zero">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div>` : ''}
+    ${aCero.length ? `<details class="att-zero"${window.innerWidth > 760 ? ' open' : ''}><summary>${escapeHtml(gl({es:'Todo en orden: ' + aCero.length + ' comprobaciones a cero', ca:'Tot en ordre: ' + aCero.length + ' comprovacions a zero', en:'All clear: ' + aCero.length + ' checks at zero'}))}</summary><div class="att-zero-lista">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div></details>` : ''}
   `;
 
 

@@ -6768,6 +6768,118 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   .kds-toolbar .btn.btn-fino{font-size:11px;padding:4px 2px}
 }
 
+/* ═══ VIDEO-MÓVIL · PAQUETE 3 · Gestión Económica y Panel de Control (vídeo del 15/11 en un Android de 360 px) ═══
+   Lo que se vio: cifras de Tesorería montadas unas sobre otras, filas «nombre + importe + ⋯ + ⌄» con el nombre en 100 px, siete pestañas
+   de anchos distintos en 5-6 filas, tablas cortadas por el borde, cabeceras mono partidas con «AUTO» colgando y frases de PC. */
+.cdr-vs + .cdr-vs::before{content:" · ";color:var(--muted)}
+/* Cuenta de Resultados: con `collapse` los filetes de las celdas fijas no viajan con la celda y la franja «Resultado neto» se rompía al
+   desplazar; con `separate` cada celda lleva sus propios filetes. */
+#cdr-table{border-collapse:separate;border-spacing:0}
+.ded-ops{display:flex;flex-wrap:wrap;gap:6px}
+.ded-op{flex:1 1 auto;min-height:44px;padding:0 12px;border:1px solid var(--hair);background:#fff;border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink);cursor:pointer}
+.ded-op:hover{border-color:var(--olive)}
+.ded-op.is-on{background:var(--olive);border-color:var(--olive);color:#fff;font-weight:600}
+.ded-ej{color:var(--body);margin-top:6px}
+.ded-mas{margin-top:6px}
+.ded-mas summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-family:var(--mono);font-size:12px;color:var(--body)}
+.ded-mas .txt-xs{color:var(--body)}
+.dp-platos-sum{cursor:pointer;list-style:none;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-weight:700;font-size:15px;min-height:44px}
+.dp-platos-sum::-webkit-details-marker{display:none}
+.dp-platos-sum::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+.dp-platos[open] > .dp-platos-sum::after{transform:rotate(-135deg) translate(-1px,-1px)}
+.dp-platos-hint{font-weight:400;font-size:12px;color:var(--muted)}
+.dp-k-v{overflow-wrap:normal;white-space:nowrap}
+.att-zero{display:block}
+.att-zero > summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12.5px;color:var(--muted);list-style:none}
+.att-zero > summary::-webkit-details-marker{display:none}
+.att-zero > summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg)}
+.att-zero[open] > summary::after{transform:rotate(-135deg)}
+.att-zero-lista{display:flex;flex-wrap:wrap;gap:0 4px}
+@media (max-width:760px){
+  /* Pestañas: rejilla de dos columnas del mismo ancho, siempre en el mismo orden (la activa no cambia de forma ni de sitio) */
+  #view-economia .ge-tab-row.gg-pest-abierta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #view-economia .ge-tab{flex:none;width:100%;min-width:0;justify-content:flex-start;padding:0 10px;white-space:normal;line-height:1.15;font-size:11.5px;letter-spacing:.02em}
+  #view-economia .ge-tab-row.gg-pest-abierta > .ge-tab:last-child:nth-child(odd){grid-column:1 / -1}   /* con «Módulos» visible son 9: la impar ocupa la fila */
+  /* Tesorería: Objetivo, Real y Diferencia cada una en su renglón con su rótulo (en tres columnas de 100 px se pisaban) */
+  #ge-tesoreria .te-row.te-dist{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"con pct" "obj obj" "real real" "dif dif";row-gap:0;padding:12px 14px 14px}
+  #ge-tesoreria .te-row.te-dist .te-c-con{padding-bottom:8px}
+  #ge-tesoreria .te-row.te-dist .te-c-obj,#ge-tesoreria .te-row.te-dist .te-c-real,#ge-tesoreria .te-row.te-dist .te-c-dif{display:flex;align-items:baseline;flex-wrap:nowrap;gap:0 8px;padding:7px 0;border-top:1px solid var(--hair);font-size:14px}
+  #ge-tesoreria .te-row.te-dist .te-c-obj::before,#ge-tesoreria .te-row.te-dist .te-c-real::before,#ge-tesoreria .te-row.te-dist .te-c-dif::before{width:auto;margin:0 auto 0 0;flex:none}
+  #ge-tesoreria .te-row.te-dist .te-c-real small{margin-left:0}
+  /* Filas de gasto/inversión: nombre a todo ancho; importe y controles debajo */
+  .gf-fila{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"nom nom nom" "imp menu chev" "prog prog prog" "det det det";row-gap:2px}
+  .gf-fila:not(:has(.pl-chev)){grid-template-columns:minmax(0,1fr) auto auto}
+  .gf-fila > .gf-nom{grid-area:nom}
+  .gf-fila > .gf-imp{grid-area:imp;text-align:left;font-size:16px}
+  .gf-fila > .mn-btn,.gf-fila > .gv-sin-menu{grid-area:menu}
+  .gf-fila .pl-chev{grid-area:chev;grid-column:auto;grid-row:auto}
+  .gf-fila > .gf-det{grid-area:det}
+  .gf-fila > .cx-prog{grid-area:prog}
+  .gf-nom b{overflow-wrap:break-word;word-break:normal}
+  /* Franjas de cifras: dos columnas (la impar ocupa la fila), cifra y € nunca en renglones distintos */
+  #view-economia .ge-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view-economia .ge-kpi{border-right:1px solid var(--hair);min-width:0;padding:12px}
+  #view-economia .ge-kpi:nth-child(2n){border-right:0}
+  #view-economia .ge-kpi-grid > .ge-kpi:last-child:nth-child(odd):not(:first-child){grid-column:1 / -1;border-right:0}
+  #view-economia .ge-kpi .val{font-size:clamp(16px,4.7vw,20px);white-space:nowrap}
+  #view-economia .ge-kpi .lbl{font-size:11px;letter-spacing:.02em}
+  /* Inversiones: «Nueva inversión» a todo ancho arriba y los filtros en rejilla */
+  #ge-capex .ve-barra-sup{flex-direction:column;align-items:stretch}
+  #ge-capex .ve-barra-sup > .btn{width:100%;justify-content:center;order:-1}
+  .cx-filtros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  /* Gastos variables: los dos botones del título, iguales y a todo ancho */
+  #ge-variables .gf-acciones{flex:1 1 100%;display:flex;flex-direction:column;gap:6px}
+  #ge-variables .gf-acciones .btn{width:100%;justify-content:center}
+  /* Cabeceras plegables: título de una o dos líneas, «AUTO» a la derecha junto al chevron */
+  .gg-plegable > .gg-acc-h > h3,.gg-plegable > .gg-acc-h > h4{display:flex;align-items:center;gap:6px;letter-spacing:.02em}
+  .gg-plegable > .gg-acc-h > h4 .ge-auto{flex:none;margin-left:auto}
+  .gg-plegable > .gg-acc-h > h4 > span:not(.ge-auto){min-width:0;overflow-wrap:break-word}
+  /* Tablas: nada cortado por el borde derecho */
+  #ventas-dia-table th,#ventas-dia-table td{padding:7px 4px;font-size:12px;white-space:normal;line-height:1.2}
+  #ventas-dia-table th:first-child,#ventas-dia-table td:first-child{padding-left:8px}
+  #ventas-dia-table td:not(:first-child){white-space:nowrap}
+  .dp-tabla td,.dp-tabla th{padding:7px 3px}
+  .dp-tabla .num{font-size:12px}
+  .dp-tabla td:first-child{white-space:normal;overflow-wrap:break-word}
+  .plt-mx thead{display:none}
+  .plt-mx,.plt-mx tbody{display:block;width:100%}
+  .plt-mx tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 12px;padding:10px 12px;border-bottom:1px solid var(--hair)}
+  .plt-mx td{display:block;padding:0;border:0;font-size:13px}
+  .plt-mx td:first-child{grid-column:1 / -1;font-weight:600;overflow-wrap:break-word;background:none;border-left:0}
+  .plt-mx td:nth-child(2)::after{content:" uds"}
+  .plt-mx td:nth-child(4){grid-column:1 / -1;margin-top:4px;text-align:left}
+  .plt-mx .badge{white-space:normal;text-align:left}
+  /* Análisis de Platos: tablas en tarjetas sin tarjeta dentro de tarjeta; nombre arriba y las cifras en tres columnas */
+  #view-dashboard .ge-grid .table-cards tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 10px;border:0;border-bottom:1px solid var(--hair);border-radius:0;margin:0;padding:8px 0;background:none}
+  #view-dashboard .ge-grid .table-cards td{display:block;border:0;padding:3px 0;min-width:0;font-size:12.5px;text-align:left;overflow-wrap:break-word}
+  #view-dashboard .ge-grid .table-cards td[data-label]::before{display:block;flex:none;max-width:none;font-family:var(--mono);letter-spacing:.04em;margin-bottom:1px}
+  #view-dashboard .ge-grid .table-cards td:first-child{grid-column:1 / -1;font-weight:600;font-size:13.5px;background:none;border-left:0}
+  #view-dashboard .ge-grid .table-cards td:first-child::before{display:none}
+  /* Panel: cifras del día */
+  .dp-k-fila > .dp-k:last-child:nth-child(odd):not(:first-child){grid-column:1 / -1}
+  .dp-k-s .badge{background:none;border:0;padding:0;min-height:0;white-space:nowrap;font-size:11.5px}
+  .dp-k-v{font-size:clamp(18px,6vw,24px)}
+  .att-list .att-chip{display:flex;width:100%}
+  .dp-matriz{display:flex;flex-direction:column;gap:8px}
+  .dp-m-eje{display:none}
+  .dp-platos-hint{flex-basis:100%}
+  /* Gráficas largas: los días a cero no dibujan un círculo cada uno (parecía una cadena de aros) */
+  .dt-punto.cero:not(.sel):not(.ult)::after{display:none}
+  .dt-ejes span{font-size:11px}
+  .ge-sec-head p,.gv-suelta-desc,.gv-buscar .txt-xs{color:var(--body)}
+}
+/* «¿Cómo se calcula?» del Panel: la frase larga de la primera celda pisaba la cifra (vídeo 14:24): ocupa lo que sobra y baja de renglón */
+.dp-eq-tabla td:first-child{flex:1 1 0;white-space:normal}
+@media (max-width:760px){
+  .cdr-vs-box{display:flex;flex-direction:column;gap:6px}
+  .cdr-vs{display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap}
+  .cdr-vs + .cdr-vs::before{content:none}
+  .cdr-vs > span:first-child{white-space:normal;min-width:0}
+}
+.dp-platos-sum .dp-platos-t{order:0}
+.dp-platos-sum::after{order:2}
+.dp-platos-hint{order:3}
+@media (max-width:760px){ .plt-mx tr{grid-template-columns:auto auto minmax(0,1fr)} }
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
    VIDEO-MÓVIL · PAQUETE 1 · GLOBAL + ENTRADA + TOUR (16/11)
    Vídeo de 18 min de la app en un Android de ~360 px (versión del 15/11): cuatro causas de fondo y decenas de pantallas. Esto arregla las
@@ -7038,3 +7150,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
   .mnl-toc-it{width:100%;text-align:left;justify-content:flex-start;border-radius:0;border:0;border-top:1px solid var(--border);background:transparent;min-height:44px;padding:10px 2px}
   .mnl-toc-et{margin-bottom:4px}
 }
+/* Gestión Económica: el id de la vista vence al «display:none» genérico de .gg-pest-col, así que se repite aquí (plegada = solo la marcada + «Más») */
+@media (max-width:640px){
+  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab:not(.active){display:none}
+  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab.active{flex:1 1 auto}
+}
+@media (max-width:760px){ #ge-ventas .table-wrap.tbl-scroll > #ventas-dia-table,.dp-tabla-w .dp-tabla{min-width:0;width:100%} }
