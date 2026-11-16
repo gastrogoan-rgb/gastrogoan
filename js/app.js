@@ -1950,7 +1950,7 @@ function renderDistDetail(){
 
   box.innerHTML = `
     <div class="dp-cab">
-      ${yo == null ? `<button type="button" class="btn btn-fino pr-ico dp-volver-eq" data-tip="${escapeHtml(gl({es:'Volver al equipo', ca:'Tornar a l\'equip', en:'Back to the team'}))}" aria-label="${escapeHtml(t('common.back'))}" onclick="backToDistList()"><i class="ti ti-arrow-left"></i><span class="dp-volver-txt">${gl({es:'Equipo', ca:'Equip', en:'Team'})}</span></button>` : ''}
+      ${yo == null ? `<button type="button" class="btn btn-fino pr-ico dp-volver-eq" data-tip="${escapeHtml(gl({es:'Volver al equipo', ca:'Tornar a l\'equip', en:'Back to the team'}))}" aria-label="${escapeHtml(t('common.back'))}" onclick="backToDistList()"><i class="ti ti-arrow-left"></i></button>` : ''}
       <span class="pr-av" style="--c:${escapeHtml(emp.color||'#DF7039')}" aria-hidden="true">${escapeHtml(prIniciales(emp.name))}</span>
       <div class="pr-id"><b class="dp-nombre">${escapeHtml(emp.name)}</b><span class="pr-sub">${escapeHtml(emp.rol||'')}</span></div>
     </div>

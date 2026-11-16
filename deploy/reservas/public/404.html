@@ -239,7 +239,7 @@
   .menu-folder-card .icon{font-size:20px;color:var(--olive);line-height:1;flex:none}
   .menu-folder-card .icon:empty{display:none}
   .menu-folder-card .icon svg{display:block}
-  /* Sin `overflow-wrap:anywhere`: partía "Hamburguesas" por la mitad de la
+  /* Sin `overflow-wrap:break-word`: partía "Hamburguesas" por la mitad de la
      palabra. Si no cabe, mejor que la columna crezca (arriba) que leer
      "Hamburgue-sas" en el menú de un restaurante. */
   .menu-folder-card .name{font-weight:700;font-size:13px;color:var(--ink);line-height:1.2;min-width:0;overflow-wrap:break-word}
@@ -1931,7 +1931,7 @@ function showError(key, detalle){
   const traza = detalleTecnico.length
     ? `<details style="margin-top:14px;text-align:left">
          <summary style="font-size:12px;color:var(--muted);cursor:pointer">Detalle técnico</summary>
-         <div style="font-size:11px;color:var(--muted);word-break:break-word;margin-top:6px;line-height:1.5">
+         <div style="font-size:11px;color:var(--muted);overflow-wrap:break-word;margin-top:6px;line-height:1.5">
            ${detalleTecnico.map(x => escapeHtml(x)).join('<br>')}
            <br>${escapeHtml(location.href)}
          </div>
@@ -6724,6 +6724,85 @@ init();
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
   window.addEventListener('load', () => { try{ navigator.serviceWorker.register('/sw-reservas.js').catch(() => {}); }catch(e){} });
 }
+
+/* ═══ ANCLAR A LA PANTALLA DE INICIO (16/11, pedido del dueño) ═══
+   Un cliente que reserva o pide a menudo lo tiene mucho más fácil con el icono del restaurante en su móvil. Se le ofrece UNA vez desde la
+   pantalla de entrada, solo en móvil y si no la tiene ya instalada; «Ahora no» lo calla 14 días y a la tercera no vuelve.
+   Android/Chrome: botón «Añadir» si el navegador lo permite; si no, los pasos del menú. iPhone/iPad: los dos toques de Compartir.
+   El icono lleva el NOMBRE del restaurante (manifiesto generado aquí) y abre la misma dirección, con su negocio. Coste cero. */
+(function(){
+  const LS = 'gastrogoan_instalar_reservas';
+  let evento = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); evento = e; });
+  window.addEventListener('appinstalled', () => { evento = null; try{ localStorage.setItem(LS, JSON.stringify({nunca:true})); }catch(_){} const x = document.getElementById('gg-instalar'); if(x) x.remove(); });
+  const T = {
+    es:{tit:'Ten este restaurante a un toque', txt:'Añádelo a tu pantalla de inicio y reserva o pide en dos toques, sin buscar el enlace.', no:'Ahora no', ok:'Entendido', add:'Añadir', x:'Cerrar',
+        ios:['Toca el botón Compartir (el cuadrado con la flecha hacia arriba), abajo en Safari.','Elige «Añadir a pantalla de inicio» y confirma.'],
+        and:['Abre el menú del navegador (los tres puntos ⋮).','Elige «Instalar aplicación» o «Añadir a la pantalla de inicio».']},
+    ca:{tit:'Tingues aquest restaurant a un toc', txt:'Afegeix-lo a la pantalla d\'inici i reserva o demana en dos tocs, sense buscar l\'enllaç.', no:'Ara no', ok:'Entesos', add:'Afegeix', x:'Tanca',
+        ios:['Toca el botó Compartir (el quadrat amb la fletxa cap amunt), a baix a Safari.','Tria «Afegir a la pantalla d\'inici» i confirma.'],
+        and:['Obre el menú del navegador (els tres punts ⋮).','Tria «Instal·la l\'aplicació» o «Afegeix a la pantalla d\'inici».']},
+    en:{tit:'Keep this restaurant one tap away', txt:'Add it to your home screen and book or order in two taps, without hunting for the link.', no:'Not now', ok:'Got it', add:'Add', x:'Close',
+        ios:['Tap the Share button (the square with an arrow pointing up) at the bottom of Safari.','Choose “Add to Home Screen” and confirm.'],
+        and:['Open the browser menu (the three dots ⋮).','Choose “Install app” or “Add to Home screen”.']}
+  };
+  const L = () => T[currentLang] || T.es;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const movil = () => { try{ return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820; }catch(_){ return false; } };
+  const instalada = () => { try{ return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; }catch(_){ return false; } };
+  const ios = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const permitido = () => {
+    if(!movil() || instalada()) return false;
+    if(!/^https?:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return false;
+    try{ const m = JSON.parse(localStorage.getItem(LS) || '{}'); if(m.nunca || (m.veces || 0) >= 3 || (m.hasta && Date.now() < m.hasta)) return false; }catch(_){}
+    return true;
+  };
+  // Manifiesto con el nombre del restaurante y la dirección exacta en la que está el cliente (con su negocio), e icono para iPhone.
+  function preparar(){
+    try{
+      const nombre = ((window.DB && DB.business && DB.business.name) || document.title || 'Reservas').toString().trim().slice(0, 40);
+      const ic = document.querySelector('link[rel="icon"]');
+      if(ic && !document.querySelector('link[rel="apple-touch-icon"]')){ const a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.href = ic.href; document.head.appendChild(a); }
+      if(!document.querySelector('link[rel="manifest"]')){
+        const man = {name: nombre, short_name: nombre.slice(0, 12), start_url: location.href.split('#')[0], scope: location.pathname, display: 'standalone', background_color: '#FAF8F4', theme_color: '#4A5D4E',
+          icons: ic ? [{src: ic.href, sizes: '64x64', type: 'image/png', purpose: 'any'}] : []};
+        const l = document.createElement('link'); l.rel = 'manifest'; l.href = URL.createObjectURL(new Blob([JSON.stringify(man)], {type: 'application/manifest+json'})); document.head.appendChild(l);
+      }
+    }catch(_){}
+  }
+  function cerrar(hecho){
+    const el = document.getElementById('gg-instalar'); if(el) el.remove();
+    try{ const m = JSON.parse(localStorage.getItem(LS) || '{}'); m.veces = (m.veces || 0) + 1; m.hasta = Date.now() + 14 * 86400000; if(hecho) m.nunca = true; localStorage.setItem(LS, JSON.stringify(m)); }catch(_){}
+  }
+  window.ggCerrarInstalar = cerrar;
+  window.ggInstalarAhora = async () => { const ev = evento; if(!ev){ cerrar(false); return; } try{ ev.prompt(); await ev.userChoice; }catch(_){} evento = null; cerrar(false); };
+  function pintar(){
+    const l = L(), pasos = ios() ? l.ios : l.and, conBoton = !!evento && !ios();   // Safari de iPhone no tiene botón: allí, los pasos
+    if(!document.getElementById('gg-instalar-css')){
+      const s = document.createElement('style'); s.id = 'gg-instalar-css';
+      s.textContent = '.gg-instalar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:190;max-width:460px;margin:0 auto;background:#fff;color:#1C1A17;border:1px solid #E7E2D9;border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;font-family:inherit}'
+        + '.gg-instalar-cab{display:flex;gap:12px;align-items:flex-start}.gg-instalar-ico{flex:none;width:40px;height:40px;border-radius:9px;background:var(--olive,#4A5D4E);color:#FAF8F4;display:flex;align-items:center;justify-content:center;font-size:20px}'
+        + '.gg-instalar strong{display:block;font-size:15px;line-height:1.3}.gg-instalar p{margin:3px 0 0;font-size:13px;line-height:1.45;color:#5f5a53}.gg-instalar ol{margin:2px 0 0;padding-left:20px;font-size:13px;line-height:1.55}'
+        + '.gg-instalar-bt{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.gg-instalar-bt button{min-height:44px;padding:0 16px;font:inherit;font-weight:600;border-radius:3px;border:1px solid #E7E2D9;background:#fff;color:#1C1A17;cursor:pointer}'
+        + '.gg-instalar-bt button.p{background:var(--olive,#4A5D4E);border-color:var(--olive,#4A5D4E);color:#FAF8F4}.gg-instalar-x{flex:none;margin:-6px -6px 0 0;min-width:44px;min-height:44px;background:transparent;border:0;color:#5f5a53;font-size:22px;cursor:pointer}';
+      document.head.appendChild(s);
+    }
+    const el = document.createElement('div'); el.id = 'gg-instalar'; el.className = 'gg-instalar'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', l.tit);
+    el.innerHTML = '<div class="gg-instalar-cab"><span class="gg-instalar-ico">★</span><div style="flex:1;min-width:0"><strong>' + esc(l.tit) + '</strong><p>' + esc(l.txt) + '</p>'
+      + (conBoton ? '' : '<ol>' + pasos.map(p => '<li>' + esc(p) + '</li>').join('') + '</ol>') + '</div><button class="gg-instalar-x" onclick="ggCerrarInstalar(false)" aria-label="' + esc(l.x) + '">&times;</button></div>'
+      + '<div class="gg-instalar-bt"><button onclick="ggCerrarInstalar(false)">' + esc(l.no) + '</button>'
+      + (conBoton ? '<button class="p" onclick="ggInstalarAhora()">' + esc(l.add) + '</button>' : '<button class="p" onclick="ggCerrarInstalar(true)">' + esc(l.ok) + '</button>') + '</div>';
+    document.body.appendChild(el);
+  }
+  function intentar(reintentos){
+    if(!permitido()) return;
+    // Solo desde la pantalla de entrada (elegir servicio): nunca a mitad de una reserva o de un pedido.
+    const enEntrada = !!document.querySelector('.svc-hero');
+    if(!enEntrada || document.getElementById('gg-instalar')){ if(reintentos > 0) setTimeout(() => intentar(reintentos - 1), 6000); return; }
+    pintar();
+  }
+  if(permitido()){ window.addEventListener('load', () => { preparar(); setTimeout(() => intentar(3), 6000); }); }
+})();
 </script>
 
 </body>

@@ -965,12 +965,12 @@ const GE = (function(){
       <div id="${pre}-f-deduc-box" style="display:${modo === 'parcial' ? 'block' : 'none'};margin-top:8px"><label>${gl({es:'% deducible', ca:'% deduïble', en:'% deductible'})}</label><input type="number" id="${pre}-f-deduc-pct" min="1" max="99" step="1" value="${modo === 'parcial' ? Math.round(p) : ''}" placeholder="50"></div>
       <details class="ded-mas"><summary>${gl({es:'¿Qué significa?', ca:'Què significa?', en:'What does it mean?'})}</summary><div class="txt-xs">${gl({es:'Afecta al impuesto sobre el beneficio y al IVA que te puedes deducir. La app no decide qué es deducible: pregúntaselo a tu gestoría (el % de un gasto mixto, p. ej. un vehículo o los suministros de un local que también es vivienda, depende de tu caso). Mientras dudes, márcalo «pendiente»: cuenta como deducible y la previsión de impuestos te lo avisa.', ca:'Afecta l\'impost sobre el benefici i l\'IVA que et pots deduir. L\'app no decideix què és deduïble: pregunta-ho a la teva gestoria (el % d\'una despesa mixta, p. ex. un vehicle o els subministraments d\'un local que també és habitatge, depèn del teu cas). Mentre dubtis, marca-ho «pendent»: compta com a deduïble i la previsió d\'impostos t\'ho avisa.', en:'It affects profit tax and the VAT you can deduct. The app does not decide what is deductible: ask your accountant (the % for a mixed expense, e.g. a vehicle or utilities of a premises that is also a home, depends on your case). While unsure, mark it «pending»: it counts as deductible and the tax forecast warns you.'})}</div></details></div>`;
   }
-  function deducElegir(pre, v, btn){
+  // Se publica directamente en window: declararla aquí Y asignarla dos líneas después la contaba la auditoría estática como duplicada.
+  window.deducElegir = function(pre, v, btn){
     document.getElementById(pre + '-f-deduc').value = v;
     btn.parentElement.querySelectorAll('.ded-op').forEach(b => { const on = b === btn; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on); });
     document.getElementById(pre + '-f-deduc-box').style.display = v === 'parcial' ? 'block' : 'none';
-  }
-  window.deducElegir = deducElegir;
+  };
   function deducLeer(pre){
     const el = document.getElementById(pre + '-f-deduc'); if(!el) return {};
     if(el.value === 'no') return {deducPct:0, deducRevisar:false};
