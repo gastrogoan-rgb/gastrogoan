@@ -1,7 +1,7 @@
 # Pendientes del vídeo móvil — NO se da por cerrado hasta que todo esto esté hecho (norma del dueño, 16/11)
 
 ## Paquetes aún por terminar
-- [ ] Paquete 3 · Gestión Económica + Panel (reanudado, trabajando)
+- [x] Paquete 3 · Gestión Económica + Panel (juntado; quedan los puntos de abajo)
 - [ ] Paquete 2 · TPV, Comandas, Reservas, Promoción, Clientes (parado, su trabajo está en su worktree)
 - [ ] Paquete 4 · Cocina, Personal, Limpieza, Stock, Escandallo (parado, ídem)
 
@@ -19,6 +19,14 @@
 - [ ] Manual: plegar las tarjetas de aviso largas.
 - [ ] `admin-panel/plan360.html` (coach): sigue enseñando el relleno «(Contenido pendiente de definir)».
 - [ ] Comprobar que las pruebas nuevas FALLAN sin los arreglos (paquetes 1, 2, 3, 4, 5).
+
+## Lo que el paquete 3 dejó sin hacer
+- [ ] Fechas ISO («2026-11-10») y «8.8/10» con punto en Gestión/Panel (fechaImpresaLegible, coma según idioma).
+- [ ] «¿Cómo se calcula?» a ancho completo en Cuenta de Resultados y demás pantallas de Gestión (espacio muerto).
+- [ ] Panel: ceros de ~240 px, globos de cifra en los extremos, etiquetas de los 12 meses.
+- [ ] Contraste de ayudas en gris claro: revisión exhaustiva (solo se tocaron tres sitios).
+- [ ] Icono de «Análisis de Platos»: el que se puso no existe en la fuente recortada (revisar `tools/recortar-iconos.py`).
+- [ ] `economia-equilibrio` no terminó y `movil-lectura` no terminó en 270 s: correrlas enteras al juntar.
 
 ## Al juntar todo (lo hago yo)
 - [ ] Batería completa `bash test/todo.sh` en verde (y con `GG_FECHA` de otra hora).
