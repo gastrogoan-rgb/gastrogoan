@@ -89,7 +89,7 @@ function renderReservasSearch(){
       <li class="cl-ev" role="button" tabindex="0" onclick="openReservationModal(${r.id})" onkeydown="if(event.key==='Enter'){openReservationModal(${r.id})}">
         <span class="cl-ev-ico"><i class="ti ti-calendar-event"></i></span>
         <div class="cl-ev-txt"><b>${escapeHtml(rvNombre(r))}</b><small>${r.people} ${escapeHtml(t('common.people'))}${r.notes ? ' · ' + escapeHtml(r.notes) : ''}</small></div>
-        <span class="cl-ev-fecha">${escapeHtml(r.date)} ${escapeHtml(r.time || '')}</span>
+        <span class="cl-ev-fecha">${escapeHtml(fechaLegibleCorta(r.date))} ${escapeHtml(r.time || '')}</span>
         <span class="cl-ev-der">${reservationStatusBadge(r.status, r.llegada)}</span>
       </li>`).join('')}</ul>
     ${matches.length > 120 ? `<p class="pr-ayuda">${escapeHtml(gl({es:'Se muestran las 120 más recientes: afina la búsqueda.', ca:'Es mostren les 120 més recents: afina la cerca.', en:'The 120 most recent are shown: narrow the search.'}))}</p>` : ''}`;
@@ -116,9 +116,9 @@ function renderReservasPendingOnline(){
         <li class="rv-solic">
           <div class="rv-solic-info">
             <div class="rv-nombre"><b>${escapeHtml(r.clientName || '—')}</b> <span class="pm-et is-dto">${escapeHtml(t('badge.newF'))}</span></div>
-            <div class="pm-ets"><span class="pm-et"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)}</span><span class="pm-et"><i class="ti ti-clock"></i> ${escapeHtml(r.time)}</span><span class="pm-et"><i class="ti ti-users"></i> ${r.people}</span>
+            <div class="pm-ets"><span class="pm-et"><i class="ti ti-calendar"></i> ${escapeHtml(fechaLegibleCorta(r.date))}</span><span class="pm-et"><i class="ti ti-clock"></i> ${escapeHtml(r.time)}</span><span class="pm-et"><i class="ti ti-users"></i> ${r.people}</span>
               ${r.clientPhone ? `<span class="pm-et${r.phoneOdd ? ' cl-et-riesgo' : ''}"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}</span>` : ''}
-              ${waitMin >= 30 ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.waitingSince').replace('${min}', waitMin))}</span>` : ''}
+              ${waitMin >= 30 ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.waitingSince').replace('${min}', fmtDurMin(waitMin)))}</span>` : ''}
               ${r.depositRequired ? (r.depositConfirmed ? `<span class="pm-et is-ok"><i class="ti ti-cash"></i> ${escapeHtml(t('deposit.received'))} (${r.depositAmount}€)</span>` : `<span class="pm-et cl-et-alergia" title="${escapeHtml(t('deposit.confirmHint'))}"><i class="ti ti-cash-banknote"></i> ${escapeHtml(t('deposit.pending'))} (${r.depositAmount}€)</span>`) : ''}
               ${turno && turno.aforo ? `<span class="pm-et${lleno ? ' cl-et-riesgo' : ''}"><i class="ti ti-users"></i> ${turno.reservados}/${turno.aforo}${lleno ? ' · ' + escapeHtml(gl({es:'se pasaría', ca:'se\'n passaria', en:'would exceed'})) : ''}</span>` : ''}</div>
             ${r.notes ? `<p class="rv-nota"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</p>` : ''}
@@ -291,7 +291,7 @@ function renderReservasSemana(){
               <b class="rv-chip-hora">${escapeHtml(r.time || '')}</b><span class="rv-chip-nom">${escapeHtml(rvNombre(r))}</span><em>${r.people}</em>
             </button>`; }).join('')}
           ${todas.length > 6 ? `<button type="button" class="pm-chip rv-chip rv-chip-mas" onclick="goToReservasDia('${ds}')"><span>${escapeHtml(gl({es:`Ver las ${todas.length - 6} restantes`, ca:`Veure les ${todas.length - 6} restants`, en:`See the other ${todas.length - 6}`}))}</span></button>` : ''}
-          <button type="button" class="pm-mas" aria-label="${escapeHtml(t('btn.newReservation'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="reservasDate='${ds}';openReservationModal()"><i class="ti ti-plus"></i></button>
+          <button type="button" class="pm-mas" aria-label="${escapeHtml(t('btn.newReservation'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="reservasDate='${ds}';openReservationModal()"><i class="ti ti-plus"></i> <span>${escapeHtml(gl({es:'Reservar', ca:'Reservar', en:'Book'}))}</span></button>
         </div>
       </section>`;
   }).join('');

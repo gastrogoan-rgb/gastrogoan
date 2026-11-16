@@ -131,6 +131,13 @@ function fechaImpresaLegible(ds){
   if(!m) return ds || '';
   return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(localeActual(), {weekday:'short', day:'numeric', month:'short', year:'numeric'});
 }
+// «2026-11-10» → «10 nov 2026»: la misma idea, más corta (sin día de la semana) para chips y celdas estrechas de móvil. Cualquier
+// texto que no sea una fecha ISO se devuelve tal cual.
+function fechaLegibleCorta(ds){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ds || '');
+  if(!m) return ds || '';
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'});
+}
 // Un color de marca oscuro (el verde oliva, un granate…) no se lee sobre fondo negro: se aclara hacia el blanco hasta tener contraste suficiente.
 function ggAcentoSobreOscuro(hex){
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());

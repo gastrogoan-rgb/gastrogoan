@@ -654,7 +654,7 @@ function shiftTogoCal(delta){
 function renderTogoCalendarBody(){
   const box = document.getElementById('togo-cal-body');
   if(!box) return;
-  const modeBtns = ['dia','semana','mes'].map(m => `<button class="btn btn-sm ${togoCalMode===m?'btn-primary':''}" onclick="setTogoCalMode('${m}')">${t('togocal.'+m)}</button>`).join('');
+  const modeBtns = ['dia','semana','mes'].map(m => `<button type="button" class="btn btn-fino${togoCalMode===m?' is-on':''}" aria-pressed="${togoCalMode===m}" onclick="setTogoCalMode('${m}')">${t('togocal.'+m)}</button>`).join('');
   let gridHtml = '', label = '', dayListHtml = '';
   if(togoCalMode==='mes'){
     const year = togoCalDate.getFullYear(), month = togoCalDate.getMonth();
@@ -669,7 +669,7 @@ function renderTogoCalendarBody(){
       const n = togoOrdersForDate(ds).length;
       const isToday = ds === todayStr();
       cells += `
-        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
+        <div class="card cal-day-cell tg-dia${isToday?' is-hoy':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
           <div style="font-weight:700">${d}</div>
           ${n ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n))}">${n}</span>` : ''}
         </div>`;
@@ -679,22 +679,23 @@ function renderTogoCalendarBody(){
     const dow = (togoCalDate.getDay()+6)%7;
     const monday = new Date(togoCalDate); monday.setDate(togoCalDate.getDate()-dow);
     const days = Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
-    label = `${dateStr(days[0])} — ${dateStr(days[6])}`;
+    // «9 nov – 15 nov», no «2026-11-09 — 2026-11-15»
+    label = `${days[0].getDate()} ${t('months.short')[days[0].getMonth()]} – ${days[6].getDate()} ${t('months.short')[days[6].getMonth()]} ${days[6].getFullYear()}`;
     let cells = '';
     days.forEach(d => {
       const ds = dateStr(d);
       const n = togoOrdersForDate(ds).length;
       const isToday = ds === todayStr();
       cells += `
-        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--ink)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
-          <div style="font-weight:700">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
+        <div class="card cal-day-cell tg-dia${isToday?' is-hoy':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
+          <div class="tg-dow">${escapeHtml(t('days.short')[(d.getDay()+6)%7])}</div><div style="font-weight:700">${d.getDate()}</div>
           ${n ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n))}">${n}</span>` : ''}
         </div>`;
     });
     gridHtml = `<div class="cal-grid" style="grid-template-columns:repeat(7,1fr)">${cells}</div>`;
   }else{
     const ds = dateStr(togoCalDate);
-    label = ds;
+    label = escapeHtml(pmFechaLarga(ds, true));
     const orders = togoOrdersForDate(ds).sort((a,b) => (a.time||'').localeCompare(b.time||''));
     dayListHtml = orders.length ? `
       <div class="table-wrap"><table class="table-cards">
@@ -704,16 +705,16 @@ function renderTogoCalendarBody(){
           <td data-label="${escapeHtml(t('common.type'))}">${o.tipo==='delivery'?t('label.deliveryShort'):t('label.pickupOrder')}</td><td data-label="${escapeHtml(t('common.total'))}">${fmtMoney(orderTotal(o))}</td>
           <td data-label="${escapeHtml(t('label.paidOnline'))}">${o.pagado ? `<span class="badge badge-green">${t('common.yes')}</span>` : `<span class="badge badge-amber">${t('common.no')}</span>`}</td>
         </tr>`).join('')}</tbody>
-      </table></div>` : `<div class="empty"><i class="ti ti-calendar-off"></i>${t('togocal.emptyDay')}</div>`;
+      </table></div>` : `<div class="empty"><i class="ti ti-calendar-off"></i>${t('togocal.emptyDay')}<div style="margin-top:10px"><button type="button" class="btn btn-fino is-on" onclick="shiftTogoCal(1)">${escapeHtml(gl({es:'Ver el día siguiente', ca:'Veure el dia següent', en:'See the next day'}))} <i class="ti ti-chevron-right"></i></button></div></div>`;
   }
   box.innerHTML = `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${modeBtns}</div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px">
-      <button class="btn btn-sm btn-icon" onclick="shiftTogoCal(-1)"><i class="ti ti-chevron-left"></i></button>
-      <span style="font-size:15px;font-weight:700">${label}</span>
-      <button class="btn btn-sm btn-icon" onclick="shiftTogoCal(1)"><i class="ti ti-chevron-right"></i></button>
+    <div class="tg-modos">${modeBtns}</div>
+    <div class="tg-nav">
+      <button type="button" class="btn btn-fino tg-flecha" aria-label="${escapeHtml(gl({es:'Anterior', ca:'Anterior', en:'Previous'}))}" onclick="shiftTogoCal(-1)"><i class="ti ti-chevron-left"></i></button>
+      <span class="tg-label">${label}</span>
+      <button type="button" class="btn btn-fino tg-flecha" aria-label="${escapeHtml(gl({es:'Siguiente', ca:'Següent', en:'Next'}))}" onclick="shiftTogoCal(1)"><i class="ti ti-chevron-right"></i></button>
     </div>
-    ${gridHtml}${dayListHtml}
+    <div class="tg-cuerpo">${gridHtml}${dayListHtml}</div>
   `;
 }
 
@@ -2303,10 +2304,27 @@ function comandaWaiterChipHtml(order){
   return order.tableId ? mesaWaiterChipHtml(order.camareroId, order.openedByOwner) : '';
 }
 
+// Una duración en minutos, legible: «45 min», «3 h 20», «2 d» (con tope «+30 d»). Mil seiscientos sesenta y cinco minutos
+// pintados tal cual («1665'») eran ilegibles Y empujaban el nombre de la mesa a dos renglones en una ficha de 160 px.
+// Las unidades (min, h, d) son las mismas en los tres idiomas, así que no necesita traducción.
+function fmtDurMin(mins){
+  const m = Math.max(0, Math.round(Number(mins) || 0));
+  if(m < 60) return m + ' min';
+  const h = Math.floor(m / 60);
+  if(h < 24) return h + ' h' + (m % 60 ? ' ' + String(m % 60).padStart(2, '0') : '');
+  const d = Math.floor(h / 24);
+  return d > 30 ? '+30 d' : d + ' d';
+}
+// Versión corta para la esquina de una ficha de mesa: «12'», «1 h 05», «2 d».
+function fmtDurCorta(mins){
+  const m = Math.max(0, Math.round(Number(mins) || 0));
+  return m < 60 ? m + "'" : fmtDurMin(m);
+}
 function timeAgo(iso){
   if(!iso) return '';
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  return mins < 1 ? t('time.now') : t('time.minsAgo').replace('${n}', mins);
+  if(mins < 1) return t('time.now');
+  return mins < 60 ? t('time.minsAgo').replace('${n}', mins) : t('time.ago').replace('${d}', fmtDurMin(mins));
 }
 
 function minutesSince(iso){
@@ -2747,7 +2765,7 @@ function paseHtml(allOrders){
     return `
       <div class="cz-pase-it ${nivel}">
         <div class="cz-pase-txt"><strong>${escapeHtml(titulo)}</strong><span>${lineas.map(l => `${fmtNum(l.qty)}× ${escapeHtml(l.name)}`).join(' · ')}</span></div>
-        <b class="cz-pase-min">${mins}'</b>
+        <b class="cz-pase-min">${fmtDurCorta(mins)}</b>
         <button type="button" class="btn btn-sm btn-fino is-on" onclick="marcarPaseRecogido(${order.id})" title="${escapeHtml(gl({es:'Sala se lo ha llevado', ca:'La sala s\'ho ha endut', en:'The floor took it'}))}"><i class="ti ti-check"></i> ${gl({es:'Recogido', ca:'Recollit', en:'Picked up'})}</button>
         <button type="button" class="btn btn-sm btn-fino${avisado ? ' is-on' : ''}" ${avisado ? 'disabled' : ''} onclick="avisarPase(${order.id})"><i class="ti ${avisado ? 'ti-check' : 'ti-bell-ringing'}"></i> ${avisado ? gl({es:'Avisado', ca:'Avisat', en:'Alerted'}) : gl({es:'Avisar', ca:'Avisar', en:'Alert'})}</button>
       </div>`;
@@ -2818,7 +2836,7 @@ function renderChaosCocinaHtml(allOrders){
         <div class="cz-plato-txt">
           <strong>${escapeHtml(g.nombre)}</strong>
           ${g.fam ? `<span class="cz-fam">${escapeHtml(g.fam)}</span>` : ''}
-          <div class="cz-donde">${g.donde.map(d => `<span class="cz-chip ${nivelEspera(d.mins)}">${escapeHtml(d.titulo)}${d.qty > 1 ? ' ×' + fmtNum(d.qty) : ''} · ${d.mins}'</span>`).join('')}</div>
+          <div class="cz-donde">${g.donde.map(d => `<span class="cz-chip ${nivelEspera(d.mins)}">${escapeHtml(d.titulo)}${d.qty > 1 ? ' ×' + fmtNum(d.qty) : ''} · ${fmtDurCorta(d.mins)}</span>`).join('')}</div>
         </div>
         ${g.prep ? `<span class="kt-st p">${fmtNum(g.prep)} ${gl({es:'en preparación', ca:'en preparació', en:'preparing'})}</span>` : ''}
       </div>`).join('');
@@ -2869,7 +2887,7 @@ function renderChaosCocinaHtml(allOrders){
         <div class="kt-bar ${nivel}"></div>
         <div class="kt-h">
           <div><div class="kt-mesa">${escapeHtml(titulo)}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
-          <div class="kt-tm ${nivel}">${mins}'<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
+          <div class="kt-tm ${nivel}">${fmtDurCorta(mins)}<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
         </div>
         ${alergias.length ? `<div class="kt-alergia"><i class="ti ti-alert-triangle"></i><div><small>${gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'})}</small>${escapeHtml(alergias.join(' · '))}</div></div>` : ''}
         ${incidenciaFranjaHtml(order, 'cocina')}
@@ -2912,8 +2930,8 @@ function renderComandasCocina(){
 
   const tabsHtml = `
     <div class="kds-toolbar">
-      <button class="btn btn-sm btn-fino ${comandasCocinaTab==='activas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
-      <button class="btn btn-sm btn-fino ${comandasCocinaTab==='cerradas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
+      <button class="btn btn-sm btn-fino kds-tab ${comandasCocinaTab==='activas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
+      <button class="btn btn-sm btn-fino kds-tab ${comandasCocinaTab==='cerradas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
       <button class="btn btn-sm btn-fino" onclick="openAvisoSalaModal()"><i class="ti ti-bell-ringing"></i> ${gl({es:'Avisar a sala', ca:'Avisar la sala', en:'Alert dining room'})}</button>
       <span class="kds-sep" aria-hidden="true"></span>
       <button class="btn btn-sm btn-fino kds-toolbar-caos ${chaosCocina?'is-on':''}" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
@@ -3162,7 +3180,7 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
     }).join('');
     const etiqueta = bloque.tipo === 'menu' ? gl({es:'Menú', ca:'Menú', en:'Set menu'}) : gl({es:'Carta', ca:'Carta', en:'À la carte'});
     return `
-      <div class="kt-bl">
+      <div class="kt-bl${bloques.length === 1 && bloque.tipo === 'carta' ? ' kt-bl-solo' : ''}">
         <div class="kt-bh ${bloque.tipo === 'menu' ? 'm' : 'c'}"><span><i class="ti ${bloque.tipo === 'menu' ? 'ti-list-details' : 'ti-book-2'}"></i> ${etiqueta}${bloque.nombre ? ' · ' + escapeHtml(bloque.nombre) : ''}</span>${instancias > 1 ? `<i>${instancias} ${gl({es:'menús', ca:'menús', en:'menus'})}</i>` : ''}</div>
         ${cursos}
       </div>`;
@@ -3184,7 +3202,7 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
       <div class="kt-bar ${nivel}"></div>
       <div class="kt-h">
         <div><div class="kt-mesa">${escapeHtml(titulo)}${totalVales > 1 ? ` <span class="kt-vale">${gl({es:'Vale', ca:'Val', en:'Slip'})} ${vale||1}</span>` : ''}</div><div class="kt-meta">${meta.map(escapeHtml).join(' · ')}</div></div>
-        <div class="kt-tm ${nivel}">${mins}'<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
+        <div class="kt-tm ${nivel}">${fmtDurCorta(mins)}<small>${gl({es:'esperando', ca:'esperant', en:'waiting'})}</small></div>
       </div>
       ${alergiaHtml}
       ${incidenciaFranjaHtml(order, 'cocina')}
@@ -4051,7 +4069,7 @@ function openVoidLogModal(){
     <div class="table-wrap">
       <table class="table-cards">
         <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>
-        <tbody>${log.length ? log.map(e => `<tr><td data-label="${t('common.date')}">${escapeHtml(e.fecha)}</td><td data-label="${t('th.time')}">${escapeHtml(e.hora)}</td><td data-label="${t('label.tables')}">${escapeHtml(e.mesa||'—')}</td><td data-label="${t('label.dishElaboration')}">${escapeHtml(e.plato)}</td><td data-label="${t('label.quantity')}">${e.cantidad}</td><td data-label="${t('label.responsible')}">${escapeHtml(e.responsableNombre||'—')}</td><td data-label="${t('label.voidReason')}">${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
+        <tbody>${log.length ? log.map(e => `<tr><td data-label="${t('common.date')}">${escapeHtml(fechaLegibleCorta(e.fecha))}</td><td data-label="${t('th.time')}">${escapeHtml(e.hora)}</td><td data-label="${t('label.tables')}">${escapeHtml(e.mesa||'—')}</td><td data-label="${t('label.dishElaboration')}">${escapeHtml(e.plato)}</td><td data-label="${t('label.quantity')}">${e.cantidad}</td><td data-label="${t('label.responsible')}">${escapeHtml(e.responsableNombre||'—')}</td><td data-label="${t('label.voidReason')}">${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">
