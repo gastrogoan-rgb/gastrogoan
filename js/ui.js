@@ -2881,6 +2881,83 @@ function renderViewSinCache(view){
     case 'plan360': renderPlan360(); break;
   }
   requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
+  if(view === 'home' && typeof ggAvisoInstalar === 'function') ggAvisoInstalar();   // se ofrece anclar la app (solo móvil, una vez; ver ggAvisoInstalar)
+}
+
+/* ═══ ANCLAR LA APP A LA PANTALLA DE INICIO (16/11, pedido del dueño) ═══
+   En el móvil, entrar desde el icono es mucho mejor que desde el navegador: pantalla completa, arranque directo y sin barras. Pero casi
+   nadie sabe que se puede, así que la primera vez que se llega a Inicio (ya identificado) se ofrece, con un «Ahora no» que lo calla.
+   · Android/Chrome avisa cuando se puede instalar (`beforeinstallprompt`): botón «Instalar». Si no lo avisa, se dan los pasos del menú.
+   · iPhone/iPad no tiene botón: se explican los dos toques (Compartir → Añadir a pantalla de inicio).
+   · Nunca en un ordenador, ni si ya está instalada (display-mode: standalone), ni en localhost, ni con una ventana abierta.
+   · «Ahora no» → 7 días; a la tercera, no vuelve. Instalada o «Entendido» → no vuelve. Coste cero: es solo una tarjeta. */
+const GG_INSTALAR_LS = 'gastrogoan_instalar';
+let ggInstalarEvento = null;
+if(typeof window !== 'undefined'){
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); ggInstalarEvento = e; });
+  window.addEventListener('appinstalled', () => { ggInstalarEvento = null; try{ localStorage.setItem(GG_INSTALAR_LS, JSON.stringify({nunca:true})); }catch(_){} const x = document.getElementById('gg-instalar'); if(x) x.remove(); });
+}
+function ggEsMovil(){ try{ return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820; }catch(_){ return false; } }
+function ggYaInstalada(){ try{ return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; }catch(_){ return false; } }
+function ggEsIos(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function ggInstalarPermitido(){
+  if(!ggEsMovil() || ggYaInstalada()) return false;
+  if(!/^https?:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return false;
+  try{
+    const m = JSON.parse(localStorage.getItem(GG_INSTALAR_LS) || '{}');
+    if(m.nunca || (m.veces || 0) >= 3) return false;
+    if(m.hasta && Date.now() < m.hasta) return false;
+  }catch(_){}
+  return true;
+}
+function ggAvisoInstalar(){
+  if(window.__ggInstalarProgramado || !ggInstalarPermitido()) return;
+  window.__ggInstalarProgramado = true;
+  const intentar = (reintentos) => {
+    if(!ggInstalarPermitido()) return;
+    const sesion = typeof getAccessSession === 'function' ? getAccessSession() : null;
+    const modal = document.getElementById('modal-overlay');
+    const ocupado = !sesion || document.getElementById('gg-instalar') || (modal && modal.classList.contains('active')) || !document.querySelector('#view-home.active');
+    if(ocupado){ if(reintentos > 0) setTimeout(() => intentar(reintentos - 1), 8000); return; }
+    ggPintarAvisoInstalar();
+  };
+  setTimeout(() => intentar(3), 4000);
+}
+function ggPintarAvisoInstalar(){
+  const ios = ggEsIos();
+  const pasos = ios
+    ? [gl({es:'Toca el botón Compartir (el cuadrado con la flecha hacia arriba), abajo en Safari.', ca:'Toca el botó Compartir (el quadrat amb la fletxa cap amunt), a baix a Safari.', en:'Tap the Share button (the square with an arrow pointing up) at the bottom of Safari.'}),
+       gl({es:'Elige «Añadir a pantalla de inicio» y confirma.', ca:'Tria «Afegir a la pantalla d\'inici» i confirma.', en:'Choose “Add to Home Screen” and confirm.'})]
+    : [gl({es:'Abre el menú del navegador (los tres puntos ⋮).', ca:'Obre el menú del navegador (els tres punts ⋮).', en:'Open the browser menu (the three dots ⋮).'}),
+       gl({es:'Elige «Instalar aplicación» o «Añadir a la pantalla de inicio».', ca:'Tria «Instal·la l\'aplicació» o «Afegeix a la pantalla d\'inici».', en:'Choose “Install app” or “Add to Home screen”.'})];
+  const conBoton = !!ggInstalarEvento && !ios;   // Safari de iPhone no tiene botón de instalar: allí se explican los pasos
+  const el = document.createElement('div');
+  el.id = 'gg-instalar'; el.className = 'gg-instalar'; el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', gl({es:'Añadir GastroGoan a la pantalla de inicio', ca:'Afegir GastroGoan a la pantalla d\'inici', en:'Add GastroGoan to the home screen'}));
+  el.innerHTML = `<div class="gg-instalar-cab"><span class="gg-instalar-ico"><i class="ti ti-device-mobile-down"></i></span>
+      <div style="flex:1;min-width:0"><strong>${escapeHtml(gl({es:'Ten GastroGoan a un toque', ca:'Tingues GastroGoan a un toc', en:'Keep GastroGoan one tap away'}))}</strong>
+      <p>${escapeHtml(gl({es:'Añádela a tu pantalla de inicio: se abre a pantalla completa, más rápido y sin barras del navegador.', ca:'Afegeix-la a la pantalla d\'inici: s\'obre a pantalla completa, més ràpid i sense barres del navegador.', en:'Add it to your home screen: it opens full screen, faster and without browser bars.'}))}</p>
+      ${conBoton ? '' : `<ol>${pasos.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>`}</div>
+      <button class="gg-instalar-x" onclick="ggCerrarAvisoInstalar(false)" aria-label="${escapeHtml(gl({es:'Cerrar', ca:'Tanca', en:'Close'}))}">&times;</button></div>
+    <div class="gg-instalar-bt">
+      <button class="btn" onclick="ggCerrarAvisoInstalar(false)">${escapeHtml(gl({es:'Ahora no', ca:'Ara no', en:'Not now'}))}</button>
+      ${conBoton ? `<button class="btn btn-primary" onclick="ggInstalarAhora()"><i class="ti ti-download"></i> ${escapeHtml(gl({es:'Instalar', ca:'Instal·la', en:'Install'}))}</button>` : `<button class="btn btn-primary" onclick="ggCerrarAvisoInstalar(true)">${escapeHtml(gl({es:'Entendido', ca:'Entesos', en:'Got it'}))}</button>`}
+    </div>`;
+  document.body.appendChild(el);
+}
+function ggCerrarAvisoInstalar(hecho){
+  const el = document.getElementById('gg-instalar'); if(el) el.remove();
+  try{
+    const m = JSON.parse(localStorage.getItem(GG_INSTALAR_LS) || '{}');
+    m.veces = (m.veces || 0) + 1; m.hasta = Date.now() + 7 * 86400000;
+    if(hecho) m.nunca = true;       // «Entendido» tras leer los pasos: ya sabe cómo, no hace falta insistir
+    localStorage.setItem(GG_INSTALAR_LS, JSON.stringify(m));
+  }catch(_){}
+}
+async function ggInstalarAhora(){
+  const ev = ggInstalarEvento; if(!ev){ ggCerrarAvisoInstalar(false); return; }
+  try{ ev.prompt(); await ev.userChoice; }catch(_){}
+  ggInstalarEvento = null; ggCerrarAvisoInstalar(false);
 }
 
 function renderHome(){
