@@ -3596,8 +3596,8 @@ const MANUAL_CHAPTERS = [
 <thead><tr><th>Etiqueta</th><th>Cuándo sale</th></tr></thead>
 <tbody>
 <tr><td><strong>Nuevo</strong></td><td>Su primera visita fue hace 30 días o menos.</td></tr>
-<tr><td><strong>VIP</strong></td><td>Tiene 7 o más puntos de fidelidad.</td></tr>
-<tr><td><strong>Recurrentes</strong></td><td>Vienen a menudo: 2 visitas en los últimos 30 días, 6 en el año o ya son VIP (la misma regla que «Habituales» en Novedades).</td></tr>
+<tr><td><strong>VIP</strong></td><td>El 20 % que más gasta en el año, con 3 visitas o más. Pueden venir poco: cuenta lo que valen, no la frecuencia.</td></tr>
+<tr><td><strong>Recurrentes</strong></td><td>Vienen a menudo: 2 visitas en los últimos 30 días o 6 en el año, gasten lo que gasten (la misma regla que «Habituales» en Novedades).</td></tr>
 <tr><td><strong>Ocasionales</strong></td><td>Han venido alguna vez, pero no con esa frecuencia.</td></tr>
 <tr><td><strong>En riesgo</strong></td><td>Venía con ritmo y ha dejado de venir. Exige tres cosas a la vez: al menos 3 visitas, más de 30 días desde la primera y una ausencia mayor que el doble de su intervalo habitual (y nunca menos de 14 días).</td></tr>
 <tr><td><strong>Inactivos</strong> (filtro)</td><td>Más de 60 días sin venir, o ninguna visita todavía.</td></tr>
@@ -3721,8 +3721,8 @@ const MANUAL_CHAPTERS = [
 <thead><tr><th>Etiqueta</th><th>Quan surt</th></tr></thead>
 <tbody>
 <tr><td><strong>Nou</strong></td><td>La primera visita va ser fa 30 dies o menys.</td></tr>
-<tr><td><strong>VIP</strong></td><td>Té 7 o més punts de fidelitat.</td></tr>
-<tr><td><strong>Recurrents</strong></td><td>Vénen sovint: 2 visites en els últims 30 dies, 6 a l'any o ja són VIP (la mateixa regla que «Habituals» a Novetats).</td></tr>
+<tr><td><strong>VIP</strong></td><td>El 20 % que més gasta a l'any, amb 3 visites o més. Poden venir poc: compta el que valen, no la freqüència.</td></tr>
+<tr><td><strong>Recurrents</strong></td><td>Vénen sovint: 2 visites en els últims 30 dies o 6 a l'any, gastin el que gastin (la mateixa regla que «Habituals» a Novetats).</td></tr>
 <tr><td><strong>Ocasionals</strong></td><td>Han vingut alguna vegada, però no amb aquesta freqüència.</td></tr>
 <tr><td><strong>En risc</strong></td><td>Venia amb ritme i ha deixat de venir. Exigeix tres coses alhora: almenys 3 visites, més de 30 dies des de la primera i una absència més gran que el doble del seu interval habitual (i mai menys de 14 dies).</td></tr>
 <tr><td><strong>Inactius</strong> (filtre)</td><td>Més de 60 dies sense venir, o cap visita encara.</td></tr>
@@ -3846,8 +3846,8 @@ const MANUAL_CHAPTERS = [
 <thead><tr><th>Tag</th><th>When it appears</th></tr></thead>
 <tbody>
 <tr><td><strong>New</strong></td><td>Their first visit was 30 days ago or less.</td></tr>
-<tr><td><strong>VIP</strong></td><td>They have 7 or more loyalty points.</td></tr>
-<tr><td><strong>Regulars</strong></td><td>They come often: 2 visits in the last 30 days, 6 in the year or already VIP (the same rule as “Regulars” in News).</td></tr>
+<tr><td><strong>VIP</strong></td><td>The top 20% by spend this year, with 3 or more visits. They may not come often: it is about what they are worth, not frequency.</td></tr>
+<tr><td><strong>Regulars</strong></td><td>They come often: 2 visits in the last 30 days or 6 in the year, whatever they spend (the same rule as “Regulars” in News).</td></tr>
 <tr><td><strong>Occasional</strong></td><td>They have come before, but not that often.</td></tr>
 <tr><td><strong>At risk</strong></td><td>They used to come regularly and have stopped. It needs three things at once: at least 3 visits, more than 30 days since the first one, and an absence longer than double their usual interval (and never under 14 days).</td></tr>
 <tr><td><strong>Inactive</strong> (filter)</td><td>More than 60 days without coming, or no visit yet.</td></tr>

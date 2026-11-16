@@ -78,7 +78,7 @@ await caso('Filtros en fichas con su cuenta, búsqueda por nombre, teléfono y e
     clSetOrden('nombre');
     return {base, riesgo, baja, porNombre, porTel, porMail, nada, porPuntos};
   });
-  assert.deepEqual(r.base, {todos:4, vip:2, riesgo:1, alergias:1, noshows:1, sinpermiso:1});
+  assert.deepEqual(r.base, {todos:4, vip:1, riesgo:1, alergias:1, noshows:1, sinpermiso:1});
   assert.deepEqual(r.riesgo, ['Rita Riesgo']); assert.deepEqual(r.baja, ['Baja Baja']);
   assert.deepEqual(r.porNombre, ['Ana Habitual']); assert.deepEqual(r.porTel, ['Rita Riesgo']); assert.deepEqual(r.porMail, ['Baja Baja']);
   assert.equal(r.nada, 'vacio'); assert.equal(r.porPuntos[0], 'Rita Riesgo');

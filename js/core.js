@@ -3922,7 +3922,7 @@ const PLAN360_DOC_PLANTILLAS = {
         ['Nuevos (primera visita hace menos de 30 días)', 'Una razón para volver pronto', '«Gracias por venir, Laura. La próxima vez, pregunta por el arroz del domingo.»'],
         ['Inactivos (60+ días)', 'Que se acuerden de ti', '«Hace tiempo que no te vemos. Ha entrado la carta de otoño; te guardamos mesa cuando quieras.»'],
         ['En riesgo de fuga', 'Saber qué ha pasado', 'Una llamada o un mensaje personal del responsable, no una difusión'],
-        ['VIP (7+ puntos)', 'Sentirse de la casa', 'Enterarse antes que nadie: la cena especial, el plato nuevo'],
+        ['VIP (el 20 % que más gasta)', 'Sentirse de la casa', 'Enterarse antes que nadie: la cena especial, el plato nuevo'],
         ['Con alergias', 'Seguridad', 'Avisar cuando haya platos nuevos aptos para ellos']]},
       {t: 'campo', id: 'grupos', label: 'Nuestros grupos de clientes', ayuda: 'Qué mensaje recibe cada uno y cada cuánto'},
 
@@ -3932,7 +3932,7 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'frases', titulo: 'Mensajes modelo', items: ['«Hola, Laura 👋 Esta semana entra la carta de otoño: setas, caza y el arroz de boletus. ¿Te guardamos mesa? Reserva aquí: [enlace]»', '«Hola, Jordi. Te echamos de menos por aquí. Este jueves hacemos cena de maridaje con vinos de la zona; quedan 8 plazas: [enlace]»']},
 
       {t: 'cap', n: '05', titulo: 'Premiar la fidelidad', sub: 'Que volver tenga su recompensa.'},
-      {t: 'lista', titulo: 'Ideas que funcionan', items: ['Puntos de fidelidad: se suman en la ficha de cada cliente, y los VIP (7 puntos o más) se ven con un filtro.', 'Un detalle en la visita número 5 o 10: un postre, una copa.', 'Vales regalo: la app los emite desde Clientes, y son un regalo que trae clientes nuevos.', 'El cumpleaños o el aniversario: un mensaje y un detalle si celebran aquí.', 'Reconocer al habitual por su nombre: no cuesta nada y es lo que más se recuerda.']},
+      {t: 'lista', titulo: 'Ideas que funcionan', items: ['Puntos de fidelidad: se suman en la ficha de cada cliente, y los VIP (el 20 % que más gasta en el año) se ven con un filtro.', 'Un detalle en la visita número 5 o 10: un postre, una copa.', 'Vales regalo: la app los emite desde Clientes, y son un regalo que trae clientes nuevos.', 'El cumpleaños o el aniversario: un mensaje y un detalle si celebran aquí.', 'Reconocer al habitual por su nombre: no cuesta nada y es lo que más se recuerda.']},
       {t: 'regla', x: 'Mejor un detalle inesperado que un descuento: el descuento enseña a venir solo cuando lo hay.'},
       {t: 'campo', id: 'programa', label: 'Nuestro programa de fidelidad', ayuda: 'Qué se premia y cómo'},
 

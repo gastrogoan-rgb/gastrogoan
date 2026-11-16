@@ -53,7 +53,7 @@ async function sembrar(){
     venta(2, -5, 15);
     venta(3, -100, 30);
     [-200, -170, -140].forEach(x => venta(4, x, 25));
-    venta(8, -2, 900);
+    [-2, -40, -90].forEach(x => venta(8, x, 300));   // el que más gasta, con 3 visitas (VIP: el 20 % que más gasta, desde 3 visitas)
     DB.novedades = [];
     currentFolder = 'sala';
   });

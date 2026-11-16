@@ -80,7 +80,7 @@ function nvSegmentosDef(){
     {id:'inactivos', ic:'ti-mood-empty', et: gl({es:'Hace tiempo que no vienen', ca:'Fa temps que no vénen', en:'Haven\'t visited in a while'}), ay: gl({es:'Más de 60 días sin venir', ca:'Més de 60 dies sense venir', en:'More than 60 days away'})},
     {id:'riesgo', ic:'ti-alert-triangle', et: gl({es:'En riesgo', ca:'En risc', en:'At risk'}), ay: gl({es:'Venían con ritmo y han dejado de aparecer', ca:'Venien amb ritme i han deixat d\'aparèixer', en:'They used to come regularly and have stopped'})},
     {id:'cumple', ic:'ti-cake', et: gl({es:'Cumpleaños este mes', ca:'Aniversari aquest mes', en:'Birthday this month'}), ay: gl({es:'Cumplen años en el mes en curso', ca:'Fan anys aquest mes', en:'Their birthday is this month'})},
-    {id:'mejores', ic:'ti-trophy', et: gl({es:'Mejores clientes', ca:'Millors clients', en:'Best customers'}), ay: gl({es:'El 20 % que más ha gastado este año', ca:'El 20 % que més ha gastat aquest any', en:'The top 20% by spend this year'})},
+    {id:'mejores', ic:'ti-trophy', et: gl({es:'Mejores clientes', ca:'Millors clients', en:'Best customers'}), ay: gl({es:'El 20 % que más ha gastado este año (3 visitas o más): los VIP', ca:'El 20 % que més ha gastat aquest any (3 visites o més): els VIP', en:'The top 20% by spend this year'})},
     {id:'cp', ic:'ti-map-pin', et: gl({es:'Por código postal', ca:'Per codi postal', en:'By postcode'}), ay: gl({es:'Los de una zona', ca:'Els d\'una zona', en:'Those in one area'})},
     {id:'elegir', ic:'ti-checkbox', et: gl({es:'Elegir uno a uno', ca:'Triar un a un', en:'Pick one by one'}), ay: gl({es:'Marcas tú a quién', ca:'Marques tu a qui', en:'You tick who'})},
   ];
@@ -100,12 +100,12 @@ function nvCalcular(c){
   const cp = String(c.seg.cp || '').trim();
   const pertenece = {
     todos: () => true,
-    habituales: x => { const s = stats.get(x.id); return s.visitas30d >= 2 || s.visitasYear >= 6 || (x.points || 0) >= 7; },
+    habituales: x => clEsRecurrente(x, stats.get(x.id)),
     nuevos: x => stats.get(x.id).isNew,
     inactivos: x => { const r = stats.get(x.id).recency; return r === null || r > 60; },
     riesgo: x => stats.get(x.id).atRisk,
     cumple: x => mesDeCumple(x) === mesActual,
-    mejores: x => { const g = stats.get(x.id).totalYear; return g > 0 && g >= umbralMejores; },
+    mejores: x => clEsVip(x, stats.get(x.id)),
     cp: x => !!cp && String(x.cp || '').trim() === cp,
     elegir: x => (c.incluidos || []).includes(x.id),
   };

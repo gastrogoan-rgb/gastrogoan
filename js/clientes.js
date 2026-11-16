@@ -22,8 +22,8 @@ function clFiltrosDef(){
   return [
     {id:'', et: gl({es:'Todos', ca:'Tots', en:'All'})},
     {id:'new', et: gl({es:'Nuevos', ca:'Nous', en:'New'}), ay: gl({es:'Primera visita hace menos de 30 días', ca:'Primera visita fa menys de 30 dies', en:'First visit under 30 days ago'})},
-    {id:'vip', et: 'VIP', ay: gl({es:'7 o más puntos de fidelidad', ca:'7 o més punts de fidelitat', en:'7 or more loyalty points'})},
-    {id:'recurrent', et: gl({es:'Recurrentes', ca:'Recurrents', en:'Regulars'}), ay: gl({es:'Vienen a menudo: 2 visitas en 30 días, 6 en el año o ya son VIP', ca:'Vénen sovint: 2 visites en 30 dies, 6 a l\'any o ja són VIP', en:'They come often: 2 visits in 30 days, 6 in the year or already VIP'})},
+    {id:'vip', et: 'VIP', ay: gl({es:'El 20 % que más gasta en el año (con 3 visitas o más)', ca:'El 20 % que més gasta a l\'any (amb 3 visites o més)', en:'The top 20% by spend this year (with 3 or more visits)'})},
+    {id:'recurrent', et: gl({es:'Recurrentes', ca:'Recurrents', en:'Regulars'}), ay: gl({es:'Vienen a menudo: 2 visitas en 30 días o 6 en el año', ca:'Vénen sovint: 2 visites en 30 dies o 6 a l\'any', en:'They come often: 2 visits in 30 days or 6 in the year'})},
     {id:'occasional', et: gl({es:'Ocasionales', ca:'Ocasionals', en:'Occasional'}), ay: gl({es:'Han venido alguna vez, pero no con frecuencia', ca:'Han vingut alguna vegada, però no amb freqüència', en:'They have come before, but not often'})},
     {id:'atrisk', et: gl({es:'En riesgo', ca:'En risc', en:'At risk'}), ay: gl({es:'Venían con ritmo y han dejado de venir', ca:'Venien amb ritme i han deixat de venir', en:'They used to come regularly and stopped'})},
     {id:'inactive', et: gl({es:'Inactivos', ca:'Inactius', en:'Inactive'}), ay: gl({es:'Más de 60 días sin venir', ca:'Més de 60 dies sense venir', en:'More than 60 days away'})},
@@ -32,17 +32,34 @@ function clFiltrosDef(){
     {id:'noconsent', et: gl({es:'Sin permiso de marketing', ca:'Sense permís de màrqueting', en:'No marketing consent'})},
   ];
 }
-// Misma definición que «Habituales» en Novedades (`nvCalcular`): así el filtro y el envío no se contradicen.
-function clEsRecurrente(c, st){ return st.visitas30d >= 2 || st.visitasYear >= 6 || (c.points || 0) >= 7; }
+/* ⚠️ VIP y Recurrente son cosas DISTINTAS (16/11, el dueño: «VIP y recurrente dan el mismo resultado»). Antes «recurrente» incluía «o ya son VIP»
+   y VIP era «7 puntos», que se ganan viniendo: en la práctica un conjunto contenía al otro y salía lo mismo.
+   · VIP = LO QUE VALE: el 20 % que más ha gastado en el año (con 3 visitas o más, para no premiar una sola cena cara). Puede venir poco.
+   · Recurrente = CON QUÉ FRECUENCIA: 2 visitas en 30 días o 6 en el año, gaste lo que gaste.
+   · Ocasional = ha venido pero no es recurrente.
+   Un cliente puede ser VIP y ocasional (viene poco, gasta mucho) o recurrente sin ser VIP (viene a menudo, gasta poco). Los puntos de
+   fidelidad siguen aparte, para los premios. La misma regla que «Habituales» y «Mejores clientes» de Novedades (nvCalcular). */
+let _clVipCache = null;
+function clUmbralVip(){
+  const clave = (DB.sales||[]).length + ':' + (DB.clients||[]).length + ':' + new Date().toDateString();
+  if(_clVipCache && _clVipCache.clave === clave) return _clVipCache.umbral;
+  const getStats = computeClientStatsIndexed();
+  const g = (DB.clients||[]).map(c => getStats(c)).filter(s => s.totalYear > 0 && s.visitasYear >= 3).map(s => s.totalYear).sort((a, b) => b - a);
+  const umbral = g.length ? g[Math.max(0, Math.ceil(g.length * 0.2) - 1)] : Infinity;
+  _clVipCache = {clave, umbral};
+  return umbral;
+}
+function clEsVip(c, st){ return st.visitasYear >= 3 && st.totalYear > 0 && st.totalYear >= clUmbralVip(); }
+function clEsRecurrente(c, st){ return st.visitas30d >= 2 || st.visitasYear >= 6; }
 // La etiqueta que explica en qué filtro de frecuencia cae el cliente (la de VIP y «Nuevo» ya salen aparte): recurrente u ocasional.
 function clSegmentoChip(c, st){
   if(!st.visitas) return '';
-  if(clEsRecurrente(c, st)) return (c.points || 0) >= 7 ? '' : `<span class="pm-et">${escapeHtml(gl({es:'Recurrente', ca:'Recurrent', en:'Regular'}))}</span>`;
+  if(clEsRecurrente(c, st)) return `<span class="pm-et">${escapeHtml(gl({es:'Recurrente', ca:'Recurrent', en:'Regular'}))}</span>`;
   return `<span class="pm-et">${escapeHtml(gl({es:'Ocasional', ca:'Ocasional', en:'Occasional'}))}</span>`;
 }
 function clPertenece(filtro, c, st){
   switch(filtro){
-    case 'vip': return (c.points || 0) >= 7;
+    case 'vip': return clEsVip(c, st);
     case 'new': return st.isNew;
     case 'recurrent': return clEsRecurrente(c, st);
     case 'occasional': return st.visitas > 0 && !clEsRecurrente(c, st);
@@ -107,7 +124,7 @@ function clTarjetaHtml(c, st){
     st.isNew ? `<span class="pm-et is-dto">${escapeHtml(t('badge.new'))}</span>` : '',
     clSegmentoChip(c, st),
     st.atRisk ? `<span class="pm-et cl-et-riesgo">${escapeHtml(t('badge.atRisk'))}</span>` : '',
-    puntos >= 7 ? `<span class="pm-et is-ok"><i class="ti ti-star"></i> VIP</span>` : '',
+    clEsVip(c, st) ? `<span class="pm-et is-ok"><i class="ti ti-star"></i> VIP</span>` : '',
     (c.allergies || '').trim() ? `<span class="pm-et cl-et-alergia" title="${escapeHtml(c.allergies)}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'}))}</span>` : '',
     c.noShows ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : '',
     c.marketingConsent === false ? `<span class="pm-et" title="${escapeHtml(t('filter.noConsent'))}"><i class="ti ti-mail-off"></i></span>` : '',

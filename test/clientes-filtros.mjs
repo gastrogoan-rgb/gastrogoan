@@ -69,7 +69,8 @@ const sembrar = page => page.evaluate(() => {
   cli(1, 'Ana Reciente'); venta(1, 20); venta(1, 10); venta(1, 2);
   cli(2, 'Berta Ocasional'); venta(2, 100);
   cli(3, 'Carla Sinvisitas');
-  cli(4, 'Dani Vip', {points:8}); venta(4, 10);
+  cli(4, 'Dani Puntos', {points:8}); venta(4, 10);                  // muchos puntos pero UNA visita: ni VIP ni recurrente
+  cli(7, 'Gala Gastadora'); venta(7, 100, 200); venta(7, 200, 200); venta(7, 300, 200);   // viene poco pero gasta mucho: VIP y ocasional
   cli(5, 'Eva Hace Cinco'); venta(5, 5); venta(5, 90);
   cli(6, 'Fran Sin Permiso', {marketingConsent:false, noShows:2, allergies:'gluten'}); venta(6, 2);
   saveDB(); currentFolder='sala'; navigate('clientes'); clientesPantalla = 'lista'; clientesFiltro = ''; renderClientes();
@@ -82,9 +83,11 @@ await caso('Clientes: los nueve filtros existen en el orden pedido y cada uno cu
   await sembrar(page); await esperar(500);
   const ids = await page.evaluate(() => clFiltrosDef().map(d => d.id));
   assert.deepEqual(ids, ['', 'new', 'vip', 'recurrent', 'occasional', 'atrisk', 'inactive', 'allergies', 'noshows', 'noconsent']);
-  assert.deepEqual(await filtro(page, 'recurrent'), ['Ana Reciente', 'Dani Vip'], 'recurrentes: 2 visitas en 30 d o VIP');
-  assert.deepEqual(await filtro(page, 'occasional'), ['Berta Ocasional', 'Eva Hace Cinco', 'Fran Sin Permiso'], 'ocasionales: con visitas pero no frecuentes');
-  assert.deepEqual(await filtro(page, 'vip'), ['Dani Vip']);
+  assert.deepEqual(await filtro(page, 'recurrent'), ['Ana Reciente'], 'recurrentes: SOLO frecuencia (2 visitas en 30 d o 6 en el año)');
+  assert.deepEqual(await filtro(page, 'occasional'), ['Berta Ocasional', 'Dani Puntos', 'Eva Hace Cinco', 'Fran Sin Permiso', 'Gala Gastadora'], 'ocasionales: con visitas pero no frecuentes');
+  assert.deepEqual(await filtro(page, 'vip'), ['Gala Gastadora'], 'VIP = el 20 % que más gasta (con 3 visitas), no los puntos');
+  const rec = await filtro(page, 'recurrent'), vip = await filtro(page, 'vip');
+  assert.ok(!rec.some(n => vip.includes(n)), 'VIP y Recurrentes no deben ser lo mismo: ' + rec + ' / ' + vip);
   assert.deepEqual(await filtro(page, 'noconsent'), ['Fran Sin Permiso']);
   assert.deepEqual(await filtro(page, 'allergies'), ['Fran Sin Permiso']);
   assert.deepEqual(await filtro(page, 'noshows'), ['Fran Sin Permiso']);
