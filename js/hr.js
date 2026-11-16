@@ -950,17 +950,27 @@ const GE = (function(){
     x = x || {};
     const p = deducPct(x);
     const modo = x.deducRevisar ? 'rev' : p >= 100 ? 'total' : p <= 0 ? 'no' : 'parcial';
-    const op = (v, tx) => `<option value="${v}"${modo === v ? ' selected' : ''}>${tx}</option>`;
+    // Opciones como botones (no un <select>): el selector nativo de Android se salía de la estética de la app (vídeo 15/11).
+    // El valor vive en un <input hidden> con el mismo id de antes, así que deducLeer() no cambia.
+    const op = (v, tx) => `<button type="button" class="ded-op${modo === v ? ' is-on' : ''}" data-v="${v}" aria-pressed="${modo === v}" onclick="deducElegir('${pre}', '${v}', this)">${tx}</button>`;
     return `<div class="field"><label>${gl({es:'¿Es deducible?', ca:'És deduïble?', en:'Is it deductible?'})}</label>
-      <select id="${pre}-f-deduc" onchange="document.getElementById('${pre}-f-deduc-box').style.display = this.value === 'parcial' ? 'block' : 'none'">
+      <input type="hidden" id="${pre}-f-deduc" value="${modo}">
+      <div class="ded-ops" role="group">
         ${op('total', gl({es:'Sí, del todo', ca:'Sí, del tot', en:'Yes, fully'}))}
         ${op('parcial', gl({es:'Solo en parte', ca:'Només en part', en:'Only partly'}))}
-        ${op('no', gl({es:'No deducible (atenciones a clientes, multas, gastos personales…)', ca:'No deduïble (atencions a clients, multes, despeses personals…)', en:'Not deductible (client entertainment, fines, personal costs…)'}))}
-        ${op('rev', gl({es:'No lo sé: pendiente de revisar con mi gestor', ca:'No ho sé: pendent de revisar amb el meu gestor', en:'Not sure: to be checked with my accountant'}))}
-      </select>
+        ${op('no', gl({es:'No deducible', ca:'No deduïble', en:'Not deductible'}))}
+        ${op('rev', gl({es:'No lo sé', ca:'No ho sé', en:'Not sure'}))}
+      </div>
+      <div class="txt-xs ded-ej">${gl({es:'No deducible: atenciones a clientes, multas, gastos personales. «No lo sé» = pendiente de revisar con tu gestor.', ca:'No deduïble: atencions a clients, multes, despeses personals. «No ho sé» = pendent de revisar amb el teu gestor.', en:'Not deductible: client entertainment, fines, personal costs. «Not sure» = to check with your accountant.'})}</div>
       <div id="${pre}-f-deduc-box" style="display:${modo === 'parcial' ? 'block' : 'none'};margin-top:8px"><label>${gl({es:'% deducible', ca:'% deduïble', en:'% deductible'})}</label><input type="number" id="${pre}-f-deduc-pct" min="1" max="99" step="1" value="${modo === 'parcial' ? Math.round(p) : ''}" placeholder="50"></div>
-      <div class="txt-xs" style="color:var(--muted);margin-top:4px">${gl({es:'Afecta al impuesto sobre el beneficio y al IVA que te puedes deducir. La app no decide qué es deducible: pregúntaselo a tu gestoría (el % de un gasto mixto, p. ej. un vehículo o los suministros de un local que también es vivienda, depende de tu caso). Mientras dudes, márcalo «pendiente»: cuenta como deducible y la previsión de impuestos te lo avisa.', ca:'Afecta l\'impost sobre el benefici i l\'IVA que et pots deduir. L\'app no decideix què és deduïble: pregunta-ho a la teva gestoria (el % d\'una despesa mixta, p. ex. un vehicle o els subministraments d\'un local que també és habitatge, depèn del teu cas). Mentre dubtis, marca-ho «pendent»: compta com a deduïble i la previsió d\'impostos t\'ho avisa.', en:'It affects profit tax and the VAT you can deduct. The app does not decide what is deductible: ask your accountant (the % for a mixed expense, e.g. a vehicle or utilities of a premises that is also a home, depends on your case). While unsure, mark it «pending»: it counts as deductible and the tax forecast warns you.'})}</div></div>`;
+      <details class="ded-mas"><summary>${gl({es:'¿Qué significa?', ca:'Què significa?', en:'What does it mean?'})}</summary><div class="txt-xs">${gl({es:'Afecta al impuesto sobre el beneficio y al IVA que te puedes deducir. La app no decide qué es deducible: pregúntaselo a tu gestoría (el % de un gasto mixto, p. ej. un vehículo o los suministros de un local que también es vivienda, depende de tu caso). Mientras dudes, márcalo «pendiente»: cuenta como deducible y la previsión de impuestos te lo avisa.', ca:'Afecta l\'impost sobre el benefici i l\'IVA que et pots deduir. L\'app no decideix què és deduïble: pregunta-ho a la teva gestoria (el % d\'una despesa mixta, p. ex. un vehicle o els subministraments d\'un local que també és habitatge, depèn del teu cas). Mentre dubtis, marca-ho «pendent»: compta com a deduïble i la previsió d\'impostos t\'ho avisa.', en:'It affects profit tax and the VAT you can deduct. The app does not decide what is deductible: ask your accountant (the % for a mixed expense, e.g. a vehicle or utilities of a premises that is also a home, depends on your case). While unsure, mark it «pending»: it counts as deductible and the tax forecast warns you.'})}</div></details></div>`;
   }
+  function deducElegir(pre, v, btn){
+    document.getElementById(pre + '-f-deduc').value = v;
+    btn.parentElement.querySelectorAll('.ded-op').forEach(b => { const on = b === btn; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on); });
+    document.getElementById(pre + '-f-deduc-box').style.display = v === 'parcial' ? 'block' : 'none';
+  }
+  window.deducElegir = deducElegir;
   function deducLeer(pre){
     const el = document.getElementById(pre + '-f-deduc'); if(!el) return {};
     if(el.value === 'no') return {deducPct:0, deducRevisar:false};
