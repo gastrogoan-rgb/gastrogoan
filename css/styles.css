@@ -6768,11 +6768,10 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   .kds-toolbar .btn.btn-fino{font-size:11px;padding:4px 2px}
 }
 
-<<<<<<< HEAD
 /* VIDEO-MÓVIL · PAQUETE 4 · Carpeta Cocina (vídeo Android 15/11): notas plegables, Escandallo, Pedidos, Stock, Personal, Distribución, APPCC y Calendario */
-.gg-nota-q{display:none}
+.gg-nota > .gg-nota-q{display:none !important}
 @media (max-width:760px){
-  .gg-nota-q{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 6px 0 0;background:none;border:0;color:var(--olive);font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .gg-nota > .gg-nota-q{display:inline-flex !important;align-items:center;gap:6px;min-height:44px;padding:0 6px 0 0;background:none;border:0;color:var(--olive);font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   .gg-nota:not(.is-abierta) .gg-nota-txt{display:none}
   .gg-nota.is-abierta .gg-nota-txt{padding-bottom:8px}
   /* Escandallo / Pedidos: Volver a la izquierda y Guardar + ⋯ a la derecha, en UNA fila */
@@ -6780,9 +6779,8 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   #view-pedidos .es-barra-der{width:100%;margin-left:0}
   .es-l-coste b,.es-l-coste{white-space:nowrap}
   /* Pestañas de Pedidos y APPCC: rejilla de columnas iguales, no una por fila */
-  .pe-tabs .left,.lp-tabs .left{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .pe-tabs .left .btn,.lp-tabs .left .btn{width:100%;justify-content:flex-start;white-space:normal;text-align:left}
-  .lp-tabs .left .btn:last-child:nth-child(odd){grid-column:1 / -1}
+  .pe-tabs .left{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .pe-tabs .left .btn{width:100%;justify-content:flex-start;white-space:normal;text-align:left}
   /* APPCC: el resumen de hoy solo en la primera pestaña (se repetía en las siete) y 3+2 sin hueco */
   #limpieza-content[data-tab]:not([data-tab="protocolo"]) .lp-resumen{display:none}
   .lp-resumen{grid-template-columns:repeat(6,minmax(0,1fr))}
@@ -6841,7 +6839,7 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
 @media (max-width:760px){
   .pr-barra-bt{display:flex;flex-wrap:nowrap;gap:8px}
   .pr-barra-bt .btn{flex:1 1 0;min-width:0;justify-content:center;white-space:normal;text-align:center}
-=======
+}
 
 /* VIDEO-MÓVIL · PAQUETE 2 · TPV (cabecera de la comanda, fichas de mesa)
    Causa: en ≤720 px la cabecera de la comanda era UNA fila sin salto (`flex-wrap:nowrap`) con «Cambiar de mesa», el nombre, «Liberar mesa»
@@ -7329,5 +7327,4 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 .tp-plato.tiene .tp-plato-nom{padding-right:38px}
 @media (max-width:430px){
   .tp-or-chips .tp-ack-t{display:none}
->>>>>>> claude/beautiful-dijkstra-58bru6
 }
