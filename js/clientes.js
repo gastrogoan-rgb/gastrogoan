@@ -168,7 +168,7 @@ function renderClientesLista(conservarFoco){
         <button type="button" class="btn btn-fino is-on" onclick="openClientModal()"><i class="ti ti-plus"></i> ${escapeHtml(t('title.newClient'))}</button>
       </div>
     </div>
-    <div class="cl-chips" role="group" aria-label="${escapeHtml(gl({es:'Filtrar clientes', ca:'Filtrar clients', en:'Filter customers'}))}">
+    <div class="cl-chips gg-pest-col" role="group" aria-label="${escapeHtml(gl({es:'Filtrar clientes', ca:'Filtrar clients', en:'Filter customers'}))}">
       ${defs.map(d => `<button type="button" class="btn btn-sm btn-fino${clientesFiltro === d.id ? ' is-on' : ''}" aria-pressed="${clientesFiltro === d.id}" ${d.ay ? `title="${escapeHtml(d.ay)}"` : ''} onclick="clSetFiltro('${d.id}')">${escapeHtml(d.et)} <b>${conteos[d.id]}</b></button>`).join('')}
     </div>`;
 

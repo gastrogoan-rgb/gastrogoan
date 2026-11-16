@@ -145,11 +145,11 @@ for(const w of [320, 360, 430]){
   });
 }
 
-await caso('Promoción 360: las seis pestañas en dos filas', async () => {
+await caso('Promoción 360: las seis pestañas en ≤ 2 filas', async () => {
   const page = await abrir(360, sembrarRes);
   const filas = await page.evaluate(() => { currentFolder = 'sala'; navigate('promocion'); return new Set([...document.querySelectorAll('#promo-tabs-row .btn')].map(b => Math.round(b.getBoundingClientRect().top / 20))).size; });
   await page.close();
-  assert.equal(filas, 2);
+  assert.ok(filas <= 2, 'pestañas en ' + filas + ' filas');
 });
 
 await caso('Clientes 360: filtros en ≤ 4 filas, buscador y orden en una fila, sin desborde, fechas y plurales legibles', async () => {

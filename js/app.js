@@ -3957,7 +3957,7 @@ function promoTabsHtml(){
     ['clientes', 'ti-users', t('view.clientes.title')],
     ['ideas', 'ti-bulb', t('tab.contentIdeas')],
   ];
-  return `<div class="left">${tabs.map(([id, ic, txt, extra]) =>
+  return `<div class="left gg-pest-col">${tabs.map(([id, ic, txt, extra]) =>
     `<button type="button" class="btn btn-sm btn-fino${extra || ''}${promoTab===id ? ' is-on active' : ''}" id="promo-tab-${id}" aria-pressed="${promoTab===id}" onclick="setPromoTab('${id}')"><i class="ti ${ic}"></i> ${escapeHtml(txt)}</button>`).join('')}</div>`;
 }
 

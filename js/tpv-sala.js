@@ -598,8 +598,8 @@ function renderTableOrderModal(orderId){
   const hasFiredLines = (order.items || []).some(l => l.estado && !l.bebida);
   const kitchenAckBadge = hasFiredLines
     ? (order.recibidoEnCocinaAt
-      ? `<span class="badge badge-green" title="${t('tpv.kitchenAck.confirmed')}"><i class="ti ti-check"></i> ${t('tpv.kitchenAck.confirmedShort')}</span>`
-      : `<span class="badge badge-amber" title="${t('tpv.kitchenAck.pending')}"><i class="ti ti-clock"></i> ${t('tpv.kitchenAck.pendingShort')}</span>`)
+      ? `<span class="badge badge-green" title="${t('tpv.kitchenAck.confirmed')}"><i class="ti ti-check"></i><span class="tp-ack-t"> ${t('tpv.kitchenAck.confirmedShort')}</span></span>`
+      : `<span class="badge badge-amber" title="${t('tpv.kitchenAck.pending')}"><i class="ti ti-clock"></i><span class="tp-ack-t"> ${t('tpv.kitchenAck.pendingShort')}</span></span>`)
     : '';
 
   const total = orderTotal(order);

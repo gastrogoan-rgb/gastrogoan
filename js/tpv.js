@@ -502,7 +502,8 @@ function getOpenOrderForTable(tableId){
 // el negocio (Rango 1, Terraza grande...), sin traducir.
 const ZONA_LABEL_KEYS = {interior:'zone.interior', terraza:'zone.terrace', barra:'zone.bar'};
 const ZONA_ICONS = {interior:'ti-home', terraza:'ti-sun', barra:'ti-glass-cocktail'};
-function zonaLabel(z){ return ZONA_LABEL_KEYS[z] ? t(ZONA_LABEL_KEYS[z]) : z; }
+// Una zona escrita en minúscula («exterior») se pinta con mayúscula inicial, como «Interior».
+function zonaLabel(z){ return ZONA_LABEL_KEYS[z] ? t(ZONA_LABEL_KEYS[z]) : (typeof z === 'string' && z ? z.charAt(0).toUpperCase() + z.slice(1) : z); }
 function zonaIconClass(z){ return ZONA_ICONS[z] || 'ti-map-pin'; }
 
 // Orden en el que se muestran las zonas/rangos de mesas en el TPV: el que el
