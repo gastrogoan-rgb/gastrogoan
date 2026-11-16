@@ -5,6 +5,14 @@ function fmtMoney(v){
 function fmtNum(v, dec=2){
   return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:dec});
 }
+// Cantidad de ingrediente para LEER: los decimales que hagan falta para que una cantidad pequeña no se muestre como «0»
+// (3 g de sal son 0,003 kg: con fmtNum, dos decimales, salía «0 kg Sal»). Redondea a 3 cifras significativas; no recorta ceros de más.
+function fmtCant(v){
+  v = Number(v) || 0;
+  const a = Math.abs(v);
+  const dec = a === 0 ? 0 : a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : Math.min(6, Math.max(3, 2 - Math.floor(Math.log10(a))));
+  return v.toLocaleString('es-ES', {minimumFractionDigits:0, maximumFractionDigits:dec});
+}
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }

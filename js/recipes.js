@@ -549,7 +549,7 @@ function esPintarHoja(estado){
               </select>
             </div>` : ''}
           </div>
-          ${isBase ? '' : `<p class="es-nota"><i class="ti ti-info-circle"></i> ${tA('msg.escandalloForOnePerson')}</p>`}
+          ${isBase ? '' : ggNota(`<i class="ti ti-info-circle"></i> ${tA('msg.escandalloForOnePerson')}`, 'es-nota')}
           <!-- El tipo (plato o elaboración base) lo decide el botón por el que se entró; ya no se vuelve a elegir aquí. -->
           <input type="checkbox" id="recipe-is-base" style="display:none" ${isBase ? 'checked' : ''}>
           <input type="hidden" id="recipe-comensales" value="1">
@@ -615,7 +615,7 @@ function esPintarHoja(estado){
           <div class="field">
             <label for="recipe-delivery-supplement">${t('label.deliverySupplement')}</label>
             <input type="number" id="recipe-delivery-supplement" value="${r.deliverySupplement != null ? r.deliverySupplement : ''}" step="0.01" min="0" placeholder="0,00" oninput="esRecalcular()">
-            <small class="es-pista">${t('label.deliverySupplementHint')}</small>
+            ${ggNota(t('label.deliverySupplementHint'), 'es-pista')}
           </div>` : ''}
           <div class="es-final">
             <div><span>${t('label.finalPriceWithVat')}</span><b id="recipe-price-final-display">—</b></div>
@@ -1714,7 +1714,7 @@ function openFichaModal(id, recipeId){
       tiempo: '', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE',
       ingredients: (r.ingredients||[]).map(line => {
         const ing = getIngredient(line.ingredientId);
-        return ing ? `${fmtNum(line.qty)} ${ing.unit} — ${ing.name}` : '';
+        return ing ? `${fmtCant(line.qty)} ${ing.unit} — ${ing.name}` : '';
       }).filter(Boolean),
       pasos: r.steps ? r.steps.split('\n').filter(Boolean) : [''],
       allergens: [],
@@ -1805,7 +1805,7 @@ function fiIngredientesHtml(f){
     const lineas = getFichaIngredientLines(f);
     if(!lineas.length) return `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noIngredients')}</div>`;
     return `<ul class="fi-ings">${lineas.map(l => `
-      <li><span class="fi-ing-q">${l.qty != null ? `${fmtNum(l.qty * factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span class="fi-ing-n">${escapeHtml(l.name)}</span></li>`).join('')}</ul>
+      <li><span class="fi-ing-q">${l.qty != null ? `${fmtCant(l.qty * factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span class="fi-ing-n">${escapeHtml(l.name)}</span></li>`).join('')}</ul>
       <p class="es-nota"><i class="ti ti-calculator"></i> ${gl({es:'Las cantidades salen del Escandallo y se ajustan solas a la producción.', ca:'Les quantitats surten de l\'Escandall i s\'ajusten soles a la producció.', en:'Quantities come from Costing and scale with the production.'})}</p>`;
   }
   const lista = (f.ingredients && f.ingredients.length) ? f.ingredients : [''];
@@ -2400,7 +2400,7 @@ function printFicha(id){
   const isBaseElaboration = !!(liveRecipe && liveRecipe.isBase);
   const unidad = produccion === 1 ? (fArea==='sala' ? t('noun.drink') : t('noun.ration')) : (fArea==='sala' ? t('noun.drinks') : t('noun.rations'));
 
-  const ings = getFichaIngredientLines(f).map(l => `<li><span class="fp-chk"></span><span class="fp-q">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)}` : ''}</span><span class="fp-n">${escapeHtml(l.name)}</span></li>`).join('');
+  const ings = getFichaIngredientLines(f).map(l => `<li><span class="fp-chk"></span><span class="fp-q">${l.qty!=null ? `${fmtCant(l.qty*factor)} ${escapeHtml(l.unit)}` : ''}</span><span class="fp-n">${escapeHtml(l.name)}</span></li>`).join('');
   const det = Array.isArray(f.pasosDet) ? f.pasosDet : [];
   const pasosPrint = (f.pasos || []).map((p, i) => ({p, d: det[i] || {}})).filter(x => x.p && String(x.p).trim());
   const steps = pasosPrint.map((x, n) => `

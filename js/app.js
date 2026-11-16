@@ -171,9 +171,9 @@ function renderLimpiezaAlergenos(){
     <section class="lp-card">
       <h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${tA('title.dishAllergensOverview')} <span class="dp-cuenta">${dishes.length}</span></h3>
       <p class="pr-ayuda">${tA('msg.dishAllergensOverviewDesc')}</p>
-      ${dishes.length ? `<div class="table-wrap"><table class="table-cards">
+      ${dishes.length ? `<div class="table-wrap"><table class="table-cards lp-alerg-tabla">
         <thead><tr><th>${tA('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td data-label="${escapeHtml(tA('label.dishElaboration'))}">${escapeHtml(d.name)}</td><td class="wrap" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
+        <tbody>${dishes.map(d => `<tr><td class="lp-alerg-nom" data-label="">${escapeHtml(d.name)}</td><td class="wrap lp-alerg-lista" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
       </table></div>` : `<div class="empty es-vacio">${filtrando ? t('common.noResults') : tA('empty.noDishesForAllergens')}</div>`}
     </section>
   `;
@@ -993,8 +993,9 @@ function renderLimpiezaLog(key){
       if(f === 'proxima' && key === 'plagas'){
         if(!e.proxima) return `<td ${et}>—</td>`;
         const due = limpiezaMantenimientoDueStatus({proximo: e.proxima});
-        return `<td ${et}>${escapeHtml(e.proxima)}${due==='overdue'?` <span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>`:''}${due==='soon'?` <span class="badge badge-amber"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>`:''}</td>`;
+        return `<td ${et}>${escapeHtml(ggFechaCorta(e.proxima))}${due==='overdue'?` <span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>`:''}${due==='soon'?` <span class="badge badge-amber"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>`:''}</td>`;
       }
+      if(f === 'fecha') return `<td ${et}>${escapeHtml(ggFechaCorta(e[f]) || '—')}</td>`;
       return `<td ${et}>${escapeHtml(String(e[f]||'—'))}</td>`;
     }).join('')}<td class="lp-fila-acc">${ggMenuAcciones([{icono:'ti-trash', texto:t('common.delete'), fn:`deleteLimpiezaLogEntry('${key}',${e.id})`, peligro:true, estricto:true}], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}</td></tr>
   `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty es-vacio">${t('empty.noLogEntries')}</div></td></tr>`;
@@ -1014,7 +1015,7 @@ function renderLimpiezaLog(key){
         return `<button type="button" class="lp-equipo${nok ? ' is-nok' : ''}${hoyLeido ? '' : ' es-viejo'}" ${canAddThisLog ? `onclick="lpPrefillEquipo('${escapeJsAttr(nombre)}','${escapeJsAttr(e.tipo||'')}')"` : 'disabled'}>
           <span class="lp-equipo-nom">${escapeHtml(nombre)}</span>
           <b class="lp-equipo-t">${escapeHtml(String(e.temp ?? '—'))}${e.temp !== '' && e.temp != null ? ' °C' : ''}</b>
-          <span class="lp-equipo-sub">${nok ? `<i class="ti ti-alert-triangle"></i> ${gl({es:'Fuera de rango', ca:'Fora de rang', en:'Out of range'})}` : e.estado === 'OK' ? `<i class="ti ti-check"></i> OK` : ''} · ${hoyLeido ? escapeHtml(e.hora||gl({es:'hoy', ca:'avui', en:'today'})) : escapeHtml(e.fecha||'')}</span>
+          <span class="lp-equipo-sub">${nok ? `<i class="ti ti-alert-triangle"></i> ${gl({es:'Fuera de rango', ca:'Fora de rang', en:'Out of range'})}` : e.estado === 'OK' ? `<i class="ti ti-check"></i> OK` : ''} · ${hoyLeido ? escapeHtml(e.hora||gl({es:'hoy', ca:'avui', en:'today'})) : escapeHtml(ggFechaCorta(e.fecha||''))}</span>
           ${hoyLeido ? '' : `<span class="lp-equipo-pend">${gl({es:'Sin lectura hoy', ca:'Sense lectura avui', en:'No reading today'})}</span>`}
         </button>`;
       }).join('')}
@@ -1667,10 +1668,14 @@ function renderDistList(){
         <div class="pr-id"><b class="pr-nom">${escapeHtml(emp.name)}</b><span class="pr-sub">${escapeHtml(emp.rol||t('label.noRole'))}</span></div>
         <button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(t('label.viewEmployeeFile'))}" aria-label="${escapeHtml(t('label.viewEmployeeFile'))}" onclick="event.stopPropagation();openEmployeePersonalCard(${emp.id})"><i class="ti ti-id-badge-2"></i></button>
       </div>
+      ${turno && turno.trabaja === false ? `
+      <div class="dp-hoy-mini is-descansa">
+        <div class="dp-hoy-mini-t"><span>${gl({es:'Hoy', ca:'Avui', en:'Today'})}</span><b>${gl({es:'Descansa hoy', ca:'Descansa avui', en:'Day off'})}</b></div>
+      </div>` : `
       <div class="dp-hoy-mini">
         <div class="dp-hoy-mini-t"><span>${gl({es:'Hoy', ca:'Avui', en:'Today'})}</span><b class="${dpEstadoCuenta(hoyHechas, hoyTotal, sem.atrasadas)}">${hoyTotal ? `${hoyHechas} / ${hoyTotal}` : gl({es:'sin tareas', ca:'sense tasques', en:'no tasks'})}</b></div>
         <div class="dp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></div>
-      </div>
+      </div>`}
       <div class="pr-estados">
         ${isInactive ? `<span class="pr-chip">${t('label.inactive')}</span>` : turno ? `<span class="pr-chip dp-turno-chip" style="background:${turno.bg};color:${turno.tx}">${escapeHtml(turno.etiqueta)}${turno.horas ? ' · ' + escapeHtml(turno.horas) : ''}</span>` : `<span class="pr-chip">${gl({es:'Sin turno hoy', ca:'Sense torn avui', en:'No shift today'})}</span>`}
         ${sem.atrasadas ? `<span class="pr-chip msg"><i class="ti ti-alert-triangle"></i> ${sem.atrasadas} ${gl({es:'atrasadas', ca:'endarrerides', en:'overdue'})}</span>` : ''}
@@ -1836,10 +1841,11 @@ function renderDistDetail(){
           ${turnoHoy ? `<span class="pr-chip dp-turno-chip" style="background:${turnoHoy.bg};color:${turnoHoy.tx}">${escapeHtml(turnoHoy.etiqueta)}</span>${turnoHoy.horas ? `<b class="dp-horas">${escapeHtml(turnoHoy.horas)}</b>` : ''}` : `<span class="pr-chip">${gl({es:'Sin turno asignado hoy', ca:'Sense torn assignat avui', en:'No shift assigned today'})}</span>`}
           ${open ? `<span class="pr-chip ok"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="pr-chip off">${t('hr2.offDuty')}</span>`}
         </div>
+        ${turnoHoy && turnoHoy.trabaja === false ? `<div class="dp-prog"><div class="dp-prog-t">${gl({es:'Descansa hoy: sin tareas que contar.', ca:'Descansa avui: sense tasques per comptar.', en:'Day off: no tasks to count.'})}</div></div>` : `
         <div class="dp-prog">
           <div class="dp-prog-t ${dpEstadoCuenta(hoyHechas, hoyTotal, 0)}"><b>${hoyHechas}</b> ${gl({es:'de', ca:'de', en:'of'})} <b>${hoyTotal}</b> ${gl({es:'tareas de hoy hechas', ca:'tasques d\'avui fetes', en:'of today\'s tasks done'})}</div>
           <div class="dp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${hoyPct}"><span style="width:${hoyPct}%"></span></div>
-        </div>
+        </div>`}
         ${hoyTotal && hoyHechas === hoyTotal ? `<div class="dp-ok"><i class="ti ti-circle-check"></i> ${gl({es:'Todo hecho por hoy. Buen trabajo.', ca:'Tot fet per avui. Bona feina.', en:'All done for today. Nice work.'})}</div>` : ''}
       </div>
       <div class="dp-hoy-der">
@@ -1944,7 +1950,7 @@ function renderDistDetail(){
 
   box.innerHTML = `
     <div class="dp-cab">
-      ${yo == null ? `<button type="button" class="btn btn-fino pr-ico" data-tip="${escapeHtml(gl({es:'Volver al equipo', ca:'Tornar a l\'equip', en:'Back to the team'}))}" aria-label="${escapeHtml(t('common.back'))}" onclick="backToDistList()"><i class="ti ti-arrow-left"></i></button>` : ''}
+      ${yo == null ? `<button type="button" class="btn btn-fino pr-ico dp-volver-eq" data-tip="${escapeHtml(gl({es:'Volver al equipo', ca:'Tornar a l\'equip', en:'Back to the team'}))}" aria-label="${escapeHtml(t('common.back'))}" onclick="backToDistList()"><i class="ti ti-arrow-left"></i><span class="dp-volver-txt">${gl({es:'Equipo', ca:'Equip', en:'Team'})}</span></button>` : ''}
       <span class="pr-av" style="--c:${escapeHtml(emp.color||'#DF7039')}" aria-hidden="true">${escapeHtml(prIniciales(emp.name))}</span>
       <div class="pr-id"><b class="dp-nombre">${escapeHtml(emp.name)}</b><span class="pr-sub">${escapeHtml(emp.rol||'')}</span></div>
     </div>
@@ -2231,7 +2237,7 @@ function dpCargoDetalleHtml(tipo, nombre){
     <div class="dp-det-cols">
       <section>
         <div class="es-tit">${t('label.ingredients')}</div>
-        ${lineas.length ? `<ul class="dp-ings">${lineas.map(l => `<li><span class="dp-ing-q">${l.qty != null ? `${fmtNum(l.qty * fx.factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span>${escapeHtml(l.name)}</span></li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noIngredients')}</p>`}
+        ${lineas.length ? `<ul class="dp-ings">${lineas.map(l => `<li><span class="dp-ing-q">${l.qty != null ? `${fmtCant(l.qty * fx.factor)} <small>${escapeHtml(l.unit)}</small>` : '—'}</span><span>${escapeHtml(l.name)}</span></li>`).join('')}</ul>` : `<p class="pr-ayuda">${t('empty.noIngredients')}</p>`}
       </section>
       <section>
         <div class="es-tit">${gl({es:'Paso a paso', ca:'Pas a pas', en:'Step by step'})}</div>
