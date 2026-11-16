@@ -662,7 +662,7 @@ function renderTogoCalendarBody(){
     const firstDow = (new Date(year, month, 1).getDay()+6)%7; // 0=lunes
     const nDias = daysInMonth(year, month);
     // Sin los nombres de los días no se sabía en qué columna cae cada fecha (el 1 de noviembre quedaba solo en la esquina).
-    let cells = (t('days.short') || []).slice(0, 7).map(n => `<div style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px">${escapeHtml(n)}</div>`).join('');
+    let cells = (t('days.short') || []).slice(0, 7).map(n => `<div class="togo-dn" style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;white-space:nowrap;min-width:0"><span class="togo-dn-l">${escapeHtml(n)}</span><span class="togo-dn-c">${escapeHtml(n.slice(0,2))}</span></div>`).join('');
     for(let i=0;i<firstDow;i++) cells += `<div></div>`;
     for(let d=1; d<=nDias; d++){
       const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;

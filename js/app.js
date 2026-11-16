@@ -332,7 +332,7 @@ function renderLimpieza(){
   const subtitleEl = document.querySelector('#view-limpieza .view-subtitle');
   if(titleEl) titleEl.textContent = isSala ? t('view.limpieza.title.sala') : t('view.limpieza.title');
   if(subtitleEl) subtitleEl.textContent = isSala ? t('view.limpieza.subtitle.sala') : t('view.limpieza.subtitle');
-  const box = document.getElementById('limpieza-content');
+  const box = document.getElementById('limpieza-content'); box.dataset.tab = limpiezaTab;
   box.innerHTML = `
     ${lpResumenHtml()}
     <div class="toolbar es-tabs lp-tabs" id="limpieza-tabs-row"><div class="left">
@@ -664,7 +664,7 @@ function limpiezaTareaRowHtml(tarea, checks, monthKey, compacta){
   const resp = tarea.responsableId ? DB.employees.find(e=>e.id===tarea.responsableId) : null;
   const info = limpiezaCheckInfo(checks, tarea.id);
   const canToggle = canToggleLimpiezaTarea(tarea);
-  const quien = info ? `${t('limpieza.doneOn').replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre ? ` · ${escapeHtml(info.checkedByNombre)}` : ''}` : '';
+  const quien = info ? `${t('limpieza.doneOn').replace('${date}', escapeHtml(ggFechaCorta(info.fecha||'')))} ${escapeHtml(info.hora && info.hora !== '00:00' ? info.hora : '')}${info.checkedByNombre ? ` · ${escapeHtml(info.checkedByNombre)}` : ''}` : '';
   return `
     <div class="lp-tarea${info ? ' is-hecha' : ''}${compacta ? ' es-compacta' : ''}">
       <label class="dp-check${canToggle ? '' : ' is-off'}" title="${escapeHtml(canToggle ? t('title.markAsDone') : t('limpieza.notYourTaskToast'))}">

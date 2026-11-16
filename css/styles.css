@@ -6769,3 +6769,73 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   button.kt-cn{flex-wrap:wrap;row-gap:4px}
   .kds-toolbar .btn.btn-fino{font-size:11px;padding:4px 2px}
 }
+
+/* VIDEO-MÓVIL · PAQUETE 4 · Carpeta Cocina (vídeo Android 15/11): notas plegables, Escandallo, Pedidos, Stock, Personal, Distribución, APPCC y Calendario */
+.gg-nota-q{display:none}
+@media (max-width:760px){
+  .gg-nota-q{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 6px 0 0;background:none;border:0;color:var(--olive);font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .gg-nota:not(.is-abierta) .gg-nota-txt{display:none}
+  .gg-nota.is-abierta .gg-nota-txt{padding-bottom:8px}
+  /* Escandallo / Pedidos: Volver a la izquierda y Guardar + ⋯ a la derecha, en UNA fila */
+  #view-escandallo .es-barra-der,#view-fichas .es-barra-der,#view-pedidos .es-barra-der{width:auto;margin-left:auto}
+  #view-pedidos .es-barra-der{width:100%;margin-left:0}
+  .es-l-coste b,.es-l-coste{white-space:nowrap}
+  /* Pestañas de Pedidos y APPCC: rejilla de columnas iguales, no una por fila */
+  .pe-tabs .left,.lp-tabs .left{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .pe-tabs .left .btn,.lp-tabs .left .btn{width:100%;justify-content:flex-start;white-space:normal;text-align:left}
+  .lp-tabs .left .btn:last-child:nth-child(odd){grid-column:1 / -1}
+  /* APPCC: el resumen de hoy solo en la primera pestaña (se repetía en las siete) y 3+2 sin hueco */
+  #limpieza-content[data-tab]:not([data-tab="protocolo"]) .lp-resumen{display:none}
+  .lp-resumen{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .lp-resumen .st-cel{grid-column:span 2}
+  .lp-resumen .st-cel:nth-child(n+4){grid-column:span 3}
+  /* Alérgenos por plato: nombre como título de la tarjeta y alérgenos que ENVUELVEN (dato de seguridad: se ven todos) */
+  .lp-alerg-tabla tbody tr{padding:10px 12px}
+  .lp-alerg-tabla td.lp-alerg-nom{font-weight:600;font-size:15px;border-bottom:0;padding:0 0 6px;overflow-wrap:break-word}
+  .lp-alerg-tabla td.lp-alerg-lista{display:flex;flex-wrap:wrap;gap:6px;border-bottom:0;padding:0;min-width:0}
+  .lp-alerg-tabla td.lp-alerg-lista::before{flex:0 0 100%;max-width:100%}
+  .lp-alerg-filtro .lp-barra{flex-direction:column;align-items:stretch}
+  .lp-alerg-filtro .lp-filtros .st-buscar{flex:1 1 140px;min-width:0}
+  .lp-alerg-filtro .lp-filtros > .btn{flex:0 0 auto}
+  .lp-alerg-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lp-alerg{justify-content:space-between;min-height:44px}
+  .lp-alerg span{font-size:12px;color:var(--ink)}
+  .lp-alerg.on span{color:#fff}
+  /* Personal: el nombre ocupa todo el ancho; el estado habitual («Fuera de servicio») no se pinta */
+  .pr-cab .pr-estados{flex:1 0 100%;margin-left:0;justify-content:flex-start}
+  .pr-estados:not(:has(.pr-chip:not(.off))){display:none}
+  .pr-chip.off{display:none}
+  .pr-pie{flex-direction:row;align-items:center;justify-content:space-between}
+  .pr-pie .pr-ver{display:none}
+  .pr-pie .pr-acc{width:100%;justify-content:space-between;flex-wrap:nowrap}
+  .pr-pie .pr-acc > *{flex:0 0 auto}
+  .dp-emp .pr-pie{justify-content:space-between}
+  .dp-emp .pr-pie .pr-ver{display:inline}
+  .dp-emp .pr-pie .dp-cargo-n{min-width:0}
+  .dp-hoy-mini.is-descansa{margin:0}
+  /* Mi puesto: lo elegido va en oliva, nunca en negro */
+  .dp-dia.is-sel{background:var(--olive);border-color:var(--olive)}
+  .dp-dia.is-sel .dp-dia-c.ok,.dp-dia.is-sel .dp-dia-c{color:#fff}
+  .dp-dia-c{font-size:12px}
+  .dp-volver-eq{width:auto;min-width:44px;padding:0 10px;gap:6px}
+  .dp-volver-txt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .dp-hoy-der{width:100%}
+  .dp-hoy-der .btn{flex:1 1 0;justify-content:center}
+  .dp-dia-cuenta,.dp-cuenta{white-space:nowrap}
+  /* Calendario: fecha del Día en una sola fila, resumen de una línea de rótulo */
+  .cal-nav{flex-wrap:nowrap}
+  .cal-nav .cal-fecha{flex:1 1 0;min-width:0;padding:0 8px;font-size:13.5px}
+  .cal-nav .cal-fecha span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-mes-dia.is-hoy{border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive)}
+  .cal-mes-cab{color:var(--ink)}
+  .cal-mes-dia:not(.tiene) .cal-mes-n{color:var(--ink)}
+  /* Stock: nombre y − n + en la MISMA fila (≈64 px por producto), sin la línea «ACTUAL · KG» */
+  .st-fila .st-qty .st-lab{display:none}
+  .st-fila .st-qty:focus-within .btn,.st-fila .btn.btn-fino:active{border-color:var(--olive)}
+  /* Pedidos: IVA del resumen sin recortar por abajo */
+  .pd-totales{padding-bottom:6px;overflow:visible}
+  .pd-totales > div{min-height:24px}
+}
+/* Calendario de pedidos (TPV): cabeceras de día completas en PC y de 2 letras en móvil (en 360 px «MAR»/«DOM» salían cortadas) */
+.togo-dn-c{display:none}
+@media (max-width:560px){.togo-dn-l{display:none}.togo-dn-c{display:inline}}
