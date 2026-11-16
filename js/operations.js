@@ -1572,7 +1572,7 @@ function pedidoTarjetaHtml(o){
         ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
       </div>
       <div class="es-plato-cifras">
-        ${k(gl({es:'Entrega', ca:'Lliurament', en:'Delivery'}), escapeHtml(o.date || '—'))}
+        ${k(gl({es:'Entrega', ca:'Lliurament', en:'Delivery'}), escapeHtml(o.date ? ggFechaCorta(o.date) : '—'))}
         ${k(gl({es:'Artículos', ca:'Articles', en:'Items'}), itemCount)}
         ${k(t('common.total'), fmtMoney(pedidoTotalConIva(o)))}
       </div>
@@ -1739,8 +1739,8 @@ function renderPedidoDetail(){
           <div class="pd-cab-t">
             <h2 class="pd-prov"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)}</h2>
             <div class="pd-fechas">
-              <span><i>${t('label.deliveryDate')}</i><b>${escapeHtml(o.date || '—')}</b></span>
-              ${o.enviadoEn ? `<span><i>${gl({es:'Enviado el', ca:'Enviat el', en:'Sent on'})}</i><b>${escapeHtml(o.enviadoEn)}</b></span>` : ''}
+              <span><i>${t('label.deliveryDate')}</i><b>${escapeHtml(o.date ? ggFechaCorta(o.date) : "—")}</b></span>
+              ${o.enviadoEn ? `<span><i>${gl({es:'Enviado el', ca:'Enviat el', en:'Sent on'})}</i><b>${escapeHtml(ggFechaCorta(o.enviadoEn))}</b></span>` : ''}
               ${isRecibido && o.recibidoPor ? `<span><i>${t('label.receivedBy')}</i><b>${escapeHtml(o.recibidoPor)}</b></span>` : ''}
             </div>
           </div>
@@ -1750,7 +1750,7 @@ function renderPedidoDetail(){
 
         <section class="es-card">
           <h3 class="es-tit">${gl({es:'Artículos', ca:'Articles', en:'Items'})} <span class="fi-para">${items.length}</span></h3>
-          ${showRecepcion ? `<p class="es-nota"><i class="ti ti-info-circle"></i> ${t('label.orderCheckHelp')}</p>` : ''}
+          ${showRecepcion ? ggNota(`<i class="ti ti-info-circle"></i> ${t('label.orderCheckHelp')}`, 'es-nota') : ''}
           <div class="pd-lineas${showRecepcion ? ' con-rec' : ''}">
             ${showRecepcion ? `<div class="pd-lcab"><span>${t('label.ingredient')}</span><span>${t('label.ordered')}</span><span>${t('label.receivedQty')}</span><span>${t('precios.albaranLabel')}</span><span>${t('ph.receptionNote')}</span></div>` : ''}
             ${itemsHtml || `<div class="empty es-vacio"><i class="ti ti-basket"></i>${t('empty.noItems')}</div>`}
@@ -2558,7 +2558,7 @@ function pcFilasHtml(){
         <div class="pc-art-nom">
           <b>${escapeHtml(ing.name)}</b>
           <span class="pc-art-sub">
-            <span class="${bajo ? 'pc-bajo' : ''}">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)}${(s.min||0) > 0 ? ` · ${t('label.minAbbrev')} ${fmtNum(s.min)}` : ''}</span>
+            <span class="${bajo ? 'pc-bajo' : ''}">${t('label.stock')}: ${fmtCant(s.qty)} ${escapeHtml(ing.unit)}${(s.min||0) > 0 ? ` · ${t('label.minAbbrev')} ${fmtNum(s.min)}` : ''}</span>
             ${bajo ? `<em class="pc-tag">${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}</em>` : ''}
             ${camino > 0 ? `<em class="pc-tag cam"><i class="ti ti-truck-delivery"></i> +${fmtNum(camino)} ${escapeHtml(ing.unit)} ${gl({es:'en camino', ca:'en camí', en:'on the way'})}</em>` : ''}
           </span>

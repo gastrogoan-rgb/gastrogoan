@@ -131,6 +131,8 @@ function fechaImpresaLegible(ds){
   if(!m) return ds || '';
   return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(localeActual(), {weekday:'short', day:'numeric', month:'short', year:'numeric'});
 }
+// Alias de fechaLegibleCorta (el helper común de la rama base) que usan los puntos de Cocina de este paquete.
+function ggFechaCorta(ds){ return fechaLegibleCorta(ds); }
 // «2026-11-10» → «10 nov 2026»: la misma idea, más corta (sin día de la semana) para chips y celdas estrechas de móvil. Cualquier
 // texto que no sea una fecha ISO se devuelve tal cual.
 function fechaLegibleCorta(ds){
@@ -2451,6 +2453,34 @@ document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === '
 // Estas pantallas se pintan por trozos (innerHTML de cada contenedor): se vuelve a preparar cuando aparece algo nuevo.
 (function(){ let t = null; const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(ggAccPreparar, 60); });
   const arrancar = () => { const c = document.getElementById('content') || document.body; obs.observe(c, {childList:true, subtree:true}); ggAccPreparar(); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar(); })();
+/* Nota de ayuda larga que en móvil se pliega tras un «?» (norma del 30/10: las explicaciones largas no van a la vista; en el vídeo
+   de Android ocupaban 5-8 renglones en gris antes de los datos). En PC el texto sigue a la vista y el botón no existe.
+   `texto` ya viene escapado/HTML; `clase` es opcional (es-nota, es-pista…) y se aplica al texto. */
+function ggNota(texto, clase){
+  // En móvil se usa la clase común `.gg-ayuda` (details con «?»); en PC el texto va a la vista.
+  if(typeof matchMedia === 'function' && matchMedia('(max-width:760px)').matches)
+    return `<details class="gg-ayuda"><summary aria-label="${escapeHtml(gl({es:'Más información', ca:'Més informació', en:'More info'}))}">?</summary><div class="${clase || ''}">${texto}</div></details>`;
+  return `<div class="gg-nota"><button type="button" class="gg-nota-q" aria-expanded="false" onclick="ggNotaToggle(this)"><i class="ti ti-help-circle"></i> ${gl({es:'Más información', ca:'Més informació', en:'More info'})}</button><div class="gg-nota-txt${clase ? ' ' + clase : ''}">${texto}</div></div>`;
+}
+function ggNotaToggle(btn){
+  const n = btn.closest('.gg-nota'); if(!n) return;
+  const abierta = n.classList.toggle('is-abierta');
+  btn.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+}
+/* Teclado numérico en TODO campo de cantidad o importe (vídeo en Android del 15/11): con el teclado de letras, teclear «0,25» obliga a
+   cambiar de teclado. El campo sigue siendo type=number (validación y flechas intactas); inputmode solo elige el teclado:
+   «decimal» si admite decimales (por defecto, o step con coma/«any»), «numeric» si el paso es entero. Un campo que ya trae su
+   inputmode (o un type=text a propósito) no se toca. Se aplica a lo que ya hay y a lo que se pinte después (pantallas y ventanas se
+   repintan por innerHTML), así que una pantalla nueva nace con el teclado bien sin acordarse. */
+function ggInputmodeNumerico(raiz){
+  (raiz || document).querySelectorAll('input[type=number]:not([inputmode])').forEach(el => {
+    const st = (el.getAttribute('step') || '').trim();
+    el.setAttribute('inputmode', st && /^\d+$/.test(st) && st !== '0' ? 'numeric' : 'decimal');
+  });
+}
+(function(){ let t = null; const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => ggInputmodeNumerico(), 40); });
+  const arrancar = () => { obs.observe(document.body, {childList:true, subtree:true}); ggInputmodeNumerico(); };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar(); })();
 const GG_VISTAS_NUEVAS = ['view-home', 'view-folder', 'view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv', 'view-manual', 'view-minegocio', 'view-dashboard', 'view-economia', 'view-plan360'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);

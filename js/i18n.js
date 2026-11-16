@@ -5,6 +5,14 @@ function fmtMoney(v){
 function fmtNum(v, dec=2){
   return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:dec});
 }
+// Cantidad de ingrediente para LEER: los decimales que hagan falta para que una cantidad pequeña no se muestre como «0»
+// (3 g de sal son 0,003 kg: con fmtNum, dos decimales, salía «0 kg Sal»). Redondea a 3 cifras significativas; no recorta ceros de más.
+function fmtCant(v){
+  v = Number(v) || 0;
+  const a = Math.abs(v);
+  const dec = a === 0 ? 0 : a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : Math.min(6, Math.max(3, 2 - Math.floor(Math.log10(a))));
+  return v.toLocaleString('es-ES', {minimumFractionDigits:0, maximumFractionDigits:dec});
+}
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -757,7 +765,7 @@ const I18N = {
     'common.search': 'Buscar', 'common.accept': 'Aceptar', 'common.confirm': 'Confirmar', 'common.notice': 'Aviso',
     'common.name': 'Nombre', 'common.phone': 'Teléfono', 'common.email': 'Email',
     'label.schedule': 'Horario', 'label.sections': 'Secciones', 'label.dishesTh': 'Platos',
-    'badge.activeInPos': 'Activa en TPV', 'badge.activeInPosM': 'Activo en TPV', 'label.groups': 'Grupos',
+    'badge.activeInPos': 'Activa en TPV', 'badge.activeInPosM': 'Activo en TPV', 'label.groups': 'Grupos', 'noun.group': 'grupo', 'noun.groups': 'grupos',
     'common.notes': 'Notas', 'common.date': 'Fecha', 'common.time': 'Hora',
     'common.responsible': 'Responsable', 'common.item': 'Artículo', 'common.amount': 'Importe', 'label.cash': 'Efectivo',
     'common.price': 'Precio', 'common.qty': 'Cantidad', 'common.unit': 'Unidad',
@@ -3730,7 +3738,7 @@ const I18N = {
     'common.search': 'Cercar', 'common.accept': 'Acceptar', 'common.confirm': 'Confirmar', 'common.notice': 'Avís',
     'common.name': 'Nom', 'common.phone': 'Telèfon', 'common.email': 'Email',
     'label.schedule': 'Horari', 'label.sections': 'Seccions', 'label.dishesTh': 'Plats',
-    'badge.activeInPos': 'Activa al TPV', 'badge.activeInPosM': 'Actiu al TPV', 'label.groups': 'Grups',
+    'badge.activeInPos': 'Activa al TPV', 'badge.activeInPosM': 'Actiu al TPV', 'label.groups': 'Grups', 'noun.group': 'grup', 'noun.groups': 'grups',
     'common.notes': 'Notes', 'common.date': 'Data', 'common.time': 'Hora',
     'common.responsible': 'Responsable', 'common.item': 'Article', 'common.amount': 'Import', 'label.cash': 'Efectiu',
     'common.price': 'Preu', 'common.qty': 'Quantitat', 'common.unit': 'Unitat',
@@ -6703,7 +6711,7 @@ const I18N = {
     'common.search': 'Search', 'common.accept': 'Accept', 'common.confirm': 'Confirm', 'common.notice': 'Notice',
     'common.name': 'Name', 'common.phone': 'Phone', 'common.email': 'Email',
     'label.schedule': 'Schedule', 'label.sections': 'Sections', 'label.dishesTh': 'Dishes',
-    'badge.activeInPos': 'Active in POS', 'badge.activeInPosM': 'Active in POS', 'label.groups': 'Groups',
+    'badge.activeInPos': 'Active in POS', 'badge.activeInPosM': 'Active in POS', 'label.groups': 'Groups', 'noun.group': 'group', 'noun.groups': 'groups',
     'common.notes': 'Notes', 'common.date': 'Date', 'common.time': 'Time',
     'common.responsible': 'Responsible', 'common.item': 'Item', 'common.amount': 'Amount', 'label.cash': 'Cash',
     'common.price': 'Price', 'common.qty': 'Quantity', 'common.unit': 'Unit',
