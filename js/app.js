@@ -1861,7 +1861,7 @@ function renderDistDetail(){
   const atrasadas = sem.atrasadas && sem.primerAtrasado ? `
     <div class="dp-aviso"><i class="ti ti-alert-triangle"></i>
       <span>${sem.atrasadas === 1 ? t('dist.oneOverdueTask') : t('dist.nOverdueTasks').replace('${n}', sem.atrasadas)}</span>
-      <button type="button" class="btn btn-fino dp-aviso-ver" onclick="distElegirDia('${sem.primerAtrasado.ds}')">${sem.atrasadas === 1 ? gl({es:'Verla', ca:'Veure-la', en:'Show me'}) : gl({es:'Verlas', ca:'Veure-les', en:'Show me'})}</button>
+      <button type="button" class="btn btn-fino btn-toque dp-aviso-ver" onclick="distElegirDia('${sem.primerAtrasado.ds}')">${sem.atrasadas === 1 ? gl({es:'Verla', ca:'Veure-la', en:'Show me'}) : gl({es:'Verlas', ca:'Veure-les', en:'Show me'})}</button>
     </div>` : '';
 
   // ---- Tira de la semana ----
