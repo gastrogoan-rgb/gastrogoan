@@ -220,7 +220,7 @@ function renderMesaCard(table){
     ${order
       ? `<span class="tp-mesa-total">${fmtMoney(total)}</span>
          <span class="tp-mesa-pie">${order.pax ? `<span class="tp-mesa-pax"><i class="ti ti-users"></i> ${order.pax}</span>` : ''}${camarero}${avisos ? `<span class="tp-avisos">${avisos}</span>` : ''}</span>`
-      : `<span class="tp-mesa-libre">${table.plazas ? `<i class="ti ti-users"></i> ${table.plazas} ${escapeHtml(t('common.persAbbr'))}` : '&nbsp;'}</span>
+      : `<span class="tp-mesa-libre">${table.plazas ? `<i class="ti ti-users"></i> <b class="tp-mesa-plazas">${table.plazas}</b> ${escapeHtml(t('common.persAbbr'))}` : '&nbsp;'}</span>
          ${upcomingRes ? `<span class="tp-mesa-reserva" title="${escapeHtml(upcomingResClient)}"><i class="ti ti-calendar-event"></i> ${escapeHtml(upcomingRes.time || '')}${upcomingResClient ? ' · ' + escapeHtml(upcomingResClient.split(' ')[0]) : ''}</span>` : ''}
          ${avisos ? `<span class="tp-avisos">${avisos}</span>` : ''}`}
   </button>`;

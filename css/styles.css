@@ -4347,8 +4347,11 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-zona-tit{display:flex;align-items:center;gap:8px;margin:6px 0 10px;font-size:15px;font-weight:600}
 .tp-zona-tit .ti{color:var(--olive);font-size:18px}
 .tp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.tp-mesa{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:118px;padding:11px 12px 10px 16px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;min-width:0;transition:border-color .15s,background-color .15s,transform .12s}
-.tp-mesa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--hair)}
+/* Fichas de mesa (16/11, pedido del dueño: «las mesas tienen el mismo color del fondo y las libres se ven feas»). Antes la ficha era blanca sobre un fondo casi blanco
+   y la libre, blanca con borde discontinuo gris: a un metro no se distinguía una mesa de otra. Ahora cada estado tiene su color de FONDO y de barra (libre = verde
+   claro, tomando nota = azul grisáceo, ocupada = arena, en cocina = ámbar, servida = verde) y todas se levantan del fondo con borde más marcado y una sombra suave. */
+.tp-mesa{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:118px;padding:11px 12px 10px 18px;background:#fff;border:1px solid #CFC8BA;border-radius:6px;box-shadow:0 1px 0 rgba(28,26,23,.05),0 2px 8px rgba(28,26,23,.07);font:inherit;color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;min-width:0;transition:border-color .15s,background-color .15s,transform .12s,box-shadow .15s}
+.tp-mesa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--hair)}
 .tp-mesa:hover{border-color:var(--olive);transform:translateY(-1px)}
 .tp-mesa:active{transform:none}
 .tp-mesa:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
@@ -4373,20 +4376,28 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-av.is-fria{background:#E8EEF2;border-color:#9FB3C2}
 .tp-av.is-pago{background:#EAF1E6;border-color:#9CB09C}
 /* Estados: lo que se ve de lejos es el COLOR de la barra de la izquierda y el fondo. */
-.tp-mesa.is-libre{background:#fff;border-style:dashed;color:var(--muted)}
-.tp-mesa.is-libre::before{background:transparent}
-.tp-mesa.is-libre .tp-mesa-nombre{color:var(--ink)}
-.tp-mesa-libre{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted)}
+/* Mesa LIBRE: tiene que verse de lejos y distinguirse del fondo. Borde grueso y continuo en verde, fondo verde, barra gruesa, la etiqueta «Libre» como una
+   pastilla rellena y el nº de plazas GRANDE (es lo que mira el camarero para sentar a alguien). */
+.tp-mesa.is-libre{background:#DDEBD6;border:2px solid #6E9873;box-shadow:0 2px 6px rgba(74,93,78,.14);color:#2F4A36;padding-left:20px}
+.tp-mesa.is-libre::before{width:10px;background:#5E8A63}
+.tp-mesa.is-libre .tp-mesa-nombre{color:#1C1A17}
+.tp-mesa.is-libre .tp-mesa-estado{align-self:flex-start;background:var(--olive);color:#fff;font-weight:700;padding:3px 9px 3px 7px;border-radius:3px;letter-spacing:.06em}
+.tp-mesa.is-libre:hover{background:#D0E4C8;border-color:var(--olive);box-shadow:0 4px 12px rgba(74,93,78,.28)}
+.tp-mesa-libre{display:flex;align-items:baseline;gap:6px;font-size:14px;font-weight:600;color:#2F4A36;margin-top:auto}
+.tp-mesa-libre .ti{font-size:18px;align-self:center}
+.tp-mesa-plazas{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1;letter-spacing:-.02em;color:#1F3A27}
 .tp-mesa-reserva{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--ink);background:var(--brand-cream);border:1px dashed var(--ink);border-radius:3px;padding:3px 7px;margin-top:auto;overflow-wrap:break-word}
 .tp-mesa.es-reservada{border-color:var(--ink)}
-.tp-mesa.is-tomando{background:#F7F6F2}
-.tp-mesa.is-tomando::before{background:#7A7468}
-.tp-mesa.is-ocupada{background:#F7F6F2}
-.tp-mesa.is-ocupada::before{background:#7A7468}
+.tp-mesa.is-tomando{background:#EAF0F5;border-color:#A9BCCB}
+.tp-mesa.is-tomando::before{background:#5B7A93}
+.tp-mesa.is-tomando .tp-mesa-estado{color:#3A566C;font-weight:600}
+.tp-mesa.is-ocupada{background:#F4EEE1;border-color:#D3C39F}
+.tp-mesa.is-ocupada::before{background:#9A8658}
+.tp-mesa.is-ocupada .tp-mesa-estado{color:#66552F;font-weight:600}
 .tp-mesa.is-cocina{background:#FBF5E4;border-color:#E3CC8E}
 .tp-mesa.is-cocina::before{background:#C79A2E}
 .tp-mesa.is-cocina .tp-mesa-estado{color:#8A6A1F}
-.tp-mesa.is-servida{background:#EAF1E6;border-color:#A9C0A6}
+.tp-mesa.is-servida{background:#E3EFDD;border-color:#8FB08A}
 .tp-mesa.is-servida::before{background:var(--olive)}
 .tp-mesa.is-servida .tp-mesa-estado{color:#33523A;font-weight:600}
 .tp-mesa.es-fria{box-shadow:inset 0 0 0 2px #9FB3C2}
