@@ -118,9 +118,16 @@ function tItem(item){
 }
 function showToast(msg, duration){
   const toastEl = document.getElementById('toast');
+  /* Un aviso sin texto salía como un rectángulo negro vacío (se vio en la
+     carga de la app, en el vídeo de móvil del 15/11): si no hay nada que decir,
+     no se enseña nada. */
+  if(msg == null || String(msg).trim() === ''){ if(toastEl){ toastEl.classList.remove('show'); } return; }
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(showToast._t);
+  /* Tope de 5 s: los avisos largos (6 s «descarga el CSV…») ya no se
+     quedan tapando la pantalla. En móvil el aviso va ARRIBA (ver CSS «VIDEO-MÓVIL»). */
+  duration = Math.min(duration || 2200, 5000);
   // Cada aviso se muestra el tiempo que pide y punto. Hubo un intento de
   // añadir un tope absoluto de 6 s como red de seguridad contra un aviso que
   // se quedara pegado en pantalla, pero ese temporizador extra no se
@@ -695,7 +702,7 @@ const I18N = {
     'tour.s31.title': 'El Manual de Uso: tu guía completa',
     'tour.s31.desc': 'En Gestión → Manual de Uso tienes un capítulo por pantalla, con pasos, consejos y qué hacer si algo no va. Busca por palabra, salta entre apartados y repite este tour con «Iniciar tour guiado».',
     'tour.phase.intro': 'Empezar', 'tour.phase.cocina': 'Cocina', 'tour.phase.sala': 'Sala', 'tour.phase.gestion': 'Gestión', 'tour.phase.ayuda': 'Ayuda',
-    'tour.stepCount': 'Paso ${n} de ${total}',
+    'tour.stepCount': 'Paso ${n} de ${total}', 'tour.more': 'Leer más', 'tour.less': 'Leer menos',
     'tour.s33.title': '¡Ya estás listo para volar!',
     'tour.s33.desc': 'Has visto Cocina, Sala y Gestión funcionando. No hace falta memorizar nada: el Manual y el Centro de ayuda están siempre a un clic, y el tour se repite cuando quieras desde Gestión → Manual de Uso. ¡A por el servicio!',
     'tour.finale.cta': 'Empezar a trabajar',
@@ -3020,7 +3027,7 @@ const I18N = {
     'dash.hero.vsLastWeek': 'vs. mismo día semana pasada',
     'dash.hero.ticketsToday': 'Tickets hoy',
     'dash.reviewFixedExpenses': 'Revisar Gastos Fijos →',
-    'dash.deepDiveHint': '(rentabilidad y ventas por plato — click para plegar)',
+    'dash.deepDiveHint': '(rentabilidad y ventas por plato — pulsa para plegar)',
     'hr.gv.editPurchase': 'Editar compra',
     'hr.gv.searchPlaceholder': 'Buscar por proveedor o categoría...',
     'factura.attachLabel': 'Factura (foto o PDF)',
@@ -3666,7 +3673,7 @@ const I18N = {
     'tour.s31.title': 'El Manual d\'Ús: la teva guia completa',
     'tour.s31.desc': 'A Gestió → Manual d\'Ús tens un capítol per pantalla, amb passos, consells i què fer si alguna cosa no va. Cerca per paraula, salta entre apartats i repeteix aquest tour amb «Iniciar tour guiat».',
     'tour.phase.intro': 'Començar', 'tour.phase.cocina': 'Cuina', 'tour.phase.sala': 'Sala', 'tour.phase.gestion': 'Gestió', 'tour.phase.ayuda': 'Ajuda',
-    'tour.stepCount': 'Pas ${n} de ${total}',
+    'tour.stepCount': 'Pas ${n} de ${total}', 'tour.more': 'Llegir més', 'tour.less': 'Llegir menys',
     'tour.s33.title': 'Ja estàs a punt per volar!',
     'tour.s33.desc': 'Has vist Cuina, Sala i Gestió funcionant. No cal memoritzar res: el Manual i el Centre d\'ajuda són sempre a un clic, i el tour es repeteix quan vulguis des de Gestió → Manual d\'Ús. Ara, al servei!',
     'tour.finale.cta': 'Començar a treballar',
@@ -5990,7 +5997,7 @@ const I18N = {
     'dash.hero.vsLastWeek': 'vs. mateix dia setmana passada',
     'dash.hero.ticketsToday': 'Tiquets avui',
     'dash.reviewFixedExpenses': 'Revisar Despeses Fixes →',
-    'dash.deepDiveHint': '(rendibilitat i vendes per plat — clic per plegar)',
+    'dash.deepDiveHint': '(rendibilitat i vendes per plat — prem per plegar)',
     'hr.gv.editPurchase': 'Editar compra',
     'hr.gv.searchPlaceholder': 'Cercar per proveïdor o categoria...',
     'factura.attachLabel': 'Factura (foto o PDF)',
@@ -6637,7 +6644,7 @@ const I18N = {
     'tour.s31.title': 'The User Manual: your complete guide',
     'tour.s31.desc': 'In Management → User Manual there\'s one chapter per screen, with steps, tips and what to do if something doesn\'t work. Search by word, jump between sections and repeat this tour with "Start guided tour".',
     'tour.phase.intro': 'Start', 'tour.phase.cocina': 'Kitchen', 'tour.phase.sala': 'Floor', 'tour.phase.gestion': 'Management', 'tour.phase.ayuda': 'Help',
-    'tour.stepCount': 'Step ${n} of ${total}',
+    'tour.stepCount': 'Step ${n} of ${total}', 'tour.more': 'Read more', 'tour.less': 'Read less',
     'tour.s33.title': 'You\'re ready to fly!',
     'tour.s33.desc': 'You\'ve seen Kitchen, Floor and Management at work. There\'s nothing to memorise: the Manual and Help centre are always one click away, and you can repeat the tour whenever you like from Management → User Manual. On to service!',
     'tour.finale.cta': 'Start working',
@@ -8962,7 +8969,7 @@ const I18N = {
     'dash.hero.vsLastWeek': 'vs. same day last week',
     'dash.hero.ticketsToday': 'Tickets today',
     'dash.reviewFixedExpenses': 'Review Fixed Expenses →',
-    'dash.deepDiveHint': '(profitability and sales per dish — click to collapse)',
+    'dash.deepDiveHint': '(profitability and sales per dish — tap to collapse)',
     'hr.gv.editPurchase': 'Edit purchase',
     'hr.gv.searchPlaceholder': 'Search by supplier or category...',
     'factura.attachLabel': 'Invoice (photo or PDF)',
@@ -9118,6 +9125,11 @@ function getLang(){
   return (DB && DB.business && DB.business.lang) || 'es';
 }
 // Para bloques largos de prosa (no cadenas cortas de UI): {es,ca,en} -> texto en el idioma activo.
+/* ¿El aparato principal es táctil (sin «pasar por encima»)? Los textos que hablan del ratón («pasa el ratón por…», «click para…») en un móvil
+   o una tablet sobran y suenan a app de PC: con esto se elige la frase que toca (vídeo en un móvil real, 15/11). */
+function ggTactil(){
+  try{ return !!(window.matchMedia && window.matchMedia('(hover:none)').matches); }catch(e){ return false; }
+}
 function gl(obj){
   const l = getLang();
   return obj[l] !== undefined ? obj[l] : obj.es;

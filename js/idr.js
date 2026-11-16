@@ -347,7 +347,7 @@ async function idrCargarModelosInterno(){
   if(btn){ btn.disabled = false; btn.innerHTML = `<i class="ti ti-list"></i> ${t('idr.listModels')}`; }
   if(fallo || !modelos.length){
     if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('idr.modelsFailed'))}</span>`
-      + (fallo ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-word">${escapeHtml(String(fallo).slice(0,300))}</div>` : '');
+      + (fallo ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;overflow-wrap:break-word">${escapeHtml(String(fallo).slice(0,300))}</div>` : '');
     return;
   }
 
@@ -423,7 +423,7 @@ async function idrProbarConexion(){
   } else {
     const msg = idrMensajeError(r);
     if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(msg)}</span>`
-      + (r.detalle ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-word;max-height:120px;overflow:auto">${escapeHtml(String(r.detalle).slice(0,400))}</div>` : '');
+      + (r.detalle ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;overflow-wrap:break-word;max-height:120px;overflow:auto">${escapeHtml(String(r.detalle).slice(0,400))}</div>` : '');
   }
   if(btn){ btn.disabled = false; btn.innerHTML = `<i class="ti ti-plug-connected"></i> ${t('idr.test')}`; }
 }
@@ -1024,7 +1024,7 @@ function renderIdr(){
     const box = document.getElementById('view-idr');
     if(box){
       box.innerHTML = `<div class="card"><h3><i class="ti ti-alert-triangle"></i> ${t('idr.err.render')}</h3>`
-        + `<div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:200px;overflow:auto;margin:8px 0">${escapeHtml(idrUltimoFallo.detalle.slice(0,600))}</div>`
+        + `<div style="font-size:11px;color:var(--muted);overflow-wrap:break-word;max-height:200px;overflow:auto;margin:8px 0">${escapeHtml(idrUltimoFallo.detalle.slice(0,600))}</div>`
         + `<button class="btn" onclick="navIdr('inicio')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button></div>`;
     }
     if(typeof showToast === 'function') showToast(t('idr.err.render'));
@@ -1526,7 +1526,7 @@ function renderIdrCreacion(box){
         ${idrUltimoFallo ? `<div style="margin-top:10px;padding:8px 10px;border-left:3px solid var(--red);font-size:12.5px">
           <strong>${escapeHtml(t(IDR_MOTIVO_KEYS[idrUltimoFallo.motivo] || 'idr.err.provider'))}</strong>
           <details style="margin-top:4px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary>
-          <div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:160px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,600))}</div></details>
+          <div style="font-size:11px;color:var(--muted);overflow-wrap:break-word;max-height:160px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,600))}</div></details>
         </div>` : ''}
 
         ${!iaOk ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.noAssistantBody')}</p>` : `
@@ -2765,7 +2765,7 @@ function idrConfigModal(){
     </div>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'))}</p>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.callsToday').replace('${n}', idrGastoHoy()).replace('${tope}', IDR_TOPE_DIA)}</p>
-    ${idrUltimoFallo ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary><div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:140px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,400))}</div></details>` : ''}
+    ${idrUltimoFallo ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary><div style="font-size:11px;color:var(--muted);overflow-wrap:break-word;max-height:140px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,400))}</div></details>` : ''}
     <div class="modal-footer">
       ${idrHayIA() ? `<button class="btn btn-danger" onclick="idrBorrarConfig();closeModal();renderIdr();showToast(t('idr.keyRemoved'))">${t('common.delete')}</button>` : ''}
       <button class="btn btn-fino" onclick="closeModal()">${t('common.cancel')}</button>

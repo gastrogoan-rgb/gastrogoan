@@ -366,7 +366,7 @@ function tpvCartaZonaHtml(order, carta){
     const platos = (abierta.platos || []).filter(p => p.disponible !== false);
     return `
       <div class="tp-sec-cab">
-        <button type="button" class="btn btn-sm btn-fino" onclick="tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.sections'))}</button>
+        <button type="button" class="btn btn-sm btn-fino" onclick="tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.back'))}</button>
         <h4 class="tp-sec-nombre">${iconoSeccionHtml(abierta.icono, abierta.nombre, 22)} ${escapeHtml(tItem(abierta))}</h4>
       </div>
       <div class="tp-platos">${platos.map(p => tpvPlatoHtml(order, abierta, p, false)).join('')}</div>`;

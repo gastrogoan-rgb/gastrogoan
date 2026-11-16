@@ -1567,7 +1567,7 @@ function renderMegalista(){
     </div>` : '';
   box.innerHTML = `
     <div class="ml-ruta">
-      <button type="button" class="btn btn-sm btn-fino" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
       <div class="ml-ruta-nom">${escapeHtml(nombreDe(megalistaFolder))}<span>${folderItems.length === 1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', folderItems.length)}</span></div>
       ${lote}
     </div>` + renderMegalistaTable(megalistaSortItems(folderItems));
@@ -2402,7 +2402,7 @@ function stRutaHtml(volverFn, nombre, filas){
   const bajos = filas.filter(r => r.qty < r.min).length;
   return `
     <div class="ml-ruta">
-      <button type="button" class="btn btn-sm btn-fino" onclick="${volverFn}()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="${volverFn}()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
       <div class="ml-ruta-nom">${escapeHtml(nombre)}<span>${filas.length}${bajos ? ` · ${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}` : ''}</span></div>
     </div>`;
 }

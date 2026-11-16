@@ -334,7 +334,7 @@ function renderEmployeeAccessFormHtml(){
   const recientes = getRecentBusinessCodes(), nombres = getRecentBusinessNames();
   return `
     <div class="access-card">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <button type="button" class="access-volver" onclick="showAccessSelectScreen()"><i class="ti ti-arrow-left" aria-hidden="true"></i> <span>${t('common.back')}</span></button>
       <div class="access-card-title">${t('access.employeeBtn')}</div>
       <p class="access-card-lead">${t('access.employeeDesc')}</p>
       <div class="field">
@@ -367,7 +367,7 @@ function renderOwnerAccessFormHtml(){
   const login = getOwnerLogin();
   return `
     <div class="access-card">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <button type="button" class="access-volver" onclick="showAccessSelectScreen()"><i class="ti ti-arrow-left" aria-hidden="true"></i> <span>${t('common.back')}</span></button>
       <div class="access-card-title">${t('access.ownerBtn')}</div>
       <p class="access-card-lead">${login ? t('access.ownerDesc') : t('access.ownerSetupDesc')}</p>
       <div class="field">
@@ -1594,15 +1594,15 @@ function renderBsGroups(allSlots){
       // eso confunde más de lo que aclara. Lo que identifica un negocio para
       // su dueño es el nombre que él le puso en "Mi Negocio".
       return `
-        <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-          <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+        <div class="bs-item gg-fila ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
             <div class="bs-item-name-wrap">
               <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
             </div>
             <span class="bs-item-tag" style="font-size:11px;color:var(--muted);font-weight:400">(${t('bs.independentTag')})</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
             ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
@@ -1612,12 +1612,12 @@ function renderBsGroups(allSlots){
     // Negocio con sucursales — cabecera expandible
     const childrenHtml = isOpen ? `
       <div class="bs-group-children">
-        <div class="bs-sub-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-          <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+        <div class="bs-sub-item gg-fila ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:6px;overflow:hidden">
             <i class="ti ti-home" style="color:var(--muted);flex-shrink:0"></i>
             <span style="overflow:visible;text-overflow:clip;white-space:normal">${t('bs.mainLocation')}</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
             ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
@@ -1625,12 +1625,12 @@ function renderBsGroups(allSlots){
         ${sucursales.map(s => {
           const sActive = s.id === ACTIVE_SLOT;
           return `
-          <div class="bs-sub-item ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
-            <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+          <div class="bs-sub-item gg-fila ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+            <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:6px;overflow:hidden">
               <i class="ti ti-building-store" style="color:var(--muted);flex-shrink:0"></i>
               <span style="overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(s.name||t('bs.defaultBranchName'))}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
               ${sActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
               <button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>
             </div>
@@ -1643,8 +1643,8 @@ function renderBsGroups(allSlots){
         <div class="bs-group-header ${(isRootActive || sucursales.some(s=>s.id===ACTIVE_SLOT))?'active':''} ${isOpen?'open':''}"
              onclick="toggleBsGroup('${escapeHtml(root.id)}')">
           <i class="ti ti-building" style="flex-shrink:0"></i>
-          <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
-          <span style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
+          <span class="bs-item-name gg-fila-nombre" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+          <span class="gg-fila-extra" style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
           <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="color:var(--muted);margin-left:4px"></i>
         </div>
         ${childrenHtml}
@@ -12731,7 +12731,7 @@ function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
 @page{size:${ancho}mm auto;margin:0}
 html,body{margin:0;padding:0;background:#fff;color:#000}
 body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
-pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+pre{margin:0;white-space:pre-wrap;overflow-wrap:break-word;font:inherit}
 </style></head><body>${cuerpo}</body></html>`;
 }
 // Imprime en un iframe oculto en vez de window.open: las ventanas nuevas

@@ -157,24 +157,12 @@ function mostrarAvisoVersionNueva(build){
      mezclaba con la barra del navegador de la tablet y quedaba aplastada.
      `env(safe-area-inset-bottom)` es para los móviles con barra de gestos,
      donde el borde inferior no es el borde de la pantalla. */
-  barra.style.cssText = [
-    'position:fixed', 'left:12px', 'right:12px',
-    'bottom:calc(12px + env(safe-area-inset-bottom, 0px))',
-    // Por encima de CUALQUIER capa, incluidas las pantallas de bloqueo que
-    // ocupan toda la ventana: si el aviso de actualizar queda debajo de una
-    // de ellas, ese aparato no se puede actualizar nunca — que es justo lo
-    // que pasó con la pantalla de licencia desactivada.
-    'z-index:100002', 'background:var(--brand-orange,#8A7440)', 'color:#fff',
-    'padding:14px 18px', 'border-radius:12px',
-    'box-shadow:0 6px 24px rgba(0,0,0,.28)',
-    'display:flex', 'align-items:center', 'justify-content:center',
-    'gap:10px 14px', 'flex-wrap:wrap', 'font-size:14px', 'font-weight:600',
-    'max-width:760px', 'margin:0 auto',
-  ].join(';');
-  barra.innerHTML = `<span style="flex:1 1 240px;min-width:0"><i class="ti ti-download"></i> ${t('app.newVersion').replace('${fecha}', escapeHtml(build))}</span>`
-    + `<span style="display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto">`
-    + `<button class="btn" style="background:#fff;color:var(--brand-orange,#8A7440);border:none;min-height:44px;padding:10px 18px;font-weight:700;white-space:nowrap" onclick="aplicarVersionNueva()">${t('app.newVersionBtn')}</button>`
-    + `<button class="btn" style="background:none;border:1px solid rgba(255,255,255,.6);color:#fff;min-height:44px;padding:10px 14px;white-space:nowrap" onclick="document.getElementById('gg-version-nueva').remove()">${t('app.newVersionLater')}</button>`
+  barra.className = 'gg-version-nueva';
+  barra.setAttribute('role', 'status');
+  barra.innerHTML = `<span class="gg-vn-txt"><i class="ti ti-download"></i> ${t('app.newVersion').replace('${fecha}', escapeHtml(build))}</span>`
+    + `<span class="gg-vn-btns">`
+    + `<button class="btn gg-vn-ok" onclick="aplicarVersionNueva()">${t('app.newVersionBtn')}</button>`
+    + `<button class="btn gg-vn-luego" onclick="document.getElementById('gg-version-nueva').remove()">${t('app.newVersionLater')}</button>`
     + `</span>`;
   document.body.appendChild(barra);
 }
@@ -200,6 +188,8 @@ async function aplicarVersionNueva(silencioso){
   }
   const btn = document.querySelector('#gg-version-nueva button');
   if(btn){ btn.disabled = true; btn.textContent = t('app.newVersionWorking'); }
+  // «Más tarde» ya no pinta nada mientras se actualiza (ni se puede cancelar una recarga en marcha).
+  const luego = document.querySelector('#gg-version-nueva .gg-vn-luego'); if(luego) luego.remove();
   if(silencioso) console.info('GastroGoan: actualizando a la versión nueva');
   try{
     await fetch('./?gg-actualizar=1', {cache: 'reload'});
@@ -217,6 +207,19 @@ if(typeof window !== 'undefined'){
     const entrada = document.getElementById('access-select-screen');
     comprobarVersionPublicada(!!(entrada && !entrada.classList.contains('hide')));
   }, 4000));
+  /* ⚠️ Y TAMBIÉN durante el splash (vídeo en un móvil real, 15/11): a los 4 s
+     tras cargar, la persona ya iba por la entrada, la barra le tapaba la frase
+     del día y la recarga automática llegaba cuando ya estaba tecleando el PIN:
+     dos pantallas de carga seguidas. Preguntando por `version.json` (29 bytes)
+     nada más arrancar, la recarga —si hace falta— ocurre UNA vez y antes de que
+     nadie toque nada. Sin sesión se pregunta siempre (como en la entrada); con
+     sesión, respetando las 6 h. */
+  const ggPreguntaTemprana = () => setTimeout(() => {
+    let forzar = false;
+    try{ forzar = typeof getAccessSession === 'function' && !getAccessSession(); }catch(e){}
+    comprobarVersionPublicada(forzar);
+  }, 350);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ggPreguntaTemprana); else ggPreguntaTemprana();
 }
 
 /* ────────────────────────────────────────────────────────────────────────

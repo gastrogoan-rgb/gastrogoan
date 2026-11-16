@@ -235,11 +235,11 @@ await caso('Tour: de punta a punta con el teclado, con el foco sobre algo real e
       const s = await page.evaluate(() => {
         const b = document.getElementById('tour-bubble'); const q = b.getBoundingClientRect(); const sp = document.getElementById('tour-spotlight');
         const f = sp.getBoundingClientRect(); const ix = Math.max(0, Math.min(q.right, f.right) - Math.max(q.left, f.left)), iy = Math.max(0, Math.min(q.bottom, f.bottom) - Math.max(q.top, f.top)); const solape = sp.classList.contains('no-target') ? 0 : Math.round(ix * iy);
-        return {solape, foco: Math.round(f.width) + 'x' + Math.round(f.height), titulo: b.querySelector('h3').textContent.trim(), fuera: q.left < -1 || q.right > innerWidth + 1 || q.top < -1 || q.bottom > innerHeight + 1, conFoco: !sp.classList.contains('no-target'), paso: tourStepIndex, finale: !!TOUR_STEPS[tourStepIndex].finale, sinObjetivo: !TOUR_STEPS[tourStepIndex].target && !TOUR_STEPS[tourStepIndex].view && !TOUR_STEPS[tourStepIndex].folder && !TOUR_STEPS[tourStepIndex].screen};
+        return {sinFocoMovil: !!TOUR_STEPS[tourStepIndex].sinFocoMovil, solape, foco: Math.round(f.width) + 'x' + Math.round(f.height), titulo: b.querySelector('h3').textContent.trim(), fuera: q.left < -1 || q.right > innerWidth + 1 || q.top < -1 || q.bottom > innerHeight + 1, conFoco: !sp.classList.contains('no-target'), paso: tourStepIndex, finale: !!TOUR_STEPS[tourStepIndex].finale, sinObjetivo: !TOUR_STEPS[tourStepIndex].target && !TOUR_STEPS[tourStepIndex].view && !TOUR_STEPS[tourStepIndex].folder && !TOUR_STEPS[tourStepIndex].screen};
       });
       if(s.fuera) mal.push(`paso ${i + 1} «${s.titulo}»: la burbuja se sale de la pantalla`);
       if(s.solape > 40) mal.push(`paso ${i + 1} «${s.titulo}»: la burbuja TAPA lo que explica (${s.solape} px² de solape con el foco ${s.foco})`);
-      if(!s.conFoco && !s.finale && !s.sinObjetivo && !(w < 500 && /logo/i.test(s.titulo))) mal.push(`paso ${i + 1} «${s.titulo}»: sin foco sobre nada`);
+      if(!s.conFoco && !s.finale && !s.sinObjetivo && !(w < 500 && (/logo/i.test(s.titulo) || s.sinFocoMovil))) mal.push(`paso ${i + 1} «${s.titulo}»: sin foco sobre nada`);
       if(s.paso !== i) mal.push(`paso ${i + 1}: el índice va por ${s.paso}`);
       if(i < total - 1) await page.keyboard.press('ArrowRight');
     }
