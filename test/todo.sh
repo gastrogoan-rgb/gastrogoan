@@ -230,6 +230,7 @@ lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=
 lanzar; node test/preguntale.mjs > "$SALIDA/preguntale.txt" 2>&1 & P110=$!
 lanzar; node test/movil-nuevas.mjs > "$SALIDA/movil-nuevas.txt" 2>&1 & P112=$!
 lanzar; node test/video-movil-global.mjs > "$SALIDA/video-movil-global.txt" 2>&1 & PVM1=$!
+lanzar; node test/cocina-movil.mjs > "$SALIDA/cocina-movil.txt" 2>&1 & PVM4=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -447,4 +448,5 @@ espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALI
 espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería sin cifras montadas, pestañas, nombres enteros, tablas sin cortar, deducible con botones" "$SALIDA/economiamovil.txt" "Panel en móvil: 5 anchos"
 
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
+espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
 exit $FALLOS

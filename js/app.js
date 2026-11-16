@@ -335,7 +335,7 @@ function renderLimpieza(){
   const box = document.getElementById('limpieza-content'); box.dataset.tab = limpiezaTab;
   box.innerHTML = `
     ${lpResumenHtml()}
-    <div class="toolbar es-tabs lp-tabs" id="limpieza-tabs-row"><div class="left">
+    <div class="toolbar es-tabs lp-tabs" id="limpieza-tabs-row"><div class="left gg-pest-col">
       ${LIMPIEZA_TABS.map(tb => `<button type="button" class="btn btn-sm btn-fino ge-tab${limpiezaTab===tb?' is-on active':''}" aria-pressed="${limpiezaTab===tb}" onclick="setLimpiezaTab('${tb}')">${limpiezaTabLabel(tb)}</button>`).join('')}
     </div></div>
     <div id="limpieza-tab-content"></div>
