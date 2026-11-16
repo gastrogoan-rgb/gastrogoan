@@ -10532,16 +10532,16 @@ function renderOnlineCard(){
         <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
         <div style="flex:1;min-width:180px">
           <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.printHint')}</p>
-          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
-          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> ${t('mn.online.viewPage')}</a>
+          <a class="btn btn-sm btn-toque" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+          <a class="btn btn-sm btn-toque" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> ${t('mn.online.viewPage')}</a>
         </div>
       </div>
       <div class="field">
         <textarea id="mn-public-link" rows="2" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-        <a class="btn btn-sm btn-fino is-on" style="flex:1;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <button class="btn btn-sm btn-toque" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+        <a class="btn btn-sm btn-fino btn-toque is-on" style="flex:1;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
       <div class="field" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <label>${t('mn.online.slugLabel')}</label>
@@ -11582,7 +11582,7 @@ function openCloudWizard(){
       </div>
     </div>
     <div class="nb-fila">
-      <button class="btn" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+      <button class="btn btn-toque" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
       <a class="btn btn-primary nb-wa" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr class="nb-hr">

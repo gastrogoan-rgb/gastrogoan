@@ -754,7 +754,7 @@ function entAbrirTablero(){
       <div class="card" style="word-break:break-all;font-size:13px">${escapeHtml(url)}</div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar enlace', ca:'Copiar enllaç', en:'Copy link'}))}</button>
+      <button class="btn btn-toque" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar enlace', ca:'Copiar enllaç', en:'Copy link'}))}</button>
       <a class="btn btn-primary" href="${escapeHtml(url)}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${escapeHtml(gl({es:'Abrir pantalla', ca:'Obrir pantalla', en:'Open screen'}))}</a>
     </div>`);
 }

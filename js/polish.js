@@ -353,7 +353,7 @@ function renderPuestaAPunto(){
           <strong>${escapeHtml(t('pp.' + tarea.id + '.titulo'))}</strong>
           <small>${cuantos}${escapeHtml(t('pp.' + tarea.id + '.desc'))}</small>
         </span>
-        ${tarea.hecho ? '' : `<button class="btn btn-sm" onclick="${tarea.ir}">${escapeHtml(t('pp.go'))}</button>`}
+        ${tarea.hecho ? '' : `<button class="btn btn-sm btn-toque" onclick="${tarea.ir}">${escapeHtml(t('pp.go'))}</button>`}
       </li>`;
   };
 
@@ -364,7 +364,7 @@ function renderPuestaAPunto(){
           <strong>${escapeHtml(t('pp.' + tarea.id + '.titulo'))}</strong>
           <small>${escapeHtml(t('pp.' + tarea.id + '.desc'))}</small>
         </span>
-        <button class="btn btn-sm" onclick="${tarea.ir}">${escapeHtml(t('pp.activate'))}</button>
+        <button class="btn btn-sm btn-toque" onclick="${tarea.ir}">${escapeHtml(t('pp.activate'))}</button>
       </li>`;
 
   /* PLEGADA de entrada, y es lo que pidió el dueño: nada más entrar, lo
