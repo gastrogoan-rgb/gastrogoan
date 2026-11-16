@@ -1599,6 +1599,32 @@ function switchChatTab(channel){
   markChatRead(channel);
   updateChatBadge();
 }
+/* Los mensajes AUTOMÁTICOS del chat (pedir ayuda, avisar de un pase, una incidencia, un aviso rápido a sala) se guardaban ya escritos
+   en el idioma del aparato que los mandó: un camarero con la app en inglés dejaba «Manager needs help right now» y el dueño lo leía en
+   inglés entre mensajes en castellano. Un dato guardado no se traduce, se traduce al mostrarlo (norma de i18n): el mensaje lleva
+   `sys` = {k, …parámetros} y se compone aquí en el idioma de quien lo lee. `text` se conserva como respaldo (otros aparatos con una
+   versión anterior, avisos del navegador) y para los mensajes antiguos, que se reconocen por su plantilla en cualquiera de los tres idiomas. */
+function chatNombreAutor(m){
+  return String(m && m.authorId) === 'owner' ? t('common.chef') : (m && m.authorName) || '';
+}
+function chatTextoDe(m){
+  if(!m) return '';
+  const s = m.sys;
+  if(s && s.k === 'urgentHelp') return t('chat.urgentDefaultText').replace('${name}', chatNombreAutor(m));
+  if(s && s.k === 'pase') return `🍳 ${s.titulo}: ${gl({es:'listo en el pase, venid a recogerlo', ca:'llest al pas, veniu a recollir-ho', en:'ready at the pass, come and collect'})}`;
+  if(s && s.k === 'avisoSala' && typeof AVISOS_SALA !== 'undefined' && AVISOS_SALA[s.i]) return '🍳 ' + gl(AVISOS_SALA[s.i]);
+  if(s && s.k === 'incidencia' && typeof incidenciaTipoLabel === 'function') return `⚠ ${s.titulo}: ${incidenciaTipoLabel(s.tipo)}${s.texto ? ' — ' + s.texto : ''}`;
+  // Mensajes de antes de `sys`: «<nombre> necesita ayuda ahora mismo» en cualquiera de los tres idiomas
+  if(m.urgent && !s){
+    for(const lg of ['es', 'ca', 'en']){
+      const plantilla = (I18N[lg] || {})['chat.urgentDefaultText'];
+      if(!plantilla) continue;
+      const [pre, post] = plantilla.split('${name}');
+      if(String(m.text).startsWith(pre) && String(m.text).endsWith(post)) return t('chat.urgentDefaultText').replace('${name}', chatNombreAutor(m));
+    }
+  }
+  return m.text;
+}
 function renderChatMessages(){
   const box = document.getElementById('chat-messages');
   const author = getChatAuthor();
@@ -1608,9 +1634,8 @@ function renderChatMessages(){
   const esNuevo = m => leido !== undefined && String(m.authorId) !== String(author) && (!leido || m.ts > leido);
   box.innerHTML = msgs.map(m => `
     <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}${esNuevo(m)?' chat-msg-new':''}">
-      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}</span>
-      ${escapeHtml(m.text)}
-      <button class="btn btn-sm txt-xs" style="margin-top:4px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
+      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(chatNombreAutor(m))} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}<button class="chat-pin" onclick="pinChatMessage(${m.id})" data-tip="${escapeHtml(t('chat.pinMessage'))}" aria-label="${escapeHtml(t('chat.pinMessage'))}"><i class="ti ti-pin"></i></button></span>
+      <span class="chat-txt">${escapeHtml(chatTextoDe(m))}</span>
     </div>
   `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
@@ -1647,7 +1672,7 @@ function renderChatPinned(){
   box.innerHTML = msg ? `
     <div class="chat-pinned-bar">
       <i class="ti ti-pin"></i>
-      <span style="flex:1"><strong>${escapeHtml(msg.authorName)}:</strong> ${escapeHtml(msg.text)}</span>
+      <span style="flex:1"><strong>${escapeHtml(chatNombreAutor(msg))}:</strong> ${escapeHtml(chatTextoDe(msg))}</span>
       <button class="btn btn-sm btn-icon" onclick="unpinChatMessage()"><i class="ti ti-x"></i></button>
     </div>` : '';
 }
@@ -1673,7 +1698,7 @@ function sendUrgentHelpAlert(){
   const authorName = getChatAuthorName(authorId);
   DB.chatMessages.push({
     id: genId(), channel: 'general', authorId, authorName,
-    text: t('chat.urgentDefaultText').replace('${name}', authorName),
+    text: t('chat.urgentDefaultText').replace('${name}', authorName), sys: {k: 'urgentHelp'},
     ts: new Date().toISOString(), urgent: true
   });
   saveDB();

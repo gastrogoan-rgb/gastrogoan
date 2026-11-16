@@ -267,6 +267,34 @@ await caso('Mantenimiento (panel): el mes tipo son 4 lunes, con claves que Fireb
   return `4 lunes · WhatsApp/vídeo alternos · ${r.total} actividades con icono · sugerencias por fecha`;
 });
 
+await caso('Una tarea de relleno «(Contenido pendiente de definir)» no se enseña, no cuenta y la lista de atrasadas tiene tope', async () => {
+  const r = await page.evaluate(() => {
+    DB.business.plan360StartDate = addDaysStr(todayStr(), -27); // hoy = día 28
+    DB.business.plan360Program.filter(d => d.phase === 'trabajo').forEach(d => {
+      d.tasks = [{id: d.day * 10, title: '(Contenido pendiente de definir)', status: 'pendiente', note: ''}];
+    });
+    DB.business.plan360Program.find(d => d.day === 10).tasks.push({id: 5, title: 'Pesar raciones', status: 'pendiente', note: ''});
+    DB.business.plan360Program.find(d => d.day === 11).tasks.push({id: 6, title: 'Revisar escandallo', status: 'pendiente', note: ''});
+    plan360AtrasadasTodas = false;
+    renderPlan360Grid();
+    const grid = document.getElementById('plan360-content').innerText;
+    renderPlan360DayDetail(19); const dia19 = document.getElementById('plan360-content').innerText;
+    renderPlan360SummaryPage(); const resumen = document.getElementById('plan360-content').innerText;
+    return {grid, dia19, resumen, atr: plan360TareasAtrasadas(28).length};
+  });
+  for(const k of ['grid', 'dia19', 'resumen']) assert.ok(!/pendiente de definir/i.test(r[k]), 'sale el relleno en ' + k);
+  assert.equal(r.atr, 2, 'solo las 2 tareas reales cuentan como atrasadas');
+  const tope = await page.evaluate(() => {
+    DB.business.plan360Program.filter(d => d.phase === 'trabajo').forEach((d, i) => { d.tasks = [{id: 100 + i, title: 'Tarea ' + d.day, status: 'pendiente', note: ''}]; });
+    plan360AtrasadasTodas = false; renderPlan360Grid();
+    const vis = document.querySelectorAll('.p360-atr-fila').length;
+    const boton = !!document.querySelector('.p360-atr-mas');
+    plan360VerTodasAtrasadas();
+    return {vis, boton, todas: document.querySelectorAll('.p360-atr-fila').length};
+  });
+  assert.equal(tope.vis, 5); assert.ok(tope.boton); assert.ok(tope.todas > tope.vis);
+});
+
 await caso('Ningún error de JavaScript', async () => {
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|network-request-failed/i.test(e));
   assert.deepEqual(reales.slice(0, 5), []);
