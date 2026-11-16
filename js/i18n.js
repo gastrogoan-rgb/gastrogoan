@@ -1,6 +1,6 @@
 /* ============== Helpers ============== */
 function fmtMoney(v){
-  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + '\u00A0€';
 }
 function fmtNum(v, dec=2){
   return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:dec});
