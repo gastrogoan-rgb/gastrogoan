@@ -745,7 +745,7 @@ function renderCartaSecciones(){
                es una carpeta, y este es su dibujo. Se elige a mano porque adivinarlo por el nombre nunca acierta
                del todo ("Cosas del chef", "La pizarra"). -->
           <button type="button" class="oc-icono" title="${t('title.chooseFolderIcon')}" aria-label="${t('title.chooseFolderIcon')}" onclick="openCartaSectionIconModal(${sec.id})">${iconoSeccionHtml(sec.icono, tItem(sec), 24) || '<i class="ti ti-ban" style="opacity:.35"></i>'}</button>
-          <div style="min-width:0"><h4>${escapeHtml(tItem(sec))}</h4><span class="oc-sec-n">${platos.length} ${(bebidas ? t('label.drinksTh') : t('label.dishesTh')).toLowerCase()}${fuera ? ` · <b class="dishout-fuera">${fuera} ${gl({es:fuera===1?'agotado':'agotados', ca:fuera===1?'esgotat':'esgotats', en:'out'})}</b>` : ''}</span></div>
+          <div style="min-width:0"><h4>${escapeHtml(tItem(sec))}</h4><span class="oc-sec-n">${platos.length} ${bebidas ? (platos.length===1 ? t('noun.drink') : t('noun.drinks')) : (platos.length===1 ? t('noun.dish') : t('noun.dishes'))}${fuera ? ` · <b class="dishout-fuera">${fuera} ${gl({es:fuera===1?'agotado':'agotados', ca:fuera===1?'esgotat':'esgotats', en:'out'})}</b>` : ''}</span></div>
         </div>
         <div class="oc-sec-acc">
           <button type="button" class="btn btn-sm btn-fino is-on" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${bebidas ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
@@ -1344,7 +1344,7 @@ function renderImportEscList(conservarScroll){
     const carpetas = getEscandalloFolders(areaRecipes);
     const c = carpetas.find(x => x[0] === importEscFolder);
     const lista = c ? c[2] : [];
-    box.innerHTML = `<div class="ie-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="importEscVolver()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><b>${escapeHtml(c ? c[1] : '')}</b></div>` + todosCab(lista) + filas(lista);
+    box.innerHTML = `<div class="ie-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="importEscVolver()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button><b>${escapeHtml(c ? c[1] : '')}</b></div>` + todosCab(lista) + filas(lista);
   }
   box.scrollTop = scroll;
   const ok = document.getElementById('import-esc-ok');
@@ -1454,7 +1454,7 @@ function renderMenuList(){
     <article class="oc-item oc-item-menu">
       <div class="oc-quien">
         <div class="oc-nombre">${escapeHtml(tItem(m))}${(DB.activeMenuIds||[]).includes(m.id) ? ` <span class="badge badge-green">${t('badge.activeInPosM')}</span>` : ''}</div>
-        <div class="oc-meta"><span class="oc-precio-m">${fmtMoney(m.precio)}</span> · ${ngrupos} ${t('label.groups').toLowerCase()}</div>
+        <div class="oc-meta"><span class="oc-precio-m">${fmtMoney(m.precio)}</span> · ${ngrupos} ${ngrupos===1 ? t('noun.group') : t('noun.groups')}</div>
       </div>
       ${renderItemScheduleHtml(m)}
       <div class="oc-acc">

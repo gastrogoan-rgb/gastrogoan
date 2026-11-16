@@ -186,6 +186,8 @@ lanzar; node test/gestion-scroll.mjs > "$SALIDA/gestionscroll.txt" 2>&1 & P179=$
 lanzar; node test/ge-prevision-caja.mjs > "$SALIDA/previsioncaja.txt" 2>&1 & P180=$!
 lanzar; node test/chat-avisos.mjs > "$SALIDA/chatavisos.txt" 2>&1 & P181=$!
 lanzar; node test/avisos-campana.mjs > "$SALIDA/avisoscampana.txt" 2>&1 & P182=$!
+lanzar; node test/parpadeo.mjs > "$SALIDA/parpadeo.txt" 2>&1 & PPARP=$!
+lanzar; node test/instalar.mjs > "$SALIDA/instalar.txt" 2>&1 & PINST=$!
 lanzar; node test/avisos-empleado.mjs > "$SALIDA/avisosempleado.txt" 2>&1 & P183=$!
 lanzar; node test/acceso-empleado-codigo.mjs > "$SALIDA/accempcodigo.txt" 2>&1 & P184=$!
 lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
@@ -195,6 +197,7 @@ lanzar; node test/alta-generador.mjs > "$SALIDA/altagenerador.txt" 2>&1 & P188=$
 lanzar; node test/tpv-menu-pasos.mjs > "$SALIDA/tpvmenupasos.txt" 2>&1 & P189=$!
 lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impresos.txt" 2>&1 & P190=$!
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
+lanzar; node test/video-movil-paquete2.mjs > "$SALIDA/videom2.txt" 2>&1 & PVM2=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -205,6 +208,7 @@ lanzar; node test/entregas.mjs > "$SALIDA/entregas.txt" 2>&1 & P198=$!
 lanzar; node test/entregas-veracidad.mjs > "$SALIDA/entregasver.txt" 2>&1 & P199=$!
 lanzar; node test/sw-reservas.mjs > "$SALIDA/swreservas.txt" 2>&1 & P200=$!
 lanzar; node test/sw-app-offline.mjs > "$SALIDA/swappoff.txt" 2>&1 & P201=$!
+lanzar; node test/economia-movil.mjs > "$SALIDA/economiamovil.txt" 2>&1 & P202=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -227,6 +231,8 @@ lanzar; node test/qr-mesa.mjs > "$SALIDA/qr-mesa.txt" 2>&1 & P104=$!
 lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=$!
 lanzar; node test/preguntale.mjs > "$SALIDA/preguntale.txt" 2>&1 & P110=$!
 lanzar; node test/movil-nuevas.mjs > "$SALIDA/movil-nuevas.txt" 2>&1 & P112=$!
+lanzar; node test/video-movil-global.mjs > "$SALIDA/video-movil-global.txt" 2>&1 & PVM1=$!
+lanzar; node test/cocina-movil.mjs > "$SALIDA/cocina-movil.txt" 2>&1 & PVM4=$!
 
 echo "→ 49 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
@@ -359,6 +365,7 @@ espera $P104 "Carta por QR en la mesa: token por mesa, precios de la carta, pago
 espera $P111 "Factura dentro del pedido: cuadre línea a línea, precios con historial, gasto sin duplicar, lo recibido no se pisa" "$SALIDA/factura-pedido.txt" "todos los casos de factura-pedido pasaron"
 espera $P110 "Pregúntale a tus números: clave de IA en Mi Negocio (solo en el aparato), cifras reales al modelo, empleado fuera, alta saltable" "$SALIDA/preguntale.txt" "todos los casos de pregúntale pasaron"
 espera $P112 "Pantallas nuevas en móvil (5 anchos): leer factura, cuadre del pedido, visión global, pregúntale, Mi Negocio, alta IA y web de la mesa" "$SALIDA/movil-nuevas.txt" "todos los casos de móvil nuevas pasaron"
+espera $PVM1 "Vídeo móvil, paquete 1: fila del selector, tablas, aviso arriba, fundidos, acceso, Volver único y tour" "$SALIDA/video-movil-global.txt" "todo en orden"
 espera $P121 "Cocina: un vale nuevo cada vez que la mesa pide otra vez, y la cabecera de la carta en verde como la del menú" "$SALIDA/vales-cocina.txt" "casos pasaron"
 espera $P122 "Oferta Gastronómica: horario semanal en una fila, aviso de cambios sin guardar, y raciones/agotado que mandan lo guardado" "$SALIDA/oferta.txt" "casos pasaron"
 espera $P123 "Iconos de la carta: catálogo de comida de trazo, «Sin icono» primero, emoji antiguos que se siguen viendo, web pública idéntica" "$SALIDA/iconos-comida.txt" "casos pasaron"
@@ -421,6 +428,8 @@ espera $P179 "Gestión Económica: repintar una pestaña o cambiar un reparto/pe
 espera $P180 "Previsión de caja a 30/60/90 días: ritmo de caja, sin doble descuento de gastos periódicos y modelos del trimestre anterior (cuentas a mano)" "$SALIDA/previsioncaja.txt" "casos pasaron"
 espera $P181 "Chat: un mensaje de otro aparato enciende el aviso, se resalta como Nuevo (también con el panel abierto), se quita al entrar y aguanta relojes adelantados" "$SALIDA/chatavisos.txt" "todos los casos pasaron"
 espera $P182 "Campana de avisos: vacaciones y cambios de turno con Aceptar/Rechazar, reservas y pedidos web, informativos con «Visto», el empleado no ve lo del dueño, también desde la nube y en móvil" "$SALIDA/avisoscampana.txt" "todos los casos pasaron"
+espera $PPARP "Parpadeo: una ráfaga de cambios remotos se funde en un repintado y no vuelve a animar las cifras" "$SALIDA/parpadeo.txt" "todos los casos pasaron"
+espera $PINST "Anclar a la pantalla de inicio: app y web de reservas, Android e iPhone, nunca en un ordenador, «Ahora no» lo calla" "$SALIDA/instalar.txt" "todos los casos pasaron"
 espera $P183 "Avisos al empleado (respuesta a vacaciones y cambios de turno, mensajes directos) y mesas a cargo: selector por zona/mesa, Mis mesas del TPV y ayuda en mesas de compañeros sin bloqueo" "$SALIDA/avisosempleado.txt" "todos los casos pasaron"
 espera $P184 "Acceso de empleados: el código de negocio se recuerda y se ve (relleno + botones con el nombre, Otro negocio, móvil)" "$SALIDA/accempcodigo.txt" "todos los casos pasaron"
 espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide asistentes en un aparato nuevo, sin conexión no pregunta nada, los borrados llegan a todos (lápida + cola de reintentos) y el PIN ya cambiado no se vuelve a ofrecer" "$SALIDA/syncnegocios.txt" "todos los casos pasaron"
@@ -440,5 +449,8 @@ espera $P198 "Para llevar y delivery: alarma, modo ocupado, En camino, ventana p
 espera $P199 "Veracidad del seguimiento: estados, ventana, llegada estimada y latido son hechos reales, no relleno" "$SALIDA/entregasver.txt" "es veraz"
 espera $P200 "La web de reservas abre sin red tras la primera visita (bloqueos de LaLiga)" "$SALIDA/swreservas.txt" "abre sin red tras la primera visita"
 espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALIDA/swappoff.txt" "abre sin red una vez instalada"
+espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería sin cifras montadas, pestañas, nombres enteros, tablas sin cortar, deducible con botones" "$SALIDA/economiamovil.txt" "Panel en móvil: 5 anchos"
 
+espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
+espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
 exit $FALLOS

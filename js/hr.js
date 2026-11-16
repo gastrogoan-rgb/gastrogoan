@@ -950,17 +950,27 @@ const GE = (function(){
     x = x || {};
     const p = deducPct(x);
     const modo = x.deducRevisar ? 'rev' : p >= 100 ? 'total' : p <= 0 ? 'no' : 'parcial';
-    const op = (v, tx) => `<option value="${v}"${modo === v ? ' selected' : ''}>${tx}</option>`;
+    // Opciones como botones (no un <select>): el selector nativo de Android se salía de la estética de la app (vídeo 15/11).
+    // El valor vive en un <input hidden> con el mismo id de antes, así que deducLeer() no cambia.
+    const op = (v, tx) => `<button type="button" class="ded-op${modo === v ? ' is-on' : ''}" data-v="${v}" aria-pressed="${modo === v}" onclick="deducElegir('${pre}', '${v}', this)">${tx}</button>`;
     return `<div class="field"><label>${gl({es:'¿Es deducible?', ca:'És deduïble?', en:'Is it deductible?'})}</label>
-      <select id="${pre}-f-deduc" onchange="document.getElementById('${pre}-f-deduc-box').style.display = this.value === 'parcial' ? 'block' : 'none'">
+      <input type="hidden" id="${pre}-f-deduc" value="${modo}">
+      <div class="ded-ops" role="group">
         ${op('total', gl({es:'Sí, del todo', ca:'Sí, del tot', en:'Yes, fully'}))}
         ${op('parcial', gl({es:'Solo en parte', ca:'Només en part', en:'Only partly'}))}
-        ${op('no', gl({es:'No deducible (atenciones a clientes, multas, gastos personales…)', ca:'No deduïble (atencions a clients, multes, despeses personals…)', en:'Not deductible (client entertainment, fines, personal costs…)'}))}
-        ${op('rev', gl({es:'No lo sé: pendiente de revisar con mi gestor', ca:'No ho sé: pendent de revisar amb el meu gestor', en:'Not sure: to be checked with my accountant'}))}
-      </select>
+        ${op('no', gl({es:'No deducible', ca:'No deduïble', en:'Not deductible'}))}
+        ${op('rev', gl({es:'No lo sé', ca:'No ho sé', en:'Not sure'}))}
+      </div>
+      <div class="txt-xs ded-ej">${gl({es:'No deducible: atenciones a clientes, multas, gastos personales. «No lo sé» = pendiente de revisar con tu gestor.', ca:'No deduïble: atencions a clients, multes, despeses personals. «No ho sé» = pendent de revisar amb el teu gestor.', en:'Not deductible: client entertainment, fines, personal costs. «Not sure» = to check with your accountant.'})}</div>
       <div id="${pre}-f-deduc-box" style="display:${modo === 'parcial' ? 'block' : 'none'};margin-top:8px"><label>${gl({es:'% deducible', ca:'% deduïble', en:'% deductible'})}</label><input type="number" id="${pre}-f-deduc-pct" min="1" max="99" step="1" value="${modo === 'parcial' ? Math.round(p) : ''}" placeholder="50"></div>
-      <div class="txt-xs" style="color:var(--muted);margin-top:4px">${gl({es:'Afecta al impuesto sobre el beneficio y al IVA que te puedes deducir. La app no decide qué es deducible: pregúntaselo a tu gestoría (el % de un gasto mixto, p. ej. un vehículo o los suministros de un local que también es vivienda, depende de tu caso). Mientras dudes, márcalo «pendiente»: cuenta como deducible y la previsión de impuestos te lo avisa.', ca:'Afecta l\'impost sobre el benefici i l\'IVA que et pots deduir. L\'app no decideix què és deduïble: pregunta-ho a la teva gestoria (el % d\'una despesa mixta, p. ex. un vehicle o els subministraments d\'un local que també és habitatge, depèn del teu cas). Mentre dubtis, marca-ho «pendent»: compta com a deduïble i la previsió d\'impostos t\'ho avisa.', en:'It affects profit tax and the VAT you can deduct. The app does not decide what is deductible: ask your accountant (the % for a mixed expense, e.g. a vehicle or utilities of a premises that is also a home, depends on your case). While unsure, mark it «pending»: it counts as deductible and the tax forecast warns you.'})}</div></div>`;
+      <details class="ded-mas"><summary>${gl({es:'¿Qué significa?', ca:'Què significa?', en:'What does it mean?'})}</summary><div class="txt-xs">${gl({es:'Afecta al impuesto sobre el beneficio y al IVA que te puedes deducir. La app no decide qué es deducible: pregúntaselo a tu gestoría (el % de un gasto mixto, p. ej. un vehículo o los suministros de un local que también es vivienda, depende de tu caso). Mientras dudes, márcalo «pendiente»: cuenta como deducible y la previsión de impuestos te lo avisa.', ca:'Afecta l\'impost sobre el benefici i l\'IVA que et pots deduir. L\'app no decideix què és deduïble: pregunta-ho a la teva gestoria (el % d\'una despesa mixta, p. ex. un vehicle o els subministraments d\'un local que també és habitatge, depèn del teu cas). Mentre dubtis, marca-ho «pendent»: compta com a deduïble i la previsió d\'impostos t\'ho avisa.', en:'It affects profit tax and the VAT you can deduct. The app does not decide what is deductible: ask your accountant (the % for a mixed expense, e.g. a vehicle or utilities of a premises that is also a home, depends on your case). While unsure, mark it «pending»: it counts as deductible and the tax forecast warns you.'})}</div></details></div>`;
   }
+  // Se publica directamente en window: declararla aquí Y asignarla dos líneas después la contaba la auditoría estática como duplicada.
+  window.deducElegir = function(pre, v, btn){
+    document.getElementById(pre + '-f-deduc').value = v;
+    btn.parentElement.querySelectorAll('.ded-op').forEach(b => { const on = b === btn; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on); });
+    document.getElementById(pre + '-f-deduc-box').style.display = v === 'parcial' ? 'block' : 'none';
+  };
   function deducLeer(pre){
     const el = document.getElementById(pre + '-f-deduc'); if(!el) return {};
     if(el.value === 'no') return {deducPct:0, deducRevisar:false};
@@ -2258,7 +2268,7 @@ const GE = (function(){
     if(!hayDatos){ box.innerHTML = `<div class="empty gf-vacio"><i class="ti ti-chart-line"></i><span>${gl({es:'Todavía no hay ventas ni gastos en ' + cdrYear + '.', ca:'Encara no hi ha vendes ni despeses el ' + cdrYear + '.', en:'No sales or expenses in ' + cdrYear + ' yet.'})}</span></div>`; tit.innerHTML = ''; return; }
     dashSerieRegistrar('cdr-serie', serie);
     const total = serie.reduce((s, p) => s + p.value, 0);
-    tit.innerHTML = `<b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl({es:'en ' + cdrYear + ' · pasa el ratón por un mes', ca:'el ' + cdrYear + ' · passa el ratolí per un mes', en:'in ' + cdrYear + ' · hover a month'}))}</span>`;
+    tit.innerHTML = `<b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl(ggTactil() ? {es:'en ' + cdrYear + ' · toca un mes', ca:'el ' + cdrYear + ' · toca un mes', en:'in ' + cdrYear + ' · tap a month'} : {es:'en ' + cdrYear + ' · pasa el ratón por un mes', ca:'el ' + cdrYear + ' · passa el ratolí per un mes', en:'in ' + cdrYear + ' · hover a month'}))}</span>`;
     box.innerHTML = dashSerieHtml(serie, {id:'cdr-serie', cadaEtiqueta:1, tooltip:true});
   }
   /* ---- Explicaciones (detrás de botones, no a la vista) ---- */
@@ -3014,7 +3024,7 @@ const GE = (function(){
       const sr = serie(bcTab === 'caja' ? 'caja' : 'beneficio'); dashSerieRegistrar('bc-serie', sr);
       const tot = sr.reduce((a, p) => a + p.value, 0);
       document.getElementById('bc-evolucion').innerHTML = `<div class="ge-sec-head"><h4><i class="ti ti-chart-line"></i> ${L({es:'Mes a mes: beneficio frente a caja', ca:'Mes a mes: benefici davant de caixa', en:'Month by month: profit vs cash'})}</h4><div class="dt-tabs">${tabs.map(([k, et]) => `<button type="button" class="btn btn-sm btn-fino${bcTab === k ? ' is-on' : ''}" aria-pressed="${bcTab === k}" onclick="GE.setBcTab('${k}')">${et}</button>`).join('')}</div></div>
-        <div class="dt-cab"><div class="dt-titular" data-dt-titular="bc-serie"><b>${escapeHtml(fm(tot))}</b> <span>${L({es:'en ' + bcYear + ' · pasa el ratón por un mes', ca:'el ' + bcYear + ' · passa el ratolí per un mes', en:'in ' + bcYear + ' · hover a month'})}</span></div></div>
+        <div class="dt-cab"><div class="dt-titular" data-dt-titular="bc-serie"><b>${escapeHtml(fm(tot))}</b> <span>${L(ggTactil() ? {es:'en ' + bcYear + ' · toca un mes', ca:'el ' + bcYear + ' · toca un mes', en:'in ' + bcYear + ' · tap a month'} : {es:'en ' + bcYear + ' · pasa el ratón por un mes', ca:'el ' + bcYear + ' · passa el ratolí per un mes', en:'in ' + bcYear + ' · hover a month'})}</span></div></div>
         ${dashSerieHtml(sr, {id:'bc-serie', cadaEtiqueta:1, tooltip:true})}
         <div class="bc-tabla"><div class="bc-tr bc-th"><span>${L({es:'Mes', ca:'Mes', en:'Month'})}</span><span>${L({es:'Beneficio', ca:'Benefici', en:'Profit'})}</span><span>${L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})}</span><span>${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}</span></div>
         ${todos.filter(d => d.hayDatos).map(d => `<div class="bc-tr"><span>${getMeses()[d.m]}</span><span class="${d.neto >= 0 ? 'is-ok' : 'is-ko'}" data-l="${L({es:'Beneficio', ca:'Benefici', en:'Profit'})}">${fm(d.neto)}</span><span class="${d.caja >= 0 ? 'is-ok' : 'is-ko'}" data-l="${L({es:'Caja (estim.)', ca:'Caixa (estim.)', en:'Cash (est.)'})}">${fm(d.caja)}</span><span data-l="${L({es:'Diferencia', ca:'Diferència', en:'Difference'})}">${sg(d.caja - d.neto)}</span></div>`).join('')}</div>`;
@@ -3461,8 +3471,8 @@ const GE = (function(){
     const vsAnterior = cdrGranularidad === 'trimestre' ? t('hr.compare.vsPrevQuarter') : t('hr.compare.vsPrevMonth');
     box.innerHTML = `
       <div class="grid grid-2" style="margin-bottom:14px">
-        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${vsAnterior} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
-        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${vsAnterior} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub cdr-vs-box"><span class="cdr-vs"><span>${vsAnterior}</span> ${badge(pctDelta(revCur, revPrev))}</span><span class="cdr-vs"><span>${t('hr.compare.vsLastYear')}</span> ${badge(pctDelta(revCur, revYoy))}</span></div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', periodo)}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub cdr-vs-box"><span class="cdr-vs"><span>${vsAnterior}</span> ${badge(pctDelta(resCur, resPrev))}</span><span class="cdr-vs"><span>${t('hr.compare.vsLastYear')}</span> ${badge(pctDelta(resCur, resYoy))}</span></div></div>
       </div>`;
   }
 
@@ -5342,9 +5352,9 @@ function renderHorariosDia(){
     ${calLeyendaHtml()}
     <div class="st-resumen cal-resumen">
       <div class="st-cel"><span class="st-cel-et">${gl({es:'Trabajan', ca:'Treballen', en:'Working'})}</span><span class="st-cel-v">${trabajan.length}</span><span class="st-cel-s">${gl({es:'de', ca:'de', en:'of'})} ${emps.length}</span></div>
-      <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas planificadas', ca:'Hores planificades', en:'Planned hours'})}</span><span class="st-cel-v">${horas.toFixed(1)}h</span></div>
-      <div class="st-cel"><span class="st-cel-et">${gl({es:'Descansan o ausentes', ca:'Descansen o absents', en:'Off or away'})}</span><span class="st-cel-v">${descansan + ausentes}</span></div>
-      <div class="st-cel${sinTurno ? ' is-bajo' : ''}"><span class="st-cel-et">${t('label.noShiftAssigned')}</span><span class="st-cel-v">${sinTurno}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas', ca:'Hores', en:'Hours'})}</span><span class="st-cel-v">${horas.toFixed(1)}h</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Descansan', ca:'Descansen', en:'Off'})}</span><span class="st-cel-v">${descansan + ausentes}</span></div>
+      <div class="st-cel${sinTurno ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Sin turno', ca:'Sense torn', en:'No shift'})}</span><span class="st-cel-v">${sinTurno}</span></div>
     </div>
     ${trabajan.length ? `<div class="cal-linea"><div class="cal-linea-cab"><span></span><div class="cal-linea-eje">${ejeHtml}</div></div>${cobHtml ? `<div class="cal-linea-cob"><span></span>${cobHtml}</div>` : ''}</div>` : ''}
     <div class="cal-filas">${rows}</div>

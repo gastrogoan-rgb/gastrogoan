@@ -257,7 +257,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
   /* Una palabra larga ("Condimentos") no cabía de una pieza en el hueco
      que queda y se salía cortada por la mitad. Que parta antes que
      desbordarse. */
-  overflow-wrap:anywhere;
+  overflow-wrap:break-word;
 }
 /* El lápiz de renombrar necesita 44 px para el dedo, pero no tiene por qué
    robarle 44 px de ANCHO al título: el área pulsable sobresale con margen
@@ -444,7 +444,7 @@ td.wrap{white-space:normal}
    se le deja envolver en dos líneas en vez de recortarlo. */
 .reserva-card-name{flex:1;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:1024px){
-  .reserva-card-name{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;overflow-wrap:anywhere}
+  .reserva-card-name{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;overflow-wrap:break-word}
 }
 .reserva-card-chevron{margin-left:auto;color:var(--muted);transition:transform .2s ease;flex:none}
 .reserva-card.expanded .reserva-card-chevron{transform:rotate(180deg)}
@@ -474,7 +474,7 @@ td.wrap{white-space:normal}
 @media (max-width:1024px){
   .client-card-name{
     white-space:normal;overflow:visible;text-overflow:clip;
-    line-height:1.25;overflow-wrap:anywhere;
+    line-height:1.25;overflow-wrap:break-word;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   }
 }
@@ -824,6 +824,21 @@ td.wrap{white-space:normal}
 .tour-bubble-finale .tour-bubble-desc{text-align:center}
 .tour-bubble-finale .modal-close{position:absolute;top:14px;right:14px}
 .tour-bubble-finale .tour-bubble-head{position:relative}
+
+/* ═══ INSTALAR EN LA PANTALLA DE INICIO (16/11, pedido del dueño) ═══
+   Tarjeta fija abajo, solo en móvil y solo si la app no está ya instalada (js/ui.js `ggAvisoInstalar`). Por debajo de ventanas y avisos. */
+.gg-instalar{position:fixed;left:12px;right:12px;bottom:calc(var(--vvb,0px) + 12px + env(safe-area-inset-bottom,0px));z-index:190;max-width:460px;margin:0 auto;
+  background:var(--surface,#fff);color:var(--ink);border:1px solid var(--border);border-radius:var(--radius,4px);box-shadow:0 8px 28px rgba(0,0,0,.22);padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px}
+.gg-instalar-cab{display:flex;gap:12px;align-items:flex-start}
+.gg-instalar-ico{flex:none;width:40px;height:40px;border-radius:9px;background:var(--olive);color:#FAF8F4;display:flex;align-items:center;justify-content:center;font-size:22px}
+.gg-instalar strong{display:block;font-size:15px;line-height:1.3}
+.gg-instalar p{margin:3px 0 0;font-size:13px;line-height:1.45;color:var(--muted)}
+.gg-instalar ol{margin:2px 0 0;padding-left:20px;font-size:13px;line-height:1.55}
+.gg-instalar-bt{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.gg-instalar-bt .btn{min-height:44px!important;height:44px!important}   /* la regla de móvil de toda la app fija .btn a 36,5 px con !important */
+.gg-instalar-x{flex:none;margin:-6px -6px 0 0;min-width:44px;min-height:44px;background:transparent;border:0;color:var(--muted);font-size:22px;cursor:pointer}
+@media (prefers-reduced-motion:no-preference){ .gg-instalar{animation:gg-instalar-in .35s ease-out both} }
+@keyframes gg-instalar-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
 /* Toast */
 .toast{
@@ -1765,7 +1780,7 @@ td.wrap{white-space:normal}
 .bs-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s}
 .bs-item:hover{border-color:var(--ink)}
 .bs-item.active{border:2px solid var(--ink)}
-.bs-item-name{font-weight:600;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;line-height:1.3}
+.bs-item-name{font-weight:600;white-space:normal;overflow-wrap:break-word;overflow:visible;text-overflow:clip;line-height:1.3}
 /* El nombre del negocio es lo único que el dueño usa para distinguirlos, así
    que se lleva TODO el ancho que sobre y se parte en varias líneas si hace
    falta. La etiqueta "(independiente)" es un adorno: se encoge primero y en
@@ -2365,7 +2380,7 @@ input,select,textarea{border-radius:var(--r-s)}
 
 /* --- INICIO: no es un menú, es la mesa de trabajo --- */
 .home-head{width:100%;max-width:1040px;margin:0 auto;padding:44px 0 0}
-.home-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+.home-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
 .home-title{font-size:clamp(30px,4.2vw,46px);font-weight:700;letter-spacing:-.035em;line-height:1.04;color:var(--ink);margin:12px 0 10px;text-wrap:balance}
 .home-sub{font-size:15px;color:var(--muted);line-height:1.5}
 .home-pulse{width:100%;max-width:1040px;margin:30px auto 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:2px solid var(--ink);border-bottom:1px solid var(--hair)}
@@ -2503,7 +2518,7 @@ input,select,textarea{border-radius:var(--r-s)}
 .btn.btn-fino.is-off::before,.btn.btn-fino.is-off:hover::before{background:#F7E9E6;border-color:#D9A79C}
 .dishout-ayuda{font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.5}
 .dishout-nav{display:flex;align-items:center;gap:12px;margin:0 0 10px}
-.dishout-migas{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+.dishout-migas{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
 .dishout-lista{display:flex;flex-direction:column;gap:8px}
 .dishout-etq{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 2px}
 .dishout-etq:first-child{margin-top:0}
@@ -2513,13 +2528,13 @@ input,select,textarea{border-radius:var(--r-s)}
 .dishout-ico{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;background:var(--brand-cream);border-radius:var(--r-s);color:var(--olive);font-size:20px}
 .dishout-fila:hover .dishout-ico{background:#fff}
 .dishout-txt{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
-.dishout-txt strong{font-size:15px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.dishout-txt strong{font-size:15px;font-weight:600;letter-spacing:-.01em;overflow-wrap:break-word}
 .dishout-txt small{font-size:12px;color:var(--muted)}
 .dishout-fuera{color:#8A3B2E;font-weight:600}
 .dishout-go{color:var(--muted);font-size:18px;flex:0 0 auto;transition:transform .18s}
 .dishout-fila:hover .dishout-go{transform:translateX(3px);color:var(--olive)}
 .dishout-plato{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 8px 8px 14px;background:#fff;border:1px solid var(--hair);border-radius:var(--r-s);font-size:15px}
-.dishout-plato > span{min-width:0;overflow-wrap:anywhere}
+.dishout-plato > span{min-width:0;overflow-wrap:break-word}
 .dishout-plato.is-off > span{color:var(--muted);text-decoration:line-through}
 .dishout-plato.dishout-menu{background:var(--brand-cream);font-weight:600}
 .dishout-plato.dishout-menu.is-off > span{text-decoration:none}
@@ -2533,8 +2548,8 @@ input,select,textarea{border-radius:var(--r-s)}
 .kt{background:#fff;border:2px solid var(--ink);border-radius:4px;overflow:hidden;position:relative;break-inside:avoid}
 .kt-bar{height:4px;background:var(--olive-l)}.kt-bar.a{background:#B7791F}.kt-bar.r{background:#B4432F}
 .kt-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px 10px}
-.kt-mesa{font-size:27px;font-weight:600;letter-spacing:-.03em;line-height:1;overflow-wrap:anywhere}
-.kt-meta{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.kt-mesa{font-size:27px;font-weight:600;letter-spacing:-.03em;line-height:1;overflow-wrap:break-word}
+.kt-meta{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px;overflow-wrap:break-word}
 .kt-tm{font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.03em;text-align:right;line-height:1;flex:0 0 auto}
 .kt-tm small{display:block;font-size:11px;font-weight:400;letter-spacing:.1em;color:var(--muted);margin-top:5px;text-transform:uppercase}
 .kt-tm.a{color:#B7791F}.kt-tm.r{color:#B4432F}
@@ -2543,7 +2558,7 @@ input,select,textarea{border-radius:var(--r-s)}
 .kt-alergia small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;opacity:.8}
 .kt-inc{display:flex;align-items:center;gap:10px;width:calc(100% - 24px);margin:0 12px 10px;padding:9px 12px;text-align:left;background:#FBF4E2;border:1px solid #E8CF9A;border-radius:3px;color:#7A5A12;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .kt-inc .ti{font-size:20px;flex:0 0 auto}
-.kt-inc span{flex:1;min-width:0;overflow-wrap:anywhere}
+.kt-inc span{flex:1;min-width:0;overflow-wrap:break-word}
 .kt-inc small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;opacity:.8}
 .kt-inc em{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-style:normal;flex:0 0 auto;border:1px solid currentColor;padding:2px 7px;border-radius:2px}
 .kt-inc.nuevo{background:#FBEDE9;border-color:#E5B3A8;color:#8A2E1E}
@@ -2577,7 +2592,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .kt-st.p{background:#FBF1DC;border-color:#E8CF9A;color:#8A5A0F}.kt-st.l{background:#E7EEE8;border-color:#B9CABD;color:#2F4434}
 .kt-pl{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:16px;font-weight:500;letter-spacing:-.005em}
 .kt-pl .q{font-family:var(--mono);font-size:15px;font-weight:500;min-width:26px;flex:0 0 auto}
-.kt-pl .n{min-width:0;overflow-wrap:anywhere}
+.kt-pl .n{min-width:0;overflow-wrap:break-word}
 .kt-pl .fam{margin-left:auto;padding-left:8px;font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right}
 .kt-pl.avanza{cursor:pointer}.kt-pl.avanza:hover .n{text-decoration:underline;text-decoration-color:var(--olive-l);text-underline-offset:3px}
 .kt-pl.held{color:#9B958A;font-weight:500}
@@ -2614,7 +2629,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .cz-cant{font-family:var(--mono);font-size:38px;font-weight:600;letter-spacing:-.04em;line-height:1;min-width:64px;text-align:right;color:var(--ink);flex:0 0 auto}
 .cz-cant small{font-size:18px;font-weight:400;color:var(--muted);margin-left:2px}
 .cz-plato-txt{flex:1;min-width:0}
-.cz-plato-txt strong{font-size:20px;font-weight:600;letter-spacing:-.015em;overflow-wrap:anywhere}
+.cz-plato-txt strong{font-size:20px;font-weight:600;letter-spacing:-.015em;overflow-wrap:break-word}
 .cz-fam{margin-left:10px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .cz-donde{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .cz-chip{font-family:var(--mono);font-size:11.5px;font-weight:500;padding:3px 8px;border:1px solid var(--hair);border-radius:3px;background:var(--bg)}
@@ -2630,7 +2645,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .cz-pase-it{display:flex;align-items:center;gap:12px;padding:8px 14px;border-top:1px solid var(--hair)}
 .cz-pase-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .cz-pase-txt strong{font-size:16px;font-weight:600}
-.cz-pase-txt span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.cz-pase-txt span{font-size:13px;color:var(--muted);overflow-wrap:break-word}
 .cz-pase-min{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.03em}
 .cz-pase-it.a .cz-pase-min{color:#B7791F}.cz-pase-it.r .cz-pase-min{color:#B4432F}
 .cz-pase-it.a{background:#FFF9EA}.cz-pase-it.r{background:#FBEDE9}
@@ -2652,7 +2667,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 /* lista de cartas y menús */
 .oc-lista{display:flex;flex-direction:column;gap:10px}
 .oc-item{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,1.8fr) auto;align-items:center;gap:18px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:14px 16px}
-.oc-nombre{font-size:18px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;flex-wrap:wrap;gap:8px;overflow-wrap:anywhere}
+.oc-nombre{font-size:18px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;flex-wrap:wrap;gap:8px;overflow-wrap:break-word}
 .oc-meta{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--muted);margin-top:4px}
 .oc-precio-m{color:var(--ink);font-weight:600}
 .oc-acc{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:2px 6px}
@@ -2696,7 +2711,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .oc-sec{background:#fff;border:1px solid var(--hair);border-radius:3px;margin-bottom:14px;overflow:hidden}
 .oc-sec-cab{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:12px 14px;background:var(--brand-cream);border-bottom:1px solid var(--hair)}
 .oc-sec-tit{display:flex;align-items:center;gap:8px;min-width:0}
-.oc-sec-tit h4{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em;overflow-wrap:anywhere}
+.oc-sec-tit h4{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em;overflow-wrap:break-word}
 .oc-sec-n{font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;color:var(--muted)}
 .oc-icono{width:40px;height:40px;border:1px solid var(--hair);background:#fff;border-radius:3px;font-size:20px;line-height:1;cursor:pointer;flex:0 0 auto}
 .oc-icono:hover{border-color:var(--olive)}
@@ -2708,7 +2723,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .oc-plato.agotado .carta-plato-name{color:var(--muted);text-decoration:line-through}
 .oc-mover{display:flex;align-items:center;gap:2px;flex:0 0 auto}
 .oc-plato-nom{display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:0}
-.oc-plato-nom .carta-plato-name{font-size:16px;font-weight:600;letter-spacing:-.01em;cursor:pointer;overflow-wrap:anywhere}
+.oc-plato-nom .carta-plato-name{font-size:16px;font-weight:600;letter-spacing:-.01em;cursor:pointer;overflow-wrap:break-word}
 .oc-plato-nom .ti-pencil{font-size:12px;opacity:.45}
 .oc-precio{font-family:var(--mono);font-size:15px;font-weight:600;min-width:64px;text-align:right;flex:0 0 auto}
 .oc-precio.editable{cursor:pointer;text-decoration:underline dotted}
@@ -2768,7 +2783,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .idr-pick-cnt.is-ok{color:var(--olive)}
 .idr-pick-lista{max-height:180px;overflow:auto}
 .idr-pick-fila{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;cursor:pointer}
-.idr-pick-plato{flex:1;min-width:0;overflow-wrap:anywhere}
+.idr-pick-plato{flex:1;min-width:0;overflow-wrap:break-word}
 .idr-pick-precio{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
 .ia-num-hilo{max-height:50vh;overflow-y:auto;margin-bottom:10px}
 .ia-num-hilo .idr-msg:first-child{margin-top:0}
@@ -2783,7 +2798,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .pv-vacio{grid-column:1/-1}
 .pv-card{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:16px 16px 10px}
-.pv-nombre{display:flex;align-items:flex-start;gap:9px;font-size:18px;font-weight:600;letter-spacing:-.02em;line-height:1.25;overflow-wrap:anywhere}
+.pv-nombre{display:flex;align-items:flex-start;gap:9px;font-size:18px;font-weight:600;letter-spacing:-.02em;line-height:1.25;overflow-wrap:break-word}
 .pv-nombre .ti{font-size:18px;color:var(--olive);margin-top:2px;flex:none}
 .pv-acc{display:flex;align-items:center;gap:2px 6px;flex-wrap:wrap;border-top:1px solid var(--hair);padding-top:6px;margin-top:auto}
 .pv-acc .btn.btn-fino{min-width:40px;padding:0 10px}
@@ -2791,7 +2806,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .pv-fila{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 16px;padding:11px 0;border-bottom:1px solid var(--hair);align-items:baseline}
 .pv-et{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
 .pv-et .ti{font-size:14px}
-.pv-val{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.pv-val{font-size:14px;line-height:1.5;overflow-wrap:break-word}
 .pv-val a{color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .pv-mono{font-family:var(--mono);font-size:13px;letter-spacing:.02em}
 .pv-notas{color:var(--muted);white-space:pre-wrap}
@@ -2800,7 +2815,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .pv-cero{font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--muted);display:inline-flex;align-items:center;gap:6px;min-height:40px}
 .pv-arts{max-height:60vh;overflow-y:auto;border-top:1px solid var(--hair)}
 .pv-art{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--hair)}
-.pv-art-n{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.pv-art-n{flex:1;min-width:0;font-weight:600;overflow-wrap:break-word}
 .pv-art-u{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .pv-art-p{font-family:var(--mono);font-size:13px;font-weight:600;min-width:72px;text-align:right}
 .pv-envio .field{flex:1;min-width:0}
@@ -3282,7 +3297,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .st-resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--hair);border-left:1px solid var(--hair);background:#fff;margin:0 0 14px}
 .st-cel{display:flex;flex-direction:column;gap:3px;padding:12px 16px;border:0;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);background:none;text-align:left;font-family:inherit;color:var(--ink);min-width:0}
 .st-cel-et{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.st-cel-v{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em;overflow-wrap:anywhere}
+.st-cel-v{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em;overflow-wrap:break-word}
 .st-cel-s{font-size:12px;color:var(--muted)}
 .st-cel-btn{cursor:pointer;min-height:44px}
 .st-cel-btn:hover{background:var(--brand-cream)}
@@ -3703,7 +3718,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .cal-chip-tipo{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:3px 8px;border-radius:3px}
 .cal-horario{font-family:var(--mono);font-size:12px;color:var(--ink)}
 .cal-horas{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink)}
-.cal-nota{display:inline-flex;align-items:center;gap:4px;overflow-wrap:anywhere}
+.cal-nota{display:inline-flex;align-items:center;gap:4px;overflow-wrap:break-word}
 .cal-nada{color:var(--muted);font-size:13px}
 .cal-leyenda{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .cal-ley{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:3px}
@@ -3982,7 +3997,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .pm-card-tit.is-texto:hover{text-decoration:none}
 .pm-desc{margin:0;font-size:13.5px;line-height:1.45;color:var(--muted);overflow-wrap:break-word}
 .pm-ets{display:flex;flex-wrap:wrap;gap:6px}
-.pm-et{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:3px 8px;border:1px solid var(--hair);border-radius:3px;background:var(--brand-cream);color:var(--ink);max-width:100%;overflow-wrap:anywhere}
+.pm-et{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:3px 8px;border:1px solid var(--hair);border-radius:3px;background:var(--brand-cream);color:var(--ink);max-width:100%;overflow-wrap:break-word}
 .pm-et.is-dto{border-color:var(--olive);color:#33523A;background:#EEF2EA}
 .pm-et.is-ok{border-color:#B9CBB6;color:#33523A;background:#F1F6EF}
 .pm-card-pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-top:8px;border-top:1px solid var(--hair);margin-top:2px}
@@ -4094,7 +4109,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .nv-prev-marco.is-movil iframe{width:375px;max-width:100%;margin:0 auto}
 .nv-prev-marco.is-wa{background:#E8E4DC;padding:16px 12px}
 .nv-wa{display:flex;justify-content:flex-end}
-.nv-wa-burbuja{position:relative;max-width:94%;padding:8px 10px 6px;border-radius:8px 8px 2px 8px;background:#E2F2D5;font-size:14px;line-height:1.45;color:#1F2420;overflow-wrap:anywhere;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+.nv-wa-burbuja{position:relative;max-width:94%;padding:8px 10px 6px;border-radius:8px 8px 2px 8px;background:#E2F2D5;font-size:14px;line-height:1.45;color:#1F2420;overflow-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.12)}
 .nv-wa-hora{display:block;text-align:right;font-size:11px;color:#667;margin-top:2px}
 .nv-canales{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .nv-canales .btn b{font-family:var(--mono);margin-left:4px}
@@ -4116,7 +4131,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .nv-lote.is-hecho{background:#F6F8F4}
 .nv-fila-txt{flex:1 1 180px;min-width:0;display:flex;flex-direction:column}
 .nv-fila-txt b{font-weight:600;overflow-wrap:break-word}
-.nv-fila-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.nv-fila-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:break-word}
 .nv-lote-bt{display:flex;gap:6px;flex-wrap:wrap}
 .nv-extras{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .nv-progreso{margin-bottom:10px}
@@ -4129,7 +4144,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .nv-cli[hidden]{display:none}
 .nv-cli-txt{flex:1;min-width:0;display:flex;flex-direction:column}
 .nv-cli-txt b{font-weight:600;overflow-wrap:break-word}
-.nv-cli-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.nv-cli-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:break-word}
 .nv-cli-tags{display:flex;gap:6px;color:var(--muted);flex:none}
 /* Novedades: la guía de envío paso a paso (correo y lista de difusión). */
 .visually-hidden{position:absolute !important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -4156,7 +4171,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .nv-gp-tit{margin:0 0 4px;font-size:15.5px;line-height:1.3;font-weight:600;overflow-wrap:break-word}
 .nv-gp-opc{margin-left:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--muted);border:1px solid var(--hair);border-radius:3px;padding:1px 6px;vertical-align:middle}
 .nv-gp-txt{margin:0 0 10px;font-size:13.5px;line-height:1.5;color:var(--muted);overflow-wrap:break-word}
-.nv-caja{margin:0 0 10px;padding:9px 12px;background:var(--brand-cream);border:1px solid var(--hair);border-left:3px solid var(--olive);border-radius:3px;font-family:var(--mono);font-size:12.5px;line-height:1.5;overflow-wrap:anywhere;max-height:120px;overflow:auto}
+.nv-caja{margin:0 0 10px;padding:9px 12px;background:var(--brand-cream);border:1px solid var(--hair);border-left:3px solid var(--olive);border-radius:3px;font-family:var(--mono);font-size:12.5px;line-height:1.5;overflow-wrap:break-word;max-height:120px;overflow:auto}
 .nv-caja em{font-style:normal;color:var(--muted)}
 .nv-gp-acc{display:flex;flex-wrap:wrap;gap:8px}
 .nv-mas{margin-top:4px;border-top:1px solid var(--hair);padding-top:10px}
@@ -4166,7 +4181,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .nv-mas[open] > summary{margin-bottom:8px}
 .nv-mas-lista{border-top:0;margin:0 0 10px;padding-top:0}
 .nv-compacta{list-style:none;margin:0;padding:0;max-height:200px;overflow:auto;font-size:13px}
-.nv-compacta li{padding:5px 2px;border-bottom:1px solid var(--hair);overflow-wrap:anywhere}
+.nv-compacta li{padding:5px 2px;border-bottom:1px solid var(--hair);overflow-wrap:break-word}
 .nv-compacta small{color:var(--muted)}
 /* Clientes (1/11): tarjetas de cliente, ficha entera, historial y vales regalo. */
 .cl-barra{margin-bottom:10px}
@@ -4200,10 +4215,10 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .cl-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .cl-stat{display:flex;flex-direction:column;gap:2px;background:#fff;border:1px solid var(--hair);border-radius:3px;padding:8px 10px;min-width:0}
 .cl-stat span{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
-.cl-stat b{font-family:var(--mono);font-size:17px;font-weight:600;overflow-wrap:anywhere}
+.cl-stat b{font-family:var(--mono);font-size:17px;font-weight:600;overflow-wrap:break-word}
 .cl-fich-ets{margin-top:10px}
 .cl-mini{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
-.cl-mini li{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid var(--hair);overflow-wrap:anywhere}
+.cl-mini li{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid var(--hair);overflow-wrap:break-word}
 .cl-mini li > .ti{color:var(--muted);flex:none}
 .cl-enlace{background:none;border:0;padding:6px 0;min-height:36px;font:inherit;color:#33523A;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
 .cl-enlace:hover{color:var(--ink)}
@@ -4216,7 +4231,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .cl-ev-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--hair);border-radius:3px;background:var(--brand-cream);color:var(--olive);font-size:18px}
 .cl-ev-txt{display:flex;flex-direction:column;min-width:0;gap:2px}
 .cl-ev-txt b{font-weight:600;overflow-wrap:break-word}
-.cl-ev-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.cl-ev-txt small{font-size:12.5px;color:var(--muted);overflow-wrap:break-word}
 .cl-ev-txt[role="button"]{cursor:pointer}
 .cl-ev-txt[role="button"]:hover b{text-decoration:underline}
 .cl-ev-fecha{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
@@ -4228,7 +4243,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .cl-vale.is-cad{border-left-color:#B58B2E;background:#FBF6EA}
 .cl-vale.is-anul{border-left-color:#B7B7AE;background:#F4F4F4;color:var(--muted)}
 .cl-vale-cab{display:flex;align-items:center;gap:8px;min-width:0}
-.cl-vale-code{font-size:16px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere}
+.cl-vale-code{font-size:16px;font-weight:600;flex:1;min-width:0;overflow-wrap:break-word}
 .cl-vale-que{display:flex;flex-direction:column;gap:2px}
 .cl-vale-que b{font-family:var(--mono);font-size:22px;letter-spacing:-.02em;overflow-wrap:break-word}
 .cl-vale-que small{font-size:12.5px;color:var(--muted)}
@@ -4302,7 +4317,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-cifra{display:flex;flex-direction:column;gap:2px;padding:10px 14px;min-width:0;border:0;border-right:1px solid var(--hair);background:none;text-align:left;font:inherit;color:var(--ink)}
 .tp-cifra:last-child{border-right:0}
 .tp-cifra-et{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);overflow-wrap:break-word}
-.tp-cifra-v{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;overflow-wrap:anywhere}
+.tp-cifra-v{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em;overflow-wrap:break-word}
 .tp-cifra.is-ventas{cursor:pointer}
 .tp-cifra.is-ventas:hover{background:var(--brand-cream)}
 .tp-cifra.is-ventas:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
@@ -4362,7 +4377,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-mesa.is-libre::before{background:transparent}
 .tp-mesa.is-libre .tp-mesa-nombre{color:var(--ink)}
 .tp-mesa-libre{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted)}
-.tp-mesa-reserva{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--ink);background:var(--brand-cream);border:1px dashed var(--ink);border-radius:3px;padding:3px 7px;margin-top:auto;overflow-wrap:anywhere}
+.tp-mesa-reserva{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--ink);background:var(--brand-cream);border:1px dashed var(--ink);border-radius:3px;padding:3px 7px;margin-top:auto;overflow-wrap:break-word}
 .tp-mesa.es-reservada{border-color:var(--ink)}
 .tp-mesa.is-tomando{background:#F7F6F2}
 .tp-mesa.is-tomando::before{background:#7A7468}
@@ -4509,7 +4524,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-linea-txt .tp-linea-nota{display:block;width:fit-content;max-width:100%;margin-top:3px}
 .tp-linea-nom{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:break-word}
 .tp-linea.marchada .tp-linea-nom{color:var(--muted)}
-.tp-linea-nota{align-self:flex-start;font-size:13px;color:#6B4E10;background:#FBF3DF;border-left:3px solid #C79A2E;padding:2px 8px;border-radius:2px;overflow-wrap:anywhere}
+.tp-linea-nota{align-self:flex-start;font-size:13px;color:#6B4E10;background:#FBF3DF;border-left:3px solid #C79A2E;padding:2px 8px;border-radius:2px;overflow-wrap:break-word}
 .tp-linea-pre{font-family:var(--mono);font-size:14px;font-weight:600;white-space:nowrap}
 .tp-linea-acc{display:flex;gap:6px;justify-content:flex-end}
 .tp-ac-mas{width:40px !important;height:40px !important;min-width:40px;padding:0 !important;border:1px solid var(--hair);background:#fff}
@@ -4550,7 +4565,7 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .tp-ped-hora.is-urgente{color:#A8392B}
 .tp-ped-nom{font-size:17px;font-weight:700;line-height:1.2;overflow-wrap:break-word}
 .tp-ped-ref{font-family:var(--mono);font-size:12px;color:var(--muted)}
-.tp-ped-dir{display:flex;align-items:flex-start;gap:5px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.tp-ped-dir{display:flex;align-items:flex-start;gap:5px;font-size:13px;color:var(--muted);overflow-wrap:break-word}
 .tp-ped-dir.is-alerta{color:#A8392B}
 .tp-ped-alerta{display:flex;align-items:center;gap:5px;font-size:13px;color:#A8392B}
 .tp-ped-lineas{font-size:13px;color:var(--ink);line-height:1.45}
@@ -4618,7 +4633,7 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .manual-step{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--hair);margin:0}
 .manual-step:last-of-type{border-bottom:0}
 .manual-step .sn{min-width:28px;height:28px;border-radius:50%;background:var(--ink);color:#FAF8F4;font-family:var(--mono);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.manual-step .st{font-size:15px;line-height:1.6;min-width:0;flex:1;overflow-wrap:anywhere}
+.manual-step .st{font-size:15px;line-height:1.6;min-width:0;flex:1;overflow-wrap:break-word}
 .manual-tip,.manual-warning{display:block;padding:12px 16px;margin:14px 0;border-radius:0 3px 3px 0;font-size:14px;line-height:1.55;overflow-wrap:break-word}
 .manual-tip{background:#F3F7F0;border-left:4px solid var(--olive);color:var(--ink)}
 .manual-warning{background:#FBF3DF;border-left:4px solid #C79A2E;color:#5C4510}
@@ -4648,7 +4663,7 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .dc-lista{list-style:none;margin:0 0 12px;padding:0}
 .dc-fila{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--hair)}
 .dc-fechas{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;font-weight:600}
-.dc-motivo{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.dc-motivo{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow-wrap:break-word}
 .dc-form{margin:10px 0}
 .dc-pasados{margin-top:12px;color:var(--muted);font-size:13px}
 .dc-pasados summary{cursor:pointer;min-height:36px;display:flex;align-items:center}
@@ -4661,7 +4676,7 @@ button.tp-ped:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 .bc-sug{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--hair);border-radius:3px;background:#fff}
 .bc-muestra{width:28px;height:28px;border-radius:3px;border:1px solid rgba(0,0,0,.15);flex:none}
 .bc-vista{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--hair);border-radius:3px;background:#fff}
-.bc-v-tit{font-weight:700;font-size:16px;color:var(--bc2);overflow-wrap:anywhere;min-width:0}
+.bc-v-tit{font-weight:700;font-size:16px;color:var(--bc2);overflow-wrap:break-word;min-width:0}
 .bc-v-btn{flex:none;padding:8px 14px;border-radius:3px;background:var(--bc1);color:#fff;font-size:13px;font-weight:600}
 /* Comprobación de códigos postales (Mi Negocio → Pedidos, 2/11) */
 .cp-lista{list-style:none;margin:8px 0 0;padding:0}
@@ -4971,7 +4986,7 @@ span.dt-punto{position:absolute;border-radius:50%}
 .rc-hist-d{font-family:var(--mono);text-align:right}
 .rc-hist-d.is-ok{color:var(--green)}
 .rc-hist-d.is-ko{color:var(--red)}
-.rc-hist-t{grid-column:1 / -1;color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.rc-hist-t{grid-column:1 / -1;color:var(--muted);font-size:12.5px;overflow-wrap:break-word}
 @media (max-width:760px){ .rc-hist-f{grid-template-columns:minmax(0,1fr) auto} .rc-hist-p{grid-column:1 / -1;font-weight:600} }
 /* Punto de equilibrio (6/11) */
 .te-valor.is-ok{color:var(--green)}
@@ -5168,7 +5183,7 @@ select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed
 .ml-fila:last-child{border-bottom:0}
 .ml-fila:hover{background:var(--brand-cream)}
 .ml-fila.is-baja{opacity:.55}
-.ml-c{min-width:0;font-size:14px;overflow-wrap:anywhere}
+.ml-c{min-width:0;font-size:14px;overflow-wrap:break-word}
 .ml-nom b{display:block;font-weight:600;font-size:15px;letter-spacing:-.01em}
 .ml-punto{display:none}
 .ml-cat{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);margin-top:2px}
@@ -5278,21 +5293,21 @@ select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed
 .idr-trabajo:hover{border-color:var(--olive)}
 .idr-trabajo-ico{width:44px;height:44px;font-size:22px}
 .idr-trabajo-txt{display:flex;flex-direction:column;gap:2px;flex:1 1 220px;min-width:0}
-.idr-trabajo-txt strong{font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.idr-trabajo-txt strong{font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:break-word}
 .idr-trabajo-txt small{font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;color:var(--muted)}
 .idr-trabajo-acc{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px}
 .idr-trabajo-acc select{max-width:160px;min-height:36px}
 /* la conversación */
 .idr-hilo{max-height:46vh;overflow:auto;padding:6px 2px}
 .idr-msg{display:flex;margin:10px 0}
-.idr-msg > div{max-width:82%;padding:10px 14px;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:3px}
+.idr-msg > div{max-width:82%;padding:10px 14px;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:break-word;border-radius:3px}
 .idr-msg.yo{justify-content:flex-end}
 .idr-msg.yo > div{background:var(--olive);color:#fff}
 .idr-msg.ia > div{background:#fff;border:1px solid var(--hair);color:var(--ink)}
 .idr-msg.pensando > div{color:var(--muted);font-family:var(--mono);font-size:12px}
 /* ayuda para conseguir la clave */
 .idr-ayuda-link{font-size:13px;color:var(--muted);margin:8px 0 0}
-.idr-ayuda-link a{display:inline-block;padding:14px 0;margin:-14px 0;color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.idr-ayuda-link a{display:inline-block;padding:14px 0;margin:-14px 0;color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px;overflow-wrap:break-word}
 .idr-pasos{margin:8px 0}
 .idr-pasos summary{font-size:13px;cursor:pointer;font-weight:600;color:var(--ink)}
 .idr-pasos ol{font-size:13px;line-height:1.6;margin:8px 0 0 18px;padding:0}
@@ -5303,7 +5318,7 @@ select:disabled{background:#F1EFE9;color:var(--ink);opacity:1;cursor:not-allowed
 .inc-texto{width:100%;resize:vertical;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--hair);border-radius:3px;background:#fff;margin-top:6px}
 .inc-tipo{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A5A0F;background:#FBF1DC;border:1px solid #E8CF9A;padding:5px 10px;border-radius:3px;margin-bottom:10px}
 .inc-hilo{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;max-height:40vh;overflow-y:auto}
-.inc-msg{max-width:86%;padding:9px 12px;border:1px solid var(--hair);border-radius:3px;background:#fff;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.inc-msg{max-width:86%;padding:9px 12px;border:1px solid var(--hair);border-radius:3px;background:#fff;font-size:15px;line-height:1.4;overflow-wrap:break-word}
 .inc-msg small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .inc-msg.mio{align-self:flex-end;background:var(--brand-cream)}
 /* Comandas Cocina en tablet y móvil (29/10) */
@@ -5729,7 +5744,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-k-fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
 .dp-k{border:1px solid var(--hair);background:#fff;padding:12px 14px;min-width:0}
 .dp-k-et{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.dp-k-v{font-family:var(--mono);font-size:28px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
+.dp-k-v{font-family:var(--mono);font-size:28px;font-weight:600;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:break-word}
 .dp-k-s{font-size:12px;color:var(--muted);margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .dp-ok{color:var(--olive)} .dp-mal{color:#B4432F} .dp-avis{color:#B7791F}
 .dp-resumen{margin-top:4px}
@@ -5947,7 +5962,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
   /* Nombres de archivo y direcciones: parten por el guion o el punto, que
      es donde los parte cualquiera al leerlos, en vez de por la mitad de
      una sílaba ("tutorial-netlify.html"). */
-  a strong,code,.mn-file{word-break:break-word;hyphens:none}
+  a strong,code,.mn-file{overflow-wrap:break-word;hyphens:none}
 
   /* ── 4b. Las pestañas se ven TODAS, sin arrastrar ──────────────────
      Gestión Económica tiene siete pestañas y Mi Negocio nueve. En una
@@ -6384,7 +6399,7 @@ small{font-size:max(.8333em, 11px)}
    En móvil, dos columnas con la etiqueta encima del valor: la mitad de alto y se lee de un vistazo. */
 @media (max-width:760px){
   .lp-tabla .table-cards tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;padding:6px 12px 8px}
-  .lp-tabla .table-cards td{flex-direction:column;align-items:flex-start;gap:1px;padding:7px 0;border-bottom:1px solid var(--hair);min-width:0;overflow-wrap:anywhere}
+  .lp-tabla .table-cards td{flex-direction:column;align-items:flex-start;gap:1px;padding:7px 0;border-bottom:1px solid var(--hair);min-width:0;overflow-wrap:break-word}
   .lp-tabla .table-cards td[data-label]::before{flex:none;max-width:none;font-family:var(--mono);letter-spacing:.06em}
   .lp-tabla .table-cards td.lp-fila-acc{grid-column:1 / -1;flex-direction:row;justify-content:flex-end;border-bottom:0;padding:4px 0 0;width:auto}
 }
@@ -6539,7 +6554,6 @@ small{font-size:max(.8333em, 11px)}
 
 
 /* ═══ AVISOS (campana) ═══ */
-.app-header #avisos-fab.avisos-con{box-shadow:0 0 0 3px rgba(138,74,59,.38)}
 .avisos-panel{display:none;position:fixed;top:calc(var(--header-h) + 10px);right:20px;width:400px;max-width:calc(100vw - 32px);max-height:calc(100dvh - var(--header-h) - 30px);
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden}
 .avisos-panel.active{display:flex}
@@ -6583,7 +6597,7 @@ small{font-size:max(.8333em, 11px)}
 /* Acceso de empleados: negocios recordados en este aparato (botones con el nombre; antes solo un datalist casi invisible en móvil) */
 .acc-biz-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .acc-biz-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-align:left;max-width:100%}
-.acc-biz-chip .acc-biz-n{overflow-wrap:anywhere;font-weight:600}
+.acc-biz-chip .acc-biz-n{overflow-wrap:break-word;font-weight:600}
 .acc-biz-chip small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
 .acc-biz-chip:hover{border-color:var(--olive);background:var(--brand-cream)}
 .acc-biz-chip.is-sel{border-color:var(--olive);background:var(--olive);color:#fff}
@@ -6615,7 +6629,7 @@ small{font-size:max(.8333em, 11px)}
 .rw-caja{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;background:var(--surface)}
 .rw-caja p{margin:6px 0 0}
 .rw-caja-t{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.rw-dato{background:var(--brand-cream);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.rw-dato{background:var(--brand-cream);padding:1px 6px;border-radius:4px;overflow-wrap:break-word}
 .rw-campo{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:13px;color:var(--muted)}
 .rw-campo input{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:16px;color:var(--ink);background:#fff}
 .rw-abrir{min-height:52px;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:10px}
@@ -6748,7 +6762,6 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   .tp-mesas-herr{flex-wrap:nowrap}
   .tp-mesas-herr .tp-buscar{flex:1 1 auto;width:auto;min-width:0}
   #avisos-fab .chat-badge,#chat-fab .chat-badge{top:-7px;right:-7px}
-  .app-header #avisos-fab.avisos-con{box-shadow:0 0 0 2px rgba(138,74,59,.38)}
   /* Cocina: dos filas de botones de UNA línea (icono fuera: el rótulo ya lo dice todo) */
   .kds-toolbar .btn.btn-fino{flex-direction:row;min-height:44px;padding:4px 4px;white-space:nowrap;font-size:12px}
   .kds-toolbar .btn.btn-fino .ti{display:none}
@@ -6768,4 +6781,565 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   .tp-filtros{flex-wrap:wrap}
   button.kt-cn{flex-wrap:wrap;row-gap:4px}
   .kds-toolbar .btn.btn-fino{font-size:11px;padding:4px 2px}
+}
+
+/* VIDEO-MÓVIL · PAQUETE 4 · Carpeta Cocina (vídeo Android 15/11): notas plegables, Escandallo, Pedidos, Stock, Personal, Distribución, APPCC y Calendario */
+.gg-nota > .gg-nota-q{display:none !important}
+@media (max-width:760px){
+  .gg-nota > .gg-nota-q{display:inline-flex !important;align-items:center;gap:6px;min-height:44px;padding:0 6px 0 0;background:none;border:0;color:var(--olive);font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .gg-nota:not(.is-abierta) .gg-nota-txt{display:none}
+  .gg-nota.is-abierta .gg-nota-txt{padding-bottom:8px}
+  /* Escandallo / Pedidos: Volver a la izquierda y Guardar + ⋯ a la derecha, en UNA fila */
+  #view-escandallo .es-barra-der,#view-fichas .es-barra-der,#view-pedidos .es-barra-der{width:auto;margin-left:auto}
+  #view-pedidos .es-barra-der{width:100%;margin-left:0}
+  .es-l-coste b,.es-l-coste{white-space:nowrap}
+  /* Pestañas de Pedidos y APPCC: rejilla de columnas iguales, no una por fila */
+  .pe-tabs .left{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .pe-tabs .left .btn{width:100%;justify-content:flex-start;white-space:normal;text-align:left}
+  /* APPCC: el resumen de hoy solo en la primera pestaña (se repetía en las siete) y 3+2 sin hueco */
+  #limpieza-content[data-tab]:not([data-tab="protocolo"]) .lp-resumen{display:none}
+  .lp-resumen{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .lp-resumen .st-cel{grid-column:span 2}
+  .lp-resumen .st-cel:nth-child(n+4){grid-column:span 3}
+  /* Alérgenos por plato: nombre como título de la tarjeta y alérgenos que ENVUELVEN (dato de seguridad: se ven todos) */
+  .lp-alerg-tabla tbody tr{padding:10px 12px}
+  .lp-alerg-tabla td.lp-alerg-nom{font-weight:600;font-size:15px;border-bottom:0;padding:0 0 6px;overflow-wrap:break-word}
+  .lp-alerg-tabla td.lp-alerg-lista{display:flex;flex-wrap:wrap;gap:6px;border-bottom:0;padding:0;min-width:0}
+  .lp-alerg-tabla td.lp-alerg-lista::before{flex:0 0 100%;max-width:100%}
+  .lp-alerg-filtro .lp-barra{flex-direction:column;align-items:stretch}
+  .lp-alerg-filtro .lp-filtros .st-buscar{flex:1 1 140px;min-width:0}
+  .lp-alerg-filtro .lp-filtros > .btn{flex:0 0 auto}
+  .lp-alerg-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lp-alerg{justify-content:space-between;min-height:44px}
+  .lp-alerg span{font-size:12px;color:var(--ink)}
+  .lp-alerg.on span{color:#fff}
+  /* Personal: el nombre ocupa todo el ancho; el estado habitual («Fuera de servicio») no se pinta */
+  .pr-cab .pr-estados{flex:1 0 100%;margin-left:0;justify-content:flex-start}
+  .pr-estados:not(:has(.pr-chip:not(.off))){display:none}
+  .pr-chip.off{display:none}
+  .pr-pie{flex-direction:row;align-items:center;justify-content:space-between}
+  .pr-pie .pr-ver{display:none}
+  .pr-pie .pr-acc{width:100%;justify-content:space-between;flex-wrap:nowrap}
+  .pr-pie .pr-acc > *{flex:0 0 auto}
+  .dp-emp .pr-pie{justify-content:space-between}
+  .dp-emp .pr-pie .pr-ver{display:inline}
+  .dp-emp .pr-pie .dp-cargo-n{min-width:0}
+  .dp-hoy-mini.is-descansa{margin:0}
+  /* Mi puesto: lo elegido va en oliva, nunca en negro */
+  .dp-dia.is-sel{background:var(--olive);border-color:var(--olive)}
+  .dp-dia.is-sel .dp-dia-c.ok,.dp-dia.is-sel .dp-dia-c{color:#fff}
+  .dp-dia-c{font-size:12px}
+  .dp-volver-eq{width:auto;min-width:44px;padding:0 10px;gap:6px}
+  .dp-volver-txt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .dp-hoy-der{width:100%}
+  .dp-hoy-der .btn{flex:1 1 0;justify-content:center}
+  .dp-dia-cuenta,.dp-cuenta{white-space:nowrap}
+  /* Calendario: fecha del Día en una sola fila, resumen de una línea de rótulo */
+  .cal-nav:has(> .cal-fecha){flex-wrap:nowrap}
+  .cal-nav .cal-fecha{flex:1 1 0;min-width:0;padding:0 8px;font-size:13.5px}
+  .cal-nav .cal-fecha span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-mes-dia.is-hoy{border-color:var(--olive);box-shadow:inset 0 0 0 1px var(--olive)}
+  .cal-mes-cab{color:var(--ink)}
+  .cal-mes-dia:not(.tiene) .cal-mes-n{color:var(--ink)}
+  /* Stock: nombre y − n + en la MISMA fila (≈64 px por producto), sin la línea «ACTUAL · KG» */
+  .st-fila .st-qty .st-lab{display:none}
+  .st-fila .st-qty:focus-within .btn,.st-fila .btn.btn-fino:active{border-color:var(--olive)}
+  /* Pedidos: IVA del resumen sin recortar por abajo */
+  .pd-totales{padding-bottom:6px;overflow:visible}
+  .pd-totales > div{min-height:24px}
+}
+/* Calendario de pedidos (TPV): cabeceras de día completas en PC y de 2 letras en móvil (en 360 px «MAR»/«DOM» salían cortadas) */
+.togo-dn-c{display:none}
+@media (max-width:560px){.togo-dn-l{display:none}.togo-dn-c{display:inline}}
+@media (max-width:760px){
+  .pr-barra-bt{display:flex;flex-wrap:nowrap;gap:8px}
+  .pr-barra-bt .btn{flex:1 1 0;min-width:0;justify-content:center;white-space:normal;text-align:center}
+}
+
+/* VIDEO-MÓVIL · PAQUETE 2 · TPV (cabecera de la comanda, fichas de mesa)
+   Causa: en ≤720 px la cabecera de la comanda era UNA fila sin salto (`flex-wrap:nowrap`) con «Cambiar de mesa», el nombre, «Liberar mesa»
+   y la X. Con la mesa vacía —o sea, con «Liberar mesa» puesto— el nombre se quedaba en 0 px de ancho y se partía en una columna de letras
+   («Mesa / 6», «2 / p / ·»), y los botones se pisaban. Ahora son SIEMPRE dos filas, haya pedido o no (la cabecera ya no cambia de forma):
+   1.ª nombre a todo el ancho + X; 2.ª las acciones, repartiéndose la fila. El DOM no cambia (la prueba exige «Cambiar de mesa» antes del <h3>);
+   el orden visual lo pone `order`. */
+@media (max-width:720px){
+  .tp-or-cab{flex-wrap:wrap;gap:6px 8px}
+  .tp-or-cab .tp-or-mesa{order:1 !important;flex:1 1 calc(100% - 52px);min-width:0}
+  .tp-or-cab .modal-close{order:2 !important;margin-left:0}
+  .tp-or-cab .tp-or-cambiar,.tp-or-cab .tp-or-acc{order:3 !important;flex:1 1 0;min-width:0;justify-content:center;white-space:normal;text-align:center;line-height:1.15;min-height:40px;padding:4px 8px !important}
+  /* Cada ficha mide lo suyo: una mesa libre ya no se estira hasta la altura de la ocupada de al lado */
+  .tp-grid > .tp-mesa{align-self:start}
+}
+/* El tiempo de la mesa pasa a otra línea si no cabe junto al nombre, en vez de partir el nombre */
+.tp-mesa-top{flex-wrap:wrap}
+.tp-mesa-top .tp-mesa-nombre{flex:1 1 auto}
+
+/* VIDEO-MÓVIL · PAQUETE 2 · Comandas Cocina
+   Causa: desde el 29/10 los tickets iban en un carrusel horizontal (overflow-x:auto + 88 % de ancho) y cada uno con alto máximo y scroll
+   propio. En un móvil real eso arrastraba la página de lado, dejaba el ticket de al lado asomando cortado y obligaba a desplazar DENTRO
+   del ticket para llegar al plato —lo más importante— que quedaba al fondo, bajo las alergias y el rótulo de la carta.
+   Ahora: una columna a ancho completo, el ticket crece con su contenido y la página es la única que se desplaza. */
+@media (max-width:600px){
+  .grid-kds,.cz-grid{display:grid !important;grid-template-columns:minmax(0,1fr);columns:auto !important;overflow:visible;scroll-snap-type:none;margin:0;padding:0;gap:10px;align-items:start}
+  .grid-kds>*,.cz-grid>*{flex:none;min-width:0;scroll-snap-align:none}
+  .kt{max-height:none;min-height:0;overflow:visible}
+  /* Con UNA sola carta en el ticket, su rótulo («Carta · Carta principal») no informa y empujaba el plato fuera de la primera pantalla */
+  .kt-bl-solo > .kt-bh{display:none}
+  .kt-alergia{margin-bottom:8px;padding:7px 10px}
+  .kt-alergia small{display:inline;margin-right:6px}
+  .kt-h{padding-bottom:6px}
+  /* Pestañas (Activas | Cerradas) y acciones eran seis botones iguales en una rejilla de tres: no se sabía qué era filtro y qué hacía algo.
+     Ahora las pestañas ocupan su fila entera (mitad y mitad) y las tres acciones, la suya. */
+  .kds-toolbar{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .kds-toolbar .btn.btn-fino.kds-tab{grid-column:span 3}
+  .kds-toolbar .btn.btn-fino:not(.kds-tab){grid-column:span 2}
+}
+
+/* VIDEO-MÓVIL · PAQUETE 2 · Calendario de pedidos del TPV
+   La ventana saltaba de alto (y de sitio) al cambiar Día / Semana / Mes y «MAR» salía como «MAF» en celdas de 44 px. Ahora el cuerpo tiene
+   un alto mínimo común, los tres modos son un segmentado de tres mitades, la semana pone el día de la semana en su línea y hoy va en oliva. */
+.tg-modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.tg-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.tg-flecha{min-width:44px;min-height:44px;padding:0 10px}
+.tg-label{flex:1;text-align:center;font-size:15px;font-weight:700;min-width:0;overflow-wrap:break-word}
+.tg-cuerpo{min-height:min(420px,52dvh)}
+.tg-dia{cursor:pointer;padding:8px 4px;text-align:center;min-width:0}
+.tg-dia.is-hoy{border-color:var(--olive);box-shadow:inset 0 3px 0 var(--olive)}
+.tg-dow{font-family:var(--mono);font-size:11px;letter-spacing:0;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+
+/* VIDEO-MÓVIL · PAQUETE 2 · Calendarios de Reservas y Promoción
+   · El contador de acciones/reservas del mes tapaba la segunda cifra del día («1̶6», «2̶1»): ahora va abajo a la derecha.
+   · El «+» de un día vacío no decía qué hacía: lleva su rótulo, y la cabecera del día (día de la semana / número / mes) gasta menos alto.
+   · «Nueva Reserva», «Nueva Acción» e «Imprimir el día» quedaban cada uno en su fila con medio ancho vacío: la acción sola ocupa la fila entera. */
+@media (max-width:640px){
+  .pm-mes-n{top:auto;bottom:4px;right:4px}
+  .pm-mes-dia{padding-bottom:6px}
+}
+@media (max-width:900px){
+  .pm-sem-cab{flex-direction:row;flex-wrap:wrap;align-content:center;justify-content:center;column-gap:5px;row-gap:0;flex:0 0 80px;width:80px;min-width:0;padding:6px 4px}
+  .pm-sem-dia-nom{flex:0 0 100%;text-align:center}
+  .pm-sem-cab .rv-sem-n{flex:0 0 100%;text-align:center}
+}
+.pm-mas{gap:6px;padding:0 12px;font-size:13px;font-weight:600}
+.pm-mas .ti{font-size:16px}
+/* VIDEO-MÓVIL · PAQUETE 2 · Promoción
+   Seis pestañas en tres filas desiguales (3 + 2 + 1) con «Ideas de contenido» sola: ahora dos filas exactas de tres. Y las franjas de cifras
+   (Promoción, Reservas, Clientes) alinean el número abajo aunque un rótulo ocupe dos renglones («ACCIONES DE LA SEMANA»). */
+@media (max-width:640px){
+  .pm-resumen .st-cel{justify-content:space-between}
+}
+
+/* VIDEO-MÓVIL · PAQUETE 2 · Clientes
+   Nueve filtros en cinco filas y una barra de tres controles que dejaba el orden a media anchura y cada acción en su fila: ahora los filtros
+   son una rejilla de tres columnas (tres filas), buscador y orden comparten fila, y la tarjeta del cliente junta la barra de puntos y sus
+   iconos de acción en una sola línea (3 clientes por pantalla en vez de 1,3). */
+@media (max-width:640px){
+  .cl-barra .left{display:flex;flex-wrap:nowrap;gap:6px;align-items:center}
+  .cl-barra .left .st-buscar{flex:1 1 0;min-width:0;width:auto}
+  .cl-barra .cl-orden{flex:0 0 132px}
+  .cl-card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 10px;padding:12px}
+  .cl-card > .cl-card-cab,.cl-card > .pm-ets{grid-column:1 / -1}
+  .cl-card > .cl-card-pie{min-height:0;flex-wrap:nowrap;justify-content:flex-end}
+}
+
+@media (max-width:720px){
+  .pm-barra > .btn{flex:1 1 100%;justify-content:center}
+  .pm-barra .pm-acciones{flex:1 1 100%}
+  .pm-barra .pm-acciones .btn{flex:1 1 auto;justify-content:center}
+}
+/* ═══ VIDEO-MÓVIL · PAQUETE 3 · Gestión Económica y Panel de Control (vídeo del 15/11 en un Android de 360 px) ═══
+   Lo que se vio: cifras de Tesorería montadas unas sobre otras, filas «nombre + importe + ⋯ + ⌄» con el nombre en 100 px, siete pestañas
+   de anchos distintos en 5-6 filas, tablas cortadas por el borde, cabeceras mono partidas con «AUTO» colgando y frases de PC. */
+.cdr-vs + .cdr-vs::before{content:" · ";color:var(--muted)}
+/* Cuenta de Resultados: con `collapse` los filetes de las celdas fijas no viajan con la celda y la franja «Resultado neto» se rompía al
+   desplazar; con `separate` cada celda lleva sus propios filetes. */
+#cdr-table{border-collapse:separate;border-spacing:0}
+.ded-ops{display:flex;flex-wrap:wrap;gap:6px}
+.ded-op{flex:1 1 auto;min-height:44px;padding:0 12px;border:1px solid var(--hair);background:#fff;border-radius:3px;font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink);cursor:pointer}
+.ded-op:hover{border-color:var(--olive)}
+.ded-op.is-on{background:var(--olive);border-color:var(--olive);color:#fff;font-weight:600}
+.ded-ej{color:var(--body);margin-top:6px}
+.ded-mas{margin-top:6px}
+.ded-mas summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-family:var(--mono);font-size:12px;color:var(--body)}
+.ded-mas .txt-xs{color:var(--body)}
+.dp-platos-sum{cursor:pointer;list-style:none;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-weight:700;font-size:15px;min-height:44px}
+.dp-platos-sum::-webkit-details-marker{display:none}
+.dp-platos-sum::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+.dp-platos[open] > .dp-platos-sum::after{transform:rotate(-135deg) translate(-1px,-1px)}
+.dp-platos-hint{font-weight:400;font-size:12px;color:var(--muted)}
+.dp-k-v{overflow-wrap:normal;white-space:nowrap}
+.att-zero{display:block}
+.att-zero > summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12.5px;color:var(--muted);list-style:none}
+.att-zero > summary::-webkit-details-marker{display:none}
+.att-zero > summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg)}
+.att-zero[open] > summary::after{transform:rotate(-135deg)}
+.att-zero-lista{display:flex;flex-wrap:wrap;gap:0 4px}
+@media (max-width:760px){
+  /* Pestañas: rejilla de dos columnas del mismo ancho, siempre en el mismo orden (la activa no cambia de forma ni de sitio) */
+  #view-economia .ge-tab-row.gg-pest-abierta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #view-economia .ge-tab{flex:none;width:100%;min-width:0;justify-content:flex-start;padding:0 10px;white-space:normal;line-height:1.15;font-size:11.5px;letter-spacing:.02em}
+  #view-economia .ge-tab-row.gg-pest-abierta > .ge-tab:last-child:nth-child(odd){grid-column:1 / -1}   /* con «Módulos» visible son 9: la impar ocupa la fila */
+  /* Tesorería: Objetivo, Real y Diferencia cada una en su renglón con su rótulo (en tres columnas de 100 px se pisaban) */
+  #ge-tesoreria .te-row.te-dist{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"con pct" "obj obj" "real real" "dif dif";row-gap:0;padding:12px 14px 14px}
+  #ge-tesoreria .te-row.te-dist .te-c-con{padding-bottom:8px}
+  #ge-tesoreria .te-row.te-dist .te-c-obj,#ge-tesoreria .te-row.te-dist .te-c-real,#ge-tesoreria .te-row.te-dist .te-c-dif{display:flex;align-items:baseline;flex-wrap:nowrap;gap:0 8px;padding:7px 0;border-top:1px solid var(--hair);font-size:14px}
+  #ge-tesoreria .te-row.te-dist .te-c-obj::before,#ge-tesoreria .te-row.te-dist .te-c-real::before,#ge-tesoreria .te-row.te-dist .te-c-dif::before{width:auto;margin:0 auto 0 0;flex:none}
+  #ge-tesoreria .te-row.te-dist .te-c-real small{margin-left:0}
+  /* Filas de gasto/inversión: nombre a todo ancho; importe y controles debajo */
+  .gf-fila{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"nom nom nom" "imp menu chev" "prog prog prog" "det det det";row-gap:2px}
+  .gf-fila:not(:has(.pl-chev)){grid-template-columns:minmax(0,1fr) auto auto}
+  .gf-fila > .gf-nom{grid-area:nom}
+  .gf-fila > .gf-imp{grid-area:imp;text-align:left;font-size:16px}
+  .gf-fila > .mn-btn,.gf-fila > .gv-sin-menu{grid-area:menu}
+  .gf-fila .pl-chev{grid-area:chev;grid-column:auto;grid-row:auto}
+  .gf-fila > .gf-det{grid-area:det}
+  .gf-fila > .cx-prog{grid-area:prog}
+  .gf-nom b{overflow-wrap:break-word;word-break:normal}
+  /* Franjas de cifras: dos columnas (la impar ocupa la fila), cifra y € nunca en renglones distintos */
+  #view-economia .ge-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view-economia .ge-kpi{border-right:1px solid var(--hair);min-width:0;padding:12px}
+  #view-economia .ge-kpi:nth-child(2n){border-right:0}
+  #view-economia .ge-kpi-grid > .ge-kpi:last-child:nth-child(odd):not(:first-child){grid-column:1 / -1;border-right:0}
+  #view-economia .ge-kpi .val{font-size:clamp(16px,4.7vw,20px);white-space:nowrap}
+  #view-economia .ge-kpi .lbl{font-size:11px;letter-spacing:.02em}
+  /* Inversiones: «Nueva inversión» a todo ancho arriba y los filtros en rejilla */
+  #ge-capex .ve-barra-sup{flex-direction:column;align-items:stretch}
+  #ge-capex .ve-barra-sup > .btn{width:100%;justify-content:center;order:-1}
+  .cx-filtros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  /* Gastos variables: los dos botones del título, iguales y a todo ancho */
+  #ge-variables .gf-acciones{flex:1 1 100%;display:flex;flex-direction:column;gap:6px}
+  #ge-variables .gf-acciones .btn{width:100%;justify-content:center}
+  /* Cabeceras plegables: título de una o dos líneas, «AUTO» a la derecha junto al chevron */
+  .gg-plegable > .gg-acc-h > h3,.gg-plegable > .gg-acc-h > h4{display:flex;align-items:center;gap:6px;letter-spacing:.02em}
+  .gg-plegable > .gg-acc-h > h4 .ge-auto{flex:none;margin-left:auto}
+  .gg-plegable > .gg-acc-h > h4 > span:not(.ge-auto){min-width:0;overflow-wrap:break-word}
+  /* Tablas: nada cortado por el borde derecho */
+  #ventas-dia-table th,#ventas-dia-table td{padding:7px 4px;font-size:12px;white-space:normal;line-height:1.2}
+  #ventas-dia-table th:first-child,#ventas-dia-table td:first-child{padding-left:8px}
+  #ventas-dia-table td:not(:first-child){white-space:nowrap}
+  .dp-tabla td,.dp-tabla th{padding:7px 3px}
+  .dp-tabla .num{font-size:12px}
+  .dp-tabla td:first-child{white-space:normal;overflow-wrap:break-word}
+  .plt-mx thead{display:none}
+  .plt-mx,.plt-mx tbody{display:block;width:100%}
+  .plt-mx tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 12px;padding:10px 12px;border-bottom:1px solid var(--hair)}
+  .plt-mx td{display:block;padding:0;border:0;font-size:13px}
+  .plt-mx td:first-child{grid-column:1 / -1;font-weight:600;overflow-wrap:break-word;background:none;border-left:0}
+  .plt-mx td:nth-child(2)::after{content:" uds"}
+  .plt-mx td:nth-child(4){grid-column:1 / -1;margin-top:4px;text-align:left}
+  .plt-mx .badge{white-space:normal;text-align:left}
+  /* Análisis de Platos: tablas en tarjetas sin tarjeta dentro de tarjeta; nombre arriba y las cifras en tres columnas */
+  #view-dashboard .ge-grid .table-cards tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 10px;border:0;border-bottom:1px solid var(--hair);border-radius:0;margin:0;padding:8px 0;background:none}
+  #view-dashboard .ge-grid .table-cards td{display:block;border:0;padding:3px 0;min-width:0;font-size:12.5px;text-align:left;overflow-wrap:break-word}
+  #view-dashboard .ge-grid .table-cards td[data-label]::before{display:block;flex:none;max-width:none;font-family:var(--mono);letter-spacing:.04em;margin-bottom:1px}
+  #view-dashboard .ge-grid .table-cards td:first-child{grid-column:1 / -1;font-weight:600;font-size:13.5px;background:none;border-left:0}
+  #view-dashboard .ge-grid .table-cards td:first-child::before{display:none}
+  /* Panel: cifras del día */
+  .dp-k-fila > .dp-k:last-child:nth-child(odd):not(:first-child){grid-column:1 / -1}
+  .dp-k-s .badge{background:none;border:0;padding:0;min-height:0;white-space:nowrap;font-size:11.5px}
+  .dp-k-v{font-size:clamp(18px,6vw,24px)}
+  .att-list .att-chip{display:flex;width:100%}
+  .dp-matriz{display:flex;flex-direction:column;gap:8px}
+  .dp-m-eje{display:none}
+  .dp-platos-hint{flex-basis:100%}
+  /* Gráficas largas: los días a cero no dibujan un círculo cada uno (parecía una cadena de aros) */
+  .dt-punto.cero:not(.sel):not(.ult)::after{display:none}
+  .dt-ejes span{font-size:11px}
+  .ge-sec-head p,.gv-suelta-desc,.gv-buscar .txt-xs{color:var(--body)}
+}
+/* «¿Cómo se calcula?» del Panel: la frase larga de la primera celda pisaba la cifra (vídeo 14:24): ocupa lo que sobra y baja de renglón */
+.dp-eq-tabla td:first-child{flex:1 1 0;white-space:normal}
+@media (max-width:760px){
+  .cdr-vs-box{display:flex;flex-direction:column;gap:6px}
+  .cdr-vs{display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap}
+  .cdr-vs + .cdr-vs::before{content:none}
+  .cdr-vs > span:first-child{white-space:normal;min-width:0}
+}
+.dp-platos-sum .dp-platos-t{order:0}
+.dp-platos-sum::after{order:2}
+.dp-platos-hint{order:3}
+@media (max-width:760px){ .plt-mx tr{grid-template-columns:auto auto minmax(0,1fr)} }
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   VIDEO-MÓVIL · PAQUETE 1 · GLOBAL + ENTRADA + TOUR (16/11)
+   Vídeo de 18 min de la app en un Android de ~360 px (versión del 15/11): cuatro causas de fondo y decenas de pantallas. Esto arregla las
+   CAUSAS una vez, aquí, en vez de pantalla a pantalla. Prueba permanente: test/video-movil-global.mjs.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* 1 · FILA «nombre + chips + importe + botones» (patrón reutilizable).
+   Antes todo iba en una sola línea: el nombre era lo único que encogía y se quedaba con 40-100 px («PruebasGastroGoanApp» en 9 renglones).
+   Uso: el contenedor lleva `.gg-fila`; el nombre `.gg-fila-nombre`; lo demás (chip, importe, ⋯, papelera) dentro de UN hijo `.gg-fila-extra`.
+   En móvil el nombre se lleva TODA la primera línea y lo demás pasa a una segunda, a la derecha. Un nombre solo se parte entre palabras:
+   `overflow-wrap:break-word` (NUNCA `anywhere` ni `break-all`, que dejan encoger la columna hasta 1 letra). Los códigos y las URL sí pueden ir con
+   `break-all`, en su propio elemento. */
+@media (max-width:520px){
+  .gg-fila{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+  .gg-fila > .gg-fila-nombre{flex:1 1 100%;min-width:8ch;overflow-wrap:break-word;word-break:normal;hyphens:manual}
+  .gg-fila > .gg-fila-extra{flex:0 1 auto;margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px}
+  #business-select-screen .bs-item-name-wrap{overflow:visible}
+  #business-select-screen .bs-item-name{overflow-wrap:break-word;word-break:normal;hyphens:manual}
+  #business-select-screen .bs-item.gg-fila,#business-select-screen .bs-sub-item.gg-fila{padding-top:10px;padding-bottom:8px}
+}
+.gg-fila-nombre{overflow-wrap:break-word}
+
+/* 2 · TABLAS EN MÓVIL.
+   a) `.table-cards` (la tabla se apila en tarjetas, ≤700 px): el rótulo de cada celda va en SU PROPIA línea, encima del valor (antes era una
+      columna del 40 % al lado: «PLATO/ELABORACIÓN» no cabía y se pintaba encima del nombre). Dos celdas por fila de la tarjeta; la primera
+      (el nombre) y las acciones ocupan el ancho entero. Los alérgenos y cualquier chip envuelven, nunca se recortan.
+   b) Una tabla de más de 3 columnas que no se apila queda en su `.table-wrap` con scroll horizontal: primera columna fija, sombra que avisa
+      de que hay más (`.tbl-scroll`, lo pone ggAccPreparar en js/ui.js). */
+@media (max-width:700px){
+  .table-cards tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px}
+  .table-cards td{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;width:auto;max-width:100%;overflow:visible;overflow-wrap:break-word;word-break:normal;white-space:normal}
+  .table-cards td:first-child,.table-cards td.actions-cell,.table-cards td:has(.badge,.chip,.alg-pill){grid-column:1 / -1}
+  .table-cards td[data-label]::before{flex:none;max-width:100%;width:auto;display:block;font-family:var(--mono);font-size:11px;line-height:1.3;letter-spacing:.06em;white-space:normal;overflow-wrap:break-word}
+  .table-cards td.actions-cell{flex-direction:row;justify-content:flex-end}
+  .table-cards td .badge,.table-cards td .chip,.table-cards td .alg-pill{white-space:normal;max-width:100%}
+  .table-wrap.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0;padding:0;
+    background:
+      linear-gradient(to right,var(--surface,#fff) 30%,rgba(255,255,255,0)) 0 0/36px 100% no-repeat local,
+      linear-gradient(to left,var(--surface,#fff) 30%,rgba(255,255,255,0)) 100% 0/36px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,rgba(28,26,23,.2),rgba(28,26,23,0)) 0 0/10px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%,rgba(28,26,23,.2),rgba(28,26,23,0)) 100% 0/10px 100% no-repeat scroll;
+    background-color:var(--surface,#fff)}
+  .table-wrap.tbl-scroll > table{min-width:520px}
+  .table-wrap.tbl-scroll th:first-child,.table-wrap.tbl-scroll td:first-child{position:sticky;left:0;z-index:1;background:var(--surface,#fff);box-shadow:1px 0 0 var(--hair,#E7E2D9)}
+  .table-wrap.tbl-scroll td:not(:first-child){white-space:nowrap}
+  .table-wrap.tbl-scroll td:has(.badge,.chip,.alg-pill){white-space:normal;min-width:190px}
+}
+
+/* 3 · CALENDARIOS (Reservas y Promoción comparten rejilla `pm-*`).
+   El chip contador del mes ya no se pinta ENCIMA del número del día: va debajo. La semana: cabecera del día compacta (sin el mes, que ya está en el
+   rango de arriba) y el «+» lleva su rótulo («Nueva reserva»). */
+.pm-mas-t{display:none}
+@media (max-width:900px){
+  .pm-sem-dia-mes{display:none}
+  .pm-sem-cab{padding:6px 8px;min-width:60px}
+  .pm-sem-lista{align-items:center}
+  .pm-mas{flex:1 1 auto;gap:6px;padding:0 12px}
+  .pm-mas-t{display:inline;font-size:13px;font-weight:600;color:inherit}
+}
+@media (max-width:640px){
+  .pm-mes-dia{align-items:center;justify-content:flex-start;gap:2px}
+  .pm-mes-n{position:static;margin-top:auto;align-self:center}
+}
+
+/* 4 · AVISO NEGRO (`.toast`). En móvil sale ARRIBA, bajo la barra de estado: abajo tapaba «Cobrar», «Marchar» y demás botones de acción del
+   servicio. Sin animación de entrada propia (la `gg-slide-r` pisaba el `translateX(-50%)` mientras duraba). Vacío no se enseña nunca. Tope de
+   duración (5 s) en showToast (js/i18n.js). */
+.toast:empty{display:none}
+#toast,.toast{animation:none}
+@media (max-width:760px){
+  .toast{bottom:auto;top:calc(var(--vvt,0px) + 12px + env(safe-area-inset-top,0px));transform:translateX(-50%) translateY(-10px);max-width:calc(100vw - 32px);text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+}
+
+/* 5 · CAMBIO DE PANTALLA. La vista hacía un fundido (.28 s) Y cada tarjeta y título otro por dentro (.4 s + retrasos), con `translateY` (que pinta el
+   texto en una capa y lo emborrona): más de un segundo a media opacidad en un móvil. Ahora una sola capa, solo opacidad y corta. */
+@keyframes gg-aparece{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:no-preference){
+  .content .view.active{animation:none}
+  .content .view.active .view-title,.content .view.active .view-header h2,
+  .content .view.active .view-subtitle,.content .view.active .view-header .view-sub,
+  .content .view.active :is(.card,.kpi,.table-wrap,.dash-hero,.module-card,.home-pulse,.folder-card),
+  .home-title,.home-eyebrow{animation:gg-aparece .18s ease-out backwards;animation-delay:0s !important}
+  .ge-tab-panel.active{animation:gg-aparece .15s ease-out}
+}
+
+/* 6 · BARRA «Hay una versión nueva» (js/polish.js). Paleta de la app (tinta + raya oliva, no el ocre); «Actualizando…» legible; «Más tarde» desaparece
+   al actualizar. En la entrada y sin tocar nada no sale (se actualiza sola). */
+.gg-version-nueva{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--vvb,0px) + env(safe-area-inset-bottom,0px));z-index:100002;background:var(--ink);color:#fff;border-top:3px solid var(--olive);padding:12px 14px;border-radius:var(--r-m,4px);display:flex;align-items:center;justify-content:center;gap:8px 14px;flex-wrap:wrap;font-size:14px;font-weight:600;max-width:760px;margin:0 auto;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+.gg-version-nueva .gg-vn-txt{flex:1 1 220px;min-width:0}
+.gg-version-nueva .gg-vn-btns{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto}
+.gg-version-nueva .gg-vn-ok{background:#fff;color:var(--ink);border:1px solid #fff;min-height:44px;padding:10px 18px;font-weight:700;white-space:nowrap}
+.gg-version-nueva .gg-vn-ok:disabled{opacity:1;background:var(--olive);border-color:var(--olive);color:#fff}
+.gg-version-nueva .gg-vn-luego{background:none;border:1px solid rgba(255,255,255,.7);color:#fff;min-height:44px;padding:10px 14px;white-space:nowrap}
+
+/* 7 · PANTALLA DE ACCESO. Título y subtítulo equilibrados (sin huérfanas); «Volver» a la IZQUIERDA y de 44 px (era una flecha de 28 px a la derecha);
+   «Desbloquear» en oliva como el botón principal de la entrada (era el único negro). */
+.access-card-title{text-wrap:balance;padding-right:0;overflow-wrap:break-word}
+.access-card-lead,.access-choice-btn .act small{text-wrap:balance}
+.access-volver{display:inline-flex;align-items:center;gap:6px;min-height:44px;min-width:44px;margin:-10px 0 2px -10px;padding:0 10px;border:0;background:transparent;color:var(--muted);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.access-volver:hover{color:var(--ink)}
+.access-volver:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+.access-volver .ti{font-size:16px}
+#access-select-screen .btn.btn-primary{background:var(--olive);border-color:var(--olive);color:#fff}
+#access-select-screen .btn.btn-primary:hover:not(:disabled){background:#3C4D40;border-color:#3C4D40}
+
+/* 8 · «ATRÁS»: un solo patrón. Siempre `← Volver` (`.btn-back` arriba de las pantallas; `.btn-fino` + flecha en los niveles de dentro). */
+
+/* 9 · TIRAS DE PESTAÑAS / FILTROS LARGAS (patrón; lo aplican las pantallas). Con 5-9 opciones, envolver ocupa 3-6 filas ANTES del contenido.
+   En móvil la tira lleva `.gg-pest-col`: se ve SOLO la opción marcada + «Más» (despliega el resto, envolviendo). En PC no cambia nada.
+   js/ui.js (ggPestColapsables) añade el botón. Marcada = `.active`, `.is-on`, `.is-sel`, `[aria-pressed=true]` o `[aria-selected=true]`. */
+.gg-pest-mas{display:none}
+@media (max-width:640px){
+  .gg-pest-col{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .gg-pest-col:not(.gg-pest-abierta) > *:not(.gg-pest-mas):not(.active):not(.is-on):not(.is-sel):not([aria-pressed="true"]):not([aria-selected="true"]){display:none}
+  .gg-pest-col > .gg-pest-mas{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 12px;border:1px solid var(--hair);border-radius:var(--r-s,3px);background:#fff;color:var(--ink);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .gg-pest-col > .gg-pest-mas:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+}
+
+/* 10 · LO ELEGIDO VA EN VERDE OLIVA, NUNCA EN NEGRO (norma del 7/11). Raíz: los estados «marcado» que quedaban en tinta. */
+.dp-dia.is-sel,.dp-chip.is-sel{background:var(--olive);border-color:var(--olive);color:#fff}
+.dp-dia.is-sel .dp-dia-n{color:#E7EDE8}
+.tour-phase-pill.current{background:var(--olive);border-color:var(--olive)}
+.tabs .tab.active{color:#fff;border-color:var(--olive);background:var(--olive)}
+.step-num,.manual-step .sn{background:var(--olive);color:#fff}
+.app-header .hdr-icon-btn.active,.app-header #chat-fab[aria-pressed="true"]{background:var(--olive) !important;color:#fff}
+.alg-pill.on{background:#EEF2EA;color:var(--olive);border-color:var(--olive)}
+input:focus,select:focus,textarea:focus{border-color:var(--olive)}
+
+/* 11 · LETRA Y AYUDAS. Nada por debajo de 11 px (varias etiquetas de 10-10,5 px): un mínimo común. Los textos de ayuda largos van plegados tras un
+   «?» con `<details class="gg-ayuda"><summary>?</summary>…</details>` (clase lista para usar; lo aplican las pantallas). */
+.txt-xs,.badge,.card-compact .badge,.togo-order-row .badge,.cal-day-badge,.bar-lbl,.ge-kpi .lbl,.cl-stat span,.tp-plato-sec,.nv-gp-opc,.p360-day-weekday,.p360-doc-table th,.help-msg .chat-meta,.dp-m-eje,.bs-item-tag,.bs-item .badge-amber,.bs-group-header .badge-amber{font-size:11px !important}
+.ge-grid th{font-size:11px}
+.gg-ayuda{margin:6px 0}
+.gg-ayuda > summary{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;list-style:none;cursor:pointer;color:var(--olive);font-family:var(--mono);font-weight:700;border:1px solid var(--hair);border-radius:50%;width:44px;padding:0}
+.gg-ayuda > summary::-webkit-details-marker{display:none}
+.gg-ayuda[open] > summary{background:var(--olive);color:#fff;border-color:var(--olive)}
+.gg-ayuda > :not(summary){margin-top:8px;font-size:13.5px;line-height:1.5;color:var(--body)}
+
+/* 12 · TOUR EN MÓVIL. La hoja de abajo era una caja con scroll propio: el pie (Anterior / Siguiente) se iba fuera cuando el texto era largo, y el
+   texto ocupaba 7-9 renglones. Ahora es una columna: cabecera fija, texto recortado a 3 renglones (con «Leer más») y el pie SIEMPRE a la vista. */
+.tour-mas{display:none}
+.tour-bubble-sheet{display:flex;flex-direction:column;overflow:hidden;max-height:min(46dvh,calc(var(--vvh,100dvh) - 24px))}
+.tour-bubble-sheet .tour-bubble-head{flex:none}
+.tour-bubble-sheet h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word}
+.tour-bubble-sheet .tour-bubble-desc{flex:0 1 auto;min-height:0;font-size:14px;line-height:1.45;margin:6px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tour-bubble-sheet.tour-texto-abierto .tour-bubble-desc{display:block;overflow-y:auto;-webkit-line-clamp:unset;max-height:calc(46dvh - 150px)}
+.tour-bubble-sheet .tour-mas{display:inline-flex;align-self:flex-start;align-items:center;min-height:44px;padding:0;margin:0;border:0;background:none;color:var(--olive);font-weight:700;font-size:13.5px;cursor:pointer}
+.tour-bubble-sheet .tour-mas[hidden]{display:none}
+.tour-bubble-sheet .tour-progress{display:none}
+.tour-bubble-sheet .tour-bubble-footer{flex:none;margin-top:4px}
+.tour-bubble-centered{max-height:calc(var(--vvh,100dvh) - 32px);overflow-y:auto}
+/* Selector de negocios en pantallas de 360 px o menos: sin el icono de la tienda el nombre gana ~44 px y un nombre de 20 letras cabe en un renglón */
+@media (max-width:360px){#business-select-screen .bs-item .gg-fila-nombre > .ti{display:none}}
+/* VIDEO-MÓVIL · PAQUETE 5 · Plan 360º (lado negocio)
+   Salió del vídeo en un Android de 360 px: tarjetas con raya negra gruesa a
+   la izquierda, el calendario con los días presenciales y «hoy» en NEGRO
+   (lo marcado va en oliva, nunca en negro), 25 filas de «atrasado» a todo
+   lo alto que enterraban lo accionable y los tres estados de cada tarea
+   rotos en dos filas con uno solo debajo. Antes todo eso eran estilos en
+   línea en el JS, donde ninguna regla de móvil los alcanza. */
+.p360-hoy{margin-bottom:14px}
+.p360-hoy-cab{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.p360-hoy-cab strong{font-size:16px}
+.p360-atr{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.p360-atr-tit{font-weight:700;color:var(--red);font-size:13px;margin-bottom:8px}
+.p360-atr-fila{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:10px;min-height:44px;padding:6px 0;border-top:1px solid var(--border);cursor:pointer}
+.p360-atr-chip{font-size:11.5px;font-weight:700;padding:3px 8px;color:var(--red);background:var(--red-l);border:1px solid rgba(138,74,59,.3);white-space:nowrap;text-align:center;border-radius:999px}
+.p360-atr-txt{font-size:13px;overflow-wrap:break-word;min-width:0}
+.p360-atr-mas{margin-top:8px;width:100%;justify-content:center;min-height:44px}
+.p360-hero-stats{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0}
+.p360-hero-stat{min-width:0;padding:0 10px;border-right:1px solid rgba(255,255,255,.18)}
+.p360-hero-stat:first-child{padding-left:0}
+.p360-hero-de{font-size:14px;opacity:.6}
+.p360-leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.p360-leyenda span{display:inline-flex;align-items:center;gap:6px}
+.p360-ley-pun{display:inline-block;width:12px;height:12px;border:1px solid var(--border);background:#fff}
+.p360-ley-presencial{background:var(--green-l);border-color:var(--olive)}
+.p360-ley-hoy{border:2px solid var(--olive)}
+.p360-ley-atrasado{border-left:4px solid var(--red)}
+/* Presencial = tinte oliva claro, ya no relleno de tinta: el negro se leía como «elegido» o «hecho» */
+.p360-day-presencial{background:var(--green-l);border-left-color:var(--olive);color:var(--ink)}
+.p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:var(--olive);opacity:1}
+.p360-day-presencial:hover{background:var(--brand-cream)}
+/* Tarea: el contenido de #plan360-content .card lleva su filete de 3 px; una tarea dentro de otra tarjeta no lo repite */
+.p360-tarea{padding:12px;margin-bottom:8px}
+#plan360-content .card .card{border-top:1px solid var(--border)}
+#plan360-content .card .p360-tarea{border:0;border-top:1px solid var(--border);background:transparent;padding:12px 0;margin:0}
+#plan360-content .card .p360-tarea:first-child{border-top:0;padding-top:4px}
+.p360-tarea-obj{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.p360-tarea-obj-t{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:break-word;min-width:0}
+.p360-tarea-tit{font-weight:700;font-size:14.5px;overflow-wrap:break-word}
+.p360-tarea-desc{font-size:13.5px;margin:4px 0 0;color:var(--body)}
+.p360-tarea-file{margin-top:6px;font-size:12px}
+.p360-estados{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.p360-estados .btn{justify-content:center;min-height:44px;padding-left:4px;padding-right:4px;letter-spacing:0}
+.p360-tarea-nota{margin:10px 0 0}
+.p360-tarea-nota textarea{resize:none}
+@media (max-width:720px){
+  /* Sin raya gruesa de acento sobre cada tarjeta (norma del barrido del 7/11) */
+  #plan360-content .card{border-top:1px solid var(--border)}
+  .p360-card{border-left:1px solid var(--border)}
+  .p360-hero{border-top:1px solid var(--olive)}
+  .p360-hero-stat-num{font-size:24px}
+  .p360-hero-stat-label{font-size:11px;letter-spacing:.02em;overflow-wrap:break-word}
+  .p360-atr-fila{grid-template-columns:minmax(0,1fr);gap:4px;min-height:0;padding:10px 0}
+  .p360-atr-chip{justify-self:start;min-width:140px}
+  .p360-day-progress{font-size:12px}
+  .p360-day-weekday{font-size:11px}
+  .p360-card p{font-size:12.5px}
+}
+
+/* VIDEO-MÓVIL · PAQUETE 5 · Chat interno, Centro de ayuda y campana de avisos
+   Eran paneles flotantes de 480 px colgados bajo la cabecera: en un móvil dejaban ver la pantalla de debajo, no llegaban al pie y
+   se veían descentrados (10 px a un lado, 15 al otro por la barra de scroll). En ≤760 px pasan a ser una hoja del tamaño del ÁREA
+   VISIBLE (--vvt/--vvh de ggSincronizarAreaVisible, la misma norma que las ventanas): el teclado y las barras del navegador no se
+   comen el campo de escribir. Por debajo de las ventanas (200010), para que una confirmación que salga desde el chat se vea. */
+@media (max-width:760px){
+  .help-panel,.avisos-panel{top:var(--vvt,0px);left:0;right:0;bottom:auto;width:100%;max-width:none;height:var(--vvh,100dvh);max-height:var(--vvh,100dvh);border:0;border-radius:0;box-shadow:none;z-index:200005}
+  .av-cab{background:#fff;color:var(--ink);border-bottom:1px solid var(--border);padding:8px 8px 8px 16px}
+  .av-cab h4{font-size:16px;font-weight:600}
+  .av-cab .btn{background:#fff;color:var(--ink);border-color:var(--border);min-width:44px;min-height:44px}
+  .avisos-panel .av-cuerpo{min-height:0}
+  .help-panel-header,.av-cab{min-height:56px}
+  .help-panel-close{min-width:44px;min-height:44px;margin:0}
+  .help-tabs{flex:none}
+  .help-tab{min-height:48px;font-size:12px;letter-spacing:.04em;padding:8px 4px}
+  .help-tab.active{border-bottom:3px solid var(--olive)}
+  .help-chat-messages{flex:1 1 auto;min-height:96px;padding:14px 12px}
+  .help-msg{max-width:92%;font-size:14.5px;line-height:1.45}
+  .help-msg .chat-meta{font-size:11px;opacity:.85}
+  .help-suggestions{flex:none;flex-direction:column;flex-wrap:nowrap;gap:6px;max-height:40%;overflow-y:auto;padding:0 12px 10px}
+  .help-suggestion{width:100%;min-height:48px;text-align:left;font-family:inherit;font-size:14px;border-radius:3px;padding:10px 12px}
+  .help-chat-input-row{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+  .help-chat-input-row input{font-size:16px;min-height:44px}
+  .help-topics{padding:10px 12px}
+  .help-topic-item{min-height:48px;padding:12px 4px;font-size:14.5px}
+  .help-topic-group-title{font-size:12px}
+  /* La campana: «Ver» / «Visto» a la derecha de la misma fila y de 44 px, no en una segunda línea sin caja */
+  .av-fila{flex-wrap:nowrap}
+  .av-bt{width:auto;padding-left:0;flex-wrap:nowrap}
+  .av-bt .btn{min-height:44px;min-width:56px;justify-content:center}
+}
+/* Mensajes del chat: el aviso urgente va en rojo (no en verde, que dice «correcto»), la chincheta sale de la burbuja a la fila de la hora */
+.help-msg .chat-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.help-msg .chat-txt{display:block;overflow-wrap:break-word}
+.help-msg.chat-msg-urgent{background:var(--red-l);color:var(--ink);border:2px solid var(--red)}
+.chat-pin{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin-top:-14px;margin-bottom:-14px;margin-right:-12px;background:none;border:0;color:inherit;opacity:.8;cursor:pointer;font-size:15px}
+.chat-pin:hover{opacity:1}
+@media (hover:none){.chat-pin{opacity:.9}}
+
+/* VIDEO-MÓVIL · PAQUETE 5 · Manual de uso
+   La tarjeta del tour medía ~340 px y se seguía viendo DENTRO de un grupo (display:flex pisaba el atributo hidden), y encima venían
+   el título de pantalla, el buscador y el título del grupo: el contenido real empezaba pasados los 900 px. */
+.mnl-tour[hidden]{display:none}
+@media (max-width:720px){
+  .mnl-tour{padding:10px 12px;gap:6px 10px;flex-wrap:wrap;border-left-width:3px}
+  .mnl-tour-ico{font-size:22px}
+  .mnl-tour-txt{flex:1 1 0}
+  .mnl-tour .btn{flex:1 1 100%;width:100%}
+  .mnl-tour-txt span{display:none}
+  #view-manual.mnl-dentro > .view-title,#view-manual.mnl-dentro > .view-subtitle{display:none}
+  #view-manual.mnl-leyendo .mnl-busca{display:none}
+  .mnl-grupo-cab{padding-left:2px;padding-right:2px}
+  .mnl-grupo-cab p{padding:0}
+  /* «En este tema»: todos los saltos del mismo ancho, una lista con filete, no cajas de ancho distinto */
+  .mnl-toc{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .mnl-toc-it{width:100%;text-align:left;justify-content:flex-start;border-radius:0;border:0;border-top:1px solid var(--border);background:transparent;min-height:44px;padding:10px 2px}
+  .mnl-toc-et{margin-bottom:4px}
+}
+/* Gestión Económica: el id de la vista vence al «display:none» genérico de .gg-pest-col, así que se repite aquí (plegada = solo la marcada + «Más») */
+@media (max-width:640px){
+  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab:not(.active){display:none}
+  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab.active{flex:1 1 auto}
+}
+@media (max-width:760px){ #ge-ventas .table-wrap.tbl-scroll > #ventas-dia-table,.dp-tabla-w .dp-tabla{min-width:0;width:100%} }
+
+/* VIDEO-MÓVIL · PAQUETE 2 · TPV: el «×N» de la ficha del plato iba encima del nombre («Patatas GG con salsa de [×1] casa»): el nombre
+   reserva su sitio a la derecha mientras el plato lleva cantidad. Y el aviso «Enviando…» de la comanda se queda en icono en móviles
+   estrechos para no empujar el contenido una fila hacia abajo. */
+.tp-plato.tiene .tp-plato-nom{padding-right:38px}
+@media (max-width:430px){
+  .tp-or-chips .tp-ack-t{display:none}
 }

@@ -1108,8 +1108,8 @@ function dashSerieHtml(serie, o){
           <path d="${d}" class="dt-linea" vector-effect="non-scaling-stroke"/>
         </svg>
         ${serie.map((p, i) => o.estatico
-          ? `<span class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
-          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + (p.txt || fmtMoney(p.value)))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(p.txt || fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
+          ? `<span class="dt-punto${p.value < 0 ? ' neg' : p.value === 0 ? ' cero' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
+          : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : p.value === 0 ? ' cero' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + (p.txt || fmtMoney(p.value)))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(p.txt || fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
         ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
       </div>
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
@@ -1283,7 +1283,7 @@ function renderDashboard(){
   const aCero = attentionItems.filter(i => i.count === 0);
   document.getElementById('dashboard-attention').innerHTML = `
     ${conAviso.length ? `<div class="att-list">${conAviso.map(chipAtencion).join('')}</div>` : `<div class="att-quiet-msg">${t('dash.att.allQuiet')}</div>`}
-    ${aCero.length ? `<div class="att-zero">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div>` : ''}
+    ${aCero.length ? `<details class="att-zero"${window.innerWidth > 760 ? ' open' : ''}><summary>${escapeHtml(gl({es:'Todo en orden: ' + aCero.length + ' comprobaciones a cero', ca:'Tot en ordre: ' + aCero.length + ' comprovacions a zero', en:'All clear: ' + aCero.length + ' checks at zero'}))}</summary><div class="att-zero-lista">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div></details>` : ''}
   `;
 
 
@@ -1567,7 +1567,7 @@ function renderMegalista(){
     </div>` : '';
   box.innerHTML = `
     <div class="ml-ruta">
-      <button type="button" class="btn btn-sm btn-fino" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
       <div class="ml-ruta-nom">${escapeHtml(nombreDe(megalistaFolder))}<span>${folderItems.length === 1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', folderItems.length)}</span></div>
       ${lote}
     </div>` + renderMegalistaTable(megalistaSortItems(folderItems));
@@ -2289,6 +2289,7 @@ function stPaso(tipo, id, dir){
   if(stPend[k]) clearTimeout(stPend[k].timer);
   const inp = document.querySelector('[data-st="' + k + '"] .st-qty input');
   if(inp) inp.value = nuevo;
+  stEtiquetaViva(k, nuevo, tipo === 'elab' ? (e.min || 0) : (getStockEntry(id).min || 0), (e || ing).unit);
   stPend[k] = {val: nuevo, timer: setTimeout(() => stGuardarPend(k, tipo, id), 700)};
 }
 // Escribir la cantidad a mano guarda al momento y anula lo que hubiera pendiente de − / +.
@@ -2327,6 +2328,30 @@ function stSoloAlertas(){
   renderStock();
 }
 
+/* La etiqueta de estado de una fila («Falta 3 kg», «+2 kg sobre el mínimo»…). Se pinta aquí y se RECALCULA con cada − / + (stPaso):
+   antes, mientras se sumaba, la etiqueta seguía diciendo «Falta 7 kg» hasta que el guardado (0,7 s después del último toque) repintaba
+   la lista, y con 9 de 8 de mínimo se leía «falta 7» durante segundos. Es solo texto y clase: no repinta nada. */
+function stTagEstadoHtml(qty, min, u){
+  const low = qty < min, ok = !low && min > 0;
+  const falta = low ? Math.round((min - qty) * 100) / 100 : 0;
+  const sobra = ok ? Math.round((qty - min) * 100) / 100 : 0;
+  if(low) return `<em class="st-tag bajo">${gl({es:'Falta', ca:'Falten', en:'Short by'})} ${fmtNum(falta)} ${u}</em>`;
+  // Con el mínimo cubierto, la tarjeta se pone verde y dice cuánto hay DE MÁS (7/11, pedido del dueño).
+  if(ok) return `<em class="st-tag ok">${sobra > 0 ? `+${fmtNum(sobra)} ${u} ${gl({es:'sobre el mínimo', ca:'sobre el mínim', en:'above minimum'})}` : gl({es:'En el mínimo', ca:'Al mínim', en:'At minimum'})}</em>`;
+  return `<span class="st-nada">${gl({es:'sin mínimo', ca:'sense mínim', en:'no minimum'})}</span>`;
+}
+function stEtiquetaViva(k, qty, min, unit){
+  const fila = document.querySelector('[data-st="' + k + '"]');
+  if(!fila || !(min > 0)) return;   // sin mínimo no hay nada que cumplir: la etiqueta no cambia
+  const low = qty < min, ok = !low;
+  fila.classList.toggle('is-bajo', low);
+  fila.classList.toggle('is-ok', ok);
+  let sub = fila.querySelector('.st-sub');
+  if(!sub){ sub = document.createElement('span'); sub.className = 'st-sub'; const nom = fila.querySelector('.st-nom'); if(nom) nom.appendChild(sub); }
+  sub.querySelectorAll('.st-tag.bajo, .st-tag.ok, .st-nada').forEach(x => x.remove());
+  sub.insertAdjacentHTML('afterbegin', stTagEstadoHtml(qty, min, escapeHtml(unit)));
+}
+
 function stFilaHtml(row){
   /* ⚠️ Bajo mínimo es ESTRICTAMENTE menor, no "menor o igual". Lo pidió el
      dueño y tiene razón: con el mínimo justo todavía TIENES tu mínimo, no
@@ -2334,14 +2359,12 @@ function stFilaHtml(row){
      criterio en el contador de alertas y en el filtro "solo alertas".
      Sin mínimo puesto (min = 0) no se pinta nada: no hay nada que cumplir,
      y teñirlo todo de verde quitaría valor al verde de verdad. */
-  const low = row.qty < row.min;
+  const k = stClave(row.type, row.id);
+  const qty = stPend[k] ? stPend[k].val : row.qty;
+  const low = qty < row.min;
   const ok = !low && row.min > 0;
   const isElab = row.type === 'elab';
   const fromEscandallo = isElab && !!row.recipeId;
-  const k = stClave(row.type, row.id);
-  const qty = stPend[k] ? stPend[k].val : row.qty;
-  const falta = low ? Math.round((row.min - row.qty) * 100) / 100 : 0;
-  const sobra = ok ? Math.round((row.qty - row.min) * 100) / 100 : 0;
   const camino = !isElab && typeof pcEnCamino === 'function' ? pcEnCamino(row.id) : 0;
   const abierta = ggPlegableAbierta('st-' + k);
   const u = escapeHtml(row.unit);
@@ -2354,12 +2377,10 @@ function stFilaHtml(row){
     isElab && !fromEscandallo ? {icono:'ti-trash', texto:t('common.delete'), fn:`deleteElaboracion(${row.id})`, peligro:true, owner:true} : null
   ];
   const tags = [
-    low ? `<em class="st-tag bajo">${gl({es:'Falta', ca:'Falten', en:'Short by'})} ${fmtNum(falta)} ${u}</em>` : '',
-    // Con el mínimo cubierto, la tarjeta se pone verde y dice cuánto hay DE MÁS (7/11, pedido del dueño).
-    ok ? `<em class="st-tag ok">${sobra > 0 ? `+${fmtNum(sobra)} ${u} ${gl({es:'sobre el mínimo', ca:'sobre el mínim', en:'above minimum'})}` : gl({es:'En el mínimo', ca:'Al mínim', en:'At minimum'})}</em>` : '',
+    low || ok ? stTagEstadoHtml(qty, row.min, u) : '',
     camino > 0 ? `<em class="st-tag cam"><i class="ti ti-truck-delivery"></i> +${fmtNum(camino)} ${u} ${gl({es:'en camino', ca:'en camí', en:'on the way'})}</em>` : '',
     fromEscandallo ? `<em class="st-tag">${t('label.costingSheet')}</em>` : '',
-    !low && !(row.min > 0) ? `<span class="st-nada">${gl({es:'sin mínimo', ca:'sense mínim', en:'no minimum'})}</span>` : ''
+    !low && !(row.min > 0) ? stTagEstadoHtml(qty, row.min, u) : ''
   ].filter(Boolean).join('');
   return `
     <div class="st-fila stock-row plegable${low ? ' is-bajo' : ok ? ' is-ok' : ''}${abierta ? ' is-abierta' : ''}" data-st="${k}" data-pl="st-${k}" onclick="ggTogglePlegable(event, this)">
@@ -2389,9 +2410,15 @@ function stFilaHtml(row){
     </div>`;
 }
 
+/* El orden de una lista se FIJA mientras se está en ella (vídeo del 15/11: al contar con «+», el producto que cruzaba el mínimo se iba
+   al sitio que le tocaba y el dedo lo perdía). Se reordena al volver a entrar en la carpeta, buscar, filtrar o cambiar de pestaña
+   (stOrdenCtx cambia). Los productos nuevos entran al final. */
+let stOrdenFijo = {}, stOrdenCtx = '';
 function stListaHtml(filas){
   // Lo que pide atención, arriba; dentro de cada grupo, por nombre.
-  const ordenadas = [...filas].sort((a, b) => ((b.qty < b.min) - (a.qty < a.min)) || a.name.localeCompare(b.name));
+  const base = [...filas].sort((a, b) => ((b.qty < b.min) - (a.qty < a.min)) || a.name.localeCompare(b.name));
+  base.forEach((r, i) => { const kk = stClave(r.type, r.id); if(stOrdenFijo[kk] == null) stOrdenFijo[kk] = Object.keys(stOrdenFijo).length + i / 1000; });
+  const ordenadas = base.slice().sort((a, b) => stOrdenFijo[stClave(a.type, a.id)] - stOrdenFijo[stClave(b.type, b.id)]);
   return `<div class="st-lista">${ordenadas.map(stFilaHtml).join('')}</div>`;
 }
 function stGrupoHtml(titulo, filas){
@@ -2402,7 +2429,7 @@ function stRutaHtml(volverFn, nombre, filas){
   const bajos = filas.filter(r => r.qty < r.min).length;
   return `
     <div class="ml-ruta">
-      <button type="button" class="btn btn-sm btn-fino" onclick="${volverFn}()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="${volverFn}()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
       <div class="ml-ruta-nom">${escapeHtml(nombre)}<span>${filas.length}${bajos ? ` · ${bajos} ${gl({es:'bajo mínimo', ca:'sota el mínim', en:'below min'})}` : ''}</span></div>
     </div>`;
 }
@@ -2418,6 +2445,8 @@ function renderStock(){
   }
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
+  const ctxOrden = [stockFolder, elabFolder, search, onlyAlerts, currentArea()].join('|');
+  if(ctxOrden !== stOrdenCtx){ stOrdenCtx = ctxOrden; stOrdenFijo = {}; }
   const chip = document.getElementById('stock-chip-alertas');
   if(chip) chip.classList.toggle('is-off', onlyAlerts);
 

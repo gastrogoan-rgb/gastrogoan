@@ -334,7 +334,7 @@ function renderEmployeeAccessFormHtml(){
   const recientes = getRecentBusinessCodes(), nombres = getRecentBusinessNames();
   return `
     <div class="access-card">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <button type="button" class="access-volver" onclick="showAccessSelectScreen()"><i class="ti ti-arrow-left" aria-hidden="true"></i> <span>${t('common.back')}</span></button>
       <div class="access-card-title">${t('access.employeeBtn')}</div>
       <p class="access-card-lead">${t('access.employeeDesc')}</p>
       <div class="field">
@@ -367,7 +367,7 @@ function renderOwnerAccessFormHtml(){
   const login = getOwnerLogin();
   return `
     <div class="access-card">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <button type="button" class="access-volver" onclick="showAccessSelectScreen()"><i class="ti ti-arrow-left" aria-hidden="true"></i> <span>${t('common.back')}</span></button>
       <div class="access-card-title">${t('access.ownerBtn')}</div>
       <p class="access-card-lead">${login ? t('access.ownerDesc') : t('access.ownerSetupDesc')}</p>
       <div class="field">
@@ -1430,7 +1430,7 @@ function renderBusinessSelectScreenHtml(){
         </div>
         <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:4px 0 16px">${t('bs.emptyDesc')}</p>
         <button class="btn btn-primary" style="width:100%" onclick="redeemFirstBusiness()"><i class="ti ti-ticket"></i> ${t('bs.redeemFirst')}</button>
-        <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+        <a href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
         <!-- Sin esto, una cuenta recién creada se quedaba ATRAPADA aquí: la
              lista de negocios está vacía, así que no hay ninguna a la que ir,
              y la pantalla no tiene aspa ni botón de volver. Quien entraba con
@@ -1501,7 +1501,7 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
         <button class="btn" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
-      <a class="bs-buy" href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      <a class="bs-buy" href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
       <div class="bs-foot">
         <button type="button" class="bs-footbtn" onclick="promptChangeOwnerPassword()"><i class="ti ti-key" aria-hidden="true"></i><span>${t('bs.changePassword')}</span></button>
         <button type="button" class="bs-footbtn" onclick="exitToAccessScreen()"><i class="ti ti-logout" aria-hidden="true"></i><span>${t('bs.exitAccount')}</span></button>
@@ -1594,15 +1594,15 @@ function renderBsGroups(allSlots){
       // eso confunde más de lo que aclara. Lo que identifica un negocio para
       // su dueño es el nombre que él le puso en "Mi Negocio".
       return `
-        <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-          <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+        <div class="bs-item gg-fila ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
             <div class="bs-item-name-wrap">
               <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
             </div>
             <span class="bs-item-tag" style="font-size:11px;color:var(--muted);font-weight:400">(${t('bs.independentTag')})</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
             ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
@@ -1612,12 +1612,12 @@ function renderBsGroups(allSlots){
     // Negocio con sucursales — cabecera expandible
     const childrenHtml = isOpen ? `
       <div class="bs-group-children">
-        <div class="bs-sub-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-          <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+        <div class="bs-sub-item gg-fila ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:6px;overflow:hidden">
             <i class="ti ti-home" style="color:var(--muted);flex-shrink:0"></i>
             <span style="overflow:visible;text-overflow:clip;white-space:normal">${t('bs.mainLocation')}</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
             ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
@@ -1625,12 +1625,12 @@ function renderBsGroups(allSlots){
         ${sucursales.map(s => {
           const sActive = s.id === ACTIVE_SLOT;
           return `
-          <div class="bs-sub-item ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
-            <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+          <div class="bs-sub-item gg-fila ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+            <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:6px;overflow:hidden">
               <i class="ti ti-building-store" style="color:var(--muted);flex-shrink:0"></i>
               <span style="overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(s.name||t('bs.defaultBranchName'))}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
               ${sActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
               <button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>
             </div>
@@ -1643,8 +1643,8 @@ function renderBsGroups(allSlots){
         <div class="bs-group-header ${(isRootActive || sucursales.some(s=>s.id===ACTIVE_SLOT))?'active':''} ${isOpen?'open':''}"
              onclick="toggleBsGroup('${escapeHtml(root.id)}')">
           <i class="ti ti-building" style="flex-shrink:0"></i>
-          <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
-          <span style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
+          <span class="bs-item-name gg-fila-nombre" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+          <span class="gg-fila-extra" style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
           <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="color:var(--muted);margin-left:4px"></i>
         </div>
         ${childrenHtml}
@@ -3922,7 +3922,7 @@ const PLAN360_DOC_PLANTILLAS = {
         ['Nuevos (primera visita hace menos de 30 días)', 'Una razón para volver pronto', '«Gracias por venir, Laura. La próxima vez, pregunta por el arroz del domingo.»'],
         ['Inactivos (60+ días)', 'Que se acuerden de ti', '«Hace tiempo que no te vemos. Ha entrado la carta de otoño; te guardamos mesa cuando quieras.»'],
         ['En riesgo de fuga', 'Saber qué ha pasado', 'Una llamada o un mensaje personal del responsable, no una difusión'],
-        ['VIP (7+ puntos)', 'Sentirse de la casa', 'Enterarse antes que nadie: la cena especial, el plato nuevo'],
+        ['VIP (el 20 % que más gasta)', 'Sentirse de la casa', 'Enterarse antes que nadie: la cena especial, el plato nuevo'],
         ['Con alergias', 'Seguridad', 'Avisar cuando haya platos nuevos aptos para ellos']]},
       {t: 'campo', id: 'grupos', label: 'Nuestros grupos de clientes', ayuda: 'Qué mensaje recibe cada uno y cada cuánto'},
 
@@ -3932,7 +3932,7 @@ const PLAN360_DOC_PLANTILLAS = {
       {t: 'frases', titulo: 'Mensajes modelo', items: ['«Hola, Laura 👋 Esta semana entra la carta de otoño: setas, caza y el arroz de boletus. ¿Te guardamos mesa? Reserva aquí: [enlace]»', '«Hola, Jordi. Te echamos de menos por aquí. Este jueves hacemos cena de maridaje con vinos de la zona; quedan 8 plazas: [enlace]»']},
 
       {t: 'cap', n: '05', titulo: 'Premiar la fidelidad', sub: 'Que volver tenga su recompensa.'},
-      {t: 'lista', titulo: 'Ideas que funcionan', items: ['Puntos de fidelidad: se suman en la ficha de cada cliente, y los VIP (7 puntos o más) se ven con un filtro.', 'Un detalle en la visita número 5 o 10: un postre, una copa.', 'Vales regalo: la app los emite desde Clientes, y son un regalo que trae clientes nuevos.', 'El cumpleaños o el aniversario: un mensaje y un detalle si celebran aquí.', 'Reconocer al habitual por su nombre: no cuesta nada y es lo que más se recuerda.']},
+      {t: 'lista', titulo: 'Ideas que funcionan', items: ['Puntos de fidelidad: se suman en la ficha de cada cliente, y los VIP (el 20 % que más gasta en el año) se ven con un filtro.', 'Un detalle en la visita número 5 o 10: un postre, una copa.', 'Vales regalo: la app los emite desde Clientes, y son un regalo que trae clientes nuevos.', 'El cumpleaños o el aniversario: un mensaje y un detalle si celebran aquí.', 'Reconocer al habitual por su nombre: no cuesta nada y es lo que más se recuerda.']},
       {t: 'regla', x: 'Mejor un detalle inesperado que un descuento: el descuento enseña a venir solo cuando lo hay.'},
       {t: 'campo', id: 'programa', label: 'Nuestro programa de fidelidad', ayuda: 'Qué se premia y cómo'},
 
@@ -4657,7 +4657,9 @@ const PLAN360_DEFAULT_PROGRAM = [
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
   ...Array.from({length: 26}, (_, i) => ({
     day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3),
-    task: '(Contenido pendiente de definir)',
+    // Sin `task`: el aviso «(Contenido pendiente de definir)» que llevaba aquí
+    // acabó como tarea real visible en 25 filas de «atrasado». Los programas ya
+    // creados con él se limpian al pintar (plan360TareaReal, js/app.js).
   })),
 ];
 
@@ -6871,7 +6873,40 @@ function updateSyncBadge(state){
   else { el.innerHTML = `<span class="hdr-text"> ${t('gate.cloudError')}</span>`; marcarEstado('error'); }
 }
 
-function refreshAfterRemoteChange(){
+/* ⚠️ PARPADEO (16/11, pedido del dueño: «a veces la app empieza a parpadear, pantallas, cifras»).
+   Cada cambio que llega de la nube repinta la vista ENTERA, y cada repintado vuelve a
+   crear las cifras y barras, que se animan otra vez desde cero (js/polish.js). Con UN
+   cambio suelto no se nota; si llegan varios seguidos (dos aparatos que se van
+   fusionando, un ráfaga de ventas, avisos…) la pantalla parpadea sin parar.
+   Dos defensas, que no dependen de saber qué las provoca:
+   1. Los repintados se AGRUPAN: el primero de una racha va al instante y los que
+      lleguen en los 250 ms siguientes se funden en uno solo. Si la racha no para
+      (más de 8 en 10 s), se espacian a 2,5 s hasta que se calme.
+   2. Un repintado por cambio REMOTO nunca vuelve a animar cifras ni barras: esas
+      animaciones son para cuando el usuario ENTRA en la pantalla.
+   Y queda un registro (`ggDiagRepintados()` en la consola) con qué lo provocó, para
+   que la próxima vez que pase se pueda ver de dónde viene. */
+let _refreshTimer = null, _refreshUltimo = 0;
+const _refreshLog = [];
+function ggDiagRepintados(){ return _refreshLog.slice(); }
+function refreshAfterRemoteChange(origen){
+  const ahora = Date.now();
+  _refreshLog.push({t: ahora, origen: origen || (new Error().stack || '').split('\n')[2] || ''});
+  while(_refreshLog.length > 40) _refreshLog.shift();
+  const enRacha = _refreshLog.filter(x => ahora - x.t < 10000).length;
+  const ventana = enRacha > 8 ? 2500 : 250;
+  if(_refreshTimer) return;                       // ya hay uno en camino: este se funde con él
+  const desdeElUltimo = ahora - _refreshUltimo;
+  if(desdeElUltimo >= ventana){ _refreshUltimo = ahora; repintarTrasCambioRemoto(); return; }
+  _refreshTimer = setTimeout(function(){
+    _refreshTimer = null; _refreshUltimo = Date.now(); repintarTrasCambioRemoto();
+  }, Math.max(50, ventana - desdeElUltimo));
+}
+function repintarTrasCambioRemoto(){
+  // Hasta que pasen dos fotogramas (cuando polish.js lanza sus animaciones) no se anima nada.
+  window.__ggSinAnimar = true;
+  clearTimeout(window.__ggSinAnimarT);
+  window.__ggSinAnimarT = setTimeout(function(){ window.__ggSinAnimar = false; }, 120);
   renderHeader();
   if(typeof chatAlLlegarDeLaNube === 'function') chatAlLlegarDeLaNube();
   renderModuleBadges();
@@ -9841,7 +9876,7 @@ function applyRemoteBlock(key, remoteValue){
     const RECENT_MS = 5*60*1000;
     const now = Date.now();
     merged.filter(m => m.urgent && !knownIds.has(m.id) && String(m.authorId) !== String(me) && m.ts && (now - new Date(m.ts).getTime()) <= RECENT_MS)
-      .forEach(m => notifyDesktop('🚨 ' + (m.authorName||''), m.text||''));
+      .forEach(m => notifyDesktop('🚨 ' + (typeof chatNombreAutor === 'function' ? chatNombreAutor(m) : (m.authorName||'')), (typeof chatTextoDe === 'function' ? chatTextoDe(m) : m.text) || ''));
   }
   if(key === 'cashClosures' && Array.isArray(DB[key]) && Array.isArray(merged)){
     const knownIds = new Set(DB[key].map(c => c.id));
@@ -12731,7 +12766,7 @@ function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
 @page{size:${ancho}mm auto;margin:0}
 html,body{margin:0;padding:0;background:#fff;color:#000}
 body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
-pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+pre{margin:0;white-space:pre-wrap;overflow-wrap:break-word;font:inherit}
 </style></head><body>${cuerpo}</body></html>`;
 }
 // Imprime en un iframe oculto en vez de window.open: las ventanas nuevas

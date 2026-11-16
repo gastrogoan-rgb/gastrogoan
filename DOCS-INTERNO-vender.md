@@ -14,7 +14,7 @@ kicker: GastroGoan · Uso interno
 - **Producto:** GastroGoan, app de gestión integral para restaurantes (TPV + cocina + sala + reservas + stock + personal + finanzas), todo en un solo archivo que funciona offline.
 - **Precio:** **100 € pago único.** Sin suscripción, sin comisiones, del cliente para siempre.
 - **Argumento de venta:** sustituye 6-7 apps con cuota mensual (TPV, delivery, carta QR, personal, reservas, stock, economía) que suman **+300 €/mes (~3.600 €/año)**. Se amortiza el primer mes.
-- **Cobro:** enlace de Stripe → `https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01`
+- **Cobro:** enlace de Stripe → `https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03`
   - ⚠️ `landing.html` todavía tiene el enlace como `PLACEHOLDER`. Sustitúyelo por el enlace real antes de publicar la web.
 
 ---

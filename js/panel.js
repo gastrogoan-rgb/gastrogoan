@@ -204,7 +204,7 @@ function dpBloqueHtml(k){
     <div class="dp-medias">
       <span><i class="ti ti-sum"></i> ${escapeHtml(gl({es: 'Media por día', ca: 'Mitjana per dia', en: 'Daily average'}))}: <b>${escapeHtml(k === 'reservas' ? dpNum(total / dias, 1) + ' ' + unidad : fmtV(total / dias))}</b></span>
       ${mejor && mejor.value !== 0 ? `<span><i class="ti ${def.subeEsBueno === false ? 'ti-flame' : 'ti-trophy'}"></i> ${escapeHtml(def.subeEsBueno === false ? gl({es: 'Día de más gasto', ca: 'Dia de més despesa', en: 'Highest-spend day'}) : gl({es: 'Mejor día', ca: 'Millor dia', en: 'Best day'}))}: <b>${escapeHtml(mejor.nombre)} · ${escapeHtml(mejor.txt)}</b></span>` : ''}
-      <span class="dp-pista"><i class="ti ti-pointer"></i> ${escapeHtml(gl({es: 'Pasa el ratón (o toca) un punto para ver ese día', ca: 'Passa el ratolí (o toca) un punt per veure aquell dia', en: 'Hover (or tap) a point to see that day'}))}</span>
+      <span class="dp-pista"><i class="ti ti-pointer"></i> ${escapeHtml((ggTactil() ? gl({es: 'Toca un punto para ver ese día', ca: 'Toca un punt per veure aquell dia', en: 'Tap a point to see that day'}) : gl({es: 'Pasa el ratón (o toca) un punto para ver ese día', ca: 'Passa el ratolí (o toca) un punt per veure aquell dia', en: 'Hover (or tap) a point to see that day'})))}</span>
     </div>
     ${dashSerieHtml(serie, {id: gid, tooltip: true, cadaEtiqueta: st.modo === 'mes' ? (serie.length > 20 ? 3 : 2) : 1, fmtTag: k === 'reservas' ? (v => String(Math.round(v))) : undefined})}`}
     ${k === 'resultado' ? dpPyLHtml(st, r) : ''}

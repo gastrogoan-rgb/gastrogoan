@@ -22,8 +22,8 @@ function clFiltrosDef(){
   return [
     {id:'', et: gl({es:'Todos', ca:'Tots', en:'All'})},
     {id:'new', et: gl({es:'Nuevos', ca:'Nous', en:'New'}), ay: gl({es:'Primera visita hace menos de 30 días', ca:'Primera visita fa menys de 30 dies', en:'First visit under 30 days ago'})},
-    {id:'vip', et: 'VIP', ay: gl({es:'7 o más puntos de fidelidad', ca:'7 o més punts de fidelitat', en:'7 or more loyalty points'})},
-    {id:'recurrent', et: gl({es:'Recurrentes', ca:'Recurrents', en:'Regulars'}), ay: gl({es:'Vienen a menudo: 2 visitas en 30 días, 6 en el año o ya son VIP', ca:'Vénen sovint: 2 visites en 30 dies, 6 a l\'any o ja són VIP', en:'They come often: 2 visits in 30 days, 6 in the year or already VIP'})},
+    {id:'vip', et: 'VIP', ay: gl({es:'El 20 % que más gasta en el año (con 3 visitas o más)', ca:'El 20 % que més gasta a l\'any (amb 3 visites o més)', en:'The top 20% by spend this year (with 3 or more visits)'})},
+    {id:'recurrent', et: gl({es:'Recurrentes', ca:'Recurrents', en:'Regulars'}), ay: gl({es:'Vienen a menudo: 2 visitas en 30 días o 6 en el año', ca:'Vénen sovint: 2 visites en 30 dies o 6 a l\'any', en:'They come often: 2 visits in 30 days or 6 in the year'})},
     {id:'occasional', et: gl({es:'Ocasionales', ca:'Ocasionals', en:'Occasional'}), ay: gl({es:'Han venido alguna vez, pero no con frecuencia', ca:'Han vingut alguna vegada, però no amb freqüència', en:'They have come before, but not often'})},
     {id:'atrisk', et: gl({es:'En riesgo', ca:'En risc', en:'At risk'}), ay: gl({es:'Venían con ritmo y han dejado de venir', ca:'Venien amb ritme i han deixat de venir', en:'They used to come regularly and stopped'})},
     {id:'inactive', et: gl({es:'Inactivos', ca:'Inactius', en:'Inactive'}), ay: gl({es:'Más de 60 días sin venir', ca:'Més de 60 dies sense venir', en:'More than 60 days away'})},
@@ -32,17 +32,34 @@ function clFiltrosDef(){
     {id:'noconsent', et: gl({es:'Sin permiso de marketing', ca:'Sense permís de màrqueting', en:'No marketing consent'})},
   ];
 }
-// Misma definición que «Habituales» en Novedades (`nvCalcular`): así el filtro y el envío no se contradicen.
-function clEsRecurrente(c, st){ return st.visitas30d >= 2 || st.visitasYear >= 6 || (c.points || 0) >= 7; }
+/* ⚠️ VIP y Recurrente son cosas DISTINTAS (16/11, el dueño: «VIP y recurrente dan el mismo resultado»). Antes «recurrente» incluía «o ya son VIP»
+   y VIP era «7 puntos», que se ganan viniendo: en la práctica un conjunto contenía al otro y salía lo mismo.
+   · VIP = LO QUE VALE: el 20 % que más ha gastado en el año (con 3 visitas o más, para no premiar una sola cena cara). Puede venir poco.
+   · Recurrente = CON QUÉ FRECUENCIA: 2 visitas en 30 días o 6 en el año, gaste lo que gaste.
+   · Ocasional = ha venido pero no es recurrente.
+   Un cliente puede ser VIP y ocasional (viene poco, gasta mucho) o recurrente sin ser VIP (viene a menudo, gasta poco). Los puntos de
+   fidelidad siguen aparte, para los premios. La misma regla que «Habituales» y «Mejores clientes» de Novedades (nvCalcular). */
+let _clVipCache = null;
+function clUmbralVip(){
+  const clave = (DB.sales||[]).length + ':' + (DB.clients||[]).length + ':' + new Date().toDateString();
+  if(_clVipCache && _clVipCache.clave === clave) return _clVipCache.umbral;
+  const getStats = computeClientStatsIndexed();
+  const g = (DB.clients||[]).map(c => getStats(c)).filter(s => s.totalYear > 0 && s.visitasYear >= 3).map(s => s.totalYear).sort((a, b) => b - a);
+  const umbral = g.length ? g[Math.max(0, Math.ceil(g.length * 0.2) - 1)] : Infinity;
+  _clVipCache = {clave, umbral};
+  return umbral;
+}
+function clEsVip(c, st){ return st.visitasYear >= 3 && st.totalYear > 0 && st.totalYear >= clUmbralVip(); }
+function clEsRecurrente(c, st){ return st.visitas30d >= 2 || st.visitasYear >= 6; }
 // La etiqueta que explica en qué filtro de frecuencia cae el cliente (la de VIP y «Nuevo» ya salen aparte): recurrente u ocasional.
 function clSegmentoChip(c, st){
   if(!st.visitas) return '';
-  if(clEsRecurrente(c, st)) return (c.points || 0) >= 7 ? '' : `<span class="pm-et">${escapeHtml(gl({es:'Recurrente', ca:'Recurrent', en:'Regular'}))}</span>`;
+  if(clEsRecurrente(c, st)) return `<span class="pm-et">${escapeHtml(gl({es:'Recurrente', ca:'Recurrent', en:'Regular'}))}</span>`;
   return `<span class="pm-et">${escapeHtml(gl({es:'Ocasional', ca:'Ocasional', en:'Occasional'}))}</span>`;
 }
 function clPertenece(filtro, c, st){
   switch(filtro){
-    case 'vip': return (c.points || 0) >= 7;
+    case 'vip': return clEsVip(c, st);
     case 'new': return st.isNew;
     case 'recurrent': return clEsRecurrente(c, st);
     case 'occasional': return st.visitas > 0 && !clEsRecurrente(c, st);
@@ -107,7 +124,7 @@ function clTarjetaHtml(c, st){
     st.isNew ? `<span class="pm-et is-dto">${escapeHtml(t('badge.new'))}</span>` : '',
     clSegmentoChip(c, st),
     st.atRisk ? `<span class="pm-et cl-et-riesgo">${escapeHtml(t('badge.atRisk'))}</span>` : '',
-    puntos >= 7 ? `<span class="pm-et is-ok"><i class="ti ti-star"></i> VIP</span>` : '',
+    clEsVip(c, st) ? `<span class="pm-et is-ok"><i class="ti ti-star"></i> VIP</span>` : '',
     (c.allergies || '').trim() ? `<span class="pm-et cl-et-alergia" title="${escapeHtml(c.allergies)}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(gl({es:'Alergias', ca:'Al·lèrgies', en:'Allergies'}))}</span>` : '',
     c.noShows ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : '',
     c.marketingConsent === false ? `<span class="pm-et" title="${escapeHtml(t('filter.noConsent'))}"><i class="ti ti-mail-off"></i></span>` : '',
@@ -119,7 +136,7 @@ function clTarjetaHtml(c, st){
     <div class="cl-card-cab">
       <span class="pr-av" style="--c:${c.erasedAt ? '#9A9A92' : '#8A7440'}">${escapeHtml(prIniciales(c.name))}</span>
       <div class="cl-card-nom"><b>${escapeHtml(c.name)}</b>
-        <small>${st.lastDate ? escapeHtml(t('label.daysAgo').replace('${n}', st.recency)) : escapeHtml(gl({es:'Sin visitas todavía', ca:'Sense visites encara', en:'No visits yet'}))}${st.visitas30d ? ' · ' + escapeHtml(gl({es:`${st.visitas30d} visita(s) este mes`, ca:`${st.visitas30d} visita(es) aquest mes`, en:`${st.visitas30d} visit(s) this month`})) : ''}</small></div>
+        <small>${st.lastDate ? escapeHtml(t('label.daysAgo').replace('${n}', st.recency)) : escapeHtml(gl({es:'Sin visitas todavía', ca:'Sense visites encara', en:'No visits yet'}))}${st.visitas30d ? ' · ' + escapeHtml(gl({es:`${st.visitas30d} ${st.visitas30d === 1 ? 'visita' : 'visitas'} este mes`, ca:`${st.visitas30d} ${st.visitas30d === 1 ? 'visita' : 'visites'} aquest mes`, en:`${st.visitas30d} ${st.visitas30d === 1 ? 'visit' : 'visits'} this month`})) : ''}</small></div>
     </div>
     ${etiquetas ? `<div class="pm-ets">${etiquetas}</div>` : ''}
     <div class="cl-puntos" title="${escapeHtml(t('label.loyaltyPoints'))}"><div class="nv-barra" role="progressbar" aria-valuenow="${puntos}" aria-valuemin="0" aria-valuemax="10" aria-label="${escapeHtml(t('label.loyaltyPoints'))}"><span style="width:${pct}%"></span></div><b>${puntos}/10</b></div>
@@ -168,7 +185,7 @@ function renderClientesLista(conservarFoco){
         <button type="button" class="btn btn-fino is-on" onclick="openClientModal()"><i class="ti ti-plus"></i> ${escapeHtml(t('title.newClient'))}</button>
       </div>
     </div>
-    <div class="cl-chips" role="group" aria-label="${escapeHtml(gl({es:'Filtrar clientes', ca:'Filtrar clients', en:'Filter customers'}))}">
+    <div class="cl-chips gg-pest-col" role="group" aria-label="${escapeHtml(gl({es:'Filtrar clientes', ca:'Filtrar clients', en:'Filter customers'}))}">
       ${defs.map(d => `<button type="button" class="btn btn-sm btn-fino${clientesFiltro === d.id ? ' is-on' : ''}" aria-pressed="${clientesFiltro === d.id}" ${d.ay ? `title="${escapeHtml(d.ay)}"` : ''} onclick="clSetFiltro('${d.id}')">${escapeHtml(d.et)} <b>${conteos[d.id]}</b></button>`).join('')}
     </div>`;
 
@@ -245,11 +262,11 @@ function openClientModal(id){
           ${clStatCel(t('label.avgTicket'), fmtMoney(st.ticketMedio))}
           ${clStatCel(t('label.total30d'), fmtMoney(st.total30d))}
           ${clStatCel(t('label.totalYear'), fmtMoney(st.totalYear))}
-          ${clStatCel(t('label.lastVisit'), st.lastDate ? `<small>${escapeHtml(st.lastDate)}</small>` : '—')}
+          ${clStatCel(t('label.lastVisit'), st.lastDate ? `<small>${escapeHtml(fechaLegibleCorta(st.lastDate))}</small>` : '—')}
         </div>
         <div class="pm-ets cl-fich-ets">
           ${st.isNew ? `<span class="pm-et is-dto">${escapeHtml(t('badge.new'))}</span>` : ''}${clSegmentoChip(c, st)}${st.atRisk ? `<span class="pm-et cl-et-riesgo">${escapeHtml(t('badge.atRisk'))}</span>` : ''}
-          ${c.noShows ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-user-x"></i> ${c.noShows} ${escapeHtml(gl({es:'no-show(s)', ca:'no-show(s)', en:'no-show(s)'}))}</span>` : ''}
+          ${c.noShows ? `<span class="pm-et cl-et-riesgo"><i class="ti ti-user-x"></i> ${c.noShows} ${escapeHtml(c.noShows === 1 ? 'no-show' : 'no-shows')}</span>` : ''}
           ${fav ? `<span class="pm-et"><i class="ti ti-heart"></i> ${escapeHtml(fav)}</span>` : ''}
           ${cumpleDias !== null && cumpleDias <= 30 ? `<span class="pm-et"><i class="ti ti-cake"></i> ${escapeHtml(cumpleDias === 0 ? t('promo.clients.today') : t('promo.clients.inDays').replace('${n}', cumpleDias).replace('${s}', cumpleDias !== 1 ? 's' : ''))}</span>` : ''}
         </div>
@@ -257,11 +274,11 @@ function openClientModal(id){
         <div class="cl-puntos"><div class="nv-barra" role="progressbar" aria-valuenow="${puntos}" aria-valuemin="0" aria-valuemax="10"><span style="width:${Math.min(100, puntos * 10)}%"></span></div><b>${puntos}/10</b>
           <button type="button" class="btn btn-sm btn-fino mn-btn" data-tip="${escapeHtml(t('title.loyaltyPoints'))}" aria-label="${escapeHtml(t('title.loyaltyPoints'))}" onclick="showLoyaltyInfo()"><i class="ti ti-info-circle"></i></button></div>
         ${puntos >= 10 ? `<button type="button" class="btn btn-sm btn-fino is-on" onclick="openRewardModal(${id})"><i class="ti ti-gift"></i> ${escapeHtml(t('btn.giveReward'))}</button>` : ''}
-        ${premios.length ? `<ul class="cl-mini">${premios.slice(0, 3).map(r => `<li><i class="ti ti-gift"></i> ${escapeHtml(r.fecha)} — ${escapeHtml(r.premio)}</li>`).join('')}</ul>` : ''}
+        ${premios.length ? `<ul class="cl-mini">${premios.slice(0, 3).map(r => `<li><i class="ti ti-gift"></i> ${escapeHtml(fechaLegibleCorta(r.fecha))} — ${escapeHtml(r.premio)}</li>`).join('')}</ul>` : ''}
         <div class="es-tit es-tit-2">${escapeHtml(gl({es:'Reservas próximas', ca:'Reserves properes', en:'Upcoming bookings'}))}</div>
-        ${proximas.length ? `<ul class="cl-mini">${proximas.map(r => `<li><button type="button" class="cl-enlace" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')">${escapeHtml(r.date)} ${escapeHtml(r.time || '')} · ${r.people} ${escapeHtml(t('common.people'))}</button> ${reservationStatusBadge(r.status, r.llegada)}</li>`).join('')}</ul>` : `<p class="pr-ayuda">${escapeHtml(gl({es:'Ninguna por ahora.', ca:'Cap de moment.', en:'None for now.'}))}</p>`}
+        ${proximas.length ? `<ul class="cl-mini">${proximas.map(r => `<li><button type="button" class="cl-enlace" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')">${escapeHtml(fechaLegibleCorta(r.date))} ${escapeHtml(r.time || '')} · ${r.people} ${escapeHtml(t('common.people'))}</button> ${reservationStatusBadge(r.status, r.llegada)}</li>`).join('')}</ul>` : `<p class="pr-ayuda">${escapeHtml(gl({es:'Ninguna por ahora.', ca:'Cap de moment.', en:'None for now.'}))}</p>`}
         <div class="es-tit es-tit-2">${escapeHtml(t('title.giftVouchers'))}</div>
-        ${vales.length ? `<p class="pr-ayuda">${escapeHtml(gl({es:`${valesVivos.length} sin usar de ${vales.length} emitido(s).`, ca:`${valesVivos.length} sense usar de ${vales.length} emès(os).`, en:`${valesVivos.length} unused of ${vales.length} issued.`}))} <button type="button" class="cl-enlace" onclick="clIr('vales', '${escapeJsAttr(c.name)}')">${escapeHtml(gl({es:'Ver', ca:'Veure', en:'View'}))}</button></p>` : `<p class="pr-ayuda">${escapeHtml(gl({es:'Ninguno.', ca:'Cap.', en:'None.'}))}</p>`}
+        ${vales.length ? `<p class="pr-ayuda">${escapeHtml(gl({es:`${valesVivos.length} sin usar de ${vales.length} ${vales.length === 1 ? 'emitido' : 'emitidos'}.`, ca:`${valesVivos.length} sense usar de ${vales.length} ${vales.length === 1 ? 'emès' : 'emesos'}.`, en:`${valesVivos.length} unused of ${vales.length} issued.`}))} <button type="button" class="cl-enlace" onclick="clIr('vales', '${escapeJsAttr(c.name)}')">${escapeHtml(gl({es:'Ver', ca:'Veure', en:'View'}))}</button></p>` : `<p class="pr-ayuda">${escapeHtml(gl({es:'Ninguno.', ca:'Cap.', en:'None.'}))}</p>`}
         ` : `<p class="pr-ayuda"><i class="ti ti-info-circle"></i> ${escapeHtml(gl({es:'Cuando guardes la ficha verás aquí sus visitas, su gasto y sus puntos.', ca:'Quan desis la fitxa veuràs aquí les seves visites, la seva despesa i els seus punts.', en:'Once you save the card you will see their visits, spend and points here.'}))}</p>`}
       </div>
     </div>
@@ -328,14 +345,14 @@ function renderClienteHistorial(){
       <div class="cl-ev-txt" ${click}><b>${tit}</b><small>${det}</small></div><span class="cl-ev-fecha">${escapeHtml(e.fecha || '')}</span><span class="cl-ev-der">${der}</span></li>`;
   };
   box.innerHTML = `
-    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(gl({es:'Clientes', ca:'Clients', en:'Customers'}))}</button></div>
+    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.back'))}</button></div>
       <div class="pm-acciones"><button type="button" class="btn btn-fino" onclick="openClientModal(${c.id})"><i class="ti ti-user"></i> ${escapeHtml(gl({es:'Ficha', ca:'Fitxa', en:'Card'}))}</button></div></div>
     <h2 class="cl-tit-pantalla"><span class="pr-av" style="--c:#8A7440">${escapeHtml(prIniciales(c.name))}</span> ${escapeHtml(gl({es:'Historial de ', ca:'Historial de ', en:'History of '}))}${escapeHtml(c.name)}</h2>
     ${pmResumenHtml([
       {et: t('label.visitsYear'), v: st.visitasYear, sub: escapeHtml(t('label.visits30d') + ': ' + st.visitas30d)},
       {et: t('label.totalYear'), v: fmtMoney(st.totalYear)},
       {et: t('label.avgTicket'), v: fmtMoney(st.ticketMedio)},
-      {et: t('label.lastVisit'), v: st.lastDate ? `<small>${escapeHtml(st.lastDate)}</small>` : '—', sub: st.recency !== null ? escapeHtml(t('label.daysAgo').replace('${n}', st.recency)) : ''},
+      {et: t('label.lastVisit'), v: st.lastDate ? `<small>${escapeHtml(fechaLegibleCorta(st.lastDate))}</small>` : '—', sub: st.recency !== null ? escapeHtml(t('label.daysAgo').replace('${n}', st.recency)) : ''},
     ])}
     <div class="cl-chips" role="group">${filtros.map(([k, et, n]) => `<button type="button" class="btn btn-sm btn-fino${clienteHistTipo === k ? ' is-on' : ''}" aria-pressed="${clienteHistTipo === k}" onclick="clHistTipo('${k}')">${escapeHtml(et)} <b>${n}</b></button>`).join('')}</div>
     ${vis.length ? `<ul class="cl-lista-ev">${vis.map(fila).join('')}</ul>${ev.length > vis.length ? `<div class="pm-ver-mas"><button type="button" class="btn btn-sm btn-fino" onclick="clHistMas()">${escapeHtml(gl({es:`Ver ${Math.min(40, ev.length - vis.length)} más`, ca:`Veure'n ${Math.min(40, ev.length - vis.length)} més`, en:`Show ${Math.min(40, ev.length - vis.length)} more`}))}</button></div>` : ''}`
@@ -589,7 +606,7 @@ function valeTarjetaHtml(v){
       <span class="${e === 'caducado' || (dias !== null && dias <= 30 && usable) ? 'cl-aviso-vence' : ''}"><i class="ti ti-hourglass"></i> ${escapeHtml(v.venceEn ? (e === 'caducado' ? gl({es:'Caducó el ', ca:'Va caducar el ', en:'Expired on '}) : gl({es:'Vence el ', ca:'Venç el ', en:'Expires on '})) + v.venceEn : valeVence(v))}${usable && dias !== null && dias <= 30 && dias >= 0 ? ` (${escapeHtml(gl({es:`en ${dias} días`, ca:`d'aquí ${dias} dies`, en:`in ${dias} days`}))})` : ''}</span>
       ${e === 'canjeado' ? `<span><i class="ti ti-check"></i> ${escapeHtml(gl({es:'Canjeado ', ca:'Bescanviat ', en:'Redeemed '}))}${escapeHtml((valeCanjes(v).slice(-1)[0] || {}).fecha || '')}</span>` : ''}
     </div>
-    ${valeCanjes(v).length > 1 || (valeCanjes(v).length === 1 && e === 'parcial') ? `<ul class="cl-mini">${valeCanjes(v).map(k => `<li><i class="ti ti-receipt"></i> ${escapeHtml(k.fecha)} — ${fmtMoney(k.importe)}${k.nota ? ' · ' + escapeHtml(k.nota) : ''}</li>`).join('')}</ul>` : ''}
+    ${valeCanjes(v).length > 1 || (valeCanjes(v).length === 1 && e === 'parcial') ? `<ul class="cl-mini">${valeCanjes(v).map(k => `<li><i class="ti ti-receipt"></i> ${escapeHtml(fechaLegibleCorta(k.fecha))} — ${fmtMoney(k.importe)}${k.nota ? ' · ' + escapeHtml(k.nota) : ''}</li>`).join('')}</ul>` : ''}
     ${usable ? `<div class="cl-card-pie"><button type="button" class="btn btn-sm btn-fino is-on owner-only" onclick="openCanjeVale(${v.id})"><i class="ti ti-circle-check"></i> ${escapeHtml(gl({es:'Canjear', ca:'Bescanviar', en:'Redeem'}))}</button></div>` : ''}
   </article>`;
 }
@@ -617,11 +634,11 @@ function renderValesPantalla(conservarFoco){
     return;
   }
   box.innerHTML = `
-    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(gl({es:'Clientes', ca:'Clients', en:'Customers'}))}</button></div>
+    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.back'))}</button></div>
       <div class="pm-acciones"><button type="button" class="btn btn-fino is-on owner-only" onclick="openGiftVouchersModal()"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Emitir un vale', ca:'Emetre un val', en:'Issue a voucher'}))}</button></div></div>
     <h2 class="cl-tit-pantalla"><i class="ti ti-gift-card"></i> ${escapeHtml(gl({es:'Historial de vales regalo', ca:'Historial de vals regal', en:'Gift voucher history'}))}</h2>
     ${pmResumenHtml([
-      {et: gl({es:'Por canjear', ca:'Per bescanviar', en:'To redeem'}), v: fmtMoney(porPagar), sub: escapeHtml(gl({es:`${vivos.length} vale(s) vivos`, ca:`${vivos.length} val(s) vius`, en:`${vivos.length} live voucher(s)`}))},
+      {et: gl({es:'Por canjear', ca:'Per bescanviar', en:'To redeem'}), v: fmtMoney(porPagar), sub: escapeHtml(gl({es:`${vivos.length} ${vivos.length === 1 ? 'vale vivo' : 'vales vivos'}`, ca:`${vivos.length} ${vivos.length === 1 ? 'val viu' : 'vals vius'}`, en:`${vivos.length} live ${vivos.length === 1 ? 'voucher' : 'vouchers'}`}))},
       {et: gl({es:'Emitido este año', ca:'Emès aquest any', en:'Issued this year'}), v: fmtMoney(emitidoAnio)},
       {et: gl({es:'Canjeado este año', ca:'Bescanviat aquest any', en:'Redeemed this year'}), v: fmtMoney(canjeadoAnio)},
       {et: gl({es:'Caducan en 30 días', ca:'Caduquen en 30 dies', en:'Expire in 30 days'}), v: porVencer, cls: porVencer ? 'is-bajo' : ''},

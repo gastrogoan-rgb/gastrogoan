@@ -120,6 +120,28 @@ await caso('Ayuda: una pregunta con otras palabras responde, y una sin sentido n
   });
   assert.match(r.buena, /cobr/i, r.buena.slice(0, 120)); assert.ok(r.nuevos >= 3); assert.notEqual(r.rara, r.rara2, 'al segundo fallo debe ofrecer hablar con una persona');
 });
+await caso('Chat: el aviso automático se muestra en el idioma de QUIEN LEE, no en el de quien lo mandó (vídeo 15/11: «Manager needs help right now»)', async () => {
+  const r = await page.evaluate(() => {
+    const ms = [
+      {id: 9001, channel:'general', authorId:'owner', authorName:'Manager', text:'Manager needs help right now', ts:new Date().toISOString(), urgent:true},
+      {id: 9002, channel:'general', authorId:'e1', authorName:'Marc', text:'Marc needs help right now', sys:{k:'urgentHelp'}, ts:new Date().toISOString(), urgent:true},
+    ];
+    return ms.map(m => chatTextoDe(m) + ' | ' + chatNombreAutor(m));
+  });
+  assert.ok(/necesita ayuda ahora mismo/.test(r[0]) && !/Manager|needs help/.test(r[0]), r[0]);
+  assert.ok(/^Marc necesita ayuda/.test(r[1]), r[1]);
+});
+await caso('Móvil 360 px: chat, ayuda y avisos son una hoja que llega al pie y ocupa todo el ancho (vídeo 15/11: flotaban a medias y descentrados)', async () => {
+  await page.setViewport({width:360, height:640});
+  await w(300);
+  const r = await page.evaluate(() => {
+    const med = id => { const p = document.querySelector(id); p.classList.add('active'); const b = p.getBoundingClientRect(); p.classList.remove('active'); return {l: Math.round(b.left), r: Math.round(innerWidth - b.right), b: Math.round(innerHeight - b.bottom), t: Math.round(b.top)}; };
+    if(typeof toggleAvisosPanel === 'function' && !document.querySelector('.avisos-panel')){ document.getElementById('avisos-fab').click(); document.querySelector('.avisos-panel').classList.remove('active'); }
+    return [med('#chat-panel'), med('#help-panel'), med('.avisos-panel')];
+  });
+  await page.setViewport({width:1280, height:900});
+  r.forEach((m, i) => assert.deepEqual(m, {l: 0, r: 0, b: 0, t: 0}, 'panel ' + i + ' ' + JSON.stringify(m)));
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await browser.close();
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron'); process.exit(fallos ? 1 : 0);

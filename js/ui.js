@@ -131,6 +131,15 @@ function fechaImpresaLegible(ds){
   if(!m) return ds || '';
   return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(localeActual(), {weekday:'short', day:'numeric', month:'short', year:'numeric'});
 }
+// Alias de fechaLegibleCorta (el helper común de la rama base) que usan los puntos de Cocina de este paquete.
+function ggFechaCorta(ds){ return fechaLegibleCorta(ds); }
+// «2026-11-10» → «10 nov 2026»: la misma idea, más corta (sin día de la semana) para chips y celdas estrechas de móvil. Cualquier
+// texto que no sea una fecha ISO se devuelve tal cual.
+function fechaLegibleCorta(ds){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ds || '');
+  if(!m) return ds || '';
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(localeActual(), {day:'numeric', month:'short', year:'numeric'});
+}
 // Un color de marca oscuro (el verde oliva, un granate…) no se lee sobre fondo negro: se aclara hacia el blanco hasta tener contraste suficiente.
 function ggAcentoSobreOscuro(hex){
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
@@ -214,7 +223,7 @@ const TOUR_STEPS = [
   {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock', phase:'cocina'},
   {icon:'ti-truck-delivery', titleKey:'tour.s43.title', descKey:'tour.s43.desc', folder:'cocina', view:'pedidos', phase:'cocina'},
   {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios', phase:'cocina'},
-  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios', phase:'cocina'},
+  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios', phase:'cocina', sinFocoMovil:true},
   {icon:'ti-list-check', titleKey:'tour.s44.title', descKey:'tour.s44.desc', folder:'cocina', view:'distribucion', phase:'cocina'},
   {icon:'ti-spray', titleKey:'tour.s45.title', descKey:'tour.s45.desc', folder:'cocina', view:'limpieza', phase:'cocina'},
   {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina', phase:'cocina'},
@@ -223,10 +232,10 @@ const TOUR_STEPS = [
   {icon:'ti-device-desktop', titleKey:'tour.s46.title', descKey:'tour.s46.desc', folder:'sala', target:'#folder-modules', phase:'sala'},
   {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', target:['.tp-cab', '#tpv-mesas-section'], phase:'sala'},
   {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
-  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala'},
+  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
+  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
+  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
+  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', target:['.tp-mesa', '#tpv-mesas-section'], phase:'sala', sinFocoMovil:true},
   {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv', target:'#tpv-togo-section', phase:'sala'},
   {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv', target:'#tpv-online-toggle-btn', phase:'sala'},
   {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv', target:'#tpv-close-cash-btn', phase:'sala'},
@@ -241,10 +250,10 @@ const TOUR_STEPS = [
   {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc', folder:'gestion', view:'dashboard', gestion:true, phase:'gestion'},
   {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc', folder:'gestion', view:'economia', gestion:true, phase:'gestion'},
   {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
-  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
+  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion', sinFocoMovil:true},
 
   // ---- Cabecera (siempre visible, en cualquier pantalla) ----
-  {icon:'ti-home', titleKey:'tour.s38.title', descKey:'tour.s38.desc', target:'#app-logo-icon', phase:'ayuda'},
+  {icon:'ti-home', titleKey:'tour.s38.title', descKey:'tour.s38.desc', target:['#app-logo-icon', '.app-header'], phase:'ayuda'},
   {icon:'ti-language', titleKey:'tour.s39.title', descKey:'tour.s39.desc', target:'#lang-btn', phase:'ayuda'},
   {icon:'ti-building-store', titleKey:'tour.s40.title', descKey:'tour.s40.desc', target:'#business-switch-btn', phase:'ayuda'},
   {icon:'ti-logout', titleKey:'tour.s41.title', descKey:'tour.s41.desc', target:'#logout-btn', phase:'ayuda'},
@@ -429,13 +438,22 @@ function tourApplyStep(step){
   // que es lo que de verdad se está explicando — no la pantalla entera ni un recuadro de otro diseño.
   const visible = n => { if(!n) return false; const r = n.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   let el = null;
+  // Pasos que explican algo que NO existe en la pantalla de fondo (la comanda de una mesa, una pestaña interna): en móvil
+  // enmarcar «la primera mesa» o un bloque cualquiera era un recuadro que no era lo explicado (vídeo del 15/11). Sin foco.
+  const sinFoco = !!(step.sinFocoMovil && window.innerWidth < 640);
+  if(sinFoco){
+    tourCurrentTargetEl = null;
+    return null;
+  }
   if(step.target){
     const lista = Array.isArray(step.target) ? step.target : [step.target];
     for(const sel of lista){ const n = document.querySelector(sel); if(visible(n)){ el = n; break; } }
     if(!el) el = document.querySelector(lista[0]);
   }else if(step.view){
     const vista = document.getElementById('view-' + step.view);
-    const bloque = vista && [...vista.children].find(n => !n.matches('.btn-back,.view-title,.view-subtitle,script,style') && visible(n));
+    // El primer bloque VISIBLE y con algo escrito dentro: un contenedor vacío o de solo huecos salía como un recuadro oscuro sin nada.
+    const conTexto = n => visible(n) && (n.innerText || '').trim().length > 0 && n.getBoundingClientRect().height >= 40;
+    const bloque = vista && [...vista.children].find(n => !n.matches('.btn-back,.view-title,.view-subtitle,script,style') && conTexto(n));
     el = bloque || (vista && (vista.querySelector('.card') || vista));
   }else if(step.folder){
     el = document.querySelector('#folder-modules .module-card') || document.querySelector('.folder-card.folder-' + step.folder);
@@ -530,6 +548,15 @@ function tourPositionUI(opts){
     spot.style.top = '50%'; spot.style.left = '50%'; spot.style.width = '0px'; spot.style.height = '0px';
     if(arrow) arrow.style.display = 'none';
     bubble.classList.remove('tour-bubble-sheet', 'tour-bubble-sheet-top', 'tour-bubble-dock');
+    // En móvil, un paso sin foco usa la MISMA hoja compacta de abajo (sin cambiar de forma entre pasos); solo el final/primero van centrados.
+    const step = TOUR_STEPS[tourStepIndex];
+    if(movil && step && !step.finale && tourStepIndex > 0){
+      bubble.classList.remove('tour-bubble-centered'); bubble.classList.add('tour-bubble-sheet');
+      bubble.style.top = 'auto'; bubble.style.left = '0px';
+      const desc = bubble.querySelector('.tour-bubble-desc'), mas = bubble.querySelector('.tour-mas');
+      if(desc && mas){ const abierto = bubble.classList.contains('tour-texto-abierto'); mas.hidden = !abierto && desc.scrollHeight <= desc.clientHeight + 1; }
+      return;
+    }
     bubble.classList.add('tour-bubble-centered');
     return;
   }
@@ -541,14 +568,18 @@ function tourPositionUI(opts){
   if(movil){
     bubble.classList.add('tour-bubble-sheet'); bubble.classList.remove('tour-bubble-dock');
     bubble.style.top = 'auto'; bubble.style.left = '0px';
+    // «Leer más» solo si el texto recortado a 3 renglones de verdad no cabe entero.
+    const desc = bubble.querySelector('.tour-bubble-desc'), mas = bubble.querySelector('.tour-mas');
+    if(desc && mas){ const abierto = bubble.classList.contains('tour-texto-abierto'); mas.hidden = !abierto && desc.scrollHeight <= desc.clientHeight + 1; }
     if(arrow) arrow.style.display = 'none';
-    const limite = vh - bh - 14;
+    const bhHoja = bubble.offsetHeight;   // ya con la clase de hoja (y el texto recortado): se mide DESPUÉS de ponerla
+    const limite = vh - bhHoja - 14;
     bubble.classList.remove('tour-bubble-sheet-top');
     if(ajustar && el){ tourScrollTarget(el, 72, limite); rect = medir(); }
     // Si la página no deja subir lo explicado por encima de la hoja (ya está al final del scroll), la hoja pasa ARRIBA en vez de
     // taparlo: queda enfrente, en el hueco libre de la mitad que no ocupa el elemento.
     let arriba = rect.top - pad, abajo = Math.min(rect.bottom + pad, limite - 6);
-    if(rect.bottom + pad > limite - 6 && rect.top - pad > bh + 14){
+    if(rect.bottom + pad > limite - 6 && rect.top - pad > bhHoja + 14){
       bubble.classList.add('tour-bubble-sheet-top');
       abajo = rect.bottom + pad;
     }
@@ -631,7 +662,7 @@ function renderTourStep(){
     return `<button class="tour-phase-pill ${state}" onclick="tourJumpToPhase('${p.key}')" title="${escapeHtml(t(p.labelKey))}"><i class="ti ${p.icon}"></i><span>${escapeHtml(t(p.labelKey))}</span></button>`;
   }).join('');
 
-  bubble.classList.remove('tour-bubble-anim');
+  bubble.classList.remove('tour-bubble-anim', 'tour-texto-abierto');
   bubble.classList.toggle('tour-bubble-finale', !!step.finale);
   void bubble.offsetWidth; // fuerza reflow para poder relanzar la animación de entrada en cada paso
   bubble.classList.add('tour-bubble-anim');
@@ -647,6 +678,7 @@ function renderTourStep(){
       <button class="modal-close" onclick="finishTour()" aria-label="${escapeHtml(t('common.close'))}">&times;</button>
     </div>
     <p class="tour-bubble-desc">${escapeHtml(t(step.descKey))}</p>
+    ${step.finale ? '' : `<button type="button" class="tour-mas" onclick="tourAlternarTexto()">${escapeHtml(t('tour.more'))}</button>`}
     ${step.finale ? '' : `<div class="tour-progress"><div class="tour-progress-fill" style="width:${pct}%"></div></div>`}
     <div class="modal-footer tour-bubble-footer">
       ${step.finale
@@ -657,6 +689,14 @@ function renderTourStep(){
         `}
     </div>
   `;
+}
+/* Hoja del móvil: el texto va recortado a 3 renglones y este botón lo despliega (y lo vuelve a recoger). Los botones Anterior/Siguiente
+   no se mueven nunca: el cuerpo es lo único que hace scroll. */
+function tourAlternarTexto(){
+  const b = document.getElementById('tour-bubble'); if(!b) return;
+  const abierto = b.classList.toggle('tour-texto-abierto');
+  const btn = b.querySelector('.tour-mas'); if(btn) btn.textContent = t(abierto ? 'tour.less' : 'tour.more');
+  tourPositionUI();
 }
 function tourNext(){ tourStepIndex = Math.min(tourStepIndex+1, TOUR_STEPS.length-1); renderTourStep(); }
 function tourPrev(){ tourStepIndex = Math.max(tourStepIndex-1, 0); renderTourStep(); }
@@ -1568,6 +1608,32 @@ function switchChatTab(channel){
   markChatRead(channel);
   updateChatBadge();
 }
+/* Los mensajes AUTOMÁTICOS del chat (pedir ayuda, avisar de un pase, una incidencia, un aviso rápido a sala) se guardaban ya escritos
+   en el idioma del aparato que los mandó: un camarero con la app en inglés dejaba «Manager needs help right now» y el dueño lo leía en
+   inglés entre mensajes en castellano. Un dato guardado no se traduce, se traduce al mostrarlo (norma de i18n): el mensaje lleva
+   `sys` = {k, …parámetros} y se compone aquí en el idioma de quien lo lee. `text` se conserva como respaldo (otros aparatos con una
+   versión anterior, avisos del navegador) y para los mensajes antiguos, que se reconocen por su plantilla en cualquiera de los tres idiomas. */
+function chatNombreAutor(m){
+  return String(m && m.authorId) === 'owner' ? t('common.chef') : (m && m.authorName) || '';
+}
+function chatTextoDe(m){
+  if(!m) return '';
+  const s = m.sys;
+  if(s && s.k === 'urgentHelp') return t('chat.urgentDefaultText').replace('${name}', chatNombreAutor(m));
+  if(s && s.k === 'pase') return `🍳 ${s.titulo}: ${gl({es:'listo en el pase, venid a recogerlo', ca:'llest al pas, veniu a recollir-ho', en:'ready at the pass, come and collect'})}`;
+  if(s && s.k === 'avisoSala' && typeof AVISOS_SALA !== 'undefined' && AVISOS_SALA[s.i]) return '🍳 ' + gl(AVISOS_SALA[s.i]);
+  if(s && s.k === 'incidencia' && typeof incidenciaTipoLabel === 'function') return `⚠ ${s.titulo}: ${incidenciaTipoLabel(s.tipo)}${s.texto ? ' — ' + s.texto : ''}`;
+  // Mensajes de antes de `sys`: «<nombre> necesita ayuda ahora mismo» en cualquiera de los tres idiomas
+  if(m.urgent && !s){
+    for(const lg of ['es', 'ca', 'en']){
+      const plantilla = (I18N[lg] || {})['chat.urgentDefaultText'];
+      if(!plantilla) continue;
+      const [pre, post] = plantilla.split('${name}');
+      if(String(m.text).startsWith(pre) && String(m.text).endsWith(post)) return t('chat.urgentDefaultText').replace('${name}', chatNombreAutor(m));
+    }
+  }
+  return m.text;
+}
 function renderChatMessages(){
   const box = document.getElementById('chat-messages');
   const author = getChatAuthor();
@@ -1577,9 +1643,8 @@ function renderChatMessages(){
   const esNuevo = m => leido !== undefined && String(m.authorId) !== String(author) && (!leido || m.ts > leido);
   box.innerHTML = msgs.map(m => `
     <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}${esNuevo(m)?' chat-msg-new':''}">
-      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}</span>
-      ${escapeHtml(m.text)}
-      <button class="btn btn-sm txt-xs" style="margin-top:4px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
+      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(chatNombreAutor(m))} · ${fmtHora(m.ts)}${esNuevo(m)?` <span class="chat-new-tag">${t('chat.new')}</span>`:''}<button class="chat-pin" onclick="pinChatMessage(${m.id})" data-tip="${escapeHtml(t('chat.pinMessage'))}" aria-label="${escapeHtml(t('chat.pinMessage'))}"><i class="ti ti-pin"></i></button></span>
+      <span class="chat-txt">${escapeHtml(chatTextoDe(m))}</span>
     </div>
   `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
@@ -1616,7 +1681,7 @@ function renderChatPinned(){
   box.innerHTML = msg ? `
     <div class="chat-pinned-bar">
       <i class="ti ti-pin"></i>
-      <span style="flex:1"><strong>${escapeHtml(msg.authorName)}:</strong> ${escapeHtml(msg.text)}</span>
+      <span style="flex:1"><strong>${escapeHtml(chatNombreAutor(msg))}:</strong> ${escapeHtml(chatTextoDe(msg))}</span>
       <button class="btn btn-sm btn-icon" onclick="unpinChatMessage()"><i class="ti ti-x"></i></button>
     </div>` : '';
 }
@@ -1642,7 +1707,7 @@ function sendUrgentHelpAlert(){
   const authorName = getChatAuthorName(authorId);
   DB.chatMessages.push({
     id: genId(), channel: 'general', authorId, authorName,
-    text: t('chat.urgentDefaultText').replace('${name}', authorName),
+    text: t('chat.urgentDefaultText').replace('${name}', authorName), sys: {k: 'urgentHelp'},
     ts: new Date().toISOString(), urgent: true
   });
   saveDB();
@@ -2348,6 +2413,24 @@ if(typeof window !== 'undefined'){
 function ggAccPreparar(){
   if(!ggAccMovil()) return;
   const vista = document.querySelector('.view.active'); if(!vista) return;
+  /* TABLAS ANCHAS EN MÓVIL (vídeo del 15/11): una tabla de más de 3 columnas que no se apila en tarjetas (`.table-cards`) se queda dentro de su
+     `.table-wrap` con scroll horizontal, y se marca `.tbl-scroll` para que lleve la primera columna fija y una sombra que avisa de que hay más
+     a la derecha. Así ninguna cifra se monta encima de otra ni se corta sin señal. */
+  vista.querySelectorAll('.table-wrap > table:not(.table-cards)').forEach(tb => {
+    const wrap = tb.parentElement; if(wrap.classList.contains('tbl-scroll')) return;
+    const fila = tb.querySelector('thead tr') || tb.querySelector('tr');
+    if(fila && fila.children.length > 3) wrap.classList.add('tbl-scroll');
+  });
+  // Tiras de pestañas/filtros largas (`.gg-pest-col`): botón «Más / Menos» que despliega el resto (ver CSS, punto 9 de VIDEO-MÓVIL).
+  vista.querySelectorAll('.gg-pest-col').forEach(c => {
+    let b = c.querySelector(':scope > .gg-pest-mas');
+    if(!b){
+      b = document.createElement('button'); b.type = 'button'; b.className = 'gg-pest-mas';
+      b.addEventListener('click', () => { const ab = c.classList.toggle('gg-pest-abierta'); b.setAttribute('aria-expanded', ab ? 'true' : 'false'); b.textContent = ab ? gl({es:'Menos', ca:'Menys', en:'Less'}) : gl({es:'Más', ca:'Més', en:'More'}); });
+      b.setAttribute('aria-expanded', 'false'); b.textContent = gl({es:'Más', ca:'Més', en:'More'});
+      c.appendChild(b);
+    }
+  });
   vista.querySelectorAll('.gg-plegable').forEach(el => {
     const h = el.querySelector(':scope > .ge-sec-head, :scope > h3, :scope > h4'); if(!h) return;
     if(!h.classList.contains('gg-acc-h')){ h.classList.add('gg-acc-h'); h.setAttribute('role','button'); h.tabIndex = 0; }
@@ -2370,6 +2453,34 @@ document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === '
 // Estas pantallas se pintan por trozos (innerHTML de cada contenedor): se vuelve a preparar cuando aparece algo nuevo.
 (function(){ let t = null; const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(ggAccPreparar, 60); });
   const arrancar = () => { const c = document.getElementById('content') || document.body; obs.observe(c, {childList:true, subtree:true}); ggAccPreparar(); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar(); })();
+/* Nota de ayuda larga que en móvil se pliega tras un «?» (norma del 30/10: las explicaciones largas no van a la vista; en el vídeo
+   de Android ocupaban 5-8 renglones en gris antes de los datos). En PC el texto sigue a la vista y el botón no existe.
+   `texto` ya viene escapado/HTML; `clase` es opcional (es-nota, es-pista…) y se aplica al texto. */
+function ggNota(texto, clase){
+  // En móvil se usa la clase común `.gg-ayuda` (details con «?»); en PC el texto va a la vista.
+  if(typeof matchMedia === 'function' && matchMedia('(max-width:760px)').matches)
+    return `<details class="gg-ayuda"><summary aria-label="${escapeHtml(gl({es:'Más información', ca:'Més informació', en:'More info'}))}">?</summary><div class="${clase || ''}">${texto}</div></details>`;
+  return `<div class="gg-nota"><button type="button" class="gg-nota-q" aria-expanded="false" onclick="ggNotaToggle(this)"><i class="ti ti-help-circle"></i> ${gl({es:'Más información', ca:'Més informació', en:'More info'})}</button><div class="gg-nota-txt${clase ? ' ' + clase : ''}">${texto}</div></div>`;
+}
+function ggNotaToggle(btn){
+  const n = btn.closest('.gg-nota'); if(!n) return;
+  const abierta = n.classList.toggle('is-abierta');
+  btn.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+}
+/* Teclado numérico en TODO campo de cantidad o importe (vídeo en Android del 15/11): con el teclado de letras, teclear «0,25» obliga a
+   cambiar de teclado. El campo sigue siendo type=number (validación y flechas intactas); inputmode solo elige el teclado:
+   «decimal» si admite decimales (por defecto, o step con coma/«any»), «numeric» si el paso es entero. Un campo que ya trae su
+   inputmode (o un type=text a propósito) no se toca. Se aplica a lo que ya hay y a lo que se pinte después (pantallas y ventanas se
+   repintan por innerHTML), así que una pantalla nueva nace con el teclado bien sin acordarse. */
+function ggInputmodeNumerico(raiz){
+  (raiz || document).querySelectorAll('input[type=number]:not([inputmode])').forEach(el => {
+    const st = (el.getAttribute('step') || '').trim();
+    el.setAttribute('inputmode', st && /^\d+$/.test(st) && st !== '0' ? 'numeric' : 'decimal');
+  });
+}
+(function(){ let t = null; const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => ggInputmodeNumerico(), 40); });
+  const arrancar = () => { obs.observe(document.body, {childList:true, subtree:true}); ggInputmodeNumerico(); };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar(); })();
 const GG_VISTAS_NUEVAS = ['view-home', 'view-folder', 'view-idr', 'view-carta', 'view-comandascocina', 'view-proveedores', 'view-megalista', 'view-escandallo', 'view-fichas', 'view-pedidos', 'view-stock', 'view-horarios', 'view-distribucion', 'view-limpieza', 'view-promocion', 'view-clientes', 'view-reservas', 'view-tpv', 'view-manual', 'view-minegocio', 'view-dashboard', 'view-economia', 'view-plan360'];   // pantallas que ya tienen el diseño nuevo
 const GG_FINO_CONTENEDORES = GG_VISTAS_NUEVAS.map(v => '#' + v).concat(['#modal-box.ds-nuevo']);
@@ -2800,6 +2911,83 @@ function renderViewSinCache(view){
     case 'plan360': renderPlan360(); break;
   }
   requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
+  if(view === 'home' && typeof ggAvisoInstalar === 'function') ggAvisoInstalar();   // se ofrece anclar la app (solo móvil, una vez; ver ggAvisoInstalar)
+}
+
+/* ═══ ANCLAR LA APP A LA PANTALLA DE INICIO (16/11, pedido del dueño) ═══
+   En el móvil, entrar desde el icono es mucho mejor que desde el navegador: pantalla completa, arranque directo y sin barras. Pero casi
+   nadie sabe que se puede, así que la primera vez que se llega a Inicio (ya identificado) se ofrece, con un «Ahora no» que lo calla.
+   · Android/Chrome avisa cuando se puede instalar (`beforeinstallprompt`): botón «Instalar». Si no lo avisa, se dan los pasos del menú.
+   · iPhone/iPad no tiene botón: se explican los dos toques (Compartir → Añadir a pantalla de inicio).
+   · Nunca en un ordenador, ni si ya está instalada (display-mode: standalone), ni en localhost, ni con una ventana abierta.
+   · «Ahora no» → 7 días; a la tercera, no vuelve. Instalada o «Entendido» → no vuelve. Coste cero: es solo una tarjeta. */
+const GG_INSTALAR_LS = 'gastrogoan_instalar';
+let ggInstalarEvento = null;
+if(typeof window !== 'undefined'){
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); ggInstalarEvento = e; });
+  window.addEventListener('appinstalled', () => { ggInstalarEvento = null; try{ localStorage.setItem(GG_INSTALAR_LS, JSON.stringify({nunca:true})); }catch(_){} const x = document.getElementById('gg-instalar'); if(x) x.remove(); });
+}
+function ggEsMovil(){ try{ return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820; }catch(_){ return false; } }
+function ggYaInstalada(){ try{ return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; }catch(_){ return false; } }
+function ggEsIos(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function ggInstalarPermitido(){
+  if(!ggEsMovil() || ggYaInstalada()) return false;
+  if(!/^https?:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return false;
+  try{
+    const m = JSON.parse(localStorage.getItem(GG_INSTALAR_LS) || '{}');
+    if(m.nunca || (m.veces || 0) >= 3) return false;
+    if(m.hasta && Date.now() < m.hasta) return false;
+  }catch(_){}
+  return true;
+}
+function ggAvisoInstalar(){
+  if(window.__ggInstalarProgramado || !ggInstalarPermitido()) return;
+  window.__ggInstalarProgramado = true;
+  const intentar = (reintentos) => {
+    if(!ggInstalarPermitido()) return;
+    const sesion = typeof getAccessSession === 'function' ? getAccessSession() : null;
+    const modal = document.getElementById('modal-overlay');
+    const ocupado = !sesion || document.getElementById('gg-instalar') || (modal && modal.classList.contains('active')) || !document.querySelector('#view-home.active');
+    if(ocupado){ if(reintentos > 0) setTimeout(() => intentar(reintentos - 1), 8000); return; }
+    ggPintarAvisoInstalar();
+  };
+  setTimeout(() => intentar(3), 4000);
+}
+function ggPintarAvisoInstalar(){
+  const ios = ggEsIos();
+  const pasos = ios
+    ? [gl({es:'Toca el botón Compartir (el cuadrado con la flecha hacia arriba), abajo en Safari.', ca:'Toca el botó Compartir (el quadrat amb la fletxa cap amunt), a baix a Safari.', en:'Tap the Share button (the square with an arrow pointing up) at the bottom of Safari.'}),
+       gl({es:'Elige «Añadir a pantalla de inicio» y confirma.', ca:'Tria «Afegir a la pantalla d\'inici» i confirma.', en:'Choose “Add to Home Screen” and confirm.'})]
+    : [gl({es:'Abre el menú del navegador (los tres puntos ⋮).', ca:'Obre el menú del navegador (els tres punts ⋮).', en:'Open the browser menu (the three dots ⋮).'}),
+       gl({es:'Elige «Instalar aplicación» o «Añadir a la pantalla de inicio».', ca:'Tria «Instal·la l\'aplicació» o «Afegeix a la pantalla d\'inici».', en:'Choose “Install app” or “Add to Home screen”.'})];
+  const conBoton = !!ggInstalarEvento && !ios;   // Safari de iPhone no tiene botón de instalar: allí se explican los pasos
+  const el = document.createElement('div');
+  el.id = 'gg-instalar'; el.className = 'gg-instalar'; el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', gl({es:'Añadir GastroGoan a la pantalla de inicio', ca:'Afegir GastroGoan a la pantalla d\'inici', en:'Add GastroGoan to the home screen'}));
+  el.innerHTML = `<div class="gg-instalar-cab"><span class="gg-instalar-ico"><i class="ti ti-device-mobile-down"></i></span>
+      <div style="flex:1;min-width:0"><strong>${escapeHtml(gl({es:'Ten GastroGoan a un toque', ca:'Tingues GastroGoan a un toc', en:'Keep GastroGoan one tap away'}))}</strong>
+      <p>${escapeHtml(gl({es:'Añádela a tu pantalla de inicio: se abre a pantalla completa, más rápido y sin barras del navegador.', ca:'Afegeix-la a la pantalla d\'inici: s\'obre a pantalla completa, més ràpid i sense barres del navegador.', en:'Add it to your home screen: it opens full screen, faster and without browser bars.'}))}</p>
+      ${conBoton ? '' : `<ol>${pasos.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>`}</div>
+      <button class="gg-instalar-x" onclick="ggCerrarAvisoInstalar(false)" aria-label="${escapeHtml(gl({es:'Cerrar', ca:'Tanca', en:'Close'}))}">&times;</button></div>
+    <div class="gg-instalar-bt">
+      <button class="btn" onclick="ggCerrarAvisoInstalar(false)">${escapeHtml(gl({es:'Ahora no', ca:'Ara no', en:'Not now'}))}</button>
+      ${conBoton ? `<button class="btn btn-primary" onclick="ggInstalarAhora()"><i class="ti ti-download"></i> ${escapeHtml(gl({es:'Instalar', ca:'Instal·la', en:'Install'}))}</button>` : `<button class="btn btn-primary" onclick="ggCerrarAvisoInstalar(true)">${escapeHtml(gl({es:'Entendido', ca:'Entesos', en:'Got it'}))}</button>`}
+    </div>`;
+  document.body.appendChild(el);
+}
+function ggCerrarAvisoInstalar(hecho){
+  const el = document.getElementById('gg-instalar'); if(el) el.remove();
+  try{
+    const m = JSON.parse(localStorage.getItem(GG_INSTALAR_LS) || '{}');
+    m.veces = (m.veces || 0) + 1; m.hasta = Date.now() + 7 * 86400000;
+    if(hecho) m.nunca = true;       // «Entendido» tras leer los pasos: ya sabe cómo, no hace falta insistir
+    localStorage.setItem(GG_INSTALAR_LS, JSON.stringify(m));
+  }catch(_){}
+}
+async function ggInstalarAhora(){
+  const ev = ggInstalarEvento; if(!ev){ ggCerrarAvisoInstalar(false); return; }
+  try{ ev.prompt(); await ev.userChoice; }catch(_){}
+  ggInstalarEvento = null; ggCerrarAvisoInstalar(false);
 }
 
 function renderHome(){
