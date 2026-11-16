@@ -2137,6 +2137,11 @@ let ggMenuAbierto = null;
   }, true);
   document.addEventListener('contextmenu', e => { if(e.target.closest && e.target.closest('[data-tip]') && 'ontouchstart' in window) e.preventDefault(); });
 })();
+/* ¿El aparato no tiene «pasar por encima»? En un móvil «pasa el ratón» es una frase de PC que no se puede cumplir (vídeo del 15/11):
+   los textos de ayuda de las gráficas eligen entre las dos redacciones con esto. */
+function ggTactil(){
+  try{ return !!(window.matchMedia && window.matchMedia('(hover:none)').matches); }catch(e){ return false; }
+}
 function ggMenuAcciones(acciones, opts){
   opts = opts || {};
   const lista = (acciones || []).filter(Boolean);

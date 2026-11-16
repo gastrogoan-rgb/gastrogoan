@@ -1283,7 +1283,7 @@ function renderDashboard(){
   const aCero = attentionItems.filter(i => i.count === 0);
   document.getElementById('dashboard-attention').innerHTML = `
     ${conAviso.length ? `<div class="att-list">${conAviso.map(chipAtencion).join('')}</div>` : `<div class="att-quiet-msg">${t('dash.att.allQuiet')}</div>`}
-    ${aCero.length ? `<div class="att-zero">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div>` : ''}
+    ${aCero.length ? `<details class="att-zero"${window.innerWidth > 760 ? ' open' : ''}><summary>${escapeHtml(gl({es:'Todo en orden: ' + aCero.length + ' comprobaciones a cero', ca:'Tot en ordre: ' + aCero.length + ' comprovacions a zero', en:'All clear: ' + aCero.length + ' checks at zero'}))}</summary><div class="att-zero-lista">${aCero.map(i => `<button type="button" class="att-link" onclick="${i.onclick}"><i class="ti ${i.icon}" aria-hidden="true"></i>${i.label}</button>`).join('')}</div></details>` : ''}
   `;
 
 
