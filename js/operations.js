@@ -1717,7 +1717,7 @@ function renderPedidoDetail(){
 
   box.innerHTML = `
     <div class="es-barra">
-      <button type="button" class="btn btn-sm btn-fino" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> ${t('btn.backToOrders')}</button>
+      <button type="button" class="btn btn-sm btn-fino" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
       <div class="es-barra-titulo">${t('label.purchaseOrder')}</div>
       <div class="es-barra-der">
         ${o.estado==='BORRADOR' ? `<button type="button" class="btn btn-fino is-on" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
@@ -2436,7 +2436,7 @@ function buildPedidoPrintHtml(o){
       .pp-meta:last-child{border-right:0}
       .pp-meta span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#716C65}
       .pp-meta b{display:block;font-size:15px;letter-spacing:-.01em}
-      .pp-meta small{display:block;font-size:11px;color:#716C65;margin-top:1px;overflow-wrap:anywhere}
+      .pp-meta small{display:block;font-size:11px;color:#716C65;margin-top:1px;overflow-wrap:break-word}
       table.pp-t{margin-top:4px}
       .pp-t th{padding:7px 8px}
       .pp-t td{padding:9px 8px;font-size:13.5px;border-bottom:1px solid #E7E2D9}

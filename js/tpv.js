@@ -2611,7 +2611,7 @@ function renderMarkDishOutModal(){
       <h3><i class="ti ti-flame-off"></i> ${titulo}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    ${atras ? `<div class="dishout-nav"><button type="button" class="btn btn-sm btn-fino" onclick="${atras}"><i class="ti ti-arrow-left"></i> ${gl({es:'Atrás', ca:'Enrere', en:'Back'})}</button><span class="dishout-migas">${migas}</span></div>` : ayuda}
+    ${atras ? `<div class="dishout-nav"><button type="button" class="btn btn-sm btn-fino" onclick="${atras}"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button><span class="dishout-migas">${migas}</span></div>` : ayuda}
     <div class="dishout-lista">${cuerpo}</div>
     <div class="modal-footer">
       <button class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
@@ -2771,7 +2771,7 @@ function avisarPase(orderId){
   const authorId = getChatAuthor();
   const autor = getChatAuthorName(authorId);
   const texto = `🍳 ${titulo}: ${gl({es:'listo en el pase, venid a recogerlo', ca:'llest al pas, veniu a recollir-ho', en:'ready at the pass, come and collect'})}`;
-  DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: autor, text: texto, ts: new Date().toISOString(), urgent: true});
+  DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: autor, text: texto, sys: {k: 'pase', titulo}, ts: new Date().toISOString(), urgent: true});
   order.paseAvisadoAt = new Date().toISOString();
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -3297,7 +3297,7 @@ function crearIncidencia(orderId, lado){
     const authorId = getChatAuthor();
     const autor = getChatAuthorName(authorId);
     const texto2 = `⚠ ${titulo}: ${tipoTxt}${texto ? ' — ' + texto : ''}`;
-    DB.chatMessages.push({id: genId(), channel: otro, authorId, authorName: autor, text: texto2, ts: new Date().toISOString(), urgent: true});
+    DB.chatMessages.push({id: genId(), channel: otro, authorId, authorName: autor, text: texto2, sys: {k: 'incidencia', titulo, tipo: incidenciaTipoSel, texto}, ts: new Date().toISOString(), urgent: true});
     if(typeof sendPushToAll === 'function') sendPushToAll('⚠ ' + autor, texto2);
   }catch(e){}
   incidenciaRefrescar(orderId);
@@ -3354,7 +3354,7 @@ function enviarAvisoSala(i){
   const authorId = getChatAuthor();
   const autor = getChatAuthorName(authorId);
   const msg = '🍳 ' + texto;
-  DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: autor, text: msg, ts: new Date().toISOString(), urgent: true});
+  DB.chatMessages.push({id: genId(), channel: 'sala', authorId, authorName: autor, text: msg, ...(i >= 0 ? {sys: {k: 'avisoSala', i}} : {}), ts: new Date().toISOString(), urgent: true});
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   if(typeof sendPushToAll === 'function') sendPushToAll('🍳 ' + autor, texto);

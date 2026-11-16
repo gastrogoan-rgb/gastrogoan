@@ -6155,6 +6155,10 @@ function renderManual(){
   const leyendo = manualChapter >= 0;
   // El tour solo se ofrece en la portada: es lo primero que se ve y no estorba cuando ya se está leyendo.
   if(tour) tour.hidden = !!(manualArea || manualChapter >= 0 || q);
+  // Dentro de un grupo o de un tema, en móvil, el título grande de la pantalla, el tour y (leyendo) el buscador sobran: el contenido
+  // empezaba pasados los 900 px (vídeo del 15/11). Las clases las usa el bloque «PAQUETE 5» del final de css/styles.css.
+  const vista = document.getElementById('view-manual');
+  if(vista){ vista.classList.toggle('mnl-dentro', !!(manualArea || leyendo || q)); vista.classList.toggle('mnl-leyendo', leyendo); }
   cont.innerHTML = ''; pie.innerHTML = '';
   indice.hidden = leyendo;
   if(leyendo){ renderManualTema(cont, pie, q); return; }

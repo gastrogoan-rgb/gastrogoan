@@ -362,7 +362,7 @@ function renderEscandallo(){
   }
 
   const backBtn = (!searching && escandalloFolder !== null)
-    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><div class="ml-ruta-nom">${escapeHtml(nombreDe(escandalloFolder))}</div></div>` : '';
+    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button><div class="ml-ruta-nom">${escapeHtml(nombreDe(escandalloFolder))}</div></div>` : '';
 
   if(!recipes.length){
     box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
@@ -1590,7 +1590,7 @@ function renderFichas(){
   }
 
   const backBtn = (!searching && fichasFolder !== null)
-    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><div class="ml-ruta-nom">${escapeHtml(fichasFolder === '__none__' ? t('label.noCategory') : fichasFolder)}</div></div>` : '';
+    ? `<div class="ml-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button><div class="ml-ruta-nom">${escapeHtml(fichasFolder === '__none__' ? t('label.noCategory') : fichasFolder)}</div></div>` : '';
 
   const visibleRecipes = (!searching && fichasFolder !== null)
     ? recipes.filter(r => (r.category || '__none__') === fichasFolder)

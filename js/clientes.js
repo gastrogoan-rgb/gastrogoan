@@ -328,7 +328,7 @@ function renderClienteHistorial(){
       <div class="cl-ev-txt" ${click}><b>${tit}</b><small>${det}</small></div><span class="cl-ev-fecha">${escapeHtml(e.fecha || '')}</span><span class="cl-ev-der">${der}</span></li>`;
   };
   box.innerHTML = `
-    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(gl({es:'Clientes', ca:'Clients', en:'Customers'}))}</button></div>
+    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.back'))}</button></div>
       <div class="pm-acciones"><button type="button" class="btn btn-fino" onclick="openClientModal(${c.id})"><i class="ti ti-user"></i> ${escapeHtml(gl({es:'Ficha', ca:'Fitxa', en:'Card'}))}</button></div></div>
     <h2 class="cl-tit-pantalla"><span class="pr-av" style="--c:#8A7440">${escapeHtml(prIniciales(c.name))}</span> ${escapeHtml(gl({es:'Historial de ', ca:'Historial de ', en:'History of '}))}${escapeHtml(c.name)}</h2>
     ${pmResumenHtml([
@@ -617,7 +617,7 @@ function renderValesPantalla(conservarFoco){
     return;
   }
   box.innerHTML = `
-    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(gl({es:'Clientes', ca:'Clients', en:'Customers'}))}</button></div>
+    <div class="toolbar pm-barra"><div class="left"><button type="button" class="btn btn-sm btn-fino" onclick="clVolver()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.back'))}</button></div>
       <div class="pm-acciones"><button type="button" class="btn btn-fino is-on owner-only" onclick="openGiftVouchersModal()"><i class="ti ti-plus"></i> ${escapeHtml(gl({es:'Emitir un vale', ca:'Emetre un val', en:'Issue a voucher'}))}</button></div></div>
     <h2 class="cl-tit-pantalla"><i class="ti ti-gift-card"></i> ${escapeHtml(gl({es:'Historial de vales regalo', ca:'Historial de vals regal', en:'Gift voucher history'}))}</h2>
     ${pmResumenHtml([

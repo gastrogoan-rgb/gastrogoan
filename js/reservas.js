@@ -291,7 +291,7 @@ function renderReservasSemana(){
               <b class="rv-chip-hora">${escapeHtml(r.time || '')}</b><span class="rv-chip-nom">${escapeHtml(rvNombre(r))}</span><em>${r.people}</em>
             </button>`; }).join('')}
           ${todas.length > 6 ? `<button type="button" class="pm-chip rv-chip rv-chip-mas" onclick="goToReservasDia('${ds}')"><span>${escapeHtml(gl({es:`Ver las ${todas.length - 6} restantes`, ca:`Veure les ${todas.length - 6} restants`, en:`See the other ${todas.length - 6}`}))}</span></button>` : ''}
-          <button type="button" class="pm-mas" aria-label="${escapeHtml(t('btn.newReservation'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="reservasDate='${ds}';openReservationModal()"><i class="ti ti-plus"></i></button>
+          <button type="button" class="pm-mas" aria-label="${escapeHtml(t('btn.newReservation'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="reservasDate='${ds}';openReservationModal()"><i class="ti ti-plus"></i><span class="pm-mas-t">${escapeHtml(t('btn.newReservation'))}</span></button>
         </div>
       </section>`;
   }).join('');
