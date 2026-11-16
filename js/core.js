@@ -8236,8 +8236,8 @@ function initPublicRequestsListener(){
         // No se confía en el tableId que trae la solicitud (lo eligió el
         // navegador del cliente): aquí se revalida contra la lista de mesas
         // que SÍ cumplen el ajuste estricto, igual que si se buscara de cero.
-        const candidatas = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
-          .filter(tb => mesaEncajaGrupo(tb, req.people || 1));
+        const candidatas = mesasMasAjustadas((getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
+          .filter(tb => mesaEncajaGrupo(tb, req.people || 1)));
         let confirmedTableId = null;
         if(req.tableId != null && candidatas.some(tb => tb.id === req.tableId)){
           confirmedTableId = req.tableId;
@@ -8341,7 +8341,7 @@ function initPublicRequestsListener(){
           // nuevo número de comensales, ni siquiera la que ya tenía asignada
           // (si el cliente sube de 2 a 6 personas manteniendo la mesa, esa
           // mesa de 2 ya no vale y hay que rebuscar una que sí quepa).
-          const candidatas = available.filter(tb => mesaEncajaGrupo(tb, newPeople));
+          const candidatas = mesasMasAjustadas(available.filter(tb => mesaEncajaGrupo(tb, newPeople)));
           let matchedTableId = candidatas.some(tb => tb.id === target.tableId) ? target.tableId : null;
           if(matchedTableId == null){
             const autoTable = candidatas.slice().sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
@@ -8826,6 +8826,15 @@ function mesaEncajaGrupo(tb, people){
   const plazas = parseInt(tb && tb.plazas) || 0;
   const n = parseInt(people) || 1;
   return plazas >= n && plazas <= n + MESA_MARGEN_PLAZAS;
+}
+/* De las mesas que PUEDEN valer (mesaEncajaGrupo), solo las del tamaño más ajustado que haya libre (decisión del dueño, 17/11): una pareja puede
+   tener una mesa de 4 por el margen, pero no si queda libre una de 2 o de 3. Las grandes se reservan para grupos grandes. Igual que getEligibleTables
+   en la web pública: la web ofrece solo estas y la app revalida con la misma regla. */
+function mesasMasAjustadas(lista){
+  const l = Array.isArray(lista) ? lista : [];
+  if(!l.length) return l;
+  const menor = Math.min(...l.map(tb => parseInt(tb && tb.plazas) || 0));
+  return l.filter(tb => (parseInt(tb && tb.plazas) || 0) === menor);
 }
 /* ── Colores de marca (2/11) ─────────────────────────────────────────────────────────────────────
    Principal (brandColor: botones y acentos de la web de reservas, tickets y correos) y secundario (brandColor2: títulos,

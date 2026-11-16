@@ -3017,10 +3017,17 @@ function mesaEncajaGrupo(tb, people){
   const plazas = parseInt(tb && tb.plazas) || 0;
   return plazas >= people && plazas <= people + MESA_MARGEN_PLAZAS;
 }
+/* ⚠️ Decisión del dueño (17/11): el margen de plazas (arriba) dice qué mesas PUEDEN valer, pero entre las libres solo se ofrecen las del tamaño más
+   AJUSTADO. Una pareja puede sentarse en una mesa de 4 (margen de 2), pero NO si queda libre una de 2 o de 3: las grandes se guardan para grupos
+   grandes y solo salen cuando las pequeñas ya están cogidas. La app aplica lo mismo al recibir la reserva (mesasMasAjustadas, js/core.js): si
+   no coincidieran, la web ofrecería una mesa que la app luego cambia. */
 function getEligibleTables(dateStr, people, slots){
-  return (DB.tables || [])
+  const libres = (DB.tables || [])
     .filter(tb => mesaEncajaGrupo(tb, people) && tableFreeForSlots(dateStr, tb.id, slots))
     .sort((a, b) => a.plazas - b.plazas);
+  if(!libres.length) return libres;
+  const menor = parseInt(libres[0].plazas) || 0;
+  return libres.filter(tb => (parseInt(tb.plazas) || 0) === menor);
 }
 function getBestFitTable(dateStr, time, people, slots){
   return getEligibleTables(dateStr, people, slots)[0] || null;
