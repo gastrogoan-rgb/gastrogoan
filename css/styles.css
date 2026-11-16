@@ -6769,3 +6769,120 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
   button.kt-cn{flex-wrap:wrap;row-gap:4px}
   .kds-toolbar .btn.btn-fino{font-size:11px;padding:4px 2px}
 }
+
+/* VIDEO-MÓVIL · PAQUETE 5 · Plan 360º (lado negocio)
+   Salió del vídeo en un Android de 360 px: tarjetas con raya negra gruesa a
+   la izquierda, el calendario con los días presenciales y «hoy» en NEGRO
+   (lo marcado va en oliva, nunca en negro), 25 filas de «atrasado» a todo
+   lo alto que enterraban lo accionable y los tres estados de cada tarea
+   rotos en dos filas con uno solo debajo. Antes todo eso eran estilos en
+   línea en el JS, donde ninguna regla de móvil los alcanza. */
+.p360-hoy{margin-bottom:14px}
+.p360-hoy-cab{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.p360-hoy-cab strong{font-size:16px}
+.p360-atr{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.p360-atr-tit{font-weight:700;color:var(--red);font-size:13px;margin-bottom:8px}
+.p360-atr-fila{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:10px;min-height:44px;padding:6px 0;border-top:1px solid var(--border);cursor:pointer}
+.p360-atr-chip{font-size:11.5px;font-weight:700;padding:3px 8px;color:var(--red);background:var(--red-l);border:1px solid rgba(138,74,59,.3);white-space:nowrap;text-align:center;border-radius:999px}
+.p360-atr-txt{font-size:13px;overflow-wrap:break-word;min-width:0}
+.p360-atr-mas{margin-top:8px;width:100%;justify-content:center;min-height:44px}
+.p360-hero-stats{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0}
+.p360-hero-stat{min-width:0;padding:0 10px;border-right:1px solid rgba(255,255,255,.18)}
+.p360-hero-stat:first-child{padding-left:0}
+.p360-hero-de{font-size:14px;opacity:.6}
+.p360-leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.p360-leyenda span{display:inline-flex;align-items:center;gap:6px}
+.p360-ley-pun{display:inline-block;width:12px;height:12px;border:1px solid var(--border);background:#fff}
+.p360-ley-presencial{background:var(--green-l);border-color:var(--olive)}
+.p360-ley-hoy{border:2px solid var(--olive)}
+.p360-ley-atrasado{border-left:4px solid var(--red)}
+/* Presencial = tinte oliva claro, ya no relleno de tinta: el negro se leía como «elegido» o «hecho» */
+.p360-day-presencial{background:var(--green-l);border-left-color:var(--olive);color:var(--ink)}
+.p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:var(--olive);opacity:1}
+.p360-day-presencial:hover{background:var(--brand-cream)}
+/* Tarea: el contenido de #plan360-content .card lleva su filete de 3 px; una tarea dentro de otra tarjeta no lo repite */
+.p360-tarea{padding:12px;margin-bottom:8px}
+#plan360-content .card .card{border-top:1px solid var(--border)}
+#plan360-content .card .p360-tarea{border:0;border-top:1px solid var(--border);background:transparent;padding:12px 0;margin:0}
+#plan360-content .card .p360-tarea:first-child{border-top:0;padding-top:4px}
+.p360-tarea-obj{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.p360-tarea-obj-t{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:break-word;min-width:0}
+.p360-tarea-tit{font-weight:700;font-size:14.5px;overflow-wrap:break-word}
+.p360-tarea-desc{font-size:13.5px;margin:4px 0 0;color:var(--body)}
+.p360-tarea-file{margin-top:6px;font-size:12px}
+.p360-estados{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.p360-estados .btn{justify-content:center;min-height:44px;padding-left:4px;padding-right:4px;letter-spacing:0}
+.p360-tarea-nota{margin:10px 0 0}
+.p360-tarea-nota textarea{resize:none}
+@media (max-width:720px){
+  /* Sin raya gruesa de acento sobre cada tarjeta (norma del barrido del 7/11) */
+  #plan360-content .card{border-top:1px solid var(--border)}
+  .p360-card{border-left:1px solid var(--border)}
+  .p360-hero{border-top:1px solid var(--olive)}
+  .p360-hero-stat-num{font-size:24px}
+  .p360-hero-stat-label{font-size:11px;letter-spacing:.02em;overflow-wrap:break-word}
+  .p360-atr-fila{grid-template-columns:minmax(0,1fr);gap:4px;min-height:0;padding:10px 0}
+  .p360-atr-chip{justify-self:start;min-width:140px}
+  .p360-day-progress{font-size:12px}
+  .p360-day-weekday{font-size:11px}
+  .p360-card p{font-size:12.5px}
+}
+
+/* VIDEO-MÓVIL · PAQUETE 5 · Chat interno, Centro de ayuda y campana de avisos
+   Eran paneles flotantes de 480 px colgados bajo la cabecera: en un móvil dejaban ver la pantalla de debajo, no llegaban al pie y
+   se veían descentrados (10 px a un lado, 15 al otro por la barra de scroll). En ≤760 px pasan a ser una hoja del tamaño del ÁREA
+   VISIBLE (--vvt/--vvh de ggSincronizarAreaVisible, la misma norma que las ventanas): el teclado y las barras del navegador no se
+   comen el campo de escribir. Por debajo de las ventanas (200010), para que una confirmación que salga desde el chat se vea. */
+@media (max-width:760px){
+  .help-panel,.avisos-panel{top:var(--vvt,0px);left:0;right:0;bottom:auto;width:100%;max-width:none;height:var(--vvh,100dvh);max-height:var(--vvh,100dvh);border:0;border-radius:0;box-shadow:none;z-index:200005}
+  .av-cab{background:#fff;color:var(--ink);border-bottom:1px solid var(--border);padding:8px 8px 8px 16px}
+  .av-cab h4{font-size:16px;font-weight:600}
+  .av-cab .btn{background:#fff;color:var(--ink);border-color:var(--border);min-width:44px;min-height:44px}
+  .avisos-panel .av-cuerpo{min-height:0}
+  .help-panel-header,.av-cab{min-height:56px}
+  .help-panel-close{min-width:44px;min-height:44px;margin:0}
+  .help-tabs{flex:none}
+  .help-tab{min-height:48px;font-size:12px;letter-spacing:.04em;padding:8px 4px}
+  .help-tab.active{border-bottom:3px solid var(--olive)}
+  .help-chat-messages{flex:1 1 auto;min-height:96px;padding:14px 12px}
+  .help-msg{max-width:92%;font-size:14.5px;line-height:1.45}
+  .help-msg .chat-meta{font-size:11px;opacity:.85}
+  .help-suggestions{flex:none;flex-direction:column;flex-wrap:nowrap;gap:6px;max-height:40%;overflow-y:auto;padding:0 12px 10px}
+  .help-suggestion{width:100%;min-height:48px;text-align:left;font-family:inherit;font-size:14px;border-radius:3px;padding:10px 12px}
+  .help-chat-input-row{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+  .help-chat-input-row input{font-size:16px;min-height:44px}
+  .help-topics{padding:10px 12px}
+  .help-topic-item{min-height:48px;padding:12px 4px;font-size:14.5px}
+  .help-topic-group-title{font-size:12px}
+  /* La campana: «Ver» / «Visto» a la derecha de la misma fila y de 44 px, no en una segunda línea sin caja */
+  .av-fila{flex-wrap:nowrap}
+  .av-bt{width:auto;padding-left:0;flex-wrap:nowrap}
+  .av-bt .btn{min-height:44px;min-width:56px;justify-content:center}
+}
+/* Mensajes del chat: el aviso urgente va en rojo (no en verde, que dice «correcto»), la chincheta sale de la burbuja a la fila de la hora */
+.help-msg .chat-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.help-msg .chat-txt{display:block;overflow-wrap:break-word}
+.help-msg.chat-msg-urgent{background:var(--red-l);color:var(--ink);border:2px solid var(--red)}
+.chat-pin{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin-top:-14px;margin-bottom:-14px;margin-right:-12px;background:none;border:0;color:inherit;opacity:.8;cursor:pointer;font-size:15px}
+.chat-pin:hover{opacity:1}
+@media (hover:none){.chat-pin{opacity:.9}}
+
+/* VIDEO-MÓVIL · PAQUETE 5 · Manual de uso
+   La tarjeta del tour medía ~340 px y se seguía viendo DENTRO de un grupo (display:flex pisaba el atributo hidden), y encima venían
+   el título de pantalla, el buscador y el título del grupo: el contenido real empezaba pasados los 900 px. */
+.mnl-tour[hidden]{display:none}
+@media (max-width:720px){
+  .mnl-tour{padding:10px 12px;gap:6px 10px;flex-wrap:wrap;border-left-width:3px}
+  .mnl-tour-ico{font-size:22px}
+  .mnl-tour-txt{flex:1 1 0}
+  .mnl-tour .btn{flex:1 1 100%;width:100%}
+  .mnl-tour-txt span{display:none}
+  #view-manual.mnl-dentro > .view-title,#view-manual.mnl-dentro > .view-subtitle{display:none}
+  #view-manual.mnl-leyendo .mnl-busca{display:none}
+  .mnl-grupo-cab{padding-left:2px;padding-right:2px}
+  .mnl-grupo-cab p{padding:0}
+  /* «En este tema»: todos los saltos del mismo ancho, una lista con filete, no cajas de ancho distinto */
+  .mnl-toc{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .mnl-toc-it{width:100%;text-align:left;justify-content:flex-start;border-radius:0;border:0;border-top:1px solid var(--border);background:transparent;min-height:44px;padding:10px 2px}
+  .mnl-toc-et{margin-bottom:4px}
+}

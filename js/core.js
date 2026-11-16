@@ -4657,7 +4657,9 @@ const PLAN360_DEFAULT_PROGRAM = [
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
   ...Array.from({length: 26}, (_, i) => ({
     day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3),
-    task: '(Contenido pendiente de definir)',
+    // Sin `task`: el aviso «(Contenido pendiente de definir)» que llevaba aquí
+    // acabó como tarea real visible en 25 filas de «atrasado». Los programas ya
+    // creados con él se limpian al pintar (plan360TareaReal, js/app.js).
   })),
 ];
 
@@ -9841,7 +9843,7 @@ function applyRemoteBlock(key, remoteValue){
     const RECENT_MS = 5*60*1000;
     const now = Date.now();
     merged.filter(m => m.urgent && !knownIds.has(m.id) && String(m.authorId) !== String(me) && m.ts && (now - new Date(m.ts).getTime()) <= RECENT_MS)
-      .forEach(m => notifyDesktop('🚨 ' + (m.authorName||''), m.text||''));
+      .forEach(m => notifyDesktop('🚨 ' + (typeof chatNombreAutor === 'function' ? chatNombreAutor(m) : (m.authorName||'')), (typeof chatTextoDe === 'function' ? chatTextoDe(m) : m.text) || ''));
   }
   if(key === 'cashClosures' && Array.isArray(DB[key]) && Array.isArray(merged)){
     const knownIds = new Set(DB[key].map(c => c.id));
