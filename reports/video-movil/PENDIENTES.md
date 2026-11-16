@@ -40,3 +40,16 @@
 - [ ] Batería completa `bash test/todo.sh` en verde (y con `GG_FECHA` de otra hora).
 - [ ] `bash build.sh` + `bash deploy/actualizar.sh`, merge a `main`, decir al dueño qué sello de versión mirar y qué pantallas comprobar.
 - [ ] Repetir el vídeo de móvil tras publicar y comparar.
+
+## Estado a 16/11 17:01 (publicado en main, sello «16/11/2026 17:01»)
+Hecho y publicado: paquetes 1, 2, 3, 4 y 5; parpadeo; alérgenos de comensales en Comandas Cocina; VIP ≠ Recurrentes; aviso de anclar a la pantalla de inicio; enlace de compra nuevo; campana sin aro rojo. Batería completa en verde.
+
+### Lo que sigue SIN hacer (hay que cerrarlo)
+- [ ] Paquete 4: pasos de la ficha técnica en mayúsculas (no reproducido), «Ocup./Serv.» y «12 atrasadas» repetidas y «Verlas» duplicado en Distribución, «jabr» cortado y «VENCIDO» con «estado ok» en Mantenimiento, ayuda de Mega Lista sin plegar, «Sin precio» y chips de contraste, iconos «P» y foco del «+» en negro, alto de la tarjeta de Stock (~135 px), plurales sueltos en Distribución.
+- [ ] Paquete 2: «Cobrar 0,00 €» con poco contraste, estado vacío «Mías + exterior», textos de «Abrir mesa» y «Marcar bebida agotada», comprobar que el aviso negro no tapa «Cobrar».
+- [ ] Paquete 3: «¿Cómo se calcula?» a ancho completo, ceros de 240 px y globos del Panel, contraste de ayudas, icono de «Análisis de Platos».
+- [ ] Paquete 1: cifra y «€» sin partir en `fmtMoney` (espacio duro; ajusta ~52 pruebas), segundo en blanco al entrar en Sala/Gestión, doble pantalla de carga, botones «Ver»/«Copiar enlace» sin caja.
+- [ ] Paquete 5: ventana «Nube» enseña el código de licencia entero (enmascararlo), Visión global/Mi Negocio/Novedades sin repasar, plegar avisos largos del Manual, `admin-panel/plan360.html` aún enseña el relleno.
+- [ ] Comprobar que las pruebas nuevas FALLAN sin los arreglos.
+- [ ] Repetir el vídeo en el móvil tras esta versión y comparar.
+- [ ] Parpadeo: si vuelve a pasar, mirar `ggDiagRepintados()` en la consola (guarda de dónde viene cada repintado).
