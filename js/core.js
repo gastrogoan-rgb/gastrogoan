@@ -334,7 +334,7 @@ function renderEmployeeAccessFormHtml(){
   const recientes = getRecentBusinessCodes(), nombres = getRecentBusinessNames();
   return `
     <div class="access-card">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <button type="button" class="access-volver" onclick="showAccessSelectScreen()"><i class="ti ti-arrow-left" aria-hidden="true"></i> <span>${t('common.back')}</span></button>
       <div class="access-card-title">${t('access.employeeBtn')}</div>
       <p class="access-card-lead">${t('access.employeeDesc')}</p>
       <div class="field">
@@ -367,7 +367,7 @@ function renderOwnerAccessFormHtml(){
   const login = getOwnerLogin();
   return `
     <div class="access-card">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <button type="button" class="access-volver" onclick="showAccessSelectScreen()"><i class="ti ti-arrow-left" aria-hidden="true"></i> <span>${t('common.back')}</span></button>
       <div class="access-card-title">${t('access.ownerBtn')}</div>
       <p class="access-card-lead">${login ? t('access.ownerDesc') : t('access.ownerSetupDesc')}</p>
       <div class="field">
@@ -1430,7 +1430,7 @@ function renderBusinessSelectScreenHtml(){
         </div>
         <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:4px 0 16px">${t('bs.emptyDesc')}</p>
         <button class="btn btn-primary" style="width:100%" onclick="redeemFirstBusiness()"><i class="ti ti-ticket"></i> ${t('bs.redeemFirst')}</button>
-        <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+        <a href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
         <!-- Sin esto, una cuenta recién creada se quedaba ATRAPADA aquí: la
              lista de negocios está vacía, así que no hay ninguna a la que ir,
              y la pantalla no tiene aspa ni botón de volver. Quien entraba con
@@ -1501,7 +1501,7 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
         <button class="btn" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
-      <a class="bs-buy" href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      <a class="bs-buy" href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
       <div class="bs-foot">
         <button type="button" class="bs-footbtn" onclick="promptChangeOwnerPassword()"><i class="ti ti-key" aria-hidden="true"></i><span>${t('bs.changePassword')}</span></button>
         <button type="button" class="bs-footbtn" onclick="exitToAccessScreen()"><i class="ti ti-logout" aria-hidden="true"></i><span>${t('bs.exitAccount')}</span></button>
@@ -1594,15 +1594,15 @@ function renderBsGroups(allSlots){
       // eso confunde más de lo que aclara. Lo que identifica un negocio para
       // su dueño es el nombre que él le puso en "Mi Negocio".
       return `
-        <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-          <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+        <div class="bs-item gg-fila ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
             <div class="bs-item-name-wrap">
               <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
             </div>
             <span class="bs-item-tag" style="font-size:11px;color:var(--muted);font-weight:400">(${t('bs.independentTag')})</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
             ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
@@ -1612,12 +1612,12 @@ function renderBsGroups(allSlots){
     // Negocio con sucursales — cabecera expandible
     const childrenHtml = isOpen ? `
       <div class="bs-group-children">
-        <div class="bs-sub-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-          <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+        <div class="bs-sub-item gg-fila ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:6px;overflow:hidden">
             <i class="ti ti-home" style="color:var(--muted);flex-shrink:0"></i>
             <span style="overflow:visible;text-overflow:clip;white-space:normal">${t('bs.mainLocation')}</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
             ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
@@ -1625,12 +1625,12 @@ function renderBsGroups(allSlots){
         ${sucursales.map(s => {
           const sActive = s.id === ACTIVE_SLOT;
           return `
-          <div class="bs-sub-item ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
-            <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+          <div class="bs-sub-item gg-fila ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+            <div class="gg-fila-nombre" style="display:flex;align-items:center;gap:6px;overflow:hidden">
               <i class="ti ti-building-store" style="color:var(--muted);flex-shrink:0"></i>
               <span style="overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(s.name||t('bs.defaultBranchName'))}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <div class="gg-fila-extra" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
               ${sActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
               <button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>
             </div>
@@ -1643,8 +1643,8 @@ function renderBsGroups(allSlots){
         <div class="bs-group-header ${(isRootActive || sucursales.some(s=>s.id===ACTIVE_SLOT))?'active':''} ${isOpen?'open':''}"
              onclick="toggleBsGroup('${escapeHtml(root.id)}')">
           <i class="ti ti-building" style="flex-shrink:0"></i>
-          <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
-          <span style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
+          <span class="bs-item-name gg-fila-nombre" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+          <span class="gg-fila-extra" style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
           <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="color:var(--muted);margin-left:4px"></i>
         </div>
         ${childrenHtml}
@@ -4657,7 +4657,9 @@ const PLAN360_DEFAULT_PROGRAM = [
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
   ...Array.from({length: 26}, (_, i) => ({
     day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3),
-    task: '(Contenido pendiente de definir)',
+    // Sin `task`: el aviso «(Contenido pendiente de definir)» que llevaba aquí
+    // acabó como tarea real visible en 25 filas de «atrasado». Los programas ya
+    // creados con él se limpian al pintar (plan360TareaReal, js/app.js).
   })),
 ];
 
@@ -9841,7 +9843,7 @@ function applyRemoteBlock(key, remoteValue){
     const RECENT_MS = 5*60*1000;
     const now = Date.now();
     merged.filter(m => m.urgent && !knownIds.has(m.id) && String(m.authorId) !== String(me) && m.ts && (now - new Date(m.ts).getTime()) <= RECENT_MS)
-      .forEach(m => notifyDesktop('🚨 ' + (m.authorName||''), m.text||''));
+      .forEach(m => notifyDesktop('🚨 ' + (typeof chatNombreAutor === 'function' ? chatNombreAutor(m) : (m.authorName||'')), (typeof chatTextoDe === 'function' ? chatTextoDe(m) : m.text) || ''));
   }
   if(key === 'cashClosures' && Array.isArray(DB[key]) && Array.isArray(merged)){
     const knownIds = new Set(DB[key].map(c => c.id));
@@ -12731,7 +12733,7 @@ function buildRollPrintHtml(contenido, anchoMm, titulo, opts){
 @page{size:${ancho}mm auto;margin:0}
 html,body{margin:0;padding:0;background:#fff;color:#000}
 body{width:${util}mm;padding:2mm ${(ancho-util)/2}mm;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${ancho==58?'11px':'12.5px'};line-height:1.3}
-pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+pre{margin:0;white-space:pre-wrap;overflow-wrap:break-word;font:inherit}
 </style></head><body>${cuerpo}</body></html>`;
 }
 // Imprime en un iframe oculto en vez de window.open: las ventanas nuevas

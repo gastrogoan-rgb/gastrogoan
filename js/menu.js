@@ -1344,7 +1344,7 @@ function renderImportEscList(conservarScroll){
     const carpetas = getEscandalloFolders(areaRecipes);
     const c = carpetas.find(x => x[0] === importEscFolder);
     const lista = c ? c[2] : [];
-    box.innerHTML = `<div class="ie-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="importEscVolver()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button><b>${escapeHtml(c ? c[1] : '')}</b></div>` + todosCab(lista) + filas(lista);
+    box.innerHTML = `<div class="ie-ruta"><button type="button" class="btn btn-sm btn-fino" onclick="importEscVolver()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button><b>${escapeHtml(c ? c[1] : '')}</b></div>` + todosCab(lista) + filas(lista);
   }
   box.scrollTop = scroll;
   const ok = document.getElementById('import-esc-ok');

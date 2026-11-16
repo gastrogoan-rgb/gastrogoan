@@ -956,6 +956,20 @@ abre CADA botón, pestaña, modal y confirmación que cuelga de ella** (la prueb
 - **Web pública, subpantallas**: «Cocina a tope» con icono, texto y botón de llamar; encuesta NPS con botones grandes (rojo del 0 al 6, verde del 7 al 10); el botón del último paso dice **«Confirmar mi reserva» / «Confirmar pedido»** (ya no «Enviar solicitud»: la norma es que se confirma sola); el color SECUNDARIO de la marca tiñe los pasos hechos y las flechas de la entrada. Manual (capítulo «Reservas y Pedidos Online», nuevo apartado «Pedir y reservar: lo que verá tu cliente, paso a paso») y Ayuda (pregunta «reserva no se confirma») al día en los tres idiomas.
 - **Pruebas con OTRA fecha y hora** (`test/_reloj.mjs`): precarga que desplaza `Date` en cada página de Chromium sin tocar ninguna prueba: `GG_FECHA=2026-11-15T23:30 NODE_OPTIONS="--import $PWD/test/_reloj.mjs" bash test/todo.sh`. Es lo que caza las pruebas que solo pasan a ciertas horas o días (un lunes fallaron «Mi puesto» y el Panel; por la noche, el calendario de reservas). No cambia el reloj del servidor ni el de Node.
 
+## Vídeo en un móvil real (16/11): lo que las pruebas NO cazaban
+
+El dueño grabó 18 min de la app en un Android real y salieron 100+ fallos que `movil.mjs` no veía. Detalle en `reports/video-movil/` (RESUMEN, notas por tramo y PENDIENTES). **Norma del dueño: lo pendiente se hace entero; la vista en móvil es prioridad.** Normas nuevas, cada una nació de un fallo real:
+- **Una fila de «nombre + chips + importe + botones» usa `.gg-fila` / `.gg-fila-nombre` / `.gg-fila-extra`** (al final de `css/styles.css`): en ≤520 px el nombre ocupa la primera línea y lo demás pasa debajo. El nombre se quedaba en 40-100 px y se partía a mitad de palabra. **Prohibido `word-break:break-all` y `overflow-wrap:anywhere`** salvo en URLs y códigos.
+- **Toda tabla de más de tres columnas en móvil** pasa a tarjetas (`.table-cards`, con el rótulo de cada celda en su propia línea) o lleva scroll con la primera columna fija (`.tbl-scroll`). Tesorería, Cuenta de Resultados y Ventas por día se cortaban por el borde y se montaban las cifras. **Los alérgenos nunca se recortan.**
+- **Nunca texto de relleno visible al cliente** («(Contenido pendiente de definir)» salía 25 veces en el Plan 360º). Una tarea sin contenido no se pinta ni cuenta (`plan360TareaReal`).
+- **Las pruebas de móvil deben usar datos reales y textos LARGOS**: nombres de negocio de 20 letras, tablas con ventas de verdad, mesas con 8.000 minutos, tareas atrasadas de muchos días. Con cuatro filas de ejemplo cabe todo.
+- **Campos de importe y cantidad: `inputmode="decimal"`** (salía el teclado de letras).
+- **Tiempos largos legibles** («hace 2 d», nunca «8662'»); **fechas con `fechaImpresaLegible`**, nunca `2026-11-11`; plurales con el mecanismo de i18n («1 plato»).
+- **Un solo «Volver»** (`common.back`) en toda la app; un aviso (`.toast`) nunca tapa un botón principal ni se enseña vacío.
+- **Pestañas/filtros largos**: `.gg-pest-col` + `ggPestColapsables` (en móvil, la opción marcada y «Más»). Ayudas largas: `.gg-ayuda` tras un «?».
+- **Los mensajes automáticos del chat** (`sys`) se componen en el idioma de quien los lee, no el de quien los genera.
+- **Cada cierto tiempo, grabar un vídeo de la app en un móvil real** y revisarlo tramo a tramo (10 s): las pruebas miden lo que se les ha enseñado a medir.
+
 ## Barrido de toda la app y `CONTROL_CALIDAD/` (7/11, noche)
 
 El dueño pidió revisar **toda** la app, no solo las pantallas elegidas, con el prompt maestro. Se hizo SIN cambiar la identidad

@@ -3963,7 +3963,7 @@ function promoTabsHtml(){
     ['clientes', 'ti-users', t('view.clientes.title')],
     ['ideas', 'ti-bulb', t('tab.contentIdeas')],
   ];
-  return `<div class="left">${tabs.map(([id, ic, txt, extra]) =>
+  return `<div class="left gg-pest-col">${tabs.map(([id, ic, txt, extra]) =>
     `<button type="button" class="btn btn-sm btn-fino${extra || ''}${promoTab===id ? ' is-on active' : ''}" id="promo-tab-${id}" aria-pressed="${promoTab===id}" onclick="setPromoTab('${id}')"><i class="ti ${ic}"></i> ${escapeHtml(txt)}</button>`).join('')}</div>`;
 }
 
@@ -4120,7 +4120,7 @@ function renderPromoSemana(){
               ${done ? '<i class="ti ti-check"></i>' : p.menuItemName ? '<i class="ti ti-discount-2"></i>' : p.recurrence === 'weekly' ? '<i class="ti ti-repeat"></i>' : ''}
               <span>${escapeHtml(p.titulo)}</span>
             </button>`; }).join('')}
-          <button type="button" class="pm-mas owner-only" aria-label="${escapeHtml(t('promo.newAction'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="openPromoModal(null,'${ds}')"><i class="ti ti-plus"></i></button>
+          <button type="button" class="pm-mas owner-only" aria-label="${escapeHtml(t('promo.newAction'))} · ${escapeHtml(pmFechaLarga(ds))}" onclick="openPromoModal(null,'${ds}')"><i class="ti ti-plus"></i> <span>${escapeHtml(gl({es:'Añadir', ca:'Afegir', en:'Add'}))}</span></button>
         </div>
       </section>`;
   }).join('');
@@ -4624,7 +4624,7 @@ function renderPromoIdeas(){
     <div class="toolbar pm-barra">
       <div class="left">
         <input type="search" class="search-input st-buscar" id="promo-ideas-q" value="${escapeHtml(promoIdeasQuery)}" placeholder="${escapeHtml(gl({es:'Buscar entre las ideas…', ca:'Cercar entre les idees…', en:'Search the ideas…'}))}" aria-label="${escapeHtml(gl({es:'Buscar ideas', ca:'Cercar idees', en:'Search ideas'}))}" oninput="promoIdeasBuscar(this.value)">
-        ${promoIdeasCategory !== null && !q ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('promo.ideas.categories')}</button>` : ''}
+        ${promoIdeasCategory !== null && !q ? `<button type="button" class="btn btn-sm btn-fino" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>` : ''}
       </div>
       <button type="button" class="owner-only btn btn-fino is-on" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> ${t('promo.ideas.surpriseMe')}</button>
     </div>`;
@@ -4805,7 +4805,7 @@ function renderPromoClientes(){
   const inactivos = conDias.filter(x => x.days === null || x.days > 60).sort((a,b) => (b.days ?? -1) - (a.days ?? -1));
 
   const scores = DB.npsScores || [];
-  const npsMedia = scores.length ? (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1) : null;
+  const npsMedia = scores.length ? (scores.reduce((s,x)=>s+x.score,0) / scores.length).toLocaleString(localeActual(), {minimumFractionDigits:1, maximumFractionDigits:1}) : null;
 
   const tarjeta = (c, templateKey, badge) => {
     const registered = DB.promos.some(p => p.clienteId===c.id && p.ideaRef && p.ideaRef.clientTemplate===templateKey && p.fecha===todayStr());
@@ -4874,7 +4874,7 @@ function renderNpsSummaryHtml(){
   if(!scores.length){
     return `<div class="empty es-vacio"><i class="ti ti-chart-bar"></i>${t('nps.noResponsesYet')}</div>`;
   }
-  const avg = (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1);
+  const avg = (scores.reduce((s,x)=>s+x.score,0) / scores.length).toLocaleString(localeActual(), {minimumFractionDigits:1, maximumFractionDigits:1});
   const detractors = scores.filter(x=>x.score<=6).length;
   const withComments = [...scores].filter(x=>x.comment).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
   return `
@@ -5687,15 +5687,42 @@ function plan360DiaDeHoy(){
 // da igual que esté en pendiente o en no_hecha, las dos cuentan como
 // trabajo que se quedó sin cerrar. Es la pieza que de verdad desincentiva
 // posponer: lo que no se hizo no desaparece, se acumula y se ve.
+// ⚠️ Una tarea sin contenido real NO se enseña al negocio, ni cuenta como hecha,
+// pendiente o atrasada. Los programas creados con la versión antigua generaban,
+// para cada uno de los 26 días, una tarea cuyo título era el aviso interno
+// «(Contenido pendiente de definir)»: el generador ya no la crea (tasks nace
+// vacío), pero esas tareas siguen guardadas en los negocios que ya tenían el
+// programa y un cliente veía 25 «atrasadas» de relleno. No se borran del dato
+// (la fusión con el panel del coach es por posición y borrar aquí desplazaría
+// las de verdad): se ignoran al pintar y al contar. Mismo criterio en
+// admin-panel/plan360.html (plan360TareaReal).
+function plan360TareaReal(tk){
+  if(!tk || typeof tk.title !== 'string') return false;
+  const x = tk.title.trim();
+  return !!x && !/^\(?\s*contenido pendiente de definir\s*\)?\.?$/i.test(x);
+}
+function plan360TareasReales(d){ return ((d && d.tasks) || []).filter(plan360TareaReal); }
+// Cuántos días de retraso se cuentan como máximo: pasado el día 28 el programa
+// ya terminó y «53 días de retraso» no dice nada útil, solo entierra el cierre.
+const PLAN360_DIAS_PROGRAMA = 28;
 function plan360TareasAtrasadas(diaHoy){
   const prog = DB.business.plan360Program || [];
   const atrasadas = [];
+  const ref = Math.min(diaHoy, PLAN360_DIAS_PROGRAMA + 1);
   prog.filter(d => d.phase === 'trabajo' && d.day < diaHoy).forEach(d => {
     (d.tasks || []).forEach((tk, i) => {
-      if(tk.title && tk.status !== 'hecha') atrasadas.push({day: d.day, i, tk, retraso: diaHoy - d.day});
+      if(plan360TareaReal(tk) && tk.status !== 'hecha') atrasadas.push({day: d.day, i, tk, retraso: ref - d.day});
     });
   });
-  return atrasadas;
+  // Lo más reciente arriba: es lo que aún se puede recuperar.
+  return atrasadas.sort((a, b) => a.retraso - b.retraso || a.i - b.i);
+}
+// Cuántas atrasadas se ven de entrada; el resto, detrás de «Ver todas».
+const PLAN360_ATRASADAS_VISIBLES = 5;
+let plan360AtrasadasTodas = false;
+function plan360VerTodasAtrasadas(){
+  plan360AtrasadasTodas = !plan360AtrasadasTodas;
+  withScrollPreserved(() => renderPlan360Grid());
 }
 // La tarjeta "Hoy": lo primero que se ve al entrar a Plan 360°, sin tener
 // que buscar el día en el calendario de abajo. Muestra las tareas de HOY
@@ -5716,27 +5743,31 @@ function plan360HoyCardHtml(){
   } else if(dHoy.phase === 'presencial'){
     cuerpoHoy = `<p style="margin:0 0 10px;font-size:13.5px">${escapeHtml(t('plan360.todayIsPresencial'))}</p><button class="btn btn-sm" onclick="renderPlan360DayDetail(${diaHoy})">${escapeHtml(t('common.view'))} <i class="ti ti-chevron-right"></i></button>`;
   } else {
-    const conTitulo = dHoy.tasks.filter(tk => tk.title);
+    const conTitulo = plan360TareasReales(dHoy);
     cuerpoHoy = conTitulo.length
-      ? dHoy.tasks.map((tk, i) => tk.title ? plan360TaskRow(diaHoy, tk, i) : '').join('')
+      ? dHoy.tasks.map((tk, i) => plan360TareaReal(tk) ? plan360TaskRow(diaHoy, tk, i) : '').join('')
       : `<p class="muted" style="margin:0">${escapeHtml(t('plan360.todayNoTasks'))}</p>`;
   }
 
-  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--ink);box-shadow:0 6px 18px rgba(28,26,23,.08)">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
-      <strong style="font-size:16px"><i class="ti ti-sun"></i> ${escapeHtml(t('plan360.today'))}</strong>
-      ${dHoy ? `<span class="muted" style="font-size:12px">${escapeHtml(fechaHoy.weekday)} · ${escapeHtml(fechaHoy.dayMonth)}</span>` : ''}
+  const visibles = plan360AtrasadasTodas ? atrasadas : atrasadas.slice(0, PLAN360_ATRASADAS_VISIBLES);
+  const ocultas = atrasadas.length - visibles.length;
+  const terminado = diaHoy > PLAN360_DIAS_PROGRAMA;
+  return `<div class="card p360-hoy">
+    <div class="p360-hoy-cab">
+      <strong><i class="ti ti-sun"></i> ${escapeHtml(t('plan360.today'))}</strong>
+      ${dHoy ? `<span class="muted txt-xs">${escapeHtml(fechaHoy.weekday)} · ${escapeHtml(fechaHoy.dayMonth)}</span>` : ''}
     </div>
     ${cuerpoHoy}
     ${atrasadas.length ? `
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-        <div style="font-weight:700;color:var(--red);font-size:13px;margin-bottom:8px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.overdue'))} (${atrasadas.length})</div>
-        ${atrasadas.map(a => `
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);cursor:pointer" onclick="renderPlan360DayDetail(${a.day})">
-            <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:var(--red);flex:none;white-space:nowrap">${escapeHtml(a.retraso === 1 ? t('plan360.overdueOneDay') : t('plan360.overdueDays').replace('${n}', String(a.retraso)))}</span>
-            <span style="flex:1;font-size:13px">${escapeHtml(a.tk.title)}</span>
+      <div class="p360-atr">
+        <div class="p360-atr-tit"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.overdue'))} (${atrasadas.length})</div>
+        ${visibles.map(a => `
+          <div class="p360-atr-fila" role="button" tabindex="0" onclick="renderPlan360DayDetail(${a.day})">
+            <span class="p360-atr-chip">${escapeHtml(terminado ? t('plan360.overdueClosed') : a.retraso === 1 ? t('plan360.overdueOneDay') : t('plan360.overdueDays').replace('${n}', String(a.retraso)))}</span>
+            <span class="p360-atr-txt">${escapeHtml(a.tk.title)}</span>
           </div>
         `).join('')}
+        ${atrasadas.length > PLAN360_ATRASADAS_VISIBLES ? `<button class="btn btn-sm p360-atr-mas" onclick="plan360VerTodasAtrasadas()" aria-expanded="${plan360AtrasadasTodas}">${escapeHtml(plan360AtrasadasTodas ? t('plan360.overdueLess') : t('plan360.overdueMore').replace('${n}', String(ocultas)))}</button>` : ''}
       </div>` : ''}
   </div>`;
 }
@@ -5754,9 +5785,9 @@ function plan360HeroHtml(diaHoy, hechos, totalTareas){
     <div class="p360-hero-title">${escapeHtml(t('plan360.programTitle'))}</div>
     <div class="p360-hero-sub">${escapeHtml(t('plan360.heroSub'))}</div>
     <div class="p360-hero-stats">
-      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${diaMostrado}<span style="font-size:14px;opacity:.6">/28</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.heroDay'))}</div></div>
-      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${hechos}<span style="font-size:14px;opacity:.6">/${totalTareas}</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.tasksDone'))}</div></div>
-      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${cumplidos}<span style="font-size:14px;opacity:.6">/${objetivos.length}</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.heroObjectives'))}</div></div>
+      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${diaMostrado}<span class="p360-hero-de">/28</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.heroDay'))}</div></div>
+      <div class="p360-hero-stat"><div class="p360-hero-stat-num">${hechos}<span class="p360-hero-de">/${totalTareas}</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.tasksDone'))}</div></div>
+      ${objetivos.length ? `<div class="p360-hero-stat"><div class="p360-hero-stat-num">${cumplidos}<span class="p360-hero-de">/${objetivos.length}</span></div><div class="p360-hero-stat-label">${escapeHtml(t('plan360.heroObjectives'))}</div></div>` : ''}
     </div>
     <div class="p360-hero-bar"><div class="p360-hero-bar-fill" style="width:${pct}%"></div></div>
   </div>`;
@@ -5769,8 +5800,8 @@ function renderPlan360Grid(){
   plan360MantAutoAbierto = true;
   const prog = DB.business.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
-  const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.status === 'hecha').length, 0);
-  const totalTareas = trabajo.reduce((n, d) => n + d.tasks.length, 0);
+  const hechos = trabajo.reduce((n, d) => n + plan360TareasReales(d).filter(x => x.status === 'hecha').length, 0);
+  const totalTareas = trabajo.reduce((n, d) => n + plan360TareasReales(d).length, 0);
   const diaHoy = plan360DiaDeHoy();
 
   // Semanas de verdad (lunes a domingo), no bloques sueltos de 7 — así la
@@ -5796,7 +5827,7 @@ function renderPlan360Grid(){
     const [diaNum, ...mesPartes] = dayMonth.split(' ');
     const fechaHtml = `${escapeHtml(diaNum)}<span class="p360-day-mes"> ${escapeHtml(mesPartes.join(' '))}</span>`;
     const esHoy = d.day === diaHoy;
-    const anillo = esHoy ? 'outline:2px solid var(--ink);outline-offset:-2px' : '';
+    const anillo = esHoy ? 'outline:2px solid var(--olive);outline-offset:-2px' : '';
     if(d.phase === 'presencial'){
       return `<div class="p360-day p360-day-presencial" style="${colStyle}${anillo}" onclick="renderPlan360DayDetail(${d.day})">
         <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
@@ -5804,17 +5835,18 @@ function renderPlan360Grid(){
         <div class="p360-day-tag"><i class="ti ti-users"></i><span class="p360-tag-txt"> ${escapeHtml(t('plan360.presencial'))}</span></div>
       </div>`;
     }
-    const pendientes = d.tasks.filter(tk => tk.title && tk.status !== 'hecha').length;
+    const reales = plan360TareasReales(d);
+    const pendientes = reales.filter(tk => tk.status !== 'hecha').length;
     const atrasado = diaHoy !== null && d.day < diaHoy && pendientes > 0;
     const colorBorde = atrasado ? 'var(--red)' : plan360PriorityColor(d.priority);
-    const done = d.tasks.length && d.tasks.every(x => x.status === 'hecha');
-    const doneCount = d.tasks.filter(x => x.status === 'hecha').length;
+    const done = reales.length && reales.every(x => x.status === 'hecha');
+    const doneCount = reales.filter(x => x.status === 'hecha').length;
     return `<div class="p360-day" style="${colStyle}${colorBorde ? 'border-left-color:' + colorBorde + ';' : ''}${anillo}" onclick="renderPlan360DayDetail(${d.day})">
       <div class="p360-day-weekday">${escapeHtml(weekday)}</div>
       <div class="p360-day-date">${fechaHtml}</div>
       ${atrasado ? `<div class="p360-day-tag" style="color:var(--red);font-weight:700"><i class="ti ti-alert-triangle"></i><span class="p360-tag-txt"> ${escapeHtml(t('plan360.overdueShort'))}</span></div>`
         : d.reunion ? `<div class="p360-day-tag"><i class="ti ${d.reunion.tipo === 'online' ? 'ti-video' : 'ti-users'}"></i><span class="p360-tag-txt"> ${escapeHtml(t('plan360.reviewType.' + d.reunion.tipo))}</span></div>` : ''}
-      ${d.tasks.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + d.tasks.length}</div>` : ''}
+      ${reales.length ? `<div class="p360-day-progress">${done ? '<i class="ti ti-circle-check"></i>' : doneCount + '/' + reales.length}</div>` : ''}
     </div>`;
   };
 
@@ -5837,7 +5869,12 @@ function renderPlan360Grid(){
     </div>
     <div class="card p360-summary-bar" onclick="renderPlan360SummaryPage()">
       <div><i class="ti ti-compass"></i> ${escapeHtml(t('plan360.programTitle'))}</div>
-      <div class="p360-summary-count"><i class="ti ti-star"></i> ${hechos} / ${totalTareas}</div>
+      ${totalTareas ? `<div class="p360-summary-count"><i class="ti ti-star"></i> ${hechos} / ${totalTareas}</div>` : ''}
+    </div>
+    <div class="p360-leyenda">
+      <span><i class="p360-ley-pun p360-ley-presencial"></i>${escapeHtml(t('plan360.legend.presencial'))}</span>
+      <span><i class="p360-ley-pun p360-ley-hoy"></i>${escapeHtml(t('plan360.legend.today'))}</span>
+      <span><i class="p360-ley-pun p360-ley-atrasado"></i>${escapeHtml(t('plan360.legend.overdue'))}</span>
     </div>
     ${semanas.map((s, i) => `
       <div class="p360-week">
@@ -5870,7 +5907,7 @@ function plan360AccionesPorNivel(){
   const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
   const objetivos = ((dia2 && dia2.objectives) || []);
   const trabajo = (DB.business.plan360Program || []).filter(x => x.phase === 'trabajo');
-  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.filter(tk => tk.title)), []);
+  const tareas = trabajo.reduce((arr, d) => arr.concat(plan360TareasReales(d)), []);
   return ['prioritario', 'esencial', 'complementario'].map(nivel => {
     const idsDeNivel = new Set(objetivos.filter(o => o.prioridad === nivel).map(o => o.id));
     const deEseNivel = tareas.filter(tk => idsDeNivel.has(tk.objectiveId));
@@ -5882,7 +5919,7 @@ function plan360AccionesPorNivel(){
 // así se presenta: no como un extra, sino como la continuación.
 function plan360Balance(objetivos){
   const trabajo = (DB.business.plan360Program || []).filter(x => x.phase === 'trabajo');
-  const tareas = trabajo.reduce((arr, d) => arr.concat((d.tasks || []).filter(tk => tk && tk.title)), []);
+  const tareas = trabajo.reduce((arr, d) => arr.concat(plan360TareasReales(d)), []);
   return {
     conseguidos: objetivos.filter(o => o.estadoFinal === 'cumplido'),
     pendientes: objetivos.filter(o => o.estadoFinal !== 'cumplido'),
@@ -7104,7 +7141,7 @@ function renderPlan360TrabajoDetail(d){
     ${plan360ReunionCardHtml(d.day, d.reunion)}
     <div class="card" style="margin-top:14px">
       <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.tasks'))}</div>
-      <div id="p360-task-list">${d.tasks.length ? d.tasks.map((tk, i) => plan360TaskRow(d.day, tk, i)).join('') : `<p class="muted">${escapeHtml(t('plan360.noTasksYet'))}</p>`}</div>
+      <div id="p360-task-list">${plan360TareasReales(d).length ? d.tasks.map((tk, i) => plan360TareaReal(tk) ? plan360TaskRow(d.day, tk, i) : '').join('') : `<p class="muted">${escapeHtml(t('plan360.noTasksYet'))}</p>`}</div>
     </div>
   `;
 }
@@ -7180,15 +7217,15 @@ function plan360AddMedicionDesdeReunion(day, objId){
 function plan360TaskRow(day, tk, i){
   const obj = plan360ObjetivoDeTarea(tk);
   const estado = tk.status || 'pendiente';
-  return `<div class="card" style="padding:10px;margin-bottom:8px">
-    ${obj ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">${escapeHtml(obj.titulo)}</span></div>` : ''}
-    <div style="font-weight:700;font-size:14.5px">${escapeHtml(tk.title)}</div>
-    ${tk.description ? `<p style="font-size:13.5px;margin:4px 0 0;color:var(--body)">${escapeHtml(tk.description)}</p>` : ''}
-    ${tk.fileName ? `<div style="margin-top:6px;font-size:12px"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+  return `<div class="card p360-tarea">
+    ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
+    <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
+    ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
+    ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
+    <div class="p360-estados" role="group">
       ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
     </div>
-    <div class="field" style="margin:10px 0 0">
+    <div class="field p360-tarea-nota">
       <label>${escapeHtml(t('plan360.taskNote'))}</label>
       <textarea id="p360-task-note-${i}" rows="2" onchange="plan360SaveTaskNote(${day},${i},this.value,${Number(tk.id) || 0})">${escapeHtml(tk.note || '')}</textarea>
     </div>
@@ -7211,7 +7248,7 @@ function plan360SetTaskEstado(day, i, estado, id){
   // contenedor #p360-task-list — en el segundo hay que repintar la
   // pantalla entera para que también se actualicen los atrasados.
   const lista = document.getElementById('p360-task-list');
-  if(lista) lista.innerHTML = d.tasks.map((tk2, j) => plan360TaskRow(day, tk2, j)).join('');
+  if(lista) lista.innerHTML = d.tasks.map((tk2, j) => plan360TareaReal(tk2) ? plan360TaskRow(day, tk2, j) : '').join('');
   else withScrollPreserved(() => renderPlan360Grid());
 }
 function plan360SaveTaskNote(day, i, valor, id){
@@ -7240,7 +7277,7 @@ function renderPlan360SummaryPage(){
   const orden = {prioritario: 0, esencial: 1, complementario: 2};
   const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo).slice().sort((a, b) => (orden[a.prioridad] ?? 1) - (orden[b.prioridad] ?? 1));
   const trabajo = prog.filter(x => x.phase === 'trabajo');
-  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.filter(tk => tk.title).map(tk => ({...tk, day: d.day}))), []);
+  const tareas = trabajo.reduce((arr, d) => arr.concat(plan360TareasReales(d).map(tk => ({...tk, day: d.day}))), []);
   const hechas = tareas.filter(tk => tk.status === 'hecha');
   const grupos = objetivos.map(o => ({obj: o, tareas: tareas.filter(tk => tk.objectiveId === o.id)}));
   const tareaLinea = tk => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">
