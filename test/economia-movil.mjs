@@ -32,9 +32,13 @@ for(const W of [320, 360, 390, 412, 430]){
   const page = await abrir(W);
   await caso(`${W}px · pestañas: mismo ancho, como mucho 4 filas, y ninguna palabra «CAPEX»`, async () => {
     await ir(page, "navigate('economia'); GE.tab('ventas')");
+    await w(300);
+    const cerrada = await page.evaluate(() => ({vis: [...document.querySelectorAll('#ge-tabs-row .ge-tab')].filter(b => b.getClientRects().length).length, mas: !!document.querySelector('#ge-tabs-row .gg-pest-mas')}));
+    assert.ok(cerrada.mas && cerrada.vis === 1, 'plegada: solo la pestaña marcada y «Más»: ' + JSON.stringify(cerrada));
+    await page.evaluate(() => document.querySelector('#ge-tabs-row .gg-pest-mas').click()); await w(200);
     const r = await page.evaluate(() => { const bs = [...document.querySelectorAll('#ge-tabs-row .ge-tab')].filter(b => b.getClientRects().length); const rc = bs.map(b => b.getBoundingClientRect());
-      return {filas: new Set(rc.map(x => Math.round(x.top))).size, anchos: [...new Set(rc.filter(x => x.width < window.innerWidth - 40).map(x => Math.round(x.width)))], capex: /capex/i.test(document.getElementById('view-economia').innerText)}; });
-    assert.ok(r.filas <= 4, 'filas de pestañas: ' + r.filas); assert.ok(r.anchos.length <= 1, 'anchos distintos: ' + r.anchos); assert.ok(!r.capex, 'sale «CAPEX»');
+      return {tops: rc.map(x => [Math.round(x.top), Math.round(x.width)]), filas: rc.map(x => x.top).sort((a, b) => a - b).filter((t, i, a) => i === 0 || t - a[i - 1] > 20).length, anchos: [...new Set(rc.filter(x => x.width < window.innerWidth - 40).map(x => Math.round(x.width)))], capex: /capex/i.test(document.getElementById('view-economia').innerText)}; });
+    assert.ok(r.filas <= 4, 'filas de pestañas: ' + r.filas + ' ' + JSON.stringify(r)); assert.ok(r.anchos.length <= 1, 'anchos distintos: ' + r.anchos); assert.ok(!r.capex, 'sale «CAPEX»');
   });
   await caso(`${W}px · Tesorería: Objetivo / Real / Dif. en renglones distintos y sin solaparse`, async () => {
     await ir(page, "navigate('economia'); GE.tab('tesoreria')");
@@ -66,6 +70,7 @@ for(const W of [320, 360, 390, 412, 430]){
     r = await page.evaluate(() => { const t = document.getElementById('platos-matrix'); return t ? [t.getBoundingClientRect().right <= window.innerWidth + 1, t.scrollWidth <= t.clientWidth + 1] : [true, true]; }); assert.deepEqual(r, [true, true], 'matriz de rentabilidad cortada');
   });
   await caso(`${W}px · Panel: sin «pasa el ratón»/«click para plegar», «Todo en orden» plegado y «¿Cómo se calcula?» sin texto sobre texto`, async () => {
+    await ir(page, "currentFolder='gestion'; navigate('dashboard')");
     await ir(page, "currentFolder='gestion'; navigate('dashboard')");
     const r = await page.evaluate(() => { const v = document.getElementById('view-dashboard'); const cerrado = document.querySelector('#dashboard-attention .att-zero'); const filas = [...document.querySelectorAll('.dp-eq-tabla tr')];
       document.querySelectorAll('.dp-eq-como').forEach(d => d.open = true);

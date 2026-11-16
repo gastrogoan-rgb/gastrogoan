@@ -7150,3 +7150,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
   .mnl-toc-it{width:100%;text-align:left;justify-content:flex-start;border-radius:0;border:0;border-top:1px solid var(--border);background:transparent;min-height:44px;padding:10px 2px}
   .mnl-toc-et{margin-bottom:4px}
 }
+/* Gestión Económica: el id de la vista vence al «display:none» genérico de .gg-pest-col, así que se repite aquí (plegada = solo la marcada + «Más») */
+@media (max-width:640px){
+  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab:not(.active){display:none}
+  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab.active{flex:1 1 auto}
+}
+@media (max-width:760px){ #ge-ventas .table-wrap.tbl-scroll > #ventas-dia-table,.dp-tabla-w .dp-tabla{min-width:0;width:100%} }
