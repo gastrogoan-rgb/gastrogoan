@@ -6839,3 +6839,7 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
 /* Calendario de pedidos (TPV): cabeceras de día completas en PC y de 2 letras en móvil (en 360 px «MAR»/«DOM» salían cortadas) */
 .togo-dn-c{display:none}
 @media (max-width:560px){.togo-dn-l{display:none}.togo-dn-c{display:inline}}
+@media (max-width:760px){
+  .pr-barra-bt{display:flex;flex-wrap:nowrap;gap:8px}
+  .pr-barra-bt .btn{flex:1 1 0;min-width:0;justify-content:center;white-space:normal;text-align:center}
+}

@@ -334,7 +334,7 @@ function renderEscandallo(){
 
   const searching = !!(search || cat);
   const nombreDe = key => key === '__none__' ? t('label.noCategory') : key;
-  const unidades = n => currentArea()==='sala' ? (n===1 ? t('noun.drink') : t('noun.drinks')) : (n===1 ? t('noun.dish') : t('noun.dishes'));
+  const unidades = n => isElab ? (n===1 ? tA('label.oneElaboration').replace(/^1 /,'') : tA('label.nElaborations').replace('${n} ','')) : currentArea()==='sala' ? (n===1 ? t('noun.drink') : t('noun.drinks')) : (n===1 ? t('noun.dish') : t('noun.dishes'));
 
   if(!searching && escandalloFolder === null){
     // Vista de carpetas por categoría (mismas tarjetas que las de Mega Lista)

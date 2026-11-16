@@ -5342,9 +5342,9 @@ function renderHorariosDia(){
     ${calLeyendaHtml()}
     <div class="st-resumen cal-resumen">
       <div class="st-cel"><span class="st-cel-et">${gl({es:'Trabajan', ca:'Treballen', en:'Working'})}</span><span class="st-cel-v">${trabajan.length}</span><span class="st-cel-s">${gl({es:'de', ca:'de', en:'of'})} ${emps.length}</span></div>
-      <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas planificadas', ca:'Hores planificades', en:'Planned hours'})}</span><span class="st-cel-v">${horas.toFixed(1)}h</span></div>
-      <div class="st-cel"><span class="st-cel-et">${gl({es:'Descansan o ausentes', ca:'Descansen o absents', en:'Off or away'})}</span><span class="st-cel-v">${descansan + ausentes}</span></div>
-      <div class="st-cel${sinTurno ? ' is-bajo' : ''}"><span class="st-cel-et">${t('label.noShiftAssigned')}</span><span class="st-cel-v">${sinTurno}</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Horas', ca:'Hores', en:'Hours'})}</span><span class="st-cel-v">${horas.toFixed(1)}h</span></div>
+      <div class="st-cel"><span class="st-cel-et">${gl({es:'Descansan', ca:'Descansen', en:'Off'})}</span><span class="st-cel-v">${descansan + ausentes}</span></div>
+      <div class="st-cel${sinTurno ? ' is-bajo' : ''}"><span class="st-cel-et">${gl({es:'Sin turno', ca:'Sense torn', en:'No shift'})}</span><span class="st-cel-v">${sinTurno}</span></div>
     </div>
     ${trabajan.length ? `<div class="cal-linea"><div class="cal-linea-cab"><span></span><div class="cal-linea-eje">${ejeHtml}</div></div>${cobHtml ? `<div class="cal-linea-cob"><span></span>${cobHtml}</div>` : ''}</div>` : ''}
     <div class="cal-filas">${rows}</div>
