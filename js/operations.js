@@ -481,11 +481,13 @@ function printCashClosure(closure){
       <tr><td>${t('label.expectedCash')}</td><td class="pr-num">${fmtMoney(closure.efectivoEsperado)}</td></tr>
       ${diffHtml}
     </tbody></table>
+    <div style="break-inside:avoid;page-break-inside:avoid">
     ${closure.notas ? `<h2>${t('common.notes')}</h2><p style="white-space:pre-wrap">${escapeHtml(closure.notas)}</p>` : ''}
     <table style="margin-top:8px;break-inside:avoid"><tr>
       <td style="width:50%;height:28px;vertical-align:bottom;border-bottom:none"><div style="border-top:1px solid #1C1A17;padding-top:4px;font-size:11px;color:#716C65">${gl({es:'Firma de quien cierra la caja', ca:'Signatura de qui tanca la caixa', en:'Signature of the person closing the till'})}</div></td>
       <td style="width:50%;height:28px;vertical-align:bottom;border-bottom:none"><div style="border-top:1px solid #1C1A17;padding-top:4px;font-size:11px;color:#716C65">${gl({es:'Revisado por', ca:'Revisat per', en:'Reviewed by'})}</div></td>
     </tr></table>
+    </div>
   `;
   printReportWindow(t('title.cashClosureReceipt'), body);
 }
