@@ -399,6 +399,9 @@ async function openClient(tenantId, name){
   startDateEditing = false;
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
+  // El SEGUNDO cliente de una sesión salía en blanco: la huella del primero seguía puesta y la primera lectura del
+  // segundo se tomaba por «eco de mi propio guardado» y se descartaba. Cada cliente empieza de cero.
+  lastPushedJson = null; mantBase = null; programaBase = null; remoteBiz = null;
   currentTenantId = tenantId;
   migracionCoachPrivadoHecha = false;
   try{
@@ -424,6 +427,7 @@ async function openClient(tenantId, name){
       lastPushedJson = huella;
       remoteBiz = val || {};
       mantBase = JSON.parse(JSON.stringify(remoteBiz.plan360Mant || {}));
+      programaBase = JSON.parse(JSON.stringify(sinIndefinidos(remoteBiz.plan360Program || null)));
       ensureRemotePlan360();
       intentarMigrarReunionPersonal();
       migrarLibroPdfANodo();
@@ -465,7 +469,7 @@ async function openClient(tenantId, name){
 function closeClient(){
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
-  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null;
+  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null; programaBase = null; lastPushedJson = null;
   currentCoachPrivateRef = null; coachPrivate = null;
   currentLibroPdfRef = null; libroPdfCache = null;
   document.getElementById('view-client').classList.add('hidden');
@@ -550,6 +554,45 @@ function avisoCambiosDelNegocio(){
 let mantBase = null;   // plan360Mant tal y como está en la nube (lo último leído o subido)
 // Rutas que cambian entre dos versiones de plan360Mant, bajando hasta cada
 // elemento (meses → semanas → items). Lo que desaparece va a null.
+/* Fusión a tres bandas del programa (Fase 0.3, 17/11): MISMA lógica que `fusion3` de js/core.js. Justo antes de subir el
+   programa, el panel lee lo que hay AHORA en la nube y lo funde con lo que el coach ha cambiado respecto a lo último que
+   leyó: lo que el negocio marcó mientras tanto se queda (antes el guardado entero lo pisaba) y las listas con `id`
+   (tareas, objetivos, inversiones) se casan por id, no por posición. */
+function fusion3Panel(b, l, r){
+  const igual = (x, y) => stableJson(x === undefined ? null : x) === stableJson(y === undefined ? null : y);
+  if(igual(l, b)) return r;
+  if(igual(r, b)) return l;
+  if(igual(l, r)) return r;
+  const esObj = x => x && typeof x === 'object' && !Array.isArray(x);
+  if(esObj(l) && esObj(r)){
+    const out = {};
+    new Set([...Object.keys(l), ...Object.keys(r)]).forEach(k => {
+      const v = fusion3Panel(esObj(b) ? b[k] : undefined, l[k], r[k]);
+      if(v !== undefined) out[k] = v;
+    });
+    return out;
+  }
+  if(Array.isArray(l) && Array.isArray(r)){
+    const bb = Array.isArray(b) ? b : [];
+    const conId = a => a.length > 0 && a.every(x => x && typeof x === 'object' && !Array.isArray(x) && (typeof x.id === 'string' || typeof x.id === 'number'));
+    if((conId(l) || conId(r)) && (l.length === 0 || conId(l)) && (r.length === 0 || conId(r)) && (bb.length === 0 || conId(bb))){
+      const de = a => { const m = new Map(); a.forEach(x => m.set(String(x.id), x)); return m; };
+      const ml = de(l), mr = de(r), mb = de(bb);
+      const ids = [...r.map(x => String(x.id)), ...l.map(x => String(x.id)).filter(i => !mr.has(i))];
+      const outId = [];
+      ids.forEach(i => { const v = fusion3Panel(mb.get(i), ml.get(i), mr.get(i)); if(v !== undefined) outId.push(v); });
+      return outId;
+    }
+    const out = [];
+    for(let i = 0; i < Math.max(l.length, r.length); i++){
+      const v = fusion3Panel(bb[i], l[i], r[i]);
+      if(v !== undefined) out.push(v);
+    }
+    return out;
+  }
+  return r;
+}
+let programaBase = null;   // plan360Program tal y como está en la nube (lo último leído o subido)
 const MANT_NIVELES = ['meses', null, 'semanas', null, 'items', null];
 function mantDiferencias(antes, ahora, ruta, nivel){
   nivel = nivel || 0;
@@ -588,7 +631,26 @@ function saveRemoteBiz(){
     Object.assign(cambios, mantDiferencias(mantBase, limpio.plan360Mant || {}, 'plan360Mant'));
   }
   mantBase = JSON.parse(JSON.stringify(limpio.plan360Mant || {}));
-  currentBizRef.update(cambios).catch(e => {
+  // El programa: se funde con lo que hay AHORA en la nube antes de subirlo (ver fusion3Panel). Si no se puede leer, se
+  // sube como antes: perder la conexión no puede impedir guardar.
+  const subir = async () => {
+    if(programaBase && cambios.plan360Program && currentBizRef){
+      try{
+        const snap = await currentBizRef.child('plan360Program').once('value');
+        const nube = sinIndefinidos(snap.val());
+        const mezcla = fusion3Panel(programaBase, cambios.plan360Program, nube === undefined ? null : nube);
+        if(mezcla !== undefined && mezcla !== null){
+          const cambioAjeno = stableJson(mezcla) !== stableJson(cambios.plan360Program);
+          cambios.plan360Program = mezcla;
+          if(cambioAjeno){ remoteBiz.plan360Program = JSON.parse(JSON.stringify(mezcla)); plan360RepararVaciosCoach(remoteBiz); avisoCambiosDelNegocio(); }
+          lastPushedJson = plan360Huella(Object.assign({}, limpio, {plan360Program: mezcla}));
+        }
+      }catch(e){ console.warn('Sin poder leer la nube para fundir el programa: se sube tal cual', e); }
+      programaBase = JSON.parse(JSON.stringify(cambios.plan360Program));
+    }else if(cambios.plan360Program) programaBase = JSON.parse(JSON.stringify(cambios.plan360Program));
+    return currentBizRef.update(cambios);
+  };
+  subir().catch(e => {
     console.error('Error guardando en la nube del negocio', e);
     alert('No se pudo guardar en la nube: ' + (e.message || e.code || 'error'));
   }).finally(() => { savingRemote = false; });
@@ -4155,7 +4217,7 @@ function ensureRemotePlan360(){
   }
   // Se guarda al momento: sin guardar, cada día que se abría el negocio la
   // fecha de inicio era «hoy» otra vez y el calendario entero se desplazaba.
-  if(!remoteBiz.plan360StartDate){ remoteBiz.plan360StartDate = todayStr(); migracionIdsPendiente = true; }
+  // La fecha NO se fija sola (17/11): la pone el coach con «Guardar» y queda confirmada. Sin ella, el negocio ve «tu coach está fijando la primera visita».
   if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
   if(!remoteBiz.plan360Contract){
     remoteBiz.plan360Contract = {
@@ -4209,6 +4271,7 @@ function renderStartDateControl(){
     <label style="margin:0">Fecha de inicio del programa</label>
     <input type="date" id="p360-startdate" value="${esc(remoteBiz.plan360StartDate || todayStr())}" style="width:auto;flex:none;min-width:160px">
     <button class="btn btn-sm btn-primary" onclick="saveStartDate()">Guardar</button>
+    ${remoteBiz.plan360StartDateConfirmed ? '' : '<span class="txt-xs" style="color:var(--red);font-weight:600">Sin confirmar: el negocio ve «tu coach está fijando la primera visita» hasta que guardes.</span>'}
   `;
 }
 function saveStartDate(){
@@ -8722,7 +8785,8 @@ function savePresencial(day){
   if(!d) return;
   if(Array.isArray(d.objectives)){
     syncObjectivesFromForm(d);
-    d.objectives = d.objectives.filter(o => o.text);
+    // Campo viejo `text`: los objetivos de ahora llevan `titulo`; filtrar por `text` los BORRABA todos (17/11).
+    d.objectives = d.objectives.filter(o => o.titulo || o.text);
     const priv = document.getElementById('private-note');
     if(priv) d.privateNote = priv.value.trim();
   }

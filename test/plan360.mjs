@@ -91,7 +91,12 @@ await caso('La oferta de mantenimiento NO aparece a mitad de programa', async ()
     const aDia9 = document.getElementById('plan360-content').textContent.includes(t('plan360.maintenancePlan'));
     DB.business.plan360StartDate = addDaysStr(todayStr(), -27); // día 28
     renderPlan360Grid();
-    const aDia28 = document.getElementById('plan360-content').textContent.includes(t('plan360.maintenancePlan'));
+    // 17/11: el día 28 sale primero el informe de cierre (paso 1); la oferta de mantenimiento, tras abrirlo.
+    const informeDia28 = /Tu informe de cierre/.test(document.getElementById('plan360-content').textContent);
+    DB.business.plan360Cierre.informeVistoEn = Date.now();
+    renderPlan360Grid();
+    const aDia28 = informeDia28 && document.getElementById('plan360-content').textContent.includes(t('plan360.maintenancePlan'));
+    delete DB.business.plan360Cierre.informeVistoEn;
     DB.business.plan360StartDate = addDaysStr(todayStr(), -8);
     return {aDia9, aDia28};
   });

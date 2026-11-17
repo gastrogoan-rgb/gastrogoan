@@ -202,6 +202,12 @@ lanzar; node test/video-movil-paquete2.mjs > "$SALIDA/videom2.txt" 2>&1 & PVM2=$
 lanzar; node test/pendientes-agente-a.mjs > "$SALIDA/pvma.txt" 2>&1 & PVMA=$!
 lanzar; node test/pendientes-movil-b.mjs > "$SALIDA/pvmb.txt" 2>&1 & PVMB=$!
 lanzar; node test/contraste-movil.mjs > "$SALIDA/contrastem.txt" 2>&1 & PCOM=$!
+lanzar; node test/plan360-fusion.mjs > "$SALIDA/p360fusion.txt" 2>&1 & P360F=$!
+lanzar; node test/plan360-fecha.mjs > "$SALIDA/p360fecha.txt" 2>&1 & P360D=$!
+lanzar; node test/plan360-panel-fusion.mjs > "$SALIDA/p360pf.txt" 2>&1 & P360P=$!
+lanzar; node test/plan360-informe.mjs > "$SALIDA/p360inf.txt" 2>&1 & P360I=$!
+lanzar; node test/plan360-avisos.mjs > "$SALIDA/p360av.txt" 2>&1 & P360V=$!
+lanzar; node test/plan360-plan-accion.mjs > "$SALIDA/p360pa.txt" 2>&1 & P360A=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -461,4 +467,10 @@ espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades p
 espera $PVMA "Vídeo móvil, pendientes zona A (ficha, Mi puesto, Limpieza, Stock, Mega Lista, TPV, foco oliva, botones Ver/Copiar enlace con caja y 44 px): 5 anchos, nombres largos" "$SALIDA/pvma.txt" "Todo en orden"
 espera $PVMB "Vídeo móvil, pendientes zona B (Nube, Manual, Gestión, Panel, Novedades, Oferta, Mi Negocio, carga temprana)" "$SALIDA/pvmb.txt" "todo en orden"
 espera $PCOM "Contraste del texto a 360 px con datos llenos" "$SALIDA/contrastem.txt" "llega a 4,5:1"
+espera $P360F "Plan 360º · la fusión a tres bandas casa tareas/objetivos/inversiones por id, no por posición" "$SALIDA/p360fusion.txt" "en orden"
+espera $P360D "Plan 360º · la fecha de inicio la confirma el coach y el «antes» es un mes completo" "$SALIDA/p360fecha.txt" "en orden"
+espera $P360P "Plan 360º · el panel del coach funde el programa con la nube antes de subirlo" "$SALIDA/p360pf.txt" "en orden"
+espera $P360I "Plan 360º · informe de cierre primero, oferta de mantenimiento después" "$SALIDA/p360inf.txt" "en orden"
+espera $P360V "Plan 360º · avisos de tareas de hoy/atrasadas e informe de cierre en el Panel y la campana" "$SALIDA/p360av.txt" "en orden"
+espera $P360A "Plan 360º · «Mi plan de acción» imprimible: objetivos por prioridad, tareas con casilla" "$SALIDA/p360pa.txt" "en orden"
 exit $FALLOS

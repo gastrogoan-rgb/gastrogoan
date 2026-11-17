@@ -5801,6 +5801,16 @@ function renderPlan360Grid(){
   // (que sigue a un clic, como histórico). Solo la primera vez por sesión.
   if(!plan360MantAutoAbierto && (DB.business.plan360Servicio || {}).fase === 'mant'){ plan360MantAutoAbierto = true; renderPlan360Mant(); return; }
   plan360MantAutoAbierto = true;
+  // Sin fecha de inicio (la confirma el coach, no se fija sola): no hay calendario que enseñar. Pintar los 28 días con
+  // fechas de «hoy» en adelante era enseñar un programa que todavía no ha empezado, con atrasados incluidos.
+  if(!DB.business.plan360StartDate){
+    document.getElementById('plan360-content').innerHTML = `
+      <div class="card" style="max-width:640px">
+        <h3><i class="ti ti-calendar-event"></i> ${escapeHtml(gl({es:'Tu coach está fijando la primera visita', ca:'El teu coach està fixant la primera visita', en:'Your coach is setting the first visit'}))}</h3>
+        <p class="txt-muted" style="margin:6px 0 0">${escapeHtml(gl({es:'En cuanto confirme la fecha, aquí aparecerá tu calendario de 4 semanas con lo que toca cada día. Mientras tanto no tienes que hacer nada.', ca:'Quan confirmi la data, aquí apareixerà el teu calendari de 4 setmanes amb el que toca cada dia. Mentrestant no has de fer res.', en:'As soon as the date is confirmed, your 4-week calendar with what is due each day will appear here. Until then there is nothing for you to do.'}))}</p>
+      </div>`;
+    return;
+  }
   const prog = DB.business.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + plan360TareasReales(d).filter(x => x.status === 'hecha').length, 0);
@@ -5865,6 +5875,10 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360HayPlanDeAccion() ? `<div class="p360-card" onclick="plan360ImprimirPlan()">
+        <i class="ti ti-printer"></i>
+        <div><h3>${escapeHtml(gl({es:'Mi plan de acción', ca:'El meu pla d\'acció', en:'My action plan'}))}</h3><p>${escapeHtml(gl({es:'Objetivos y tareas con casillas, para imprimir y colgar en la cocina.', ca:'Objectius i tasques amb caselles, per imprimir i penjar a la cuina.', en:'Goals and tasks with checkboxes, to print and pin up in the kitchen.'}))}</p></div>
+      </div>` : ''}
       ${plan360MantHayAlgo() ? `<div class="p360-card" onclick="renderPlan360Mant()">
         <i class="ti ti-calendar-repeat"></i>
         <div><h3>${escapeHtml(t('plan360.mant.title'))}</h3><p>${escapeHtml(t('plan360.mant.cardDesc'))}</p></div>
@@ -5998,7 +6012,8 @@ function plan360CierreHtml(){
         ${cierre.queVigilar ? `<div style="margin-bottom:8px"><div style="font-size:12px;color:var(--muted)">${escapeHtml(t('plan360.watchOutFor'))}</div><p style="margin:2px 0 0;font-size:13.5px">${escapeHtml(cierre.queVigilar)}</p></div>` : ''}
         ${cierre.siguienteNivel ? `<div><div style="font-size:12px;color:var(--muted)">${escapeHtml(t('plan360.nextLevel'))}</div><p style="margin:2px 0 0;font-size:13.5px">${escapeHtml(cierre.siguienteNivel)}</p></div>` : ''}
       </div>` : ''}
-      <div class="card" style="background:var(--ink);color:#fff">
+      ${plan360InformeCierreCardHtml(cierre, m)}
+      ${(m.respuesta || cierre.informeVistoEn) ? `<div class="card" style="background:var(--ink);color:#fff">
         <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-rocket"></i> ${escapeHtml(t('plan360.maintenancePlan'))}</div>
         <p style="margin:0 0 10px;font-size:13.5px;opacity:.9">${escapeHtml(t('plan360.maintenanceIncludes'))}</p>
         <div style="font-size:22px;font-weight:800;margin-bottom:12px">${escapeHtml(m.precio && m.precio !== '99€/mes' && m.precio !== '75€/mes' ? m.precio : '75 € + IVA al mes')}</div>
@@ -6012,9 +6027,109 @@ function plan360CierreHtml(){
           <div class="field" style="margin:10px 0 6px"><label style="color:#fff">${escapeHtml(t('plan360.maintenanceThinkDate'))}</label><input id="p360-mant-fecha" type="date" style="color:var(--text);max-width:180px"></div>
           <button class="btn btn-sm" onclick="plan360MantenimientoPensar()">${escapeHtml(t('plan360.maintenanceThinkBtn'))}</button>
         ` : m.respuesta === 'piensa' ? `<p style="margin:0;font-size:13.5px">${escapeHtml(t('plan360.maintenanceThinking'))} ${escapeHtml(plan360FechaLegible(m.volverAHablarFecha))}</p>` : `<p style="margin:0;font-size:12px;opacity:.8">${escapeHtml(t('plan360.maintenanceOwnerOnly'))}</p>`}
-      </div>
+      </div>` : ''}
     </div>
   `;
+}
+/* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
+   casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */
+function plan360HayPlanDeAccion(){
+  const prog = (DB.business || {}).plan360Program;
+  if(!Array.isArray(prog) || !DB.business.plan360StartDate) return false;
+  return prog.some(d => d.phase === 'trabajo' && plan360TareasReales(d).length > 0);
+}
+function plan360PlanAccionHtml(){
+  const b = DB.business || {};
+  const L = o => gl(o);
+  const prog = b.plan360Program || [];
+  const dia2 = prog.find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+  const tareas = [];
+  prog.filter(d => d.phase === 'trabajo').forEach(d => plan360TareasReales(d).forEach(tk => tareas.push({day: d.day, tk})));
+  const fecha = day => { try{ return plan360FechaLegible(plan360DateForDay(day)); }catch(e){ return ''; } };
+  const casilla = tk => tk.status === 'hecha' ? '☑' : '☐';
+  const fila = x => `<tr><td class="c">${casilla(x.tk)}</td><td>${escapeHtml(x.tk.title || '')}${x.tk.description ? `<div class="m">${escapeHtml(x.tk.description).slice(0, 220)}</div>` : ''}</td><td class="f">${escapeHtml(fecha(x.day))}</td></tr>`;
+  const orden = {prioritario: 0, esencial: 1, complementario: 2};
+  const objs = objetivos.slice().sort((a, c) => (orden[a.prioridad] ?? 1) - (orden[c.prioridad] ?? 1));
+  const ids = new Set(objs.map(o => o.id));
+  const bloques = objs.map(o => {
+    const ts = tareas.filter(x => x.tk.objectiveId === o.id);
+    return `<h2>${escapeHtml(o.titulo)} <span class="n">${escapeHtml(t(PLAN360_NIVEL_LABEL[o.prioridad] || PLAN360_NIVEL_LABEL.esencial))}</span></h2>
+      ${o.metrica ? `<p class="m">${escapeHtml(L({es:'Cómo se mide: ', ca:'Com es mesura: ', en:'How it is measured: '}))}${escapeHtml(o.metrica)}</p>` : ''}
+      ${ts.length ? `<table>${ts.map(fila).join('')}</table>` : `<p class="m">${escapeHtml(L({es:'Sin tareas todavía.', ca:'Sense tasques encara.', en:'No tasks yet.'}))}</p>`}`;
+  }).join('');
+  const sueltas = tareas.filter(x => !ids.has(x.tk.objectiveId));
+  const otras = sueltas.length ? `<h2>${escapeHtml(L({es:'Otras acciones', ca:'Altres accions', en:'Other actions'}))}</h2><table>${sueltas.map(fila).join('')}</table>` : '';
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px;letter-spacing:-.01em}h2 .n{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E;margin-left:8px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.c{width:26px;font-size:18px;line-height:1}td.f{width:120px;color:#716C65;font:12px 'IBM Plex Mono',monospace}.m{color:#716C65;font-size:12px;margin:2px 0}</style>
+    <p class="m">${escapeHtml(L({es:'Programa de 4 semanas con tu coach', ca:'Programa de 4 setmanes amb el teu coach', en:'4-week programme with your coach'}))} · ${escapeHtml(plan360FechaLegible(b.plan360StartDate))}</p>
+    ${bloques}${otras}`;
+}
+function plan360ImprimirPlan(){
+  printReportWindow(gl({es:'Mi plan de acción · Plan 360º', ca:'El meu pla d\'acció · Pla 360º', en:'My action plan · 360º Plan'}), plan360PlanAccionHtml());
+}
+/* ── Informe de cierre (17/11, decisión del dueño): lo PRIMERO que se enseña al acabar las 4 semanas. NO lleva la oferta de
+   mantenimiento: esa es el paso siguiente (aparece cuando el negocio ya ha abierto el informe). Todo sale de las cifras
+   reales de la app (plan360Kpis: Día 1 frente al último mes completo) y de lo que el negocio hizo en el programa. */
+function plan360InformeCierreCardHtml(cierre, m){
+  const visto = !!cierre.informeVistoEn;
+  if(m.respuesta && visto) return `<div style="margin:0 0 10px"><button class="btn btn-sm" onclick="plan360InformeCierre()"><i class="ti ti-file-text"></i> ${escapeHtml(gl({es:'Ver el informe de cierre', ca:'Veure l\'informe de tancament', en:'View the closing report'}))}</button></div>`;
+  return `<div class="card" style="margin-bottom:10px;border-color:var(--olive)">
+    <div style="font-weight:700;margin-bottom:6px"><i class="ti ti-file-text"></i> ${escapeHtml(gl({es:'Paso 1 · Tu informe de cierre', ca:'Pas 1 · El teu informe de tancament', en:'Step 1 · Your closing report'}))}</div>
+    <p style="margin:0 0 10px;font-size:13.5px">${escapeHtml(gl({es:'Tus cifras de antes y de ahora, lo que has conseguido con cada objetivo y lo que viene después. Se puede guardar en PDF.', ca:'Les teves xifres d\'abans i d\'ara, el que has aconseguit amb cada objectiu i el que ve després. Es pot guardar en PDF.', en:'Your before and now figures, what you achieved with each goal and what comes next. It can be saved as a PDF.'}))}</p>
+    <button class="btn btn-primary btn-sm" onclick="plan360InformeCierre()"><i class="ti ti-file-text"></i> ${escapeHtml(visto ? gl({es:'Volver a ver mi informe', ca:'Tornar a veure el meu informe', en:'View my report again'}) : gl({es:'Ver mi informe de cierre', ca:'Veure el meu informe de tancament', en:'View my closing report'}))}</button>
+    ${visto ? '' : `<p class="txt-xs txt-muted" style="margin:8px 0 0">${escapeHtml(gl({es:'Después verás el siguiente paso: cómo seguir con tu coach.', ca:'Després veuràs el pas següent: com continuar amb el teu coach.', en:'Afterwards you will see the next step: how to continue with your coach.'}))}</p>`}
+  </div>`;
+}
+const PLAN360_INFORME_FILAS = {
+  foodCost: {es:'Food cost', ca:'Food cost', en:'Food cost', pct:true},
+  personal: {es:'Coste de personal sobre ventas', ca:'Cost de personal sobre vendes', en:'Staff cost over sales', pct:true},
+  ticket: {es:'Ticket medio', ca:'Tiquet mitjà', en:'Average ticket', eur:true},
+  ventas: {es:'Ventas netas del mes', ca:'Vendes netes del mes', en:'Net sales for the month', eur:true},
+  resultado: {es:'Resultado del mes', ca:'Resultat del mes', en:'Result for the month', eur:true},
+};
+function plan360InformeCierreHtml(){
+  const b = DB.business || {};
+  const eur = v => v == null ? '—' : Math.round(v).toLocaleString(localeActual()) + ' €';
+  const pct = v => v == null ? '—' : String(Math.round(v * 10) / 10).replace('.', ',') + ' %';
+  const L = o => gl(o);
+  const mar = typeof plan360MarcadorEuros === 'function' ? plan360MarcadorEuros() : null;
+  const dia2 = (b.plan360Program || []).find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+  const cierre = b.plan360Cierre || {};
+  const acciones = plan360AccionesPorNivel().filter(n => n.total > 0);
+  const hechas = acciones.reduce((n, x) => n + x.hechas, 0), total = acciones.reduce((n, x) => n + x.total, 0);
+  const th = 'text-align:left;font:600 11px var(--mono,monospace);text-transform:uppercase;letter-spacing:.06em;color:#716C65;border-bottom:1.5px solid #1C1A17;padding:6px 8px 6px 0';
+  const td = 'padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top';
+  const filas = mar ? mar.filas.map(f => {
+    const def = PLAN360_INFORME_FILAS[f.k] || {es:f.k, ca:f.k, en:f.k};
+    const fmt = def.pct ? pct : eur;
+    const euros = f.euros != null && Math.abs(f.euros) >= 1 ? `<span style="color:${f.euros >= 0 ? '#3F6B4A' : '#A33F2E'};font-weight:700">${f.euros >= 0 ? '+' : '−'}${eur(Math.abs(f.euros))}${L({es:'/mes', ca:'/mes', en:'/mo'})}</span>` : '';
+    return `<tr><td style="${td}">${escapeHtml(L(def))}</td><td style="${td}">${fmt(f.antes)}</td><td style="${td};font-weight:700">${fmt(f.hoy)}</td><td style="${td}">${euros}</td></tr>`;
+  }).join('') : '';
+  const cifras = mar ? `
+    <h2>${escapeHtml(L({es:'Tus cifras: antes y ahora', ca:'Les teves xifres: abans i ara', en:'Your figures: before and now'}))}</h2>
+    <p class="muted">${escapeHtml(L({es:'«Antes» es el mes completo previo al inicio del plan; «ahora», el último mes completo. Mismas cuentas que tu Cuenta de Resultados.', ca:'«Abans» és el mes complet previ a l\'inici del pla; «ara», l\'últim mes complet. Els mateixos comptes que el teu Compte de Resultats.', en:'“Before” is the full month prior to the plan start; “now”, the last full month. Same figures as your Profit & Loss.'}))}</p>
+    <table style="width:100%;border-collapse:collapse"><tr><th style="${th}"></th><th style="${th}">${escapeHtml(plan360FechaLegible(mar.desde + '-01').replace(/^\d+ de /, ''))}</th><th style="${th}">${escapeHtml(plan360FechaLegible(mar.mes + '-01').replace(/^\d+ de /, ''))}</th><th style="${th}">${escapeHtml(L({es:'Diferencia', ca:'Diferència', en:'Difference'}))}</th></tr>${filas}</table>`
+    : `<h2>${escapeHtml(L({es:'Tus cifras', ca:'Les teves xifres', en:'Your figures'}))}</h2><p class="muted">${escapeHtml(L({es:'Todavía no hay un mes completo de antes y de ahora con datos suficientes para compararlos. Tu coach los revisará contigo.', ca:'Encara no hi ha un mes complet d\'abans i d\'ara amb dades suficients per comparar-los. El teu coach els revisarà amb tu.', en:'There is not yet a full before and now month with enough data to compare. Your coach will go over them with you.'}))}</p>`;
+  const estado = o => o.estadoFinal ? L({cumplido:{es:'Cumplido', ca:'Complert', en:'Achieved'}, parcial:{es:'Parcial', ca:'Parcial', en:'Partial'}, no_cumplido:{es:'No cumplido', ca:'No complert', en:'Not achieved'}}[o.estadoFinal] || {es:'', ca:'', en:''}) : L({es:'Sin cierre', ca:'Sense tancament', en:'Not closed'});
+  const med = o => { const ms = (o.mediciones || []).filter(x => x && x.valor !== '' && x.valor != null); if(!ms.length) return ''; return ms.length === 1 ? escapeHtml(String(ms[0].valor)) : escapeHtml(String(ms[0].valor)) + ' → ' + escapeHtml(String(ms[ms.length - 1].valor)); };
+  const objs = objetivos.length ? `
+    <h2>${escapeHtml(L({es:'Tus objetivos', ca:'Els teus objectius', en:'Your goals'}))}</h2>
+    <table style="width:100%;border-collapse:collapse"><tr><th style="${th}">${escapeHtml(L({es:'Objetivo', ca:'Objectiu', en:'Goal'}))}</th><th style="${th}">${escapeHtml(L({es:'Medición', ca:'Mesura', en:'Measure'}))}</th><th style="${th}">${escapeHtml(L({es:'Resultado', ca:'Resultat', en:'Outcome'}))}</th></tr>
+    ${objetivos.map(o => `<tr><td style="${td}"><strong>${escapeHtml(o.titulo)}</strong>${o.metrica ? `<div class="muted">${escapeHtml(o.metrica)}</div>` : ''}</td><td style="${td}">${med(o)}</td><td style="${td};font-weight:700">${escapeHtml(estado(o))}</td></tr>`).join('')}</table>` : '';
+  const acc = total ? `<h2>${escapeHtml(L({es:'Lo que se ha hecho', ca:'El que s\'ha fet', en:'What has been done'}))}</h2><p>${escapeHtml(L({es:`${hechas} de ${total} acciones del plan hechas.`, ca:`${hechas} de ${total} accions del pla fetes.`, en:`${hechas} of ${total} plan actions done.`}))}</p>
+    <table style="width:100%;border-collapse:collapse">${acciones.map(n => `<tr><td style="${td}">${escapeHtml(t(PLAN360_NIVEL_LABEL[n.nivel]))}</td><td style="${td}">${n.hechas} / ${n.total}</td></tr>`).join('')}</table>` : '';
+  const bloque = (titulo, texto) => texto ? `<h3>${escapeHtml(titulo)}</h3><p style="white-space:pre-wrap">${escapeHtml(texto)}</p>` : '';
+  const cierreTxt = bloque(L({es:'Mejoras que ya se ven', ca:'Millores que ja es veuen', en:'Improvements already visible'}), cierre.mejorasVisibles) + bloque(L({es:'Qué vigilar', ca:'Què vigilar', en:'What to watch'}), cierre.queVigilar) + bloque(L({es:'Siguiente nivel', ca:'Següent nivell', en:'Next level'}), cierre.siguienteNivel);
+  return `<style>h2{font:600 17px 'Schibsted Grotesk',sans-serif;margin:22px 0 6px;letter-spacing:-.01em}h3{font:600 14px 'Schibsted Grotesk',sans-serif;margin:14px 0 2px}.muted{color:#716C65;font-size:12px;margin:2px 0 8px}</style>
+    <p class="muted" style="font-size:13px">${escapeHtml(L({es:'Programa de 4 semanas con tu coach', ca:'Programa de 4 setmanes amb el teu coach', en:'4-week programme with your coach'}))}${b.plan360StartDate ? ' · ' + escapeHtml(L({es:'inicio ', ca:'inici ', en:'start '})) + escapeHtml(plan360FechaLegible(b.plan360StartDate)) : ''}</p>
+    ${cifras}${objs}${acc}${cierreTxt}`;
+}
+function plan360InformeCierre(){
+  const cierre = DB.business.plan360Cierre;
+  if(cierre && !cierre.informeVistoEn){ cierre.informeVistoEn = Date.now(); saveDB(); plan360PingActivity(); }
+  printReportWindow(gl({es:'Informe de cierre · Plan 360º', ca:'Informe de tancament · Pla 360º', en:'Closing report · 360º Plan'}), plan360InformeCierreHtml());
+  renderPlan360Grid();
 }
 // Fechas guardadas como AAAA-MM-DD, pintadas en el idioma de la app.
 function plan360FechaLegible(f){
