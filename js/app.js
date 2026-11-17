@@ -5883,6 +5883,10 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360HayPlanDeAccion() ? `<div class="p360-card" onclick="plan360CompartirSemana()">
+        <i class="ti ti-brand-whatsapp"></i>
+        <div><h3>${escapeHtml(gl({es:'Resumen de la semana', ca:'Resum de la setmana', en:'Weekly summary'}))}</h3><p>${escapeHtml(gl({es:'Lo hecho, tus objetivos y lo ganado desde el Día 1, listo para WhatsApp.', ca:'El fet, els teus objectius i el guanyat des del Dia 1, a punt per a WhatsApp.', en:'What is done, your goals and what you have gained since Day 1, ready for WhatsApp.'}))}</p></div>
+      </div>` : ''}
       ${plan360ActasLista().length ? `<div class="p360-card" onclick="plan360AbrirActas()">
         <i class="ti ti-notes"></i>
         <div><h3>${escapeHtml(gl({es:'Actas de reunión', ca:'Actes de reunió', en:'Meeting minutes'}))}</h3><p>${escapeHtml(gl({es:'Lo que se decidió en cada reunión con tu coach.', ca:'El que es va decidir a cada reunió amb el teu coach.', en:'What was decided at each meeting with your coach.'}))}</p></div>
@@ -6190,6 +6194,40 @@ const PLAN360_ENLACES = {
   promocion: {es:'Promoción', ca:'Promoció', en:'Promotion'}, clientes: {es:'Clientes', ca:'Clients', en:'Customers'}, reservas: {es:'Reservas', ca:'Reserves', en:'Bookings'},
   tpv: {es:'TPV', ca:'TPV', en:'POS'}, economia: {es:'Gestión Económica', ca:'Gestió Econòmica', en:'Financial Management'}, minegocio: {es:'Mi Negocio', ca:'El Meu Negoci', en:'My Business'},
 };
+/* ── Resumen de la semana para WhatsApp (17/11): texto plano (sin HTML) con lo hecho de la semana en curso (lunes a domingo, por
+   la fecha de cada día del programa), cada objetivo con su última medición y, si hay Día 1, lo ganado al mes. */
+function plan360SemanaTexto(){
+  const b = DB.business || {}, L = o => gl(o);
+  const hoy = todayStr(), [yy, mm, dd] = hoy.split('-').map(Number);
+  const dow = (new Date(yy, mm - 1, dd).getDay() + 6) % 7;
+  const lunes = addDaysStr(hoy, -dow), domingo = addDaysStr(lunes, 6);
+  const prog = b.plan360Program || [];
+  const dSem = prog.filter(d => d.phase === 'trabajo' && b.plan360StartDate && plan360DateForDay(d.day) >= lunes && plan360DateForDay(d.day) <= domingo);
+  const tareas = dSem.reduce((a, d) => a.concat(plan360TareasReales(d)), []);
+  const hechas = tareas.filter(t2 => t2.status === 'hecha').length;
+  const d2 = prog.find(x => x.day === 2);
+  const objs = ((d2 && d2.objectives) || []).filter(o => o.titulo);
+  const ultima = o => { const ms = (o.mediciones || []).filter(m => m && m.valor !== '' && m.valor != null); return ms.length ? String(ms[ms.length - 1].valor) : null; };
+  const mar = typeof plan360MarcadorEuros === 'function' ? plan360MarcadorEuros() : null;
+  const ganado = mar ? mar.filas.filter(f => f.euros != null && f.k !== 'resultado').reduce((n, f) => n + f.euros, 0) : null;
+  const eur = v => Math.round(v).toLocaleString(localeActual()) + ' €';
+  const f = d => plan360FechaLegible(d).replace(/ de \d{4}$/, '');
+  const lineas = [
+    `*${L({es:'Plan 360º · semana del ', ca:'Pla 360º · setmana del ', en:'360º Plan · week of '})}${f(lunes)} ${L({es:'al', ca:'al', en:'to'})} ${f(domingo)}*${b.businessName || b.name ? ' · ' + (b.businessName || b.name) : ''}`,
+    '',
+    tareas.length ? `✅ ${L({es:'Tareas', ca:'Tasques', en:'Tasks'})}: ${hechas} ${L({es:'de', ca:'de', en:'of'})} ${tareas.length} ${L({es:'hechas', ca:'fetes', en:'done'})}` : `✅ ${L({es:'Sin tareas esta semana', ca:'Sense tasques aquesta setmana', en:'No tasks this week'})}`,
+  ];
+  if(objs.length){ lineas.push('', '🎯 ' + L({es:'Objetivos', ca:'Objectius', en:'Goals'})); objs.slice(0, 6).forEach(o => { const u = ultima(o); lineas.push(`• ${o.titulo}${u ? ': ' + u : ''}`); }); }
+  if(ganado != null && Math.abs(ganado) >= 1) lineas.push('', `💶 ${L({es:'Desde que empezamos', ca:'Des que vam començar', en:'Since we started'})}: ${ganado >= 0 ? '+' : '−'}${eur(Math.abs(ganado))}${L({es:' al mes', ca:' al mes', en:' per month'})}`);
+  return lineas.join('\n');
+}
+function plan360CompartirSemana(){
+  const texto = plan360SemanaTexto();
+  const abrir = () => { try{ window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener'); }catch(e){} };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(() => showToast(gl({es:'Resumen copiado. Se abre WhatsApp.', ca:'Resum copiat. S\'obre WhatsApp.', en:'Summary copied. Opening WhatsApp.'})), () => {}).finally(abrir);
+  }else abrir();
+}
 /* ── Actas de reunión (17/11): las deja el coach desde su panel («Acta en vivo», plan360Actas = un objeto por id) y el
    negocio las lee aquí, y las puede imprimir o guardar en PDF. Las tareas y objetivos que salieron de ella ya están en su plan. */
 function plan360ActasLista(){
@@ -6469,6 +6507,43 @@ function plan360MarcadorEurosHtml(){
     </div>`).join('')}
   </div>`;
 }
+/* «Mi mantenimiento» (17/11): lo que el negocio necesita saber de SU servicio sin llamar al coach: cuánto paga, qué meses lleva
+   cobrados, cuándo se renueva y cómo pedir la baja. Lo escribe el coach (plan360Servicio: cuota, cobros, mantHasta); la app
+   solo añade la solicitud de baja (`baja`), y solo el propietario. La baja es a fin del mes en curso. */
+function plan360MantServicioHtml(){
+  const sv = (DB.business || {}).plan360Servicio || {};
+  const L = o => gl(o);
+  const cuota = Number(sv.cuota) > 0 ? Number(sv.cuota) : 75;
+  const cobros = (sv.cobros && typeof sv.cobros === 'object') ? sv.cobros : {};
+  const ult = Object.keys(cobros).filter(k => /^\d{4}-\d{2}$/.test(k)).sort().slice(-6);
+  const mesTxt = k => { const [y, m] = k.split('-').map(Number); return plan360Mayus(new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'short', year: 'numeric'})); };
+  const baja = sv.baja && sv.baja.ts ? sv.baja : null;
+  const esOwner = plan360EsOwner();
+  return `<div class="card" style="margin-top:12px" id="p360-mant-servicio">
+    <div class="txt-xs" style="font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)"><i class="ti ti-receipt"></i> ${escapeHtml(L({es:'Mi mantenimiento', ca:'El meu manteniment', en:'My maintenance'}))}</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin:6px 0">
+      <div><div class="txt-xs txt-muted">${escapeHtml(L({es:'Cuota', ca:'Quota', en:'Fee'}))}</div><b>${cuota} € + IVA ${escapeHtml(L({es:'al mes', ca:'al mes', en:'a month'}))}</b></div>
+      ${sv.mantHasta ? `<div><div class="txt-xs txt-muted">${escapeHtml(L({es:'Pagado hasta', ca:'Pagat fins', en:'Paid until'}))}</div><b>${escapeHtml(plan360FechaLegible(sv.mantHasta))}</b></div>` : ''}
+    </div>
+    ${ult.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${ult.map(k => `<span class="badge" style="background:var(--green-bg,#E4EDE6);color:var(--green,#3F6B4A)"><i class="ti ti-check"></i> ${escapeHtml(mesTxt(k))}</span>`).join('')}</div>` : `<p class="txt-xs txt-muted" style="margin:4px 0 8px">${escapeHtml(L({es:'Todavía no hay cobros apuntados.', ca:'Encara no hi ha cobraments apuntats.', en:'No payments recorded yet.'}))}</p>`}
+    ${baja ? `<div style="background:var(--amber-bg,#F6EBD0);padding:10px;border-radius:6px;font-size:13px">${escapeHtml(L({es:'Has pedido la baja el ', ca:'Has demanat la baixa el ', en:'You asked to cancel on '}))}<b>${escapeHtml(new Date(baja.ts).toLocaleDateString(localeActual()))}</b>${escapeHtml(L({es:': será efectiva a fin de mes.', ca:': serà efectiva a final de mes.', en:': effective at the end of the month.'}))}
+        ${esOwner ? ` <button class="btn btn-sm btn-toque" onclick="plan360RetirarBaja()">${escapeHtml(L({es:'Retirar la solicitud', ca:'Retirar la sol·licitud', en:'Withdraw the request'}))}</button>` : ''}</div>`
+      : (esOwner ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
+  </div>`;
+}
+function plan360SolicitarBaja(){
+  if(!plan360EsOwner()) return;
+  if(!confirm(gl({es:'¿Pedir la baja del mantenimiento? Será efectiva a fin de este mes y tu coach la recibe al momento.', ca:'Demanar la baixa del manteniment? Serà efectiva a final d\'aquest mes i el teu coach la rep a l\'instant.', en:'Request cancellation of the maintenance? It takes effect at the end of this month and your coach gets it right away.'}))) return;
+  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {baja: {ts: Date.now(), por: 'negocio'}});
+  saveDB(); plan360PingActivity(); showToast(gl({es:'Baja solicitada', ca:'Baixa sol·licitada', en:'Cancellation requested'}));
+  renderPlan360Mant();
+}
+function plan360RetirarBaja(){
+  if(!plan360EsOwner()) return;
+  const sv = Object.assign({}, DB.business.plan360Servicio || {}); delete sv.baja;
+  DB.business.plan360Servicio = sv;
+  saveDB(); plan360PingActivity(); renderPlan360Mant();
+}
 function renderPlan360Mant(clave){
   if(clave) plan360MantMes = clave;
   if(!plan360MantMes) plan360MantMes = plan360MantClave(new Date());
@@ -6531,6 +6606,7 @@ function renderPlan360Mant(clave){
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.mant.title'), t('plan360.mant.desc'))}
     <div style="margin-top:12px">${plan360MantMarcadorHtml()}</div>
+    ${plan360MantServicioHtml()}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
       <button class="btn btn-sm" onclick="plan360MantMover(-1)" aria-label="${escapeHtml(t('plan360.mant.prev'))}"><i class="ti ti-chevron-left"></i></button>
       <strong style="flex:1;text-align:center;font-size:16px">${escapeHtml(plan360Mayus(nombreMes))}</strong>
