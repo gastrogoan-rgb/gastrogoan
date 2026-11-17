@@ -6079,8 +6079,76 @@ function plan360DiagnosticoDatos(){
         detalle: {es:`+${al.subida.pct} %${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`, ca:`+${al.subida.pct} %${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`, en:`+${al.subida.pct}%${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`}});
     }
     hallazgos.sort((a, b) => (b.euros || 0) - (a.euros || 0));
-    return {mes, netas: k.netas, hallazgos, total: hallazgos.reduce((n, h) => n + (h.euros || 0), 0)};
+    return {mes, netas: k.netas, hallazgos, kpis: k, carta: plan360IngenieriaCarta(f.getFullYear(), f.getMonth()), total: hallazgos.reduce((n, h) => n + (h.euros || 0), 0)};
   }catch(e){ return null; }
+}
+/* Ingeniería de carta (Kasavana-Smith, 17/11): cada plato vendido el mes se coloca por POPULARIDAD (su parte de las
+   unidades frente al 70 % de la parte media) y por MARGEN (lo que deja cada unidad frente al margen medio ponderado):
+   estrella (alta/alta), caballo (popular pero deja poco), puzle (deja mucho pero se vende poco) y perro (ni una cosa ni la
+   otra). Solo platos con receta (coste conocido) y ≥ 3 unidades; con menos de 4 platos así no hay carta que analizar. */
+function plan360IngenieriaCarta(year, month){
+  try{
+    const mesStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const platos = {};
+    activeSales().filter(v => (v.date || '').startsWith(mesStr)).forEach(v => (v.items || []).forEach(l => {
+      if(!l || !l.name || l.isShipping) return;
+      const coste = (typeof costoUnitarioDeLinea === 'function' && l.recipeId) ? costoUnitarioDeLinea(l) : null;
+      const q = parseFloat(l.qty) || 0;
+      if(coste == null || !(l.price > 0) || !(q > 0)) return;
+      const neto = (parseFloat(l.price) || 0) / (1 + (parseFloat(l.ivaPct) || 10) / 100);
+      const p = platos[l.name] = platos[l.name] || {nombre: l.name, u: 0, ingreso: 0, coste: 0};
+      p.u += q; p.ingreso += neto * q; p.coste += coste * q;
+    }));
+    const lista = Object.values(platos).filter(p => p.u >= 3 && p.ingreso > 0);
+    if(lista.length < 4) return null;
+    const totU = lista.reduce((n, p) => n + p.u, 0);
+    lista.forEach(p => { p.margen = (p.ingreso - p.coste) / p.u; p.fc = p.coste / p.ingreso * 100; });
+    const margenMedio = lista.reduce((n, p) => n + p.margen * p.u, 0) / totU;
+    const umbralPop = (1 / lista.length) * 0.7 * totU;
+    lista.forEach(p => { const pop = p.u >= umbralPop, mar = p.margen >= margenMedio; p.clase = pop && mar ? 'estrella' : pop ? 'caballo' : mar ? 'puzle' : 'perro'; });
+    const por = c => lista.filter(p => p.clase === c).sort((a, b) => b.u - a.u);
+    return {platos: lista, margenMedio, estrellas: por('estrella'), caballos: por('caballo'), puzles: por('puzle'), perros: por('perro')};
+  }catch(e){ return null; }
+}
+function plan360CartaHtml(ic){
+  if(!ic) return '';
+  const L = o => gl(o);
+  const eur2 = v => (Math.round(v * 100) / 100).toLocaleString(localeActual(), {minimumFractionDigits: 2}) + ' €';
+  const grupo = (lista, titulo, consejo, color) => lista.length ? `<div style="margin:10px 0"><div style="font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:${color}">${escapeHtml(L(titulo))} · ${lista.length}</div>
+      <div style="font-size:13px;margin:3px 0">${lista.slice(0, 6).map(p => `<span style="white-space:nowrap">${escapeHtml(p.nombre)} <span style="color:#716C65">(${Math.round(p.u)} u · ${escapeHtml(eur2(p.margen))})</span></span>`).join(' · ')}${lista.length > 6 ? ` · +${lista.length - 6}` : ''}</div>
+      <div style="color:#716C65;font-size:12px">${escapeHtml(L(consejo))}</div></div>` : '';
+  return `<h2 style="font:600 17px 'Schibsted Grotesk',sans-serif;margin:22px 0 4px">${escapeHtml(L({es:'Tu carta: qué platos trabajan por ti', ca:'La teva carta: quins plats treballen per tu', en:'Your menu: which dishes work for you'}))}</h2>
+    <p style="color:#716C65;font-size:12px;margin:0 0 6px">${escapeHtml(L({es:`Popularidad (unidades vendidas) frente al margen por unidad. Margen medio: ${eur2(ic.margenMedio)}.`, ca:`Popularitat (unitats venudes) davant del marge per unitat. Marge mitjà: ${eur2(ic.margenMedio)}.`, en:`Popularity (units sold) against margin per unit. Average margin: ${eur2(ic.margenMedio)}.`}))}</p>
+    ${grupo(ic.estrellas, {es:'Estrellas', ca:'Estrelles', en:'Stars'}, {es:'Se venden mucho y dejan mucho: protégelas, que no falten y que se vean.', ca:'Es venen molt i deixen molt: protegeix-les, que no faltin i que es vegin.', en:'They sell a lot and earn a lot: protect them, keep them in stock and visible.'}, '#3F6B4A')}
+    ${grupo(ic.caballos, {es:'Caballos de batalla', ca:'Cavalls de batalla', en:'Workhorses'}, {es:'Se venden mucho pero dejan poco: revisa la receta o sube el precio unos céntimos.', ca:'Es venen molt però deixen poc: revisa la recepta o puja el preu uns cèntims.', en:'They sell a lot but earn little: review the recipe or raise the price a few cents.'}, '#B07D1F')}
+    ${grupo(ic.puzles, {es:'Puzles', ca:'Trencaclosques', en:'Puzzles'}, {es:'Dejan mucho pero se piden poco: dales sitio en la carta y que el equipo los sugiera.', ca:'Deixen molt però es demanen poc: dóna-los lloc a la carta i que l\'equip els suggereixi.', en:'They earn a lot but few order them: give them a better spot and have the team suggest them.'}, '#4A5D4E')}
+    ${grupo(ic.perros, {es:'Perros', ca:'Gossos', en:'Dogs'}, {es:'Ni se venden ni dejan: candidatos a quitar o reinventar.', ca:'Ni es venen ni deixen: candidats a treure o reinventar.', en:'Neither sell nor earn: candidates to drop or rework.'}, '#A33F2E')}`;
+}
+/* Puntuación 0-100 por área MEDIBLE (17/11). Sin inventar autoridad: food cost y personal se miden contra el objetivo que
+   el propio negocio fijó en Tesorería (100 si lo cumple; pierde 10 puntos por punto de desviación), las mermas contra el
+   % de lo comprado (5 % = 0) y la satisfacción es la nota media de los clientes sobre 10. Lo que no se puede medir
+   (sin ventas, sin encuestas) no sale: nunca un 0 por falta de datos. */
+function plan360Puntuaciones(k){
+  if(!k) return [];
+  const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+  const objFc = geFoodCostObjPct();
+  const dp = (DB.ge && DB.ge.config && DB.ge.config.distPct) || {};
+  const objPer = dp.per != null ? Number(dp.per) : 30;
+  const out = [];
+  if(k.foodCostPct != null) out.push({id:'foodcost', nombre:{es:'Costes de cocina', ca:'Costos de cuina', en:'Kitchen costs'}, puntos: clamp(100 - Math.max(0, k.foodCostPct - objFc) * 10), dato: `${k.foodCostPct} % / ${objFc} %`});
+  if(k.personalPct != null) out.push({id:'personal', nombre:{es:'Equipo', ca:'Equip', en:'Team'}, puntos: clamp(100 - Math.max(0, k.personalPct - objPer) * 10), dato: `${k.personalPct} % / ${objPer} %`});
+  if(k.mermasPct != null) out.push({id:'mermas', nombre:{es:'Control de mermas', ca:'Control de minves', en:'Waste control'}, puntos: clamp(100 - k.mermasPct * 20), dato: `${k.mermasPct} %`});
+  if(k.nps != null && k.npsN >= 3) out.push({id:'nps', nombre:{es:'Satisfacción de clientes', ca:'Satisfacció de clients', en:'Customer satisfaction'}, puntos: clamp(k.nps * 10), dato: `${k.nps} / 10`});
+  return out;
+}
+function plan360PuntuacionesHtml(k){
+  const ps = plan360Puntuaciones(k);
+  if(!ps.length) return '';
+  const L = o => gl(o);
+  const color = n => n >= 80 ? '#3F6B4A' : n >= 50 ? '#B07D1F' : '#A33F2E';
+  return `<h2 style="font:600 17px 'Schibsted Grotesk',sans-serif;margin:22px 0 6px">${escapeHtml(L({es:'Cómo está cada área', ca:'Com està cada àrea', en:'How each area is doing'}))}</h2>
+    ${ps.map(x => `<div style="display:grid;grid-template-columns:1fr 60px;gap:2px 10px;margin:8px 0;align-items:end"><div style="font-size:13px"><strong>${escapeHtml(L(x.nombre))}</strong> <span style="color:#716C65;font-size:12px">· ${escapeHtml(x.dato)}</span></div><div style="text-align:right;font:600 16px 'IBM Plex Mono',monospace;color:${color(x.puntos)}">${x.puntos}</div><div style="grid-column:1/3;height:6px;background:#E7E2D9"><div style="height:6px;width:${x.puntos}%;background:${color(x.puntos)}"></div></div></div>`).join('')}
+    <p style="color:#716C65;font-size:11.5px">${escapeHtml(L({es:'100 = cumples tu objetivo. Costes y equipo, frente a los objetivos que fijaste en Tesorería; mermas frente a lo comprado; satisfacción, nota media de tus clientes sobre 10.', ca:'100 = compleixes el teu objectiu. Costos i equip, davant dels objectius que vas fixar a Tresoreria; minves davant del comprat; satisfacció, nota mitjana dels teus clients sobre 10.', en:'100 = you meet your target. Costs and team, against the targets you set in Treasury; waste against purchases; satisfaction, your customers\' average score out of 10.'}))}</p>`;
 }
 function plan360DiagnosticoHtml(){
   const d = plan360DiagnosticoDatos();
@@ -6093,11 +6161,23 @@ function plan360DiagnosticoHtml(){
   return `<p style="color:#716C65;font-size:12px;margin:0 0 4px">${escapeHtml(L({es:'Datos de ', ca:'Dades de ', en:'Data from '}))}${escapeHtml(mesTxt)} · ${escapeHtml(L({es:'ventas netas ', ca:'vendes netes ', en:'net sales '}))}${escapeHtml(eur(d.netas))}</p>
     ${d.total > 0 ? `<div style="margin:14px 0 6px"><span style="font:600 30px 'IBM Plex Mono',monospace">${escapeHtml(eur(d.total))}</span><span style="color:#716C65;font-size:13px"> ${escapeHtml(L({es:'al año, sumando lo que se puede medir', ca:'a l\'any, sumant el que es pot mesurar', en:'per year, adding what can be measured'}))}</span></div>` : ''}
     <table style="width:100%;border-collapse:collapse">${filas}</table>
+    ${plan360PuntuacionesHtml(d.kpis)}
+    ${plan360CartaHtml(d.carta)}
     <p style="color:#716C65;font-size:11.5px;margin-top:14px">${escapeHtml(L({es:'Es una estimación: diferencia respecto a TUS objetivos (Tesorería) × las ventas netas del mes × 12. No incluye efectos de estacionalidad. Mismas cifras que tu Cuenta de Resultados.', ca:'És una estimació: diferència respecte als TEUS objectius (Tresoreria) × les vendes netes del mes × 12. No inclou efectes d\'estacionalitat. Les mateixes xifres que el teu Compte de Resultats.', en:'This is an estimate: the difference against YOUR targets (Treasury) × the month\'s net sales × 12. It does not include seasonality. Same figures as your Profit & Loss.'}))}</p>`;
 }
 function plan360AbrirDiagnostico(){
   printReportWindow(gl({es:'Dinero sobre la mesa · Plan 360º', ca:'Diners sobre la taula · Pla 360º', en:'Money on the table · 360º Plan'}), plan360DiagnosticoHtml());
 }
+// Pantallas a las que una tarea del Plan 360º puede llevar al negocio (el coach la elige en su panel: «Se hace en»).
+// Lista idéntica en el panel (PLAN360_ENLACES_PANEL en admin-panel/plan360.html).
+const PLAN360_ENLACES = {
+  escandallo: {es:'Escandallo', ca:'Escandall', en:'Costing'}, fichas: {es:'Fichas técnicas', ca:'Fitxes tècniques', en:'Recipe sheets'},
+  megalista: {es:'Mega Lista', ca:'Mega Llista', en:'Master list'}, proveedores: {es:'Proveedores', ca:'Proveïdors', en:'Suppliers'},
+  stock: {es:'Stock', ca:'Estoc', en:'Stock'}, pedidos: {es:'Pedidos', ca:'Comandes', en:'Orders'}, carta: {es:'Oferta Gastronómica', ca:'Oferta Gastronòmica', en:'Menu Offer'},
+  limpieza: {es:'Plan de Limpieza', ca:'Pla de Neteja', en:'Cleaning Plan'}, horarios: {es:'Personal y horarios', ca:'Personal i horaris', en:'Staff and schedules'},
+  promocion: {es:'Promoción', ca:'Promoció', en:'Promotion'}, clientes: {es:'Clientes', ca:'Clients', en:'Customers'}, reservas: {es:'Reservas', ca:'Reserves', en:'Bookings'},
+  tpv: {es:'TPV', ca:'TPV', en:'POS'}, economia: {es:'Gestión Económica', ca:'Gestió Econòmica', en:'Financial Management'}, minegocio: {es:'Mi Negocio', ca:'El Meu Negoci', en:'My Business'},
+};
 /* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
    casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */
 function plan360HayPlanDeAccion(){
@@ -7406,6 +7486,7 @@ function plan360TaskRow(day, tk, i){
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
     <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
+    ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
     <div class="p360-estados" role="group">
       ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
