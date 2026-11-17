@@ -52,6 +52,32 @@ done
   echo "$CSS_APP"
   echo "</style>"
 
+  # Pregunta de versión TEMPRANA (vídeo en un móvil real, 16/11): la que hay en js/polish.js corre cuando la app ya
+  # ha arrancado, y en un Android normal eso son ~5 s de pantalla de carga que se tiran a la basura cuando llega la
+  # recarga automática: el usuario veía DOS cargas seguidas. Este guion mínimo va ANTES de los 4 MB de JS, pregunta
+  # por version.json (29 bytes) y, si hay versión nueva y nadie ha tocado nada, recarga ya: la primera carga dura
+  # lo que dura esa petición. Respeta lo mismo que polish.js (sin sesión se pregunta siempre, con sesión cada 6 h,
+  # y el freno de 10 min contra el bucle de recargas). Si algo no cuadra, no hace nada: polish.js sigue ahí.
+  echo "<script>"
+  cat <<EARLY
+(function(){try{
+var B='$GG_SELLO',LS=window.localStorage,tocado=false;
+['pointerdown','keydown','touchstart'].forEach(function(e){window.addEventListener(e,function(){tocado=true;},{once:true,passive:true});});
+var ses=null;try{ses=JSON.parse(LS.getItem('gastrogoan_access_session')||'null');}catch(e){}
+if(ses&&Date.now()-parseInt(LS.getItem('gastrogoan_version_comprobada')||'0',10)<21600000)return;
+fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+ if(!j||!j.build||j.build===B||tocado)return;
+ var x=null;try{x=JSON.parse(LS.getItem('gastrogoan_auto_actualizacion')||'null');}catch(e){}
+ if(x&&x.build===j.build&&Date.now()-x.ts<600000)return;
+ LS.setItem('gastrogoan_auto_actualizacion',JSON.stringify({build:j.build,ts:Date.now()}));
+ LS.setItem('gastrogoan_version_comprobada',String(Date.now()));
+ window.__ggActualizandoTemprano=true;
+ return fetch('./?gg-actualizar=1',{cache:'reload'}).catch(function(){}).then(function(){location.reload();});
+}).catch(function(){});
+}catch(e){}})();
+EARLY
+  echo "</script>"
+
   # From </head> to before the JS script tags
   sed -n '/<\/head>/,/<script src="js\/core.js">/p' index.html | head -n -1
 

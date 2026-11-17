@@ -1,6 +1,6 @@
 /* ============== Helpers ============== */
 function fmtMoney(v){
-  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + '\u00A0€';
 }
 function fmtNum(v, dec=2){
   return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:dec});
@@ -801,7 +801,8 @@ const I18N = {
     'title.sendDishToKitchen': 'Marchar este plato a cocina',
     'btn.sendFullTicket': 'Marchar vale', 'btn.charge': 'Cobrar', 'btn.closeOrderPaidOnline': 'Cerrar pedido (ya pagado)', 'msg.cannotBranchOtherAccount': 'Ese negocio es de otra cuenta: no se puede abrir una sucursal a partir de él.', 'label.selectFromMenu': 'Selecciona platos de la carta',
     'label.order': 'Comanda', 'tab.activeOrders': 'Activas', 'tab.closedOrders': 'Cerradas',
-    'btn.markDishOut': 'Marcar agotado', 'title.markDishOut': 'Marcar plato agotado', 'title.markDishOutSala': 'Marcar bebida agotada',
+    'btn.markDishOut': 'Marcar agotado', 'title.markDishOut': 'Marcar plato agotado', 'title.markDishOutSala': 'Marcar agotado',
+    'label.markDishOutHelp.sala': 'Marca aquí una bebida (o un plato) que se acabe a media comanda: deja de poder pedirse al momento, sin entrar en Oferta Gastronómica.',
     'label.markDishOutHelp': 'Marca aquí un plato o bebida que se acabe a media comanda — deja de poder pedirse al momento, sin tener que entrar en Oferta Gastronómica.',
     'empty.noDishesToday': 'No hay platos en la carta activa de esta área',
     'label.kitchen': 'COCINA', 'label.diningBar': 'SALA / BARRA', 'label.table': 'Mesa',
@@ -3774,7 +3775,8 @@ const I18N = {
     'title.sendDishToKitchen': 'Marxar aquest plat a cuina',
     'btn.sendFullTicket': 'Marxar val complet', 'btn.charge': 'Cobrar', 'btn.closeOrderPaidOnline': 'Tancar comanda (ja pagada)', 'msg.cannotBranchOtherAccount': 'Aquest negoci és d\'un altre compte: no es pot obrir una sucursal a partir d\'ell.', 'label.selectFromMenu': 'Selecciona plats de la carta',
     'label.order': 'Comanda', 'tab.activeOrders': 'Actives', 'tab.closedOrders': 'Tancades',
-    'btn.markDishOut': 'Marcar esgotat', 'title.markDishOut': 'Marcar plat esgotat', 'title.markDishOutSala': 'Marcar beguda esgotada',
+    'btn.markDishOut': 'Marcar esgotat', 'title.markDishOut': 'Marcar plat esgotat', 'title.markDishOutSala': 'Marcar esgotat',
+    'label.markDishOutHelp.sala': "Marca aquí una beguda (o un plat) que s'acabi a mitja comanda: deixa de poder-se demanar a l'instant, sense entrar a Oferta Gastronòmica.",
     'label.markDishOutHelp': 'Marca aquí un plat o beguda que s\'acabi a mitja comanda — deixa de poder-se demanar a l\'instant, sense haver d\'entrar a Oferta Gastronòmica.',
     'empty.noDishesToday': 'No hi ha plats a la carta activa d\'aquesta àrea',
     'label.kitchen': 'CUINA', 'label.diningBar': 'SALA / BARRA', 'label.table': 'Taula',
@@ -6747,7 +6749,8 @@ const I18N = {
     'title.sendDishToKitchen': 'Send this dish to the kitchen',
     'btn.sendFullTicket': 'Send full ticket', 'btn.charge': 'Charge', 'btn.closeOrderPaidOnline': 'Close order (already paid)', 'msg.cannotBranchOtherAccount': 'That business belongs to another account: you cannot open a branch from it.', 'label.selectFromMenu': 'Select dishes from the menu',
     'label.order': 'Order', 'tab.activeOrders': 'Active', 'tab.closedOrders': 'Closed',
-    'btn.markDishOut': 'Mark as out', 'title.markDishOut': 'Mark dish as out of stock', 'title.markDishOutSala': 'Mark drink as out of stock',
+    'btn.markDishOut': 'Mark as out', 'title.markDishOut': 'Mark dish as out of stock', 'title.markDishOutSala': 'Mark as out',
+    'label.markDishOutHelp.sala': 'Mark a drink (or a dish) here as soon as it runs out mid-order: it can no longer be ordered right away, without opening Menu Offer.',
     'label.markDishOutHelp': 'Mark a dish or drink here as soon as it runs out mid-service — it stops being orderable immediately, no need to go into Menu Offering.',
     'empty.noDishesToday': 'No dishes in the active menu for this area',
     'label.kitchen': 'KITCHEN', 'label.diningBar': 'DINING / BAR', 'label.table': 'Table',

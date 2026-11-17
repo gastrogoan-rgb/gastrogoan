@@ -15,6 +15,7 @@ kicker: GastroGoan · Uso interno
 - **Precio:** **100 € pago único.** Sin suscripción, sin comisiones, del cliente para siempre.
 - **Argumento de venta:** sustituye 6-7 apps con cuota mensual (TPV, delivery, carta QR, personal, reservas, stock, economía) que suman **+300 €/mes (~3.600 €/año)**. Se amortiza el primer mes.
 - **Cobro:** enlace de Stripe → `https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03`
+  - Segundo enlace, **solo la app (240 € + IVA, sin instalación)**, para quien YA es cliente y compra otro negocio: `https://buy.stripe.com/3cI5kCaCubwL9Bs3uDdwc04`. Es el del botón «Comprar nueva licencia» del selector de negocios. Si llega un pago por este enlace, es un negocio más de una cuenta existente (en el generador, solo paso 2: un código, sin cuenta nueva).
   - ⚠️ `landing.html` todavía tiene el enlace como `PLACEHOLDER`. Sustitúyelo por el enlace real antes de publicar la web.
 
 ---

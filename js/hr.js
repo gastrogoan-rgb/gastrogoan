@@ -2587,7 +2587,7 @@ const GE = (function(){
     document.getElementById('cdr-table').innerHTML = html;
     renderCdrGrafica();
     renderCdrReal();
-    const comoT = document.getElementById('cdr-como-t'); if(comoT) comoT.textContent = gl({es:'¿Cómo se calcula?', ca:'Com es calcula?', en:'How is it calculated?'});
+    const comoT = document.getElementById('cdr-como-t'); if(comoT){ comoT.textContent = gl({es:'¿Cómo se calcula?', ca:'Com es calcula?', en:'How is it calculated?'}); const comoB = document.getElementById('cdr-como'); if(comoB) comoB.setAttribute('aria-label', comoT.textContent); }
     const prev = document.getElementById('cdr-prev'), next = document.getElementById('cdr-next');
     if(prev) prev.setAttribute('aria-label', gl({es:'Año anterior', ca:'Any anterior', en:'Previous year'}));
     if(next) next.setAttribute('aria-label', gl({es:'Año siguiente', ca:'Any següent', en:'Next year'}));

@@ -4226,8 +4226,8 @@ function renderClientGrid(){
   if(st && st.querySelector('button')) st.textContent = 'Conectado — los cambios se ven al instante en su app, y los suyos aquí.';
   const prog = remoteBiz.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
-  const hechos = trabajo.reduce((n, d) => n + d.tasks.filter(x => x.status === 'hecha').length, 0);
-  const totalTareas = trabajo.reduce((n, d) => n + d.tasks.length, 0);
+  const hechos = trabajo.reduce((n, d) => n + plan360TareasReales(d).filter(x => x.status === 'hecha').length, 0);
+  const totalTareas = trabajo.reduce((n, d) => n + plan360TareasReales(d).length, 0);
   const semanas = [];
   prog.forEach(d => {
     const fecha = plan360DateForDay(d.day);
@@ -4251,13 +4251,14 @@ function renderClientGrid(){
       </div>`;
     }
     const col = plan360PriorityColor(d.priority);
-    const done = d.tasks.length && d.tasks.every(x => x.status === 'hecha');
-    const doneCount = d.tasks.filter(x => x.status === 'hecha').length;
+    const tReales = plan360TareasReales(d);
+    const done = tReales.length && tReales.every(x => x.status === 'hecha');
+    const doneCount = tReales.filter(x => x.status === 'hecha').length;
     return `<div class="p360-day" style="${colStyle}${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
       <div class="p360-day-weekday">${esc(weekday)}</div>
       <div class="p360-day-date">${esc(dayMonth)}</div>
       ${d.reunion ? `<div class="p360-day-tag">${d.reunion.tipo === 'presencial' ? 'Presencial' : 'Online'}</div>` : ''}
-      ${d.tasks.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + d.tasks.length}</div>` : ''}
+      ${tReales.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + tReales.length}</div>` : ''}
     </div>`;
   };
   document.getElementById('client-grid').innerHTML = `<span id="p360-coach-calendario" hidden></span>
@@ -4326,7 +4327,7 @@ function plan360AccionesPorNivel(){
   const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
   const objetivos = ((dia2 && dia2.objectives) || []);
   const trabajo = (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo');
-  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.filter(tk => tk.title)), []);
+  const tareas = trabajo.reduce((arr, d) => arr.concat(plan360TareasReales(d)), []);
   return ['prioritario', 'esencial', 'complementario'].map(nivel => {
     const idsDeNivel = new Set(objetivos.filter(o => o.prioridad === nivel).map(o => o.id));
     const deEseNivel = tareas.filter(tk => idsDeNivel.has(tk.objectiveId));
@@ -4348,7 +4349,7 @@ function plan360CierreHtml(){
         // Balance del mes: lo conseguido y lo que falta (que es lo que se
         // presenta como el trabajo del mantenimiento).
         const trabajo = (remoteBiz.plan360Program || []).filter(x => x.phase === 'trabajo');
-        const tareas = trabajo.reduce((arr, d) => arr.concat((d.tasks || []).filter(tk => tk && tk.title)), []);
+        const tareas = trabajo.reduce((arr, d) => arr.concat((d.tasks || []).filter(plan360TareaReal)), []);
         const hechas = tareas.filter(tk => tk.status === 'hecha').length;
         const cons = objetivos.filter(o => o.estadoFinal === 'cumplido').map(o => o.titulo);
         const falta = [...objetivos.filter(o => o.estadoFinal !== 'cumplido').map(o => o.titulo), ...tareas.filter(tk => tk.status !== 'hecha').map(tk => tk.title)];
@@ -5502,7 +5503,7 @@ function p360ResumenPrograma(b, hoyStr){
   prog.forEach(d => {
     if(!d || d.phase !== 'trabajo' || !Array.isArray(d.tasks)) return;
     const f = b.plan360StartDate ? p360FechaDiaPrograma(b, d.day) : null;
-    d.tasks.forEach(tk => { if(!tk || !tk.title) return; total++; if(tk.status === 'hecha') hechas++; else if(f && f < hoyStr) atrasadas.push(tk.title); });
+    d.tasks.forEach(tk => { if(!plan360TareaReal(tk)) return; total++; if(tk.status === 'hecha') hechas++; else if(f && f < hoyStr) atrasadas.push(tk.title); });
   });
   return {hechas, total, atrasadas};
 }
@@ -8841,7 +8842,17 @@ function plan360ObjetivosDelDia2(){
   const dia2 = (remoteBiz.plan360Program || []).find(x => x.day === 2);
   return ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
 }
+// Mismo criterio que la app (plan360TareaReal): el aviso interno «(Contenido
+// pendiente de definir)» de negocios antiguos NO se pinta ni cuenta, pero
+// tampoco se borra del dato: la fusión con la app va por posición.
+function plan360TareaReal(tk){
+  if(!tk || typeof tk.title !== 'string') return false;
+  const x = tk.title.trim();
+  return !!x && !/^\(?\s*contenido pendiente de definir\s*\)?\.?$/i.test(x);
+}
+function plan360TareasReales(d){ return ((d && d.tasks) || []).filter(plan360TareaReal); }
 function taskRow(tk, i){
+  if(tk && tk.title && !plan360TareaReal(tk)) return '';
   const objetivos = plan360ObjetivosDelDia2();
   const estado = tk.status || 'pendiente';
   return `<div class="card" id="task-row-${i}" style="padding:10px;margin-bottom:8px">
@@ -9017,7 +9028,7 @@ function renderSummaryPage(){
   const orden = {prioritario: 0, esencial: 1, complementario: 2};
   const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo).slice().sort((a, b) => (orden[a.prioridad] ?? 1) - (orden[b.prioridad] ?? 1));
   const trabajo = prog.filter(x => x.phase === 'trabajo');
-  const tareas = trabajo.reduce((arr, d) => arr.concat(d.tasks.filter(tk => tk.title).map(tk => ({...tk, day: d.day}))), []);
+  const tareas = trabajo.reduce((arr, d) => arr.concat(plan360TareasReales(d).map(tk => ({...tk, day: d.day}))), []);
   const hechas = tareas.filter(tk => tk.status === 'hecha');
   const grupos = objetivos.map(o => ({obj: o, tareas: tareas.filter(tk => tk.objectiveId === o.id)}));
   const sinObjetivo = tareas.filter(tk => !tk.objectiveId || !objetivos.some(o => o.id === tk.objectiveId));

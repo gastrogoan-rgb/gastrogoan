@@ -53,3 +53,6 @@ Hecho y publicado: paquetes 1, 2, 3, 4 y 5; parpadeo; alérgenos de comensales e
 - [ ] Comprobar que las pruebas nuevas FALLAN sin los arreglos.
 - [ ] Repetir el vídeo en el móvil tras esta versión y comparar.
 - [ ] Parpadeo: si vuelve a pasar, mirar `ggDiagRepintados()` en la consola (guarda de dónde viene cada repintado).
+
+## Añadido el 17/11
+- [ ] Manual: el capítulo de TPV/Pedidos online no explica la barra de pedidos (Cocina saturada, Alarma, Pedido por teléfono, Mi reparto, Pantalla de listos) ni dónde están ahora Captación y Tiempos de entrega (Mi Negocio › Pedidos online). Escribirlo en es/ca/en.

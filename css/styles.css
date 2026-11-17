@@ -4347,8 +4347,11 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-zona-tit{display:flex;align-items:center;gap:8px;margin:6px 0 10px;font-size:15px;font-weight:600}
 .tp-zona-tit .ti{color:var(--olive);font-size:18px}
 .tp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.tp-mesa{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:118px;padding:11px 12px 10px 16px;background:#fff;border:1px solid var(--hair);border-radius:4px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;min-width:0;transition:border-color .15s,background-color .15s,transform .12s}
-.tp-mesa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--hair)}
+/* Fichas de mesa (16/11, pedido del dueño: «las mesas tienen el mismo color del fondo y las libres se ven feas»). Antes la ficha era blanca sobre un fondo casi blanco
+   y la libre, blanca con borde discontinuo gris: a un metro no se distinguía una mesa de otra. Ahora cada estado tiene su color de FONDO y de barra (libre = verde
+   claro, tomando nota = azul grisáceo, ocupada = arena, en cocina = ámbar, servida = verde) y todas se levantan del fondo con borde más marcado y una sombra suave. */
+.tp-mesa{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:118px;padding:11px 12px 10px 18px;background:#fff;border:1px solid #CFC8BA;border-radius:6px;box-shadow:0 1px 0 rgba(28,26,23,.05),0 2px 8px rgba(28,26,23,.07);font:inherit;color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;min-width:0;transition:border-color .15s,background-color .15s,transform .12s,box-shadow .15s}
+.tp-mesa::before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--hair)}
 .tp-mesa:hover{border-color:var(--olive);transform:translateY(-1px)}
 .tp-mesa:active{transform:none}
 .tp-mesa:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
@@ -4373,20 +4376,28 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-av.is-fria{background:#E8EEF2;border-color:#9FB3C2}
 .tp-av.is-pago{background:#EAF1E6;border-color:#9CB09C}
 /* Estados: lo que se ve de lejos es el COLOR de la barra de la izquierda y el fondo. */
-.tp-mesa.is-libre{background:#fff;border-style:dashed;color:var(--muted)}
-.tp-mesa.is-libre::before{background:transparent}
-.tp-mesa.is-libre .tp-mesa-nombre{color:var(--ink)}
-.tp-mesa-libre{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted)}
+/* Mesa LIBRE: tiene que verse de lejos y distinguirse del fondo. Borde grueso y continuo en verde, fondo verde, barra gruesa, la etiqueta «Libre» como una
+   pastilla rellena y el nº de plazas GRANDE (es lo que mira el camarero para sentar a alguien). */
+.tp-mesa.is-libre{background:#DDEBD6;border:2px solid #6E9873;box-shadow:0 2px 6px rgba(74,93,78,.14);color:#2F4A36;padding-left:20px}
+.tp-mesa.is-libre::before{width:10px;background:#5E8A63}
+.tp-mesa.is-libre .tp-mesa-nombre{color:#1C1A17}
+.tp-mesa.is-libre .tp-mesa-estado{align-self:flex-start;background:var(--olive);color:#fff;font-weight:700;padding:3px 9px 3px 7px;border-radius:3px;letter-spacing:.06em}
+.tp-mesa.is-libre:hover{background:#D0E4C8;border-color:var(--olive);box-shadow:0 4px 12px rgba(74,93,78,.28)}
+.tp-mesa-libre{display:flex;align-items:baseline;gap:6px;font-size:14px;font-weight:600;color:#2F4A36;margin-top:auto}
+.tp-mesa-libre .ti{font-size:18px;align-self:center}
+.tp-mesa-plazas{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1;letter-spacing:-.02em;color:#1F3A27}
 .tp-mesa-reserva{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--ink);background:var(--brand-cream);border:1px dashed var(--ink);border-radius:3px;padding:3px 7px;margin-top:auto;overflow-wrap:break-word}
 .tp-mesa.es-reservada{border-color:var(--ink)}
-.tp-mesa.is-tomando{background:#F7F6F2}
-.tp-mesa.is-tomando::before{background:#7A7468}
-.tp-mesa.is-ocupada{background:#F7F6F2}
-.tp-mesa.is-ocupada::before{background:#7A7468}
+.tp-mesa.is-tomando{background:#EAF0F5;border-color:#A9BCCB}
+.tp-mesa.is-tomando::before{background:#5B7A93}
+.tp-mesa.is-tomando .tp-mesa-estado{color:#3A566C;font-weight:600}
+.tp-mesa.is-ocupada{background:#F4EEE1;border-color:#D3C39F}
+.tp-mesa.is-ocupada::before{background:#9A8658}
+.tp-mesa.is-ocupada .tp-mesa-estado{color:#66552F;font-weight:600}
 .tp-mesa.is-cocina{background:#FBF5E4;border-color:#E3CC8E}
 .tp-mesa.is-cocina::before{background:#C79A2E}
 .tp-mesa.is-cocina .tp-mesa-estado{color:#8A6A1F}
-.tp-mesa.is-servida{background:#EAF1E6;border-color:#A9C0A6}
+.tp-mesa.is-servida{background:#E3EFDD;border-color:#8FB08A}
 .tp-mesa.is-servida::before{background:var(--olive)}
 .tp-mesa.is-servida .tp-mesa-estado{color:#33523A;font-weight:600}
 .tp-mesa.es-fria{box-shadow:inset 0 0 0 2px #9FB3C2}
@@ -6704,8 +6715,24 @@ small{font-size:max(.8333em, 11px)}
 /* ════ PARA LLEVAR Y DELIVERY (13/11, js/entregas.js, test/entregas.mjs) ════
    Franja de sonido + modo ocupado + pausas, alarma que parpadea, empaquetado, vista del repartidor y monedero. Letra mínima 11 px y
    toques de 44 px como en el resto de la app. */
-.ent-barra{display:flex;flex-direction:column;gap:8px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-m,4px);background:#fff}
-.ent-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+/* Botones de pedidos del TPV (17/11): sueltos, sin el recuadro de «Herramientas». Una rejilla que reparte el ancho: 5 en una fila en PC, 2-3 en móvil. */
+.ent-barra{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+.ent-botones{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.ent-bt{min-height:44px!important;height:auto!important;justify-content:center;white-space:normal;text-align:center;line-height:1.2}
+.ent-bt.ent-sat{font-weight:700}
+.ent-bt.ent-sat.is-lim,.ent-bt.ent-sat:hover{border-color:#C79A2E}
+.ent-sat-estado{padding:8px 10px;border:1px solid #E3CC8E;background:#FBF5E4;border-radius:var(--r-s,3px)}
+/* Ventana «Cocina saturada»: canal (tres opciones grandes) y minutos con − y + */
+.ent-sat-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ent-sat-op{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;padding:8px 6px;background:#fff;border:1.5px solid #CFC8BA;border-radius:6px;color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:center;overflow-wrap:break-word}
+.ent-sat-op .ti{font-size:22px;color:var(--olive)}
+.ent-sat-op.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.ent-sat-op.is-on .ti{color:#fff}
+.ent-sat-paso{display:flex;align-items:center;justify-content:center;gap:16px}
+.ent-sat-pm{min-width:64px;min-height:56px!important;height:56px!important;font-size:30px;font-weight:600;line-height:1;padding:0}
+.ent-sat-num{font-family:var(--mono);font-size:18px;color:var(--muted);min-width:110px;text-align:center}
+.ent-sat-num b{font-size:44px;line-height:1;color:var(--ink);letter-spacing:-.02em}
+@media (max-width:420px){.ent-sat-ops{grid-template-columns:1fr}.ent-sat-op{flex-direction:row;min-height:52px;gap:10px}}.ent-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .ent-rot{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .ent-chips{display:inline-flex;flex-wrap:wrap;gap:6px}
 .ent-estado{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 8px;border-radius:var(--r-s,3px);background:#F1EFE9}
@@ -7342,4 +7369,127 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 .tp-plato.tiene .tp-plato-nom{padding-right:38px}
 @media (max-width:430px){
   .tp-or-chips .tp-ack-t{display:none}
+}
+
+/* PENDIENTES · AGENTE A · 16/11 (vídeo en un móvil real: cocina, distribución, limpieza, stock, mega lista, fichas y TPV) */
+/* Botón con caja y zona de toque de 44 px (Ver, Copiar enlace…): la regla de móvil de toda la app fija .btn a 36,5 px con !important. */
+.btn.btn-toque{min-height:44px !important;min-width:44px;justify-content:center}
+.btn.btn-fino.btn-toque::before{top:0;bottom:0;height:auto;margin-top:0}
+/* Foco y pulsado SIEMPRE en oliva, nunca en tinta/negro (el «+» de Stock y el selector de IVA salían con un aro negro). */
+:where(button,[role="button"],a,summary,[tabindex]):focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--olive)}
+.btn:focus:not(:focus-visible){outline:none}
+/* Iniciales del propietario en el chip de la mesa: oliva (antes un cuadrado negro) */
+.mesa-waiter-avatar.is-propietario{background:var(--olive);color:#fff}
+/* Ficha técnica en móvil: el número, el lápiz y el «⋯» le robaban el ancho al texto del paso (columna de ~170 px, palabras partidas).
+   Ahora el paso se lee a todo el ancho y los mandos van en su propia fila, a la derecha. */
+.fi-paso-leer,.fi-paso-txt{text-transform:none;letter-spacing:normal;hyphens:manual;word-break:normal;overflow-wrap:break-word}
+@media (max-width:760px){
+  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c" ". acc"}
+  .fi-paso > .fi-paso-n{grid-area:n}
+  .fi-paso > .fi-paso-c{grid-area:c}
+  .fi-paso > .fi-paso-acc{grid-area:acc;justify-self:end;margin-top:6px}
+}
+/* Mi puesto: el aviso de atrasadas se lee de un vistazo y «Verlas» es un botón de 44 px */
+.dp-aviso .dp-aviso-ver{flex:0 0 auto;min-height:44px}
+/* Limpieza: lo que cuelga de una tarea (producto, responsable) envuelve, nunca se recorta */
+.lp-tarea-sub > span{min-width:0;overflow-wrap:break-word}
+/* Stock en móvil: la tarjeta de un producto más compacta sin quitar nada */
+@media (max-width:760px){
+  .st-fila{padding-top:6px;padding-bottom:6px}
+  .st-nom{padding-top:0}
+  .st-sub{margin-top:2px}
+  .st-qty{padding:2px 0 0}
+}
+/* TPV · «Abrir mesa»: el tipo de cliente son dos opciones legibles (tinta, sin mono gris), con el aro bien visible */
+.ao-tipo{display:flex;flex-wrap:wrap;gap:8px}
+.field .ao-op,.ao-op{flex:1 1 140px;display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;margin:0;background:#fff;border:1px solid #716C65;border-radius:3px;font-family:inherit;font-size:15px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);cursor:pointer}
+.field .ao-op input,.ao-op input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--olive)}
+.ao-op:has(input:checked){border-color:var(--olive);background:#F0F5F1;box-shadow:inset 0 0 0 1px var(--olive)}
+.ao-op.is-off{background:#F1EFE9;border-color:var(--hair);color:#5E5A53;cursor:default}
+.ao-nota{display:block;margin-top:6px;font-size:13px;line-height:1.4;color:#5E5A53}
+/* TPV · «Cobrar 0,00 €» desactivado: texto legible (≥4,5:1) en vez de un gris al 45 % de opacidad, y el motivo a la vista */
+.tp-or-acciones .tp-or-cobrar:disabled{opacity:1;background:#E9E5DC !important;color:#4A463F !important;cursor:not-allowed}
+.tp-or-acciones .tp-or-cobrar:disabled::before{background:#E9E5DC !important;border-color:#B8B2A6 !important}
+.tp-or-acciones .tp-or-cobrar:disabled .ti,.tp-or-acciones .tp-or-cobrar:disabled b{color:#4A463F}
+.tp-or-acciones:has(.tp-or-why){flex-wrap:wrap}
+.tp-or-why{flex:1 1 100%;margin:0 0 6px;font-size:13px;line-height:1.4;color:#4A463F}
+.tp-or-why .ti{vertical-align:-2px;color:var(--olive)}
+/* TPV · lista de mesas vacía con filtros: mensaje y salida a un toque */
+.tp-vacio{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.tp-vacio > span{max-width:32ch;overflow-wrap:break-word}
+
+/* PENDIENTES · AGENTE B · vídeo móvil 16/11 */
+/* Código de licencia oculto en la ventana «Nube» (botón Mostrar/Ocultar). */
+.nb-lic-cod{font-family:var(--mono);letter-spacing:.06em;overflow-wrap:anywhere}
+.nb-lic-ver{min-height:44px;margin-left:6px;vertical-align:middle}
+/* Manual: avisos y consejos largos plegados en móvil. En PC no se pliega nada. */
+.mnl-av-mas{display:none}
+@media (max-width:640px){
+  .mnl-av-largo{position:relative}
+  .mnl-av-largo.is-plegado{max-height:6.4em;overflow:hidden}
+  .mnl-av-largo.is-plegado::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2.6em;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--av-fade,#fff));pointer-events:none}
+  .manual-tip.mnl-av-largo{--av-fade:#F3F7F0}
+  .manual-warning.mnl-av-largo{--av-fade:#FBF3DF}
+  .mnl-av-mas{display:block;position:relative;z-index:1;min-height:44px;margin:6px 0 -6px;padding:0;background:none;border:0;font:600 13px var(--mono);color:var(--olive);text-align:left;cursor:pointer}
+  .mnl-av-largo.is-plegado .mnl-av-mas{position:absolute;left:16px;bottom:0;margin:0}
+}
+/* Cuenta de Resultados: «¿Cómo se calcula?» ya no ocupa una fila entera en móvil. Pasa a un botón de
+   44 px (la etiqueta sigue ahí para lectores de pantalla) en la fila del año; Mensual|Trimestral, debajo. */
+@media (max-width:760px){
+  .cdr-barra{flex-wrap:wrap;align-items:center}
+  .cdr-barra .cdr-anio{order:1}
+  .cdr-barra .cdr-como{order:2;width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;padding:0 !important;margin-left:auto;justify-content:center;flex:none}
+  .cdr-barra .cdr-como #cdr-como-t{display:none} /* la etiqueta vive en el aria-label del botón (js/hr.js) */
+  .cdr-barra .cdr-gran{order:3;flex:1 0 100%}
+  .cdr-barra .cdr-gran .btn{flex:1 1 0;justify-content:center;min-height:44px !important}
+}
+/* Panel: la variación del año no se parte («4 / %» en dos renglones) y las comparaciones de una cifra
+   del día («-21 % vs sem. pasada») pasan al renglón de abajo en vez de salirse de la caja. */
+/* Entrada de pantalla en móvil SIN fundido desde transparente: medido con CPU ×6, el fundido de la vista (.28 s) y la
+   entrada en cascada de tarjetas (.08 s de retraso + .4 s, `backwards` = invisibles hasta arrancar) sumaban 0,4-0,8 s en
+   BLANCO al entrar en Sala o Gestión, justo después del trabajo de pintar. En un móvil lento se lee como «se ha colgado». */
+@media (max-width:760px){
+  .content .view.active,
+  .content .view.active .view-title,.content .view.active .view-header h2,
+  .content .view.active .view-subtitle,.content .view.active .view-header .view-sub,
+  .content .view.active :is(.card,.kpi,.table-wrap,.dash-hero,.module-card,.home-pulse,.folder-card){animation:none !important}
+}
+/* Mi Negocio (acordeón): con el título largo («Pedidos para llevar / domicilio», «Pago online con tarjeta (Stripe)») la
+   flecha caía a una segunda línea y en VeriFactu el icono se quedaba solo arriba. Sin salto de línea entre icono, título y
+   flecha: el que se parte, si hace falta, es el texto del título. */
+@media (max-width:760px){
+  .mn-grid > .card.mn-acc > h3{flex-wrap:nowrap}
+  .mn-grid > .card.mn-acc > h3 > i{flex:none}
+}
+/* Novedades en móvil: los 9 grupos de clientes y los 11 temas eran una columna de 20 filas de 56 px (~1.100 px de
+   lista) porque el mínimo de columna (170/190 px) no dejaba que cupieran dos en 340 px. Ahora van de dos en dos. */
+@media (max-width:760px){
+  .nv-segs,.nv-temas{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .nv-seg,.nv-tema{padding:8px 8px;gap:6px}
+  .nv-seg > .ti,.nv-tema > .ti{font-size:17px}
+}
+/* Novedades en móvil: «Nueva novedad» y «Enviadas y borradores» en una sola fila cuando caben (a 360 px sobraban
+   unos 20 px y cada botón iba en su fila con la mitad vacía). A 320 siguen envolviendo, como antes. */
+@media (max-width:760px){
+  .nv-subnav{gap:6px}
+  .nv-subnav > .left{gap:6px;flex:1 1 100%}
+  .nv-subnav > .left > .btn{padding-left:9px;padding-right:9px;letter-spacing:0}
+}
+/* Oferta en móvil: «Carta | Menús» y «Nueva Carta» en UNA fila (la norma de espacios muertos, hecha en PC y no aquí:
+   la regla general de la barra de herramientas daba el ancho entero a las pestañas y mandaba el botón a otra fila). */
+@media (max-width:760px){
+  #view-carta > .toolbar{justify-content:flex-start;flex-wrap:wrap;gap:6px}
+  #view-carta > .toolbar > .left{flex:0 1 auto;width:auto;min-width:0;flex-wrap:nowrap}
+  #view-carta > .toolbar > .btn{flex:0 1 auto;min-width:0;white-space:nowrap}
+}
+/* Contraste: la variación «vs año anterior» llevaba el rojo/verde de fondo claro sobre la fila oscura de
+   «Resultado neto» (2,2:1), y el chip ámbar de «Parcial» (inversiones) quedaba a 3,97:1. */
+#ge-cdr tr.total .txt-xs[style*="--red"]{color:#F0C4B8 !important}
+#ge-cdr tr.total .txt-xs[style*="--green"]{color:#C9D6CC !important}
+.gf-chip.is-amber{color:#6F5C2E}
+.dt-delta .dt-dv{white-space:nowrap;flex:none}
+.dt-delta{flex-wrap:wrap;row-gap:2px}
+@media (max-width:760px){
+  .dp-k-s .badge{white-space:normal;overflow-wrap:break-word;max-width:100%}
 }

@@ -90,7 +90,7 @@ await caso('Reservas con las cuentas a mano: IVA = 1.000 − 500 − 105 = 395 �
   // «Para Hacienda» = la suma de las reservas de verdad del trimestre (IVA, IRPF y el pago a cuenta del 130), SIN el impuesto acumulado del año (informativo).
   const suma = r.filas.filter(f => !/acumulado|year to date/i.test(f.t)).reduce((a, f) => a + numero(f.v), 0);
   assert.equal(Math.round(numero(r.grupo) * 100), Math.round(suma * 100), 'el total es la suma de las filas: ' + r.grupo + ' vs ' + suma + ' ' + JSON.stringify(r.filas));
-  assert.ok(numero(r.grupo) >= 695, 'al menos IVA + IRPF'); assert.ok(r.kpi.some(k => /Para Hacienda/i.test(k) && k.includes(r.grupo.trim())), r.kpi.join(' | ')); assert.ok(r.colchon);
+  assert.ok(numero(r.grupo) >= 695, 'al menos IVA + IRPF'); assert.ok(r.kpi.some(k => /Para Hacienda/i.test(k) && k.includes(r.grupo.replace(/\s+/g, ' ').trim())), r.kpi.join(' | ')); assert.ok(r.colchon);
   assert.ok(r.kpi.some(k => /Coste primo/i.test(k) && /%/.test(k)), r.kpi.join(' | ')); await page.close();
 });
 await caso('Reparto sin plantillas (8/11): ya no hay selector de «plantilla del sector»; cada negocio pone SUS porcentajes y siguen sumando 100 y avisando si el margen es corto', async () => {

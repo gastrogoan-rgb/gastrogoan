@@ -155,6 +155,7 @@ function renderQrMesaPendientes(){
 let chaosMode = false;
 function toggleChaosMode(){ chaosMode = !chaosMode; renderTPV(); }
 function setTpvMesaFiltro(f){ tpvMesaFiltro = f; renderTpvMesasZona(); }
+function tpvQuitarFiltrosMesas(){ tpvMesaFiltro = 'todas'; tpvZonaSel = ''; tpvMesaBusca = ''; renderTpvMesasZona(); }
 function setTpvZona(z){ tpvZonaSel = z; renderTpvMesasZona(); }
 function setTpvMesaBusca(v){
   tpvMesaBusca = v;
@@ -220,7 +221,7 @@ function renderMesaCard(table){
     ${order
       ? `<span class="tp-mesa-total">${fmtMoney(total)}</span>
          <span class="tp-mesa-pie">${order.pax ? `<span class="tp-mesa-pax"><i class="ti ti-users"></i> ${order.pax}</span>` : ''}${camarero}${avisos ? `<span class="tp-avisos">${avisos}</span>` : ''}</span>`
-      : `<span class="tp-mesa-libre">${table.plazas ? `<i class="ti ti-users"></i> ${table.plazas} ${escapeHtml(t('common.persAbbr'))}` : '&nbsp;'}</span>
+      : `<span class="tp-mesa-libre">${table.plazas ? `<i class="ti ti-users"></i> <b class="tp-mesa-plazas">${table.plazas}</b> ${escapeHtml(t('common.persAbbr'))}` : '&nbsp;'}</span>
          ${upcomingRes ? `<span class="tp-mesa-reserva" title="${escapeHtml(upcomingResClient)}"><i class="ti ti-calendar-event"></i> ${escapeHtml(upcomingRes.time || '')}${upcomingResClient ? ' · ' + escapeHtml(upcomingResClient.split(' ')[0]) : ''}</span>` : ''}
          ${avisos ? `<span class="tp-avisos">${avisos}</span>` : ''}`}
   </button>`;
@@ -231,7 +232,15 @@ function tpvMesasTilesHtml(){
   const sorted = [...DB.tables].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', {numeric: true}));
   const lista = sorted.map(table => ({table, est: tpvEstadoMesa(table)})).filter(x => mesaPasaFiltro(x.table, x.est));
   if(!lista.length){
-    return `<div class="empty es-vacio"><i class="ti ti-search-off"></i>${escapeHtml(tpvMesaFiltro === 'mias' ? gl({es:'No tienes ninguna mesa asignada ni abierta.', ca:'No tens cap taula assignada ni oberta.', en:'You have no assigned or open tables.'}) : t('common.noResults'))}</div>`;
+    // Estado vacío con salida (16/11): «Mías + exterior» dejaba una frase suelta sin decir QUÉ combinación no tenía nada
+    // ni cómo volver. Ahora nombra los filtros activos y ofrece quitarlos de un toque.
+    const zonaTxt = tpvZonaSel ? zonaLabel(tpvZonaSel) : '';
+    const msgVacio = tpvMesaFiltro === 'mias'
+      ? (zonaTxt ? gl({es:`No tienes mesas asignadas ni abiertas en ${zonaTxt}.`, ca:`No tens taules assignades ni obertes a ${zonaTxt}.`, en:`You have no assigned or open tables in ${zonaTxt}.`})
+                 : gl({es:'No tienes ninguna mesa asignada ni abierta.', ca:'No tens cap taula assignada ni oberta.', en:'You have no assigned or open tables.'}))
+      : (zonaTxt && tpvMesaFiltro === 'todas' && !tpvMesaBusca ? gl({es:`No hay mesas en ${zonaTxt}.`, ca:`No hi ha taules a ${zonaTxt}.`, en:`There are no tables in ${zonaTxt}.`}) : t('common.noResults'));
+    const hayFiltros = tpvMesaFiltro !== 'todas' || !!tpvZonaSel || !!tpvMesaBusca;
+    return `<div class="empty es-vacio tp-vacio"><i class="ti ti-search-off"></i><span>${escapeHtml(msgVacio)}</span>${hayFiltros ? `<button type="button" class="btn btn-fino btn-toque tp-vacio-sal" onclick="tpvQuitarFiltrosMesas()"><i class="ti ti-filter-off"></i> ${escapeHtml(gl({es:'Ver todas las mesas', ca:'Veure totes les taules', en:'Show all tables'}))}</button>` : ''}</div>`;
   }
   // Modo caos: una sola lista con las ocupadas, la que más lleva esperando primero.
   if(chaosMode){
@@ -273,7 +282,7 @@ function renderTpvMesas(tiposServicio){
     if(f === 'mias') return tpvEsMiaLaMesa(DB.tables[i], e);
     return false;
   }).length;
-  const filtros = [['todas', gl({es:'Todas', ca:'Totes', en:'All'}), ''], ['libres', gl({es:'Libres', ca:'Lliures', en:'Free'}), ''], ['ocupadas', gl({es:'Ocupadas', ca:'Ocupades', en:'Occupied'}), gl({es:'Ocup.', ca:'Ocup.', en:'Busy'})], ['servidas', gl({es:'Servidas', ca:'Servides', en:'Served'}), gl({es:'Serv.', ca:'Serv.', en:'Served'})], ['mias', gl({es:'Mis mesas', ca:'Les meves taules', en:'My tables'}), gl({es:'Mías', ca:'Meves', en:'Mine'})]];
+  const filtros = [['todas', gl({es:'Todas', ca:'Totes', en:'All'}), ''], ['libres', gl({es:'Libres', ca:'Lliures', en:'Free'}), ''], ['ocupadas', gl({es:'Ocupadas', ca:'Ocupades', en:'Occupied'}), gl({es:'Ocupadas', ca:'Ocupades', en:'Occupied'})], ['servidas', gl({es:'Servidas', ca:'Servides', en:'Served'}), gl({es:'Servidas', ca:'Servides', en:'Served'})], ['mias', gl({es:'Mis mesas', ca:'Les meves taules', en:'My tables'}), gl({es:'Mías', ca:'Meves', en:'Mine'})]];
   const zonas = getZonaOrder().filter(z => DB.tables.some(x => x.zona === z));
   const zonaBtns = zonas.length > 1 && !chaosMode ? `<span class="tp-sep" aria-hidden="true"></span>
         <button type="button" class="btn btn-sm btn-fino tp-zona-todas${!tpvZonaSel ? ' is-on' : ''}" aria-pressed="${!tpvZonaSel}" onclick="setTpvZona('')">${escapeHtml(gl({es:'Todas las zonas', ca:'Totes les zones', en:'All zones'}))}</button>
@@ -648,8 +657,10 @@ function renderTableOrderModal(orderId){
   const yaPagadoDelTodo = order.items.length > 0 && Math.max(0, roundMoney(total - orderAmountPaidOnline(order))) <= 0.001;
   const botonCobrarOCerrar = yaPagadoDelTodo
     ? `<button type="button" class="btn btn-primary tp-or-cobrar" onclick="cerrarPedidoPagadoOnline(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
-    : `<button type="button" class="btn ${allDelivered && order.items.length ? 'btn-primary ' : ''}tp-or-cobrar" onclick="openPaymentModal(${order.id})" ${!order.items.length ? 'disabled' : ''}><i class="ti ti-cash"></i> ${t('btn.charge')}<span class="tp-pto"> ·</span> <b>${fmtMoney(total)}</b></button>`;
-  const actionButtons = `<div class="tp-or-acciones">${botonCobrarOCerrar}</div>`;
+    : `<button type="button" class="btn ${allDelivered && order.items.length ? 'btn-primary ' : ''}tp-or-cobrar" onclick="openPaymentModal(${order.id})" ${!order.items.length ? 'disabled aria-describedby="tp-or-cobrar-why"' : ''}><i class="ti ti-cash"></i> ${t('btn.charge')}<span class="tp-pto"> ·</span> <b>${fmtMoney(total)}</b></button>`;
+  // Con la cuenta a 0 el botón no se puede pulsar: se dice POR QUÉ (antes quedaba un gris casi invisible sin explicación).
+  const porQueNoCobrar = !order.items.length ? `<p class="tp-or-why" id="tp-or-cobrar-why"><i class="ti ti-info-circle"></i> ${escapeHtml(gl({es:'Añade algo a la comanda para poder cobrar.', ca:'Afegeix alguna cosa a la comanda per poder cobrar.', en:'Add something to the order to be able to charge.'}))}</p>` : '';
+  const actionButtons = `<div class="tp-or-acciones">${porQueNoCobrar}${botonCobrarOCerrar}</div>`;
 
   const unidades = order.items.reduce((s, l) => s + l.qty, 0);
   const panel = tpvOrderMobilePane;

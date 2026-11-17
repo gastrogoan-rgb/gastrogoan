@@ -1430,7 +1430,7 @@ function renderBusinessSelectScreenHtml(){
         </div>
         <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:4px 0 16px">${t('bs.emptyDesc')}</p>
         <button class="btn btn-primary" style="width:100%" onclick="redeemFirstBusiness()"><i class="ti ti-ticket"></i> ${t('bs.redeemFirst')}</button>
-        <a href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+        <a href="https://buy.stripe.com/3cI5kCaCubwL9Bs3uDdwc04" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
         <!-- Sin esto, una cuenta recién creada se quedaba ATRAPADA aquí: la
              lista de negocios está vacía, así que no hay ninguna a la que ir,
              y la pantalla no tiene aspa ni botón de volver. Quien entraba con
@@ -1501,7 +1501,7 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
         <button class="btn" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
-      <a class="bs-buy" href="https://buy.stripe.com/bJebJ0cKCfN19Bsc19dwc03" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      <a class="bs-buy" href="https://buy.stripe.com/3cI5kCaCubwL9Bs3uDdwc04" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
       <div class="bs-foot">
         <button type="button" class="bs-footbtn" onclick="promptChangeOwnerPassword()"><i class="ti ti-key" aria-hidden="true"></i><span>${t('bs.changePassword')}</span></button>
         <button type="button" class="bs-footbtn" onclick="exitToAccessScreen()"><i class="ti ti-logout" aria-hidden="true"></i><span>${t('bs.exitAccount')}</span></button>
@@ -8236,8 +8236,8 @@ function initPublicRequestsListener(){
         // No se confía en el tableId que trae la solicitud (lo eligió el
         // navegador del cliente): aquí se revalida contra la lista de mesas
         // que SÍ cumplen el ajuste estricto, igual que si se buscara de cero.
-        const candidatas = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
-          .filter(tb => mesaEncajaGrupo(tb, req.people || 1));
+        const candidatas = mesasMasAjustadas((getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
+          .filter(tb => mesaEncajaGrupo(tb, req.people || 1)));
         let confirmedTableId = null;
         if(req.tableId != null && candidatas.some(tb => tb.id === req.tableId)){
           confirmedTableId = req.tableId;
@@ -8341,7 +8341,7 @@ function initPublicRequestsListener(){
           // nuevo número de comensales, ni siquiera la que ya tenía asignada
           // (si el cliente sube de 2 a 6 personas manteniendo la mesa, esa
           // mesa de 2 ya no vale y hay que rebuscar una que sí quepa).
-          const candidatas = available.filter(tb => mesaEncajaGrupo(tb, newPeople));
+          const candidatas = mesasMasAjustadas(available.filter(tb => mesaEncajaGrupo(tb, newPeople)));
           let matchedTableId = candidatas.some(tb => tb.id === target.tableId) ? target.tableId : null;
           if(matchedTableId == null){
             const autoTable = candidatas.slice().sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
@@ -8826,6 +8826,15 @@ function mesaEncajaGrupo(tb, people){
   const plazas = parseInt(tb && tb.plazas) || 0;
   const n = parseInt(people) || 1;
   return plazas >= n && plazas <= n + MESA_MARGEN_PLAZAS;
+}
+/* De las mesas que PUEDEN valer (mesaEncajaGrupo), solo las del tamaño más ajustado que haya libre (decisión del dueño, 17/11): una pareja puede
+   tener una mesa de 4 por el margen, pero no si queda libre una de 2 o de 3. Las grandes se reservan para grupos grandes. Igual que getEligibleTables
+   en la web pública: la web ofrece solo estas y la app revalida con la misma regla. */
+function mesasMasAjustadas(lista){
+  const l = Array.isArray(lista) ? lista : [];
+  if(!l.length) return l;
+  const menor = Math.min(...l.map(tb => parseInt(tb && tb.plazas) || 0));
+  return l.filter(tb => (parseInt(tb && tb.plazas) || 0) === menor);
 }
 /* ── Colores de marca (2/11) ─────────────────────────────────────────────────────────────────────
    Principal (brandColor: botones y acentos de la web de reservas, tickets y correos) y secundario (brandColor2: títulos,
@@ -10553,16 +10562,16 @@ function renderOnlineCard(){
         <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
         <div style="flex:1;min-width:180px">
           <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.printHint')}</p>
-          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
-          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> ${t('mn.online.viewPage')}</a>
+          <a class="btn btn-sm btn-toque" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+          <a class="btn btn-sm btn-toque" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> ${t('mn.online.viewPage')}</a>
         </div>
       </div>
       <div class="field">
         <textarea id="mn-public-link" rows="2" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-        <a class="btn btn-sm btn-fino is-on" style="flex:1;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <button class="btn btn-sm btn-toque" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+        <a class="btn btn-sm btn-fino btn-toque is-on" style="flex:1;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
       <div class="field" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <label>${t('mn.online.slugLabel')}</label>
@@ -10880,6 +10889,14 @@ function renderPedidosConfigCard(){
         <textarea id="mn-zonas" rows="3" placeholder="Centro | 08001,08002 | 2 | 12 | 25">${escapeHtml(entZonasATexto(p.zonas))}</textarea>
         <small style="color:var(--muted)">${escapeHtml(gl({es:'Una por línea: nombre | códigos postales | tarifa | mínimo | envío gratis desde. Lo que dejes vacío usa el valor general. La web y la app calculan el envío con estas mismas reglas.', ca:'Una per línia: nom | codis postals | tarifa | mínim | enviament gratuït des de. El que deixis buit fa servir el valor general. El web i l\'app calculen l\'enviament amb aquestes mateixes regles.', en:'One per line: name | postal codes | fee | minimum | free delivery from. Anything left empty uses the general value. The web and the app compute delivery with these same rules.'}))}</small>
       </div>` : ''}
+      <div class="field">
+        <label>${escapeHtml(gl({es:'Captar pedidos y ver cómo vas', ca:'Captar comandes i veure com vas', en:'Win orders and see how you are doing'}))}</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn" style="min-height:44px" onclick="entAbrirKit()"><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Kit de captación', ca:'Kit de captació', en:'Acquisition kit'}))}</button>
+          <button type="button" class="btn" style="min-height:44px" onclick="entAbrirAnalitica()"><i class="ti ti-chart-line"></i> ${escapeHtml(gl({es:'Tiempos de entrega', ca:'Temps de lliurament', en:'Delivery times'}))}</button>
+        </div>
+        <small style="color:var(--muted)">${escapeHtml(gl({es:'Kit de captación: el QR y el flyer para la bolsa, con un enlace que cuenta de dónde llegan los pedidos. Tiempos de entrega: cuánto tardáis de verdad en preparar y repartir cada pedido (por código postal), para prometer horas que se cumplan.', ca:'Kit de captació: el QR i el flyer per a la bossa, amb un enllaç que compta d\'on arriben les comandes. Temps de lliurament: quant trigueu de debò a preparar i repartir cada comanda (per codi postal), per prometre hores que es compleixin.', en:'Acquisition kit: the QR and the bag flyer, with a link that counts where orders come from. Delivery times: how long you really take to prepare and deliver each order (by postal code), so you promise times you keep.'}))}</small>
+      </div>
       <div class="field">
         <label>${escapeHtml(gl({es:'Válvulas de cocina', ca:'Vàlvules de cuina', en:'Kitchen valves'}))}</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -11510,6 +11527,28 @@ function renderOwnFirebaseForm(){
   `;
 }
 
+// El código de licencia es la «contraseña» del negocio (ver CLAUDE.md, límite
+// conocido de tenants/$tenantId): no se enseña entero a quien mira por encima
+// del hombro ni en una captura/vídeo. Se pinta oculto (••••••12) y se descubre
+// con «Mostrar»; el código completo nunca viaja en el HTML mientras está oculto.
+function licenciaMascara(code){
+  const c = String(code || '');
+  return '\u2022'.repeat(Math.max(4, c.length - 2)) + c.slice(-2);
+}
+function licenciaOcultaHtml(code, tag){
+  tag = tag || 'strong';
+  return `<${tag} class="nb-lic-cod" data-oculto="1">${escapeHtml(licenciaMascara(code))}</${tag}> <button type="button" class="btn btn-sm btn-toque nb-lic-ver" onclick="licenciaAlternar(this)" aria-pressed="false">${escapeHtml(gl({es:'Mostrar', ca:'Mostra', en:'Show'}))}</button>`;
+}
+function licenciaAlternar(btn){
+  const cod = btn && btn.previousElementSibling;
+  const lic = getLicense();
+  if(!cod || !lic) return;
+  const oculto = cod.getAttribute('data-oculto') === '1';
+  cod.textContent = oculto ? lic.code : licenciaMascara(lic.code);
+  cod.setAttribute('data-oculto', oculto ? '0' : '1');
+  btn.setAttribute('aria-pressed', oculto ? 'true' : 'false');
+  btn.textContent = oculto ? gl({es:'Ocultar', ca:'Amaga', en:'Hide'}) : gl({es:'Mostrar', ca:'Mostra', en:'Show'});
+}
 function openCloudWizard(){
   const lic = getLicense();
   if(!lic){
@@ -11528,7 +11567,7 @@ function openCloudWizard(){
         <h3><i class="ti ti-cloud"></i> ${t('gate.setupCloud')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+      <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: ${licenciaOcultaHtml(lic.code)}</p>
       <div class="nb-aviso is-nota">
         ${t('gate.cloudIntro')}
       </div>
@@ -11553,7 +11592,7 @@ function openCloudWizard(){
       <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+    <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: ${licenciaOcultaHtml(lic.code)}</p>
     ${reglasAntiguas ? `<div class="nb-aviso is-amber">
       <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${
         /* Dos casos MUY distintos y no se pueden contar igual:
@@ -11592,7 +11631,7 @@ function openCloudWizard(){
           lastSyncErrorCode ? `<div class="nb-detalle nb-codigo"><code>${escapeHtml(String(lastSyncErrorCode))}</code></div>` : ''
         }</div>`
       : `<div class="nb-aviso is-ok"><div class="nb-estado"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div></div>`}
-    <p class="nb-p"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
+    <p class="nb-p"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', licenciaOcultaHtml(lic.code, 'code'))}</p>
     <hr class="nb-hr">
     <p class="nb-sub"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</p>
     <p class="nb-ayuda">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>
@@ -11603,7 +11642,7 @@ function openCloudWizard(){
       </div>
     </div>
     <div class="nb-fila">
-      <button class="btn" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+      <button class="btn btn-toque" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
       <a class="btn btn-primary nb-wa" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr class="nb-hr">

@@ -1159,7 +1159,10 @@ function renderLimpiezaMantenimiento(){
         <div><dt>${t('label.lastMaintenance')}</dt><dd>${fecha(e.ultimo)}</dd></div>
         <div><dt>${t('label.next')}</dt><dd>${fecha(e.proximo)}</dd></div>
         <div><dt>${t('label.responsible')}</dt><dd>${e.responsable ? escapeHtml(e.responsable) : '—'}</dd></div>
-        <div><dt>${t('label.status')}</dt><dd><span class="lp-estado-eq ${e.estado === 'Urgente' ? 'nok' : e.estado === 'Pendiente' ? 'pend' : 'ok'}">${escapeHtml(estadoTxt[e.estado] || e.estado || '—')}</span></dd></div>
+        <div><dt>${t('label.status')}</dt><dd>${due === 'overdue'
+          /* «VENCIDO» junto a «estado: ok» se contradecía (vídeo 16/11): una fecha pasada manda sobre el estado apuntado a mano. */
+          ? `<span class="lp-estado-eq nok">${escapeHtml(t('badge.overdue'))}</span>`
+          : `<span class="lp-estado-eq ${e.estado === 'Urgente' ? 'nok' : e.estado === 'Pendiente' ? 'pend' : 'ok'}">${escapeHtml(estadoTxt[e.estado] || e.estado || '—')}</span>`}</dd></div>
         <div class="lp-eq-notas"><dt>${t('th.notes')}</dt><dd>${e.notas ? escapeHtml(e.notas) : '—'}</dd></div>
       </dl>
     </article>`;
@@ -1678,7 +1681,7 @@ function renderDistList(){
       </div>`}
       <div class="pr-estados">
         ${isInactive ? `<span class="pr-chip">${t('label.inactive')}</span>` : turno ? `<span class="pr-chip dp-turno-chip" style="background:${turno.bg};color:${turno.tx}">${escapeHtml(turno.etiqueta)}${turno.horas ? ' · ' + escapeHtml(turno.horas) : ''}</span>` : `<span class="pr-chip">${gl({es:'Sin turno hoy', ca:'Sense torn avui', en:'No shift today'})}</span>`}
-        ${sem.atrasadas ? `<span class="pr-chip msg"><i class="ti ti-alert-triangle"></i> ${sem.atrasadas} ${gl({es:'atrasadas', ca:'endarrerides', en:'overdue'})}</span>` : ''}
+        ${sem.atrasadas ? `<span class="pr-chip msg"><i class="ti ti-alert-triangle"></i> ${sem.atrasadas} ${sem.atrasadas === 1 ? gl({es:'atrasada', ca:'endarrerida', en:'overdue'}) : gl({es:'atrasadas', ca:'endarrerides', en:'overdue'})}</span>` : ''}
         ${chipManual}
       </div>
       <div class="pr-pie">
@@ -1858,7 +1861,7 @@ function renderDistDetail(){
   const atrasadas = sem.atrasadas && sem.primerAtrasado ? `
     <div class="dp-aviso"><i class="ti ti-alert-triangle"></i>
       <span>${sem.atrasadas === 1 ? t('dist.oneOverdueTask') : t('dist.nOverdueTasks').replace('${n}', sem.atrasadas)}</span>
-      <button type="button" class="btn btn-sm btn-fino" onclick="distElegirDia('${sem.primerAtrasado.ds}')">${gl({es:'Verlas', ca:'Veure-les', en:'Show me'})}</button>
+      <button type="button" class="btn btn-fino btn-toque dp-aviso-ver" onclick="distElegirDia('${sem.primerAtrasado.ds}')">${sem.atrasadas === 1 ? gl({es:'Verla', ca:'Veure-la', en:'Show me'}) : gl({es:'Verlas', ca:'Veure-les', en:'Show me'})}</button>
     </div>` : '';
 
   // ---- Tira de la semana ----
@@ -1901,7 +1904,7 @@ function renderDistDetail(){
   const nPlatos = d.platos.length, nElabs = d.elabs.length, rangoEtiquetas = distRangoLabels(d), nCargo = isSala ? rangoEtiquetas.length : nPlatos + nElabs;
   const cargoResumen = isSala
     ? (rangoEtiquetas.length ? rangoEtiquetas.slice(0, 3).join(' · ') + (rangoEtiquetas.length > 3 ? ' …' : '') : t('dist.noZonesAssigned'))
-    : (nCargo ? `${nPlatos} ${nPlatos === 1 ? gl({es:'plato', ca:'plat', en:'dish'}) : gl({es:'platos', ca:'plats', en:'dishes'})} · ${nElabs} ${nElabs === 1 ? gl({es:'elaboración', ca:'elaboració', en:'preparation'}) : gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'})}` : t('dist.noDishesAssigned'));
+    : (nCargo ? `${[nPlatos ? `${nPlatos} ${nPlatos === 1 ? gl({es:'plato', ca:'plat', en:'dish'}) : gl({es:'platos', ca:'plats', en:'dishes'})}` : '', nElabs ? `${nElabs} ${nElabs === 1 ? gl({es:'elaboración', ca:'elaboració', en:'preparation'}) : gl({es:'elaboraciones', ca:'elaboracions', en:'preparations'})}` : ''].filter(Boolean).join(' · ')}` : t('dist.noDishesAssigned'));
   const man = d.manual;
   const nMan = man.items.length;
   const leido = d.manualLeido && d.manualLeido.version === man.version;
@@ -5741,7 +5744,7 @@ function plan360HoyCardHtml(){
   if(!dHoy){
     cuerpoHoy = `<p class="muted" style="margin:0">${escapeHtml(t(diaHoy < 1 ? 'plan360.programNotStartedYet' : 'plan360.programFinished'))}</p>`;
   } else if(dHoy.phase === 'presencial'){
-    cuerpoHoy = `<p style="margin:0 0 10px;font-size:13.5px">${escapeHtml(t('plan360.todayIsPresencial'))}</p><button class="btn btn-sm" onclick="renderPlan360DayDetail(${diaHoy})">${escapeHtml(t('common.view'))} <i class="ti ti-chevron-right"></i></button>`;
+    cuerpoHoy = `<p style="margin:0 0 10px;font-size:13.5px">${escapeHtml(t('plan360.todayIsPresencial'))}</p><button class="btn btn-sm btn-toque" onclick="renderPlan360DayDetail(${diaHoy})">${escapeHtml(t('common.view'))} <i class="ti ti-chevron-right"></i></button>`;
   } else {
     const conTitulo = plan360TareasReales(dHoy);
     cuerpoHoy = conTitulo.length
@@ -6854,7 +6857,7 @@ function renderPlan360PlanAccion(day){
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <strong>${escapeHtml(t('plan360.investmentPlan'))}</strong>
-        ${(d.inversiones || []).length ? `<button class="btn btn-sm" onclick="renderPlan360Inversiones(${day})">${escapeHtml(t('common.view'))}</button>` : ''}
+        ${(d.inversiones || []).length ? `<button class="btn btn-sm btn-toque" onclick="renderPlan360Inversiones(${day})">${escapeHtml(t('common.view'))}</button>` : ''}
       </div>
       ${(d.inversiones || []).filter(inv => inv.nombre).length ? (d.inversiones || []).filter(inv => inv.nombre).map(inv => `
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">

@@ -125,38 +125,90 @@ function entProgramarCaducidad(){
 }
 const entHoraCorta = d => d.toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
 
-// La franja que va encima de Para llevar / Delivery: sonido, modo ocupado y pausas.
+/* ───────── COCINA SATURADA (17/11, rehecho a petición del dueño) ─────────
+   Un solo botón. Al pulsarlo se elige el canal —Para llevar, Domicilio o los dos— y CUÁNTOS MINUTOS la cocina no acepta pedidos nuevos (con − y +). Pasado ese
+   tiempo se reanuda sola. A quien entra en la web de pedidos le sale «La cocina está que arde. Podrás hacer tu pedido en aproximadamente X minutos».
+   Por debajo usa lo de siempre (pausaTakeawayHasta / pausaDeliveryHasta, con caducidad por reloj): no hay servidor que tenga que acordarse de reanudar. */
+let entSatCanal = 'both', entSatMin = 15;
+const ENT_SAT_MIN = 5, ENT_SAT_MAX = 180, ENT_SAT_PASO = 5;
+function entSatHasta(){ return new Date(Date.now() + entSatMin * 60000); }
+function entSatEstado(){
+  const pT = entCanalPausado('takeaway'), pD = entCanalPausado('delivery');
+  if(!pT && !pD) return null;
+  const canal = pT && pD ? 'both' : (pT ? 'takeaway' : 'delivery');
+  const hasta = new Date(Math.max(pT ? pT.getTime() : 0, pD ? pD.getTime() : 0));
+  return {canal, hasta, mins: Math.max(1, Math.ceil((hasta.getTime() - Date.now()) / 60000))};
+}
+function entSatCanalTxt(c){
+  return c === 'both' ? gl({es:'Para llevar y domicilio', ca:'Per emportar i domicili', en:'Pickup and delivery'})
+    : c === 'takeaway' ? gl({es:'Para llevar', ca:'Per emportar', en:'Pickup'}) : gl({es:'Domicilio', ca:'Domicili', en:'Delivery'});
+}
+function entAbrirSaturada(){
+  const act = entSatEstado();
+  if(act){ entSatCanal = act.canal; entSatMin = Math.min(ENT_SAT_MAX, Math.max(ENT_SAT_MIN, Math.round(act.mins / ENT_SAT_PASO) * ENT_SAT_PASO)); }
+  const op = (c, tx, ic) => `<button type="button" class="ent-sat-op${entSatCanal === c ? ' is-on' : ''}" data-c="${c}" aria-pressed="${entSatCanal === c}" onclick="entSatSetCanal('${c}')"><i class="ti ${ic}"></i><span>${escapeHtml(tx)}</span></button>`;
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Cocina saturada', ca:'Cuina saturada', en:'Kitchen busy'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 12px">${escapeHtml(gl({es:'Durante este tiempo no se aceptan pedidos nuevos en lo que elijas. Al cliente de la web le sale: «La cocina está que arde. Podrás hacer tu pedido en aproximadamente X minutos».', ca:'Durant aquest temps no s\'accepten comandes noves en el que triïs. Al client del web li surt: «La cuina està que crema. Podràs fer la teva comanda d\'aquí a uns X minuts».', en:'During this time no new orders are accepted for what you choose. Web customers see: “The kitchen is on fire! You will be able to place your order in about X minutes”.'}))}</p>
+    <div class="field"><label>${escapeHtml(gl({es:'¿Qué se pausa?', ca:'Què es pausa?', en:'What is paused?'}))}</label>
+      <div class="ent-sat-ops" role="group">${op('takeaway', gl({es:'Para llevar', ca:'Per emportar', en:'Pickup'}), 'ti-shopping-bag')}${op('delivery', gl({es:'Domicilio', ca:'Domicili', en:'Delivery'}), 'ti-moped')}${op('both', gl({es:'Los dos', ca:'Els dos', en:'Both'}), 'ti-layout-grid')}</div></div>
+    <div class="field"><label>${escapeHtml(gl({es:'Minutos sin aceptar pedidos', ca:'Minuts sense acceptar comandes', en:'Minutes without taking orders'}))}</label>
+      <div class="ent-sat-paso">
+        <button type="button" class="btn ent-sat-pm" onclick="entSatCambiar(-${ENT_SAT_PASO})" aria-label="${escapeHtml(gl({es:'Menos minutos', ca:'Menys minuts', en:'Fewer minutes'}))}">−</button>
+        <span class="ent-sat-num"><b id="ent-sat-min">${entSatMin}</b> min</span>
+        <button type="button" class="btn ent-sat-pm" onclick="entSatCambiar(${ENT_SAT_PASO})" aria-label="${escapeHtml(gl({es:'Más minutos', ca:'Més minuts', en:'More minutes'}))}">+</button>
+      </div>
+      <p class="txt-xs" style="margin:8px 0 0;color:var(--muted)">${escapeHtml(gl({es:'Se reanuda sola a las', ca:'Es reprèn sola a les', en:'Resumes by itself at'}))} <b id="ent-sat-hasta">${escapeHtml(entHoraCorta(entSatHasta()))}</b></p>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      ${act ? `<button type="button" class="btn is-off" onclick="entSatReanudar()"><i class="ti ti-player-play"></i> ${escapeHtml(gl({es:'Reanudar ya', ca:'Reprendre ara', en:'Resume now'}))}</button>` : `<button type="button" class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button>`}
+      <button type="button" class="btn btn-primary" onclick="entSatActivar()"><i class="ti ti-flame"></i> ${escapeHtml(act ? gl({es:'Actualizar', ca:'Actualitzar', en:'Update'}) : gl({es:'Activar', ca:'Activar', en:'Turn on'}))}</button>
+    </div>`);
+}
+function entSatSetCanal(c){
+  entSatCanal = c === 'takeaway' || c === 'delivery' ? c : 'both';
+  document.querySelectorAll('.ent-sat-op').forEach(b => { const on = b.dataset.c === entSatCanal; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on); });
+}
+function entSatCambiar(d){
+  entSatMin = Math.min(ENT_SAT_MAX, Math.max(ENT_SAT_MIN, entSatMin + d));
+  const a = document.getElementById('ent-sat-min'), h = document.getElementById('ent-sat-hasta');
+  if(a) a.textContent = entSatMin; if(h) h.textContent = entHoraCorta(entSatHasta());
+}
+function entSatActivar(){
+  const p = entPedidosCfg(), hasta = entSatHasta().toISOString();
+  // Lo elegido se pausa; lo NO elegido se reanuda: el modal refleja el estado entero, no suma pausas por encima de las que ya hubiera.
+  p.pausaTakeawayHasta = (entSatCanal === 'takeaway' || entSatCanal === 'both') ? hasta : '';
+  p.pausaDeliveryHasta = (entSatCanal === 'delivery' || entSatCanal === 'both') ? hasta : '';
+  saveDB(); entProgramarCaducidad(); closeModal(); renderTPV();
+  logAudit('edit', gl({es:'Cocina saturada: ' + entSatCanalTxt(entSatCanal) + ' durante ' + entSatMin + ' min', ca:'Cuina saturada: ' + entSatCanalTxt(entSatCanal) + ' durant ' + entSatMin + ' min', en:'Kitchen busy: ' + entSatCanalTxt(entSatCanal) + ' for ' + entSatMin + ' min'}));
+  showToast(gl({es:'Cocina saturada: sin pedidos nuevos ' + entSatMin + ' min (' + entSatCanalTxt(entSatCanal) + ')', ca:'Cuina saturada: sense comandes noves ' + entSatMin + ' min (' + entSatCanalTxt(entSatCanal) + ')', en:'Kitchen busy: no new orders for ' + entSatMin + ' min (' + entSatCanalTxt(entSatCanal) + ')'}));
+}
+function entSatReanudar(){
+  const p = entPedidosCfg(); p.pausaTakeawayHasta = ''; p.pausaDeliveryHasta = '';
+  saveDB(); closeModal(); renderTPV();
+  showToast(gl({es:'Pedidos reanudados', ca:'Comandes represes', en:'Orders resumed'}));
+}
+
+// Los botones de pedidos del TPV, sueltos y en orden de uso (17/11): lo que se usa en pleno servicio arriba (cocina saturada, alarma) y lo que se abre de vez en cuando
+// después. Captación y Tiempos ya no están aquí: viven en Mi Negocio › Pedidos online, que es donde se configuran.
 function entBarraHtml(){
-  const oc = entOcupadoActivo(), pT = entCanalPausado('takeaway'), pD = entCanalPausado('delivery');
+  const sat = entSatEstado();
   const alarmaOff = entAlarmaApagada();
-  const durBtn = m => `<button type="button" class="btn btn-sm btn-fino${entDurSel === m ? ' is-on' : ''}" aria-pressed="${entDurSel === m}" onclick="entSetDur(${m})">${m} min</button>`;
-  const extraBtn = m => `<button type="button" class="btn btn-sm btn-fino${oc && oc.extra === m ? ' is-lim' : ''}" onclick="entPonerOcupado(${m})">+${m} min</button>`;
+  const btn = (ic, tx, fn, extra) => `<button type="button" class="btn btn-fino ent-bt${extra ? ' ' + extra : ''}" onclick="${fn}"><i class="ti ${ic}"></i> <span>${escapeHtml(tx)}</span></button>`;
   return `
   <div class="ent-barra" id="ent-barra">
     <div class="ent-sonido" id="ent-aviso-reloj" hidden></div>
     ${!entSonidoActivo() ? `<div class="ent-sonido"><i class="ti ti-volume-off"></i><span>${escapeHtml(gl({es:'El sonido de avisos está desactivado en este aparato: toca para activarlo y mantener la pantalla encendida.', ca:'El so d\'avisos està desactivat en aquest aparell: toca per activar-lo i mantenir la pantalla encesa.', en:'Alert sound is off on this device: tap to turn it on and keep the screen awake.'}))}</span><button type="button" class="btn btn-fino is-lim" id="ent-activar-sonido" onclick="entActivarSonido()">${escapeHtml(gl({es:'Activar sonido', ca:'Activar so', en:'Turn sound on'}))}</button></div>` : ''}
-    <details class="ent-herr"${window.innerWidth > 720 || oc || pT || pD ? ' open' : ''}>
-    <summary class="btn btn-sm btn-fino"><i class="ti ti-adjustments-horizontal"></i> ${escapeHtml(gl({es:'Herramientas de pedidos', ca:'Eines de comandes', en:'Order tools'}))}${oc || pT || pD ? ' <b class="ent-herr-on">' + escapeHtml(gl({es:'activo', ca:'actiu', en:'on'})) + '</b>' : ''}</summary>
-    <div class="ent-fila">
-      <span class="ent-rot">${escapeHtml(gl({es:'Cocina saturada', ca:'Cuina saturada', en:'Kitchen busy'}))}</span>
-      <span class="ent-chips" role="group">${extraBtn(10)}${extraBtn(15)}${extraBtn(20)}</span>
-      <span class="ent-rot">${escapeHtml(gl({es:'durante', ca:'durant', en:'for'}))}</span>
-      <span class="ent-chips" role="group">${durBtn(15)}${durBtn(30)}${durBtn(60)}</span>
-      <button type="button" class="btn btn-sm btn-fino" id="ent-alarma-toggle" aria-pressed="${!alarmaOff}" onclick="entToggleAlarma()"><i class="ti ${alarmaOff ? 'ti-bell-off' : 'ti-bell-ringing'}"></i> ${escapeHtml(alarmaOff ? gl({es:'Alarma apagada', ca:'Alarma apagada', en:'Alarm off'}) : gl({es:'Alarma activa', ca:'Alarma activa', en:'Alarm on'}))}</button>
+    <div class="ent-botones">
+      ${btn('ti-flame', gl({es:'Cocina saturada', ca:'Cuina saturada', en:'Kitchen busy'}), 'entAbrirSaturada()', 'ent-sat' + (sat ? ' is-lim' : ''))}
+      <button type="button" class="btn btn-fino ent-bt" id="ent-alarma-toggle" aria-pressed="${!alarmaOff}" onclick="entToggleAlarma()"><i class="ti ${alarmaOff ? 'ti-bell-off' : 'ti-bell-ringing'}"></i> <span>${escapeHtml(alarmaOff ? gl({es:'Alarma apagada', ca:'Alarma apagada', en:'Alarm off'}) : gl({es:'Alarma activa', ca:'Alarma activa', en:'Alarm on'}))}</span></button>
+      ${btn('ti-phone-plus', gl({es:'Pedido por teléfono', ca:'Comanda per telèfon', en:'Phone order'}), 'entNuevoPedidoTelefono()')}
+      ${btn('ti-moped', gl({es:'Mi reparto', ca:'El meu repartiment', en:'My deliveries'}), 'entAbrirRepartidor()')}
+      ${btn('ti-device-tv', gl({es:'Pantalla de listos', ca:'Pantalla de llestos', en:'Ready screen'}), 'entAbrirTablero()')}
     </div>
-    <div class="ent-fila">
-      ${oc ? `<span class="ent-estado is-lim"><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Ocupado +' + oc.extra + ' min hasta las ' + entHoraCorta(oc.hasta), ca:'Ocupat +' + oc.extra + ' min fins a les ' + entHoraCorta(oc.hasta), en:'Busy +' + oc.extra + ' min until ' + entHoraCorta(oc.hasta)}))}</span><button type="button" class="btn btn-sm btn-fino" onclick="entQuitarOcupado()">${escapeHtml(gl({es:'Reanudar', ca:'Reprendre', en:'Resume'}))}</button>` : ''}
-      ${pT ? `<span class="ent-estado is-off"><i class="ti ti-player-pause"></i> ${escapeHtml(gl({es:'Para llevar en pausa hasta las ' + entHoraCorta(pT), ca:'Per emportar en pausa fins a les ' + entHoraCorta(pT), en:'Pickup paused until ' + entHoraCorta(pT)}))}</span><button type="button" class="btn btn-sm btn-fino" onclick="entReanudarCanal('takeaway')">${escapeHtml(gl({es:'Reanudar', ca:'Reprendre', en:'Resume'}))}</button>`
-          : `<button type="button" class="btn btn-sm btn-fino" onclick="entPausarCanal('takeaway')"><i class="ti ti-player-pause"></i> ${escapeHtml(gl({es:'Pausar para llevar', ca:'Pausar per emportar', en:'Pause pickup'}))}</button>`}
-      ${pD ? `<span class="ent-estado is-off"><i class="ti ti-player-pause"></i> ${escapeHtml(gl({es:'Domicilio en pausa hasta las ' + entHoraCorta(pD), ca:'Domicili en pausa fins a les ' + entHoraCorta(pD), en:'Delivery paused until ' + entHoraCorta(pD)}))}</span><button type="button" class="btn btn-sm btn-fino" onclick="entReanudarCanal('delivery')">${escapeHtml(gl({es:'Reanudar', ca:'Reprendre', en:'Resume'}))}</button>`
-          : `<button type="button" class="btn btn-sm btn-fino" onclick="entPausarCanal('delivery')"><i class="ti ti-player-pause"></i> ${escapeHtml(gl({es:'Pausar domicilio', ca:'Pausar domicili', en:'Pause delivery'}))}</button>`}
-      <button type="button" class="btn btn-sm btn-fino" onclick="entNuevoPedidoTelefono()"><i class="ti ti-phone-plus"></i> ${escapeHtml(gl({es:'Pedido por teléfono', ca:'Comanda per telèfon', en:'Phone order'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="entAbrirRepartidor()"><i class="ti ti-moped"></i> ${escapeHtml(gl({es:'Mi reparto', ca:'El meu repartiment', en:'My deliveries'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino" onclick="entAbrirTablero()"><i class="ti ti-device-tv"></i> ${escapeHtml(gl({es:'Pantalla de listos', ca:'Pantalla de llestos', en:'Ready screen'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirKit()"><i class="ti ti-share"></i> ${escapeHtml(gl({es:'Captación', ca:'Captació', en:'Acquisition'}))}</button>
-      <button type="button" class="btn btn-sm btn-fino owner-only" onclick="entAbrirAnalitica()"><i class="ti ti-chart-line"></i> ${escapeHtml(gl({es:'Tiempos', ca:'Temps', en:'Timings'}))}</button>
-    </div>
-    </details>
+    ${sat ? `<div class="ent-fila ent-sat-estado"><span class="ent-estado is-lim"><i class="ti ti-flame"></i> ${escapeHtml(gl({es:'Cocina saturada · ' + entSatCanalTxt(sat.canal) + ' · sin pedidos nuevos hasta las ' + entHoraCorta(sat.hasta) + ' (' + sat.mins + ' min)', ca:'Cuina saturada · ' + entSatCanalTxt(sat.canal) + ' · sense comandes noves fins a les ' + entHoraCorta(sat.hasta) + ' (' + sat.mins + ' min)', en:'Kitchen busy · ' + entSatCanalTxt(sat.canal) + ' · no new orders until ' + entHoraCorta(sat.hasta) + ' (' + sat.mins + ' min)'}))}</span>
+      <button type="button" class="btn btn-sm btn-fino" onclick="entAbrirSaturada()">${escapeHtml(gl({es:'Cambiar', ca:'Canviar', en:'Change'}))}</button>
+      <button type="button" class="btn btn-sm btn-fino is-off" onclick="entSatReanudar()">${escapeHtml(gl({es:'Reanudar ya', ca:'Reprendre ara', en:'Resume now'}))}</button></div>` : ''}
   </div>`;
 }
 
@@ -754,7 +806,7 @@ function entAbrirTablero(){
       <div class="card" style="word-break:break-all;font-size:13px">${escapeHtml(url)}</div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar enlace', ca:'Copiar enllaç', en:'Copy link'}))}</button>
+      <button class="btn btn-toque" onclick="navigator.clipboard.writeText('${escapeHtml(url)}');showToast('${escapeHtml(gl({es:'Enlace copiado', ca:'Enllaç copiat', en:'Link copied'}))}')"><i class="ti ti-copy"></i> ${escapeHtml(gl({es:'Copiar enlace', ca:'Copiar enllaç', en:'Copy link'}))}</button>
       <a class="btn btn-primary" href="${escapeHtml(url)}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${escapeHtml(gl({es:'Abrir pantalla', ca:'Obrir pantalla', en:'Open screen'}))}</a>
     </div>`);
 }

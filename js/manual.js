@@ -2713,6 +2713,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Para llevar y a domicilio</h4>
 <p>Estos pedidos <strong>no se apuntan a mano</strong>: los hace el cliente en tu web (ver el capítulo «Reservas y Pedidos Online»). Aparecen en la sección <strong>Para Llevar / Delivery</strong>, debajo de las mesas, como una ficha por pedido: tipo (<em>Para recoger</em> o <em>Delivery</em>), hora, cliente, dirección, total y si está pagado.</p>
+<p>Encima de las fichas hay una <strong>barra de seis botones</strong>, cada uno con lo suyo: <strong>Cocina saturada</strong> (eliges <em>Delivery</em>, <em>Take Away</em> o los dos y, con el <strong>−</strong> y el <strong>+</strong>, cuántos minutos no aceptas pedidos nuevos; el cliente ve «La cocina está que arde. Podrás hacer tu pedido en aproximadamente X minutos» y puedes <strong>Reanudar ya</strong>), <strong>Alarma activa / apagada</strong> (el aviso sonoro de pedidos pendientes), <strong>Pedido por teléfono</strong> (apuntar uno a mano), <strong>Mi reparto</strong> (la vista del repartidor: Salgo, Entregado, mapa) y <strong>Pantalla de listos</strong> (para poner en una pantalla del local). El <strong>Kit de captación</strong> (QR y flyer para la bolsa) y los <strong>Tiempos de entrega</strong> ya no están aquí: viven en <strong>Mi Negocio → Captar pedidos y ver cómo vas</strong>.</p>
 <ul>
   <li><strong>Pedidos online: ON/OFF</strong> — el interruptor de emergencia. En ON los pedidos entran y se aceptan solos; en OFF la web deja de admitirlos y avisa al cliente. Úsalo cuando la cocina se desborda.</li>
   <li>Pestaña <strong>Pendientes</strong> — lo que espera una decisión: pedidos pagados con tarjeta cuyo pago aún no ha confirmado el banco, zonas de reparto sin verificar, o todo si tienes el interruptor en OFF. Cada uno tiene <strong>Aceptar</strong> y <strong>Rechazar</strong>. También se listan aquí los pedidos <strong>Programados para más tarde hoy</strong>.</li>
@@ -2851,6 +2852,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Per emportar i a domicili</h4>
 <p>Aquestes comandes <strong>no s'apunten a mà</strong>: les fa el client a la teva web (vegeu el capítol «Reserves i Comandes en Línia»). Apareixen a la secció <strong>Per Emportar / Delivery</strong>, sota les taules, com una fitxa per comanda: tipus (<em>Per recollir</em> o <em>Delivery</em>), hora, client, adreça, total i si està pagada.</p>
+<p>Sobre les fitxes hi ha una <strong>barra de sis botons</strong>, cadascun amb el seu: <strong>Cuina saturada</strong> (tries <em>Delivery</em>, <em>Take Away</em> o tots dos i, amb el <strong>−</strong> i el <strong>+</strong>, quants minuts no acceptes comandes noves; el client veu «La cuina està que crema. Podràs fer la teva comanda d'aquí a aproximadament X minuts» i pots <strong>Reprendre ara</strong>), <strong>Alarma activa / apagada</strong> (l'avís sonor de comandes pendents), <strong>Comanda per telèfon</strong> (apuntar-ne una a mà), <strong>El meu repartiment</strong> (la vista del repartidor: Surto, Lliurat, mapa) i <strong>Pantalla de llestos</strong> (per posar en una pantalla del local). El <strong>Kit de captació</strong> (QR i flyer per a la bossa) i els <strong>Temps de lliurament</strong> ja no són aquí: viuen a <strong>El Meu Negoci → Captar comandes i veure com vas</strong>.</p>
 <ul>
   <li><strong>Comandes online: ON/OFF</strong> — l'interruptor d'emergència. En ON les comandes entren i s'accepten soles; en OFF la web deixa d'admetre-les i n'avisa el client. Fes-lo servir quan la cuina es desborda.</li>
   <li>Pestanya <strong>Pendents</strong> — el que espera una decisió: comandes pagades amb targeta el pagament de les quals encara no ha confirmat el banc, zones de repartiment sense verificar, o tot si tens l'interruptor en OFF. Cadascuna té <strong>Acceptar</strong> i <strong>Rebutjar</strong>. També s'hi llisten les comandes <strong>Programades per més tard avui</strong>.</li>
@@ -2989,6 +2991,7 @@ const MANUAL_CHAPTERS = [
 
 <h4>Takeaway and delivery</h4>
 <p>These orders <strong>aren't entered by hand</strong>: the customer places them on your website (see the "Online Reservations and Ordering" chapter). They appear in the <strong>Takeaway / Delivery</strong> section, below the tables, as one card per order: type (<em>For pickup</em> or <em>Delivery</em>), time, customer, address, total and whether it's paid.</p>
+<p>Above the cards there is a <strong>bar of six buttons</strong>, each with its own job: <strong>Kitchen busy</strong> (pick <em>Delivery</em>, <em>Take Away</em> or both and, with <strong>−</strong> and <strong>+</strong>, how many minutes you stop taking new orders; the customer sees «The kitchen is slammed. You will be able to order in about X minutes» and you can <strong>Resume now</strong>), <strong>Alarm on / off</strong> (the sound for pending orders), <strong>Phone order</strong> (enter one by hand), <strong>My deliveries</strong> (the driver view: Leaving, Delivered, map) and <strong>Ready screen</strong> (to put on a screen in the venue). The <strong>Acquisition kit</strong> (QR and bag flyer) and <strong>Delivery times</strong> are no longer here: they live in <strong>My Business → Win orders and see how you are doing</strong>.</p>
 <ul>
   <li><strong>Online orders: ON/OFF</strong> — the emergency switch. ON: orders come in and are accepted by themselves; OFF: the website stops accepting them and tells the customer. Use it when the kitchen is swamped.</li>
   <li><strong>Pending</strong> tab — what is waiting for a decision: card-paid orders whose payment the bank hasn't confirmed yet, delivery zones that couldn't be verified, or everything if the switch is OFF. Each has <strong>Accept</strong> and <strong>Reject</strong>. It also lists the orders <strong>Scheduled for later today</strong>.</li>
@@ -6215,6 +6218,7 @@ function renderManualTema(cont, pie, q){
     if(h3 && h3.parentNode === cuerpo) h3.after(toc); else cuerpo.prepend(toc);
   }
   manualResaltar(cuerpo, q);
+  if(!q) manualPlegarAvisos(cuerpo);
   // ── pie: anterior / siguiente DENTRO del mismo grupo, e imprimir ──
   const hermanos = MANUAL_CHAPTERS.map((ch, i) => ({ch, i})).filter(x => x.ch.area === actual.area);
   const pos = hermanos.findIndex(m => m.i === manualChapter);
@@ -6225,6 +6229,22 @@ function renderManualTema(cont, pie, q){
       <button type="button" class="btn btn-fino mnl-imprimir" onclick="printManualChapter()"><i class="ti ti-printer"></i> ${escapeHtml(t('btn.printChapter'))}</button>
       ${sig ? `<button type="button" class="btn btn-fino mnl-nav mnl-sig" onclick="goManualChapter(${sig.i})"><span><small>${escapeHtml(gl({es:'Siguiente', ca:'Següent', en:'Next'}))}</small>${escapeHtml(manualChapterPlainTitle(sig.ch))}</span><i class="ti ti-arrow-right"></i></button>` : '<span></span>'}
     </div>`;
+}
+// Avisos y consejos largos (14/16 px, 8-10 renglones) se comían la pantalla del
+// móvil: se ven recortados a unos renglones y un toque los abre. Solo en
+// ≤640 px (lo recorta el CSS); en PC la clase y el botón no hacen nada.
+function manualPlegarAvisos(cuerpo){
+  cuerpo.querySelectorAll('.manual-warning, .manual-tip').forEach(av => {
+    if((av.textContent || '').trim().length < 170) return;
+    av.classList.add('mnl-av-largo', 'is-plegado');
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'mnl-av-mas';
+    b.setAttribute('aria-expanded', 'false');
+    const txt = ab => ab ? gl({es:'Ver menos', ca:'Veure menys', en:'Show less'}) : gl({es:'Ver más', ca:'Veure més', en:'Show more'});
+    b.textContent = txt(false);
+    b.onclick = () => { const ab = av.classList.toggle('is-plegado') === false; b.textContent = txt(ab); b.setAttribute('aria-expanded', String(ab)); };
+    av.appendChild(b);
+  });
 }
 function manualIrA(k){
   const h = document.getElementById('mnl-h-' + k);

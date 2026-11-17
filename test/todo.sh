@@ -188,6 +188,7 @@ lanzar; node test/chat-avisos.mjs > "$SALIDA/chatavisos.txt" 2>&1 & P181=$!
 lanzar; node test/avisos-campana.mjs > "$SALIDA/avisoscampana.txt" 2>&1 & P182=$!
 lanzar; node test/parpadeo.mjs > "$SALIDA/parpadeo.txt" 2>&1 & PPARP=$!
 lanzar; node test/instalar.mjs > "$SALIDA/instalar.txt" 2>&1 & PINST=$!
+lanzar; node test/mesa-ajustada.mjs > "$SALIDA/mesaajustada.txt" 2>&1 & PMAJ=$!
 lanzar; node test/avisos-empleado.mjs > "$SALIDA/avisosempleado.txt" 2>&1 & P183=$!
 lanzar; node test/acceso-empleado-codigo.mjs > "$SALIDA/accempcodigo.txt" 2>&1 & P184=$!
 lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
@@ -198,6 +199,9 @@ lanzar; node test/tpv-menu-pasos.mjs > "$SALIDA/tpvmenupasos.txt" 2>&1 & P189=$!
 lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impresos.txt" 2>&1 & P190=$!
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
 lanzar; node test/video-movil-paquete2.mjs > "$SALIDA/videom2.txt" 2>&1 & PVM2=$!
+lanzar; node test/pendientes-agente-a.mjs > "$SALIDA/pvma.txt" 2>&1 & PVMA=$!
+lanzar; node test/pendientes-movil-b.mjs > "$SALIDA/pvmb.txt" 2>&1 & PVMB=$!
+lanzar; node test/contraste-movil.mjs > "$SALIDA/contrastem.txt" 2>&1 & PCOM=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -430,6 +434,7 @@ espera $P181 "Chat: un mensaje de otro aparato enciende el aviso, se resalta com
 espera $P182 "Campana de avisos: vacaciones y cambios de turno con Aceptar/Rechazar, reservas y pedidos web, informativos con «Visto», el empleado no ve lo del dueño, también desde la nube y en móvil" "$SALIDA/avisoscampana.txt" "todos los casos pasaron"
 espera $PPARP "Parpadeo: una ráfaga de cambios remotos se funde en un repintado y no vuelve a animar las cifras" "$SALIDA/parpadeo.txt" "todos los casos pasaron"
 espera $PINST "Anclar a la pantalla de inicio: app y web de reservas, Android e iPhone, nunca en un ordenador, «Ahora no» lo calla" "$SALIDA/instalar.txt" "todos los casos pasaron"
+espera $PMAJ "Mesa más ajustada: entre las libres solo se ofrece el tamaño menor que encaje (web y app); las grandes se guardan para grupos grandes" "$SALIDA/mesaajustada.txt" "todos los casos pasaron"
 espera $P183 "Avisos al empleado (respuesta a vacaciones y cambios de turno, mensajes directos) y mesas a cargo: selector por zona/mesa, Mis mesas del TPV y ayuda en mesas de compañeros sin bloqueo" "$SALIDA/avisosempleado.txt" "todos los casos pasaron"
 espera $P184 "Acceso de empleados: el código de negocio se recuerda y se ve (relleno + botones con el nombre, Otro negocio, móvil)" "$SALIDA/accempcodigo.txt" "todos los casos pasaron"
 espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide asistentes en un aparato nuevo, sin conexión no pregunta nada, los borrados llegan a todos (lápida + cola de reintentos) y el PIN ya cambiado no se vuelve a ofrecer" "$SALIDA/syncnegocios.txt" "todos los casos pasaron"
@@ -453,4 +458,7 @@ espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería s
 
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
+espera $PVMA "Vídeo móvil, pendientes zona A (ficha, Mi puesto, Limpieza, Stock, Mega Lista, TPV, foco oliva, botones Ver/Copiar enlace con caja y 44 px): 5 anchos, nombres largos" "$SALIDA/pvma.txt" "Todo en orden"
+espera $PVMB "Vídeo móvil, pendientes zona B (Nube, Manual, Gestión, Panel, Novedades, Oferta, Mi Negocio, carga temprana)" "$SALIDA/pvmb.txt" "todo en orden"
+espera $PCOM "Contraste del texto a 360 px con datos llenos" "$SALIDA/contrastem.txt" "llega a 4,5:1"
 exit $FALLOS

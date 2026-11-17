@@ -51,13 +51,13 @@ await caso('3 personas: verde si hay mesa de 3 a 5 libre; a las 21:00 (la de 5 o
   return mesas.map(m=>m[0]).join(' | ');
 });
 
-await caso('3 personas a las 22:30: elige entre la de 4 y la de 5 (nunca la de 2 ni la de 8)', async ()=>{
+await caso('3 personas a las 22:30: libres la de 4 y la de 5 → SOLO se ofrece la más ajustada (la de 4); la de 5 se guarda (17/11)', async ()=>{
   await page.evaluate(d=>calPickSlot(d,'22:30'), dia);
-  const n = await page.evaluate(()=>document.querySelectorAll('.mesa-opt').length);
-  assert.equal(n, 2);
-  await page.evaluate(()=>calPickTable(3));
+  const nombres = await page.evaluate(()=>[...document.querySelectorAll('.mesa-opt')].map(b=>b.textContent.replace(/\s+/g,' ').trim()));
+  assert.equal(nombres.length, 1, nombres.join(' | '));
+  assert.ok(/4/.test(nombres[0]), nombres[0]);
   const sel = await page.evaluate(()=>calSelectedTable);
-  assert.equal(sel, 3);
+  assert.equal(sel, 2);       // la mesa de 4 (id 2)
 });
 
 await caso('5 personas: la 21:00 en rojo (la única de 5 a 7 está ocupada; la de 8 le sobra)', async ()=>{
@@ -82,9 +82,9 @@ await caso('Sin umbral, 12 personas y la mesa mayor de 8: mismo aviso (no hay me
   assert.ok(await page.evaluate(()=>!document.querySelector('.grp-aviso') && !document.getElementById('r-submit').disabled), 'al bajar a 2 vuelve el calendario');
 });
 
-await caso('La reserva enviada lleva la mesa que eligió el cliente', async ()=>{
+await caso('La reserva enviada lleva la mesa MÁS AJUSTADA que quedaba libre (la de 4, no la de 5)', async ()=>{
   await preparar(); await personas(3);
-  await page.evaluate(d=>{ calPickSlot(d,'22:30'); calPickTable(3); }, dia);
+  await page.evaluate(d=>{ calPickSlot(d,'22:30'); }, dia);
   const req = await page.evaluate(()=>new Promise(res=>{
     document.getElementById('r-name').value='Ana'; document.getElementById('r-phone').value='600000000';
     document.getElementById('r-email').value='ana@ejemplo.es'; document.getElementById('r-privacy-consent').checked=true;
@@ -95,7 +95,7 @@ await caso('La reserva enviada lleva la mesa que eligió el cliente', async ()=>
     try{ submitReserva(); }catch(e){ res({error:e.message}); }
     setTimeout(()=>res({timeout:true}), 3000);
   }));
-  assert.equal(req.tableId, 3, JSON.stringify(req));
+  assert.equal(req.tableId, 2, JSON.stringify(req));   // la mesa de 4 (id 2): la de 5 (id 3) se guarda mientras haya una más ajustada
 });
 
 await page.screenshot({path:'/tmp/claude-0/-home-user-gastrogoan/9f1abb2c-92fd-5a33-8aab-42cccc1d20dd/scratchpad/res.png', fullPage:true}).catch(()=>{});
