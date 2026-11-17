@@ -7884,7 +7884,25 @@ function asegurarTokenMesa(tbl){
 }
 function mesaPorTokenQr(token){
   if(typeof token !== 'string' || token.length < 16 || token.length > 64) return null;
-  return (DB.tables || []).find(tb => tb && tb.qrToken === token) || null;
+  return (DB.tables || []).find(tb => tb && (tb.qrToken === token || (Array.isArray(tb.qrAlias) && tb.qrAlias.includes(token)))) || null;
+}
+/* Alias de QR (17/11, decisión del dueño): si al fusionar con la nube el token de una mesa cambia SIN que nadie lo haya rotado
+   (dos aparatos le dieron token a la vez y gana el de la nube), el QR que ya se imprimió con el token perdido sigue valiendo:
+   se guarda como alias (máx. 5). Rotar a propósito («Cambiar código») borra los alias: ahí sí se quiere invalidar el QR viejo. */
+function qrTokensDeMesas(lista){
+  const m = {};
+  (lista || []).forEach(tb => { if(tb && tb.id != null && typeof tb.qrToken === 'string') m[tb.id] = {tok: tb.qrToken, rot: tb.qrRotadoEn || 0}; });
+  return m;
+}
+function conservarAliasQr(antes, lista){
+  (lista || []).forEach(tb => {
+    const a = tb && antes[tb.id];
+    if(!a || typeof tb.qrToken !== 'string' || tb.qrToken === a.tok) return;
+    if((tb.qrRotadoEn || 0) !== a.rot) return;               // lo rotó alguien a propósito: el viejo NO vale
+    const alias = (Array.isArray(tb.qrAlias) ? tb.qrAlias : []).filter(x => x !== tb.qrToken && x !== a.tok);
+    alias.unshift(a.tok);
+    tb.qrAlias = alias.slice(0, 5);
+  });
 }
 function enlaceQrMesa(tbl){
   const link = getPublicClientLink();
@@ -7929,12 +7947,15 @@ function publicarMesasQr(espejoApp, publicId){
   if(cfg.activo){
     (DB.tables || []).forEach(tbl => {
       if(!tbl || typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) return;
-      vivos.add(tbl.qrToken);
       const data = cuentaPublicaMesa(tbl);
       const firma = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
-      if(mesaQrPublicado[tbl.qrToken] === firma) return;
-      mesaQrPublicado[tbl.qrToken] = firma;
-      nodo(tbl.qrToken).set(sinIndefinidos(data)).catch(e => { delete mesaQrPublicado[tbl.qrToken]; console.error('No se pudo publicar la cuenta de la mesa', e); });
+      [tbl.qrToken].concat(Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(tok => {
+        if(typeof tok !== 'string' || tok.length < 16) return;
+        vivos.add(tok);
+        if(mesaQrPublicado[tok] === firma) return;
+        mesaQrPublicado[tok] = firma;
+        nodo(tok).set(sinIndefinidos(data)).catch(e => { delete mesaQrPublicado[tok]; console.error('No se pudo publicar la cuenta de la mesa', e); });
+      });
     });
   }
   // Tokens que ya no valen (mesa rotada, borrada o QR desactivado).
@@ -8621,11 +8642,19 @@ function recibirPedidoPlataforma(req){
   })).filter(l => l.name);
   if(!items.length) return false;
   const recoger = /recoger|takeaway|pickup/i.test(String(req.tipo || req.entrega || ''));
+  /* La comisión que el negocio configuró en Mi Negocio (deliveryPlatforms) solo se aplica si el pedido lleva el id de esa
+     plataforma: se busca por nombre («Glovo» ↔ 'glovo'). Sin esto la venta salía sin comisión y el resultado se inflaba. */
+  const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const plat = (DB.business.deliveryPlatforms || []).find(p => norm(p.nombre) === canal || norm(p.nombre).includes(canal) || (canal.length > 3 && canal.includes(norm(p.nombre))));
+  /* Datos del cliente de la plataforma: sus contratos (Uber, Glovo) solo permiten usarlos para gestionar el pedido. Se guarda
+     el nombre para entregarlo en mano; el teléfono y la dirección NO se guardan (el reparto y el contacto los lleva la
+     plataforma) y nunca se crea ficha de cliente (clientId null). */
   DB.tpvOrders.push({
     id: genId(), tableId: null, tipo: recoger ? 'takeaway' : 'delivery',
     clienteNombre: String(req.clienteNombre || req.cliente || '').slice(0, 80),
-    clienteTelefono: String(req.clienteTelefono || req.telefono || '').slice(0, 30), clienteEmail: '',
-    clienteDireccion: String(req.clienteDireccion || req.direccion || '').slice(0, 160), clienteCodigoPostal: String(req.codigoPostal || '').slice(0, 10),
+    clienteTelefono: '', clienteEmail: '',
+    clienteDireccion: '', clienteCodigoPostal: String(req.codigoPostal || '').slice(0, 10),
+    plataformaId: plat ? plat.id : undefined, sinFichaCliente: true,
     notas: String(req.notas || '').slice(0, 300), date: '', time: String(req.hora || '').slice(0, 5),
     costeEnvio: 0, propina: 0, status: 'pendiente-online', items, tandas: [], createdAt: new Date().toISOString(),
     origenOnline: true, clientRef: null, clientId: null,
@@ -9811,7 +9840,9 @@ function applyRemoteBlock(key, remoteValue){
     merged = mergeListaDeNombres(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
+    const tokensAntes = key === 'tables' ? qrTokensDeMesas(DB[key]) : null;
     merged = mergeArraysById(DB[key], merged);
+    if(tokensAntes) conservarAliasQr(tokensAntes, merged);
     if(PREFER_LOCAL_ARRAYS.has(key)){
       merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
@@ -10822,6 +10853,9 @@ async function rotarTokenMesa(tableId){
   if(!(await confirmModal(t('qrMesa.mn.rotarConfirm').replace('${mesa}', tbl.name || ''), {confirmLabel: t('qrMesa.mn.rotar')}))) return;
   const viejo = tbl.qrToken;
   tbl.qrToken = nuevoTokenMesaQr();
+  tbl.qrRotadoEn = Date.now();
+  (Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(retirarTokenMesaPublicado);
+  delete tbl.qrAlias;
   retirarTokenMesaPublicado(viejo);
   saveDB();
   if(typeof syncPublicMirror === 'function') syncPublicMirror();

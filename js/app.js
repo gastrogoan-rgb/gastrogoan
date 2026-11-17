@@ -8687,8 +8687,13 @@ function checkBackupReminder(){
   const session = getAccessSession();
   if(!session || session.type !== 'owner') return;
   const hoy = todayStr();
+  // Por NEGOCIO, no por aparato (decisión del dueño, 17/11): el día del último aviso viaja en DB.business, así que con
+  // tres tablets el aviso sale una vez al día en total, no tres. La fecha de la última copia (lastBackupAt) ya era del negocio.
+  if((DB.business || {}).backupAvisoDia === hoy) return;
   try{ if(localStorage.getItem(BACKUP_REMINDER_DAY_KEY) === hoy) return; }catch(e){}
+  DB.business.backupAvisoDia = hoy;
   try{ localStorage.setItem(BACKUP_REMINDER_DAY_KEY, hoy); }catch(e){}
+  saveDB();
   openBackupReminderModal();
 }
 function openArchiveReminderModal(){
