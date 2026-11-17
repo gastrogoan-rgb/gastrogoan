@@ -6478,6 +6478,14 @@ function objRow(o, i){
         <option value="complementario" ${o.prioridad==='complementario'?'selected':''}>Complementario</option>
       </select>
     </div>
+    <div class="field">
+      <label>Se mide solo con (opcional)</label>
+      <select id="obj-auto-${i}">
+        <option value="">— lo mide a mano el negocio —</option>
+        ${Object.entries(PLAN360_METRICAS_AUTO_PANEL).map(([k, n]) => `<option value="${k}" ${o.metricaAuto===k?'selected':''}>${esc(n)}</option>`).join('')}
+      </select>
+      <div class="txt-xs" style="color:var(--muted)">La app apunta sola la cifra del último mes completo cada semana, a partir del Día 1.</div>
+    </div>
   </div>`;
 }
 function renderPresencialPage(d){
@@ -8770,6 +8778,8 @@ function addObjective(day){
   d.objectives.push({id: plan360GenId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
   document.getElementById('obj-list').innerHTML = d.objectives.map((o, i) => objRow(o, i)).join('');
 }
+// Misma lista que PLAN360_METRICAS_AUTO de la app (js/finance.js)
+const PLAN360_METRICAS_AUTO_PANEL = {foodCostPct:'Food cost', personalPct:'Coste de personal sobre ventas', mermasPct:'Mermas sobre lo comprado', ticketMedio:'Ticket medio', netas:'Ventas netas del mes', nps:'Nota media de clientes (sobre 10)'};
 function syncObjectivesFromForm(d){
   d.objectives.forEach((o, i) => {
     const tt = document.getElementById('obj-titulo-' + i);
@@ -8778,6 +8788,8 @@ function syncObjectivesFromForm(d){
     if(tt) o.titulo = tt.value.trim();
     if(ex) o.explicacion = ex.value.trim();
     if(pr) o.prioridad = pr.value;
+    const au = document.getElementById('obj-auto-' + i);
+    if(au){ if(au.value) o.metricaAuto = au.value; else delete o.metricaAuto; }
   });
 }
 function savePresencial(day){
@@ -8930,6 +8942,9 @@ function taskRow(tk, i){
     </div>
     <div class="field" style="margin-bottom:8px"><label>Título</label><input id="task-title-${i}" value="${esc(tk.title)}" placeholder="Qué hay que hacer"></div>
     <div class="field" style="margin-bottom:8px"><label>Descripción</label><textarea id="task-desc-${i}" rows="3" placeholder="Por qué / cómo se hace">${esc(tk.description || '')}</textarea></div>
+    <div class="field" style="margin-bottom:8px"><label>Se hace en (opcional)</label>
+      <select id="task-enlace-${i}"><option value="">— sin enlace —</option>${Object.entries(PLAN360_ENLACES_PANEL).map(([k, n]) => `<option value="${k}" ${tk.enlace===k?'selected':''}>${esc(n)}</option>`).join('')}</select>
+      <div class="txt-xs" style="color:var(--muted)">El negocio verá un botón «Ir a…» que le lleva directo a esa pantalla de su app.</div></div>
     ${tk.note ? `<div class="field" style="margin-bottom:8px"><label>Nota del negocio</label><p style="font-size:13px;margin:0;padding:8px;background:var(--brand-cream);border-radius:6px">${esc(tk.note)}</p></div>` : ''}
     <div style="font-size:12px;color:var(--muted)">
       <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto">
@@ -9008,6 +9023,8 @@ function borrarTask(i){
   const banco = document.getElementById('banco-modulos');
   if(banco) banco.innerHTML = plan360BancoModulosHtml(sel ? sel.value : '');
 }
+// Misma lista que PLAN360_ENLACES de la app (js/app.js): pantallas a las que una tarea puede llevar al negocio
+const PLAN360_ENLACES_PANEL = {escandallo:'Escandallo', fichas:'Fichas técnicas', megalista:'Mega Lista', proveedores:'Proveedores', stock:'Stock', pedidos:'Pedidos', carta:'Oferta Gastronómica', limpieza:'Plan de Limpieza', horarios:'Personal y horarios', promocion:'Promoción', clientes:'Clientes', reservas:'Reservas', tpv:'TPV', economia:'Gestión Económica', minegocio:'Mi Negocio'};
 function syncTasksFromForm(d){
   d.tasks.forEach((tk, i) => {
     const obj = document.getElementById('task-objetivo-' + i), ti = document.getElementById('task-title-' + i),
@@ -9015,6 +9032,8 @@ function syncTasksFromForm(d){
     if(obj) tk.objectiveId = obj.value ? Number(obj.value) : null;
     if(ti) tk.title = ti.value.trim();
     if(de) tk.description = de.value.trim();
+    const en = document.getElementById('task-enlace-' + i);
+    if(en){ if(en.value) tk.enlace = en.value; else delete tk.enlace; }
     if(cl && cl.value === '1'){ tk.fileData = null; tk.fileName = null; }
   });
 }
