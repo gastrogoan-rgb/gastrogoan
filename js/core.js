@@ -279,7 +279,7 @@ function accesoFraseYFechaHtml(){
   if(!f || !f.a) return `<div class="access-cita"><span class="access-cita-fecha">${escapeHtml(fecha)}</span></div>`;
   return `<aside class="access-cita" aria-label="${escapeHtml(gl({es:'Frase del día', ca:'Frase del dia', en:'Quote of the day'}))}">
       <span class="access-cita-fecha">${escapeHtml(fecha)}</span>
-      <q>${escapeHtml(f[getLang()] || f.es)}</q>
+      <q${/[«»“”"]/.test(f[getLang()] || f.es) ? ' class="sin-comillas"' : ''}>${escapeHtml(f[getLang()] || f.es)}</q>
       <cite>${escapeHtml(f.a)}</cite>
     </aside>`;
 }

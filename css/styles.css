@@ -5597,6 +5597,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .access-cita::before{content:"";width:28px;height:2px;background:#6F8A74;margin-bottom:4px}
 .access-cita-fecha{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9A948A}
 .access-cita q{display:block;font-family:"Schibsted Grotesk",system-ui,sans-serif;font-size:17px;font-weight:400;line-height:1.5;color:#F1EFE9;quotes:"«" "»";text-wrap:balance}
+.access-cita q.sin-comillas{quotes:none}
 .access-cita cite{font-family:var(--mono);font-style:normal;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#9DB3A1}
 .access-cita cite::before{content:"— "}
 .access-cita{padding-bottom:36px}

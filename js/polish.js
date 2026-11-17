@@ -384,7 +384,7 @@ function renderPuestaAPunto(){
                a su propia línea: "Puesta a punto de tu negocio" es largo, y en
                un móvil estrecho el texto solo se envolvía y empujaba la
                flecha abajo, descolgada y sola. -->
-          <h2 style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t('pp.title'))}</span> <i class="ti ti-chevron-${abierta ? 'up' : 'down'}" style="flex:none;font-size:16px;opacity:.6"></i></h2>
+          <h2>${escapeHtml(t('pp.title'))}&nbsp;<i class="ti ti-chevron-${abierta ? 'up' : 'down'}" style="font-size:16px;opacity:.6;vertical-align:-2px"></i></h2>
           <p>${escapeHtml(abierta ? t('pp.subtitle') : t('pp.progress').replace('${h}', hechas).replace('${t}', total))}</p>
         </div>
         <button class="pp-cerrar" onclick="ocultarPuestaAPunto()" title="${escapeHtml(t('pp.hide'))}">&times;</button>

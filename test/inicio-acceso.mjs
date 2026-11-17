@@ -1,0 +1,31 @@
+// Entrada (17/11): la frase del día no lleva comillas dobles («««…»») y el título de «Puesta a punto» no se corta con puntos suspensivos.
+import puppeteer from 'puppeteer-core';
+import assert from 'node:assert/strict';
+let fallos = 0;
+const caso = async (n, f) => { try{ await f(); console.log('✅ ' + n); }catch(e){ fallos++; console.log('❌ ' + n + '\n   ⤷ ' + e.message); } };
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', args:['--no-sandbox']});
+const page = await browser.newPage();
+await page.setViewport({width:320, height:760});
+await page.setRequestInterception(true);
+page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver/.test(r.url()) ? r.abort() : r.continue());
+await page.goto('http://localhost:8950/dist/index.html', {waitUntil:'domcontentloaded'});
+await page.evaluate(() => { localStorage.removeItem('gastrogoan_access_session'); localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code:'INICIO01', tenantId: ggBizTenantId('INICIO01')})); localStorage.setItem('gastrogoan_owner_login','1'); });
+await page.reload({waitUntil:'domcontentloaded'});
+await new Promise(r => setTimeout(r, 3000));
+const r = await page.evaluate(() => {
+  const host = document.createElement('div'); host.className = 'access-card'; document.body.appendChild(host);
+  window.fraseDelDia = () => ({es:'«Demasiado trabajo» es la muerte de la buena comida.', ca:'x', en:'x', a:'Autor'});
+  host.innerHTML = accesoFraseYFechaHtml();
+  const q = host.querySelector('q');
+  const sin = getComputedStyle(q).quotes;
+  window.fraseDelDia = () => ({es:'Cocinar es amar.', ca:'x', en:'x', a:'Autor'});
+  host.innerHTML = accesoFraseYFechaHtml();
+  const con = getComputedStyle(host.querySelector('q')).quotes;
+  return {sin, con};
+});
+await caso('Una frase que ya trae «» no se envuelve en otras comillas; una sin ellas, sí', async () => { assert.equal(r.sin, 'none'); assert.notEqual(r.con, 'none'); });
+const src = (await import('node:fs')).readFileSync('js/polish.js', 'utf8');
+await caso('El título de «Puesta a punto» ya no se corta con puntos suspensivos', async () => { assert.ok(!/text-overflow:ellipsis[^`]*pp\.title/.test(src)); });
+await browser.close();
+console.log(fallos ? '\n❌ ' + fallos + ' caso(s) fallaron' : '\n✅ Entrada: 2 casos en orden');
+process.exit(fallos ? 1 : 0);
