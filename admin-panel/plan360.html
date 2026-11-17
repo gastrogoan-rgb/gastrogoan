@@ -399,6 +399,9 @@ async function openClient(tenantId, name){
   startDateEditing = false;
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
+  // El SEGUNDO cliente de una sesión salía en blanco: la huella del primero seguía puesta y la primera lectura del
+  // segundo se tomaba por «eco de mi propio guardado» y se descartaba. Cada cliente empieza de cero.
+  lastPushedJson = null; mantBase = null; remoteBiz = null;
   currentTenantId = tenantId;
   migracionCoachPrivadoHecha = false;
   try{
@@ -465,7 +468,7 @@ async function openClient(tenantId, name){
 function closeClient(){
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
-  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null;
+  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null; lastPushedJson = null;
   currentCoachPrivateRef = null; coachPrivate = null;
   currentLibroPdfRef = null; libroPdfCache = null;
   document.getElementById('view-client').classList.add('hidden');
