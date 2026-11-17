@@ -4335,6 +4335,10 @@ function renderClientGrid(){
         <i class="ti ti-folder"></i>
         <div><h3>Recursos</h3><p>Identidad de marca, playbooks y demás documentos del programa</p></div>
       </div>
+      <div class="p360-card" onclick="renderPlantillaPage()">
+        <i class="ti ti-copy"></i>
+        <div><h3>Plantilla del programa</h3><p>Guarda este plan como plantilla y aplícala a otro cliente en un clic</p></div>
+      </div>
       <div class="p360-card" onclick="renderCobros360Page()">
         <i class="ti ti-receipt-euro"></i>
         <div><h3>Cobros del Plan 360º</h3><p>Firma y día 15, lo cobrado y lo pendiente, y exportar a CSV</p></div>
@@ -5720,6 +5724,63 @@ function plan360PageHeader(title, subtitle){
   return `<button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
     <h2 style="margin:10px 0 4px">${esc(title)}</h2>
     ${subtitle ? `<p class="muted" style="margin-bottom:10px">${esc(subtitle)}</p>` : ''}`;
+}
+
+/* ---- Plantilla del programa (17/11) ----
+   Ahorra horas por cliente: las tareas de un programa bien montado se guardan en tu plantilla privada
+   (gastrogoan/coachConfig/programaPlantilla, solo admin) y se aplican a otro cliente. Aplicar NO pisa nada: añade solo las
+   tareas que ese día todavía no tiene (mismo título). Se guardan título, descripción y «Se hace en…»; nunca el estado,
+   las notas ni los archivos del cliente de origen. */
+function plantillaDesdePrograma(prog){
+  const out = {};
+  (prog || []).filter(d => d && d.phase === 'trabajo').forEach(d => {
+    (d.tasks || []).filter(tk => tk && String(tk.title || '').trim()).forEach(tk => {
+      const t = {day: d.day, title: String(tk.title).trim().slice(0, 140), description: String(tk.description || '').slice(0, 1200)};
+      if(tk.enlace) t.enlace = String(tk.enlace).slice(0, 30);
+      out['t' + Object.keys(out).length] = t;
+    });
+  });
+  return out;
+}
+function plantillaAplicar(prog, tpl){
+  let n = 0;
+  Object.values(tpl || {}).forEach(t => {
+    const d = (prog || []).find(x => x && x.day === t.day && x.phase === 'trabajo'); if(!d) return;
+    if(!Array.isArray(d.tasks)) d.tasks = [];
+    if(d.tasks.some(x => x && String(x.title || '').trim().toLowerCase() === String(t.title || '').trim().toLowerCase())) return;
+    const nueva = {id: plan360GenId(), objectiveId: null, title: t.title, description: t.description || '', status: 'pendiente', note: '', fileData: null, fileName: null};
+    if(t.enlace) nueva.enlace = t.enlace;
+    d.tasks.push(nueva); n++;
+  });
+  return n;
+}
+function plantillaRef(){ return getApp().database().ref('gastrogoan/coachConfig/programaPlantilla'); }
+function renderPlantillaPage(){
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Plantilla del programa', 'Las tareas de este plan, guardadas para aplicarlas a otros clientes')}
+    <div class="card" style="font-size:15px">
+      <p style="margin-top:0">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
+      <button class="btn btn-sm" onclick="plantillaGuardar()"><i class="ti ti-device-floppy"></i> Guardar este plan como plantilla</button>
+      <button class="btn btn-sm btn-primary" onclick="plantillaPonerAEsteCliente()"><i class="ti ti-copy"></i> Aplicar mi plantilla a este cliente</button>
+      <p class="muted" id="plantilla-estado" style="margin:10px 0 0;font-size:13px"></p>
+    </div>`;
+}
+async function plantillaGuardar(){
+  const tpl = plantillaDesdePrograma(remoteBiz.plan360Program);
+  const est = document.getElementById('plantilla-estado');
+  if(!Object.keys(tpl).length){ est.textContent = 'Este cliente no tiene tareas que guardar.'; return; }
+  try{ await plantillaRef().set(tpl); est.textContent = 'Plantilla guardada (' + Object.keys(tpl).length + ' tareas).'; }
+  catch(e){ est.textContent = 'No se pudo guardar en la plataforma (¿reglas de coachConfig publicadas?): ' + (e.message || e.code || 'error'); }
+}
+async function plantillaPonerAEsteCliente(){
+  const est = document.getElementById('plantilla-estado');
+  try{
+    const snap = await plantillaRef().once('value'); const tpl = snap.val();
+    if(!tpl){ est.textContent = 'Todavía no hay plantilla guardada.'; return; }
+    const n = plantillaAplicar(remoteBiz.plan360Program, tpl);
+    if(n){ saveRemoteBiz(); }
+    est.textContent = n ? 'Añadidas ' + n + ' tareas.' : 'Nada que añadir: este plan ya tiene todas las tareas de la plantilla.';
+  }catch(e){ est.textContent = 'No se pudo leer la plantilla: ' + (e.message || e.code || 'error'); }
 }
 
 /* ---- Cobros del Plan 360º (17/11) ----
