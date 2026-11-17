@@ -50,10 +50,40 @@ function platoDescripcion(p){
   return String((f && f.descripcionCarta) || p.descripcion || '').trim();
 }
 // Las cartas tal como las ve la web pública: cada plato con su descripción ya resuelta (no se toca DB.cartas).
+/* Miniatura del plato para la web de pedidos (17/11): solo si el negocio lo activa en Mi Negocio y el plato tiene foto en su
+   Ficha técnica. Se reduce a 320 px de lado (JPEG, ~15 KB) en el navegador: la foto original (hasta 2 MB) NUNCA sube al espejo. Se
+   genera una vez por foto (caché) y, al estar lista, se vuelve a publicar el espejo. */
+const FOTO_MINI_CACHE = {};
+function fotoMiniaturaDePlato(p){
+  if(!(DB.business || {}).fotosPlatosWeb || !p || !p.recipeId) return '';
+  const f = (DB.fichas || []).find(x => String(x.recipeId) === String(p.recipeId));
+  if(!f || typeof f.photo !== 'string' || !f.photo.startsWith('data:image/')) return '';
+  const k = String(f.recipeId) + ':' + f.photo.length;
+  if(k in FOTO_MINI_CACHE) return FOTO_MINI_CACHE[k];
+  FOTO_MINI_CACHE[k] = '';
+  try{
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const esc = Math.min(1, 320 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * esc)); c.height = Math.max(1, Math.round(img.height * esc));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        FOTO_MINI_CACHE[k] = c.toDataURL('image/jpeg', 0.7);
+        if(typeof syncPublicMirror === 'function') syncPublicMirror();
+      }catch(e){}
+    };
+    img.src = f.photo;
+  }catch(e){}
+  return '';
+}
 function cartasParaElEspejo(){
   return (DB.cartas || []).map(c => Object.assign({}, c, {secciones: (c.secciones || []).map(s => Object.assign({}, s, {platos: (s.platos || []).map(p => {
-    const d = platoDescripcion(p);
-    return d ? Object.assign({}, p, {descripcion: d}) : p;
+    const d = platoDescripcion(p), foto = fotoMiniaturaDePlato(p);
+    const extra = {};
+    if(d) extra.descripcion = d;
+    if(foto) extra.foto = foto;
+    return Object.keys(extra).length ? Object.assign({}, p, extra) : p;
   })}))}));
 }
 function ocBtnDescripcion(tiene, onclick){

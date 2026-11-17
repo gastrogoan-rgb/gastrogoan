@@ -8058,6 +8058,10 @@ function renderMiNegocio(){
         <input type="number" id="mn-reserva-margen-cierre" min="0" step="5" value="${escapeHtml(b.reservaMargenCierreMin === undefined || b.reservaMargenCierreMin === '' ? '' : b.reservaMargenCierreMin)}" placeholder="30" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">${t('mn.ops.lastBookingMarginDesc')}</small>
       </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:10px;min-height:44px"><input type="checkbox" id="mn-fotos-platos" style="width:auto" ${b.fotosPlatosWeb ? 'checked' : ''} onchange="saveBusiness(true)"> <span>${t('mn.ops.fotosPlatos')}</span></label>
+        <small style="color:var(--muted)">${t('mn.ops.fotosPlatosDesc')}</small>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>${t('mn.ops.leadTimeReservas')}</label>
@@ -8927,6 +8931,7 @@ async function saveBusiness(silent){
   if(el('mn-brand-color2')) DB.business.brandColor2 = el('mn-brand-color2').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-reserva-duracion')) DB.business.reservaDuracionMin = Math.max(0, parseInt(el('mn-reserva-duracion').value) || 0) || '';
+  if(el('mn-fotos-platos')) DB.business.fotosPlatosWeb = el('mn-fotos-platos').checked;
   if(el('mn-reserva-margen-cierre')){ const m = parseInt(el('mn-reserva-margen-cierre').value); DB.business.reservaMargenCierreMin = isNaN(m) ? '' : Math.max(0, m); }
   const leadTimeReservas = readLeadTimeDHM('mn-leadtime-reservas');
   if(leadTimeReservas != null) DB.business.leadTimeMinReservas = leadTimeReservas;
