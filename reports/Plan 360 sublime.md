@@ -1,6 +1,6 @@
 # Plan 360º sublime — plan de trabajo
 
-**Estado: EN ESPERA** (15/11, decisiones del dueño ya recogidas abajo). El dueño lo aprobó como dirección («dale caña a todo y no pares hasta acabar»), pero pidió dejarlo aparcado hasta terminar un par de cosas antes. Cuando se retome, se ejecuta entero, fase a fase, sin pararse a preguntar salvo en las decisiones marcadas con ❓.
+**Estado (17/11, noche): EN CURSO.** Hecho y probado: Fase 0.1, 0.2, 0.3, 0.5, 0.6 y 0.7; informe de cierre; avisos; plan de acción imprimible (ver «Añadido sobre la marcha»). Pendiente: Fase 0.4 y el resto de fases. (Antes: EN ESPERA, 15/11, decisiones del dueño ya recogidas abajo.) El dueño lo aprobó como dirección («dale caña a todo y no pares hasta acabar»), pero pidió dejarlo aparcado hasta terminar un par de cosas antes. Cuando se retome, se ejecuta entero, fase a fase, sin pararse a preguntar salvo en las decisiones marcadas con ❓.
 
 Base: revisión en profundidad del 15/11 (panel del coach `admin-panel/plan360.html` + app del negocio `js/app.js` 5596-7263, `js/core.js`, `js/finance.js`). 15 problemas en el panel y 12 en la app; los más graves, reproducidos.
 
@@ -279,3 +279,17 @@ Abre la app y en «Hoy» ve **qué toca, por qué, cuánto cuesta, quién lo hac
 ## Añadido sobre la marcha
 
 (Se rellena al construir: cada mejora aplicada que no estaba en el plan.)
+
+### 17/11 (noche) — hecho, con su prueba en `todo.sh`
+- **Fase 0.1** El 2.º cliente del panel ya no sale en blanco (`lastPushedJson`/`mantBase`/`programaBase` a cero en `openClient`/`closeClient`).
+- **Fase 0.2** `fusion3` (js/core.js) casa las listas con `id` POR ID (tareas, objetivos, inversiones); sin id sigue por posición. Prueba `plan360-fusion.mjs`.
+- **Fase 0.3** El panel funde el programa con lo que hay AHORA en la nube antes de subirlo (`fusion3Panel`, `saveRemoteBiz`): lo que el negocio marcó mientras el coach editaba ya no se pisa. Prueba `plan360-panel-fusion.mjs`. ⚠️ Es lectura-y-escritura con una ventana de milisegundos, no el cambio de modelo a «tareas como mapa por id»; ese cambio sigue pendiente.
+- **Fase 0.5** La fecha de inicio ya no se fija sola: la confirma el coach. Sin fecha el negocio ve «Tu coach está fijando la primera visita» (sin «hoy», sin atrasados, sin Día 1). Los negocios que ya tenían fecha no cambian. Prueba `plan360-fecha.mjs`.
+- **Fase 0.6** El «antes» (Día 1) es un mes COMPLETO anterior al inicio con ≥10 días de venta (`PLAN360_DIA1_MIN_DIAS`); si no, «sin datos del Día 1». Se recalcula si cambia la fecha.
+- **Fase 0.7** Guardar la reunión presencial ya no borra objetivos (filtraba por el campo viejo `text`).
+- **Informe de cierre en PDF** (app): cifras antes/ahora con euros al mes, objetivos con medición y resultado, acciones hechas y los textos del coach. NO lleva la oferta: el negocio ve «Paso 1 · Tu informe de cierre» y, al abrirlo, aparece el paso siguiente (mantenimiento). Prueba `plan360-informe.mjs`.
+- **Avisos** en el Panel y la campana (solo propietario): tareas de hoy/atrasadas e «informe de cierre listo». Prueba `plan360-avisos.mjs`.
+- **«Mi plan de acción»** imprimible: objetivos por prioridad con sus tareas y casillas, y «Otras acciones» al final. Prueba `plan360-plan-accion.mjs`.
+
+### Pendiente del plan (nada de esto está hecho)
+Fase 0.4 (la app sube `plan360*` por rutas; probar con el emulador de dos aparatos), modo cara a cara y acta en vivo, cuestionario por áreas, radar 360 y diagnóstico con datos reales, objetivos enganchados a un dato de la app, tareas al equipo, plantilla de programa, cobros del 360, mantenimiento en la app, peso/privacidad (DNI/IBAN fuera del código), manual del Plan 360 al día, y el resto de «Multiplicar el valor».

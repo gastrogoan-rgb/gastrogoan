@@ -5875,6 +5875,10 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360HayPlanDeAccion() ? `<div class="p360-card" onclick="plan360ImprimirPlan()">
+        <i class="ti ti-printer"></i>
+        <div><h3>${escapeHtml(gl({es:'Mi plan de acción', ca:'El meu pla d\'acció', en:'My action plan'}))}</h3><p>${escapeHtml(gl({es:'Objetivos y tareas con casillas, para imprimir y colgar en la cocina.', ca:'Objectius i tasques amb caselles, per imprimir i penjar a la cuina.', en:'Goals and tasks with checkboxes, to print and pin up in the kitchen.'}))}</p></div>
+      </div>` : ''}
       ${plan360MantHayAlgo() ? `<div class="p360-card" onclick="renderPlan360Mant()">
         <i class="ti ti-calendar-repeat"></i>
         <div><h3>${escapeHtml(t('plan360.mant.title'))}</h3><p>${escapeHtml(t('plan360.mant.cardDesc'))}</p></div>
@@ -6026,6 +6030,42 @@ function plan360CierreHtml(){
       </div>` : ''}
     </div>
   `;
+}
+/* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
+   casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */
+function plan360HayPlanDeAccion(){
+  const prog = (DB.business || {}).plan360Program;
+  if(!Array.isArray(prog) || !DB.business.plan360StartDate) return false;
+  return prog.some(d => d.phase === 'trabajo' && plan360TareasReales(d).length > 0);
+}
+function plan360PlanAccionHtml(){
+  const b = DB.business || {};
+  const L = o => gl(o);
+  const prog = b.plan360Program || [];
+  const dia2 = prog.find(x => x.day === 2);
+  const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
+  const tareas = [];
+  prog.filter(d => d.phase === 'trabajo').forEach(d => plan360TareasReales(d).forEach(tk => tareas.push({day: d.day, tk})));
+  const fecha = day => { try{ return plan360FechaLegible(plan360DateForDay(day)); }catch(e){ return ''; } };
+  const casilla = tk => tk.status === 'hecha' ? '☑' : '☐';
+  const fila = x => `<tr><td class="c">${casilla(x.tk)}</td><td>${escapeHtml(x.tk.title || '')}${x.tk.description ? `<div class="m">${escapeHtml(x.tk.description).slice(0, 220)}</div>` : ''}</td><td class="f">${escapeHtml(fecha(x.day))}</td></tr>`;
+  const orden = {prioritario: 0, esencial: 1, complementario: 2};
+  const objs = objetivos.slice().sort((a, c) => (orden[a.prioridad] ?? 1) - (orden[c.prioridad] ?? 1));
+  const ids = new Set(objs.map(o => o.id));
+  const bloques = objs.map(o => {
+    const ts = tareas.filter(x => x.tk.objectiveId === o.id);
+    return `<h2>${escapeHtml(o.titulo)} <span class="n">${escapeHtml(t(PLAN360_NIVEL_LABEL[o.prioridad] || PLAN360_NIVEL_LABEL.esencial))}</span></h2>
+      ${o.metrica ? `<p class="m">${escapeHtml(L({es:'Cómo se mide: ', ca:'Com es mesura: ', en:'How it is measured: '}))}${escapeHtml(o.metrica)}</p>` : ''}
+      ${ts.length ? `<table>${ts.map(fila).join('')}</table>` : `<p class="m">${escapeHtml(L({es:'Sin tareas todavía.', ca:'Sense tasques encara.', en:'No tasks yet.'}))}</p>`}`;
+  }).join('');
+  const sueltas = tareas.filter(x => !ids.has(x.tk.objectiveId));
+  const otras = sueltas.length ? `<h2>${escapeHtml(L({es:'Otras acciones', ca:'Altres accions', en:'Other actions'}))}</h2><table>${sueltas.map(fila).join('')}</table>` : '';
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px;letter-spacing:-.01em}h2 .n{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E;margin-left:8px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.c{width:26px;font-size:18px;line-height:1}td.f{width:120px;color:#716C65;font:12px 'IBM Plex Mono',monospace}.m{color:#716C65;font-size:12px;margin:2px 0}</style>
+    <p class="m">${escapeHtml(L({es:'Programa de 4 semanas con tu coach', ca:'Programa de 4 setmanes amb el teu coach', en:'4-week programme with your coach'}))} · ${escapeHtml(plan360FechaLegible(b.plan360StartDate))}</p>
+    ${bloques}${otras}`;
+}
+function plan360ImprimirPlan(){
+  printReportWindow(gl({es:'Mi plan de acción · Plan 360º', ca:'El meu pla d\'acció · Pla 360º', en:'My action plan · 360º Plan'}), plan360PlanAccionHtml());
 }
 /* ── Informe de cierre (17/11, decisión del dueño): lo PRIMERO que se enseña al acabar las 4 semanas. NO lleva la oferta de
    mantenimiento: esa es el paso siguiente (aparece cuando el negocio ya ha abierto el informe). Todo sale de las cifras
