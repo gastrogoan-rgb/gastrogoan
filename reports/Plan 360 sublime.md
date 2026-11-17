@@ -291,5 +291,7 @@ Abre la app y en «Hoy» ve **qué toca, por qué, cuánto cuesta, quién lo hac
 - **Avisos** en el Panel y la campana (solo propietario): tareas de hoy/atrasadas e «informe de cierre listo». Prueba `plan360-avisos.mjs`.
 - **«Mi plan de acción»** imprimible: objetivos por prioridad con sus tareas y casillas, y «Otras acciones» al final. Prueba `plan360-plan-accion.mjs`.
 
+- **«Dinero sobre la mesa»** (diagnóstico con datos reales): food cost y personal frente a los objetivos que el propio negocio fijó en Tesorería, mermas anualizadas, peor plato y subida de proveedor; euros al año = diferencia × ventas netas del mes × 12, dicho como estimación. Sin ventas del último mes completo no sale nada. Prueba `plan360-diagnostico.mjs`. ⚠️ Todavía NO es el radar 0-100 por área, ni lleva ingeniería de carta (popularidad × margen).
+
 ### Pendiente del plan (nada de esto está hecho)
 Fase 0.4 (la app sube `plan360*` por rutas; probar con el emulador de dos aparatos), modo cara a cara y acta en vivo, cuestionario por áreas, radar 360 y diagnóstico con datos reales, objetivos enganchados a un dato de la app, tareas al equipo, plantilla de programa, cobros del 360, mantenimiento en la app, peso/privacidad (DNI/IBAN fuera del código), manual del Plan 360 al día, y el resto de «Multiplicar el valor».
