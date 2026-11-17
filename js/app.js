@@ -1598,6 +1598,11 @@ function distTareasDelDia(emp, ds, idx, date){
     (lt.tipo === 'mensual' && lt.diaMes === date.getDate()) || (lt.tipo === 'puntual' && lt.fecha === ds)
   )).forEach(lt => out.push({k:'limp', id:lt.id, text: lt.area + (lt.producto ? ` (${lt.producto})` : ''), done:!!limpiezaCheckInfo(checksMes, lt.id), canToggle:canToggleLimpiezaTarea(lt), monthKey}));
   getPromosForEmployeeDate(emp.id, ds).forEach(p => out.push({k:'promo', id:p.id, text:p.titulo, done:!!(promoDoneInfo(p, ds) || {}).done}));
+  // Tareas del Plan 360º que el propietario ha pasado a ESTE empleado (17/11): salen el día que toca, como «Puesta por el coach».
+  if(DB.business && DB.business.plan360StartDate) (DB.business.plan360Program || []).filter(d => d && d.phase === 'trabajo').forEach(d => {
+    if(plan360DateForDay(d.day) !== ds) return;
+    plan360TareasReales(d).filter(tk => tk.asignadoA && String(tk.asignadoA) === String(emp.id)).forEach(tk => out.push({k:'p360', id:tk.id, text:tk.title, done:tk.status === 'hecha', day:d.day}));
+  });
   return out;
 }
 // Cifras de una semana (offset 0 = la actual): total, hechas, atrasadas y el primer día con algo atrasado.
@@ -1773,11 +1778,13 @@ function dpFilaHtml(emp, ds, tk, puedeGestionar){
   const k = escapeJsAttr(String(tk.id));
   const onchange = tk.k === 'limp' ? `toggleLimpiezaCheckMesFromDist('${tk.monthKey}',${tk.id},this.checked)`
     : tk.k === 'promo' ? `togglePromoDone(${tk.id},this.checked,'${ds}')`
+    : tk.k === 'p360' ? `plan360TareaDesdeMiPuesto(${tk.day},${Number(tk.id) || 0},this.checked)`
     : `toggleDistTareaDone('${ds}','${k}',this.checked)`;
   // Solo la etiqueta que toca: la de «Cada lunes» necesita el día, y las demás tareas no lo tienen.
   const etiqueta = tk.k === 'prod' ? `<span class="dp-et"><i class="ti ti-repeat"></i> ${gl({es:'Cada ' + weekDayFull(tk.idx).toLowerCase(), ca:'Cada ' + weekDayFull(tk.idx).toLowerCase(), en:'Every ' + weekDayFull(tk.idx)})}</span>`
     : tk.k === 'unica' ? `<span class="dp-et"><i class="ti ti-calendar-event"></i> ${gl({es:'Solo este día', ca:'Només aquest dia', en:'This day only'})}</span>`
     : tk.k === 'limp' ? `<span class="dp-et"><i class="ti ti-spray"></i> ${gl({es:'Limpieza', ca:'Neteja', en:'Cleaning'})}</span>`
+    : tk.k === 'p360' ? `<span class="dp-et"><i class="ti ti-compass"></i> Plan 360º</span>`
     : `<span class="dp-et"><i class="ti ti-speakerphone"></i> Promo</span>`;
   const puedeTocar = (tk.k === 'prod' || tk.k === 'unica') && (puedeGestionar || tk.bySelf);
   const menu = puedeTocar ? ggMenuAcciones([
@@ -1792,6 +1799,7 @@ function dpFilaHtml(emp, ds, tk, puedeGestionar){
     ? (tk.bySelf
       ? `<span class="dp-origen mia"><i class="ti ti-user"></i> ${verComoEmpleado ? gl({es:'Puesta por mí', ca:'Posada per mi', en:'Set by me'}) : gl({es:'Puesta por ' + emp.name.split(' ')[0], ca:'Posada per ' + emp.name.split(' ')[0], en:'Set by ' + emp.name.split(' ')[0]})}</span>`
       : `<span class="dp-origen jefe"><i class="ti ti-briefcase"></i> ${gl({es:'Puesta por el jefe', ca:'Posada pel cap', en:'Set by the boss'})}</span>`)
+    : tk.k === 'p360' ? `<span class="dp-origen jefe"><i class="ti ti-compass"></i> ${gl({es:'Puesta por el coach', ca:'Posada pel coach', en:'Set by the coach'})}</span>`
     : '';
   return `
     <div class="dp-tarea${tk.done ? ' is-hecha' : ''}${tk.bySelf ? ' es-mia' : ''}">
@@ -7488,6 +7496,8 @@ function plan360TaskRow(day, tk, i){
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
+    ${plan360EsOwner() && (DB.employees || []).length ? `<div class="field" style="margin:4px 0 8px"><label>${escapeHtml(gl({es:'Pasar a un empleado', ca:'Passar a un empleat', en:'Hand to an employee'}))}</label>
+      <select onchange="plan360AsignarTarea(${day},${i},this.value,${Number(tk.id) || 0})"><option value="">${escapeHtml(gl({es:'— la hago yo —', ca:'— la faig jo —', en:'— I do it —'}))}</option>${(DB.employees || []).filter(e => e.activo !== false).map(e => `<option value="${escapeHtml(String(e.id))}" ${String(tk.asignadoA || '') === String(e.id) ? 'selected' : ''}>${escapeHtml(e.name)}</option>`).join('')}</select></div>` : ''}
     <div class="p360-estados" role="group">
       ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
     </div>
@@ -7502,6 +7512,24 @@ function plan360TaskRow(day, tk, i){
 function plan360BuscarTarea(d, i, id){
   const tareas = (d && d.tasks) || [];
   return (id && tareas.find(tk => Number(tk.id) === Number(id))) || (!id ? tareas[i] : null);
+}
+function plan360AsignarTarea(day, i, empId, id){
+  if(!plan360EsOwner()) return;
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk) return;
+  if(empId) tk.asignadoA = empId; else delete tk.asignadoA;
+  saveDB(); plan360PingActivity();
+  showToast(empId ? gl({es:'Tarea pasada a ' + ((DB.employees || []).find(e => String(e.id) === String(empId)) || {}).name + ': le saldrá en «Mi puesto» ese día.', ca:'Tasca passada: li sortirà a «El meu lloc» aquell dia.', en:'Task handed over: it will show in their “My post” that day.'}) : gl({es:'Tarea de nuevo contigo.', ca:'Tasca de nou amb tu.', en:'Task back with you.'}));
+}
+// Lo marca el empleado desde «Mi puesto»: la misma tarea del programa, el mismo estado que ve el coach.
+function plan360TareaDesdeMiPuesto(day, id, hecha){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = d && (d.tasks || []).find(x => Number(x.id) === Number(id));
+  if(!tk) return;
+  tk.status = hecha ? 'hecha' : 'pendiente';
+  saveDB(); plan360PingActivity();
+  if(typeof renderDistDetail === 'function') renderDistDetail();
 }
 function plan360SetTaskEstado(day, i, estado, id){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
