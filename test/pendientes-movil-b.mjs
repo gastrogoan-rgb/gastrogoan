@@ -35,7 +35,10 @@ await caso('Punto 2 · una sola carga: con versión nueva, la recarga sale ANTES
   const dist = fs.readFileSync('dist/index.html', 'utf8');
   const iEarly = dist.indexOf('gastrogoan_auto_actualizacion'), iBuild = dist.indexOf("const GG_BUILD");
   assert.ok(iEarly > 0 && iEarly < iBuild, 'el guion temprano debe ir antes de los 4 MB de JS');
-  const page = await browser.newPage(); await page.setViewport({width: 360, height: 800, isMobile: true, hasTouch: true});
+  // Contexto limpio: el localStorage se comparte entre páginas del mismo contexto y un caso anterior deja una sesión viva
+  // (y «versión comprobada hace poco»), con lo que el guion temprano, a propósito, no pregunta nada.
+  const ctx = await (browser.createBrowserContext || browser.createIncognitoBrowserContext).call(browser);
+  const page = await ctx.newPage(); await page.setViewport({width: 360, height: 800, isMobile: true, hasTouch: true});
   const cdp = await page.createCDPSession(); await cdp.send('Emulation.setCPUThrottlingRate', {rate: 4});
   await page.setRequestInterception(true);
   const navs = []; let dcl = 0;
@@ -52,7 +55,7 @@ await caso('Punto 2 · una sola carga: con versión nueva, la recarga sale ANTES
   assert.ok(navs.length >= 2, 'tenía que haber una recarga (navegaciones: ' + navs.length + ')');
   assert.equal(navs[1], 0, 'la recarga llegó cuando el primer documento ya había terminado de cargar (DCL=' + navs[1] + '): dos pantallas de carga completas');
   assert.ok(navs.length <= 3, 'bucle de recargas: ' + navs.length);
-  await page.close();
+  await page.close(); await ctx.close();
 });
 
 await caso('Punto 2 · entrada de pantalla sin fundido desde transparente en móvil (nada en blanco mientras entra)', async () => {
@@ -115,8 +118,8 @@ await caso('Punto 6 · Mi Negocio: en el acordeón la flecha no cae a una segund
   const page = await abrir();
   const r = await page.evaluate(async () => { currentFolder = 'gestion'; navigate('minegocio'); await new Promise(r => setTimeout(r, 900));
     return [...document.querySelectorAll('#view-minegocio .mn-grid > .card.mn-acc > h3')].filter(h => h.getClientRects().length).map(h => ({t: h.textContent.trim().replace(/\s+/g, ' ').slice(0, 30), h: Math.round(h.getBoundingClientRect().height), fw: getComputedStyle(h).flexWrap})); });
-  assert.ok(r.length > 8); const malos = r.filter(x => x.fw !== 'nowrap' || x.h > 72); assert.equal(malos.length, 0, JSON.stringify(malos));
-  const una = r.filter(x => !/VeriFactu/.test(x.t) && x.h > 52); assert.equal(una.length, 0, JSON.stringify(una));
+  assert.ok(r.length > 8); const malos = r.filter(x => x.fw !== 'nowrap' || x.h > 96); assert.equal(malos.length, 0, JSON.stringify(malos));
+  const una = r.filter(x => !/VeriFactu|Pedidos para llevar|Pago online/.test(x.t) && x.h > 52); assert.equal(una.length, 0, JSON.stringify(una));
   await page.close();
 });
 

@@ -11537,7 +11537,7 @@ function licenciaMascara(code){
 }
 function licenciaOcultaHtml(code, tag){
   tag = tag || 'strong';
-  return `<${tag} class="nb-lic-cod" data-oculto="1">${escapeHtml(licenciaMascara(code))}</${tag}> <button type="button" class="btn btn-sm nb-lic-ver" onclick="licenciaAlternar(this)" aria-pressed="false">${escapeHtml(gl({es:'Mostrar', ca:'Mostra', en:'Show'}))}</button>`;
+  return `<${tag} class="nb-lic-cod" data-oculto="1">${escapeHtml(licenciaMascara(code))}</${tag}> <button type="button" class="btn btn-sm btn-toque nb-lic-ver" onclick="licenciaAlternar(this)" aria-pressed="false">${escapeHtml(gl({es:'Mostrar', ca:'Mostra', en:'Show'}))}</button>`;
 }
 function licenciaAlternar(btn){
   const cod = btn && btn.previousElementSibling;
