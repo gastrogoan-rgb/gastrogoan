@@ -2779,15 +2779,6 @@ function ggRutaPagina(fn){
 }
 if(typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('popstate', ev => {
-    if(ggModalIgnorarPop > 0){ ggModalIgnorarPop--; return; }
-    const ov = document.getElementById('modal-overlay');
-    if(ov && ov.classList.contains('active') && ggModalEntrada){
-      ggModalEntrada = false;
-      // Mismo camino que tocar fuera de la ventana: si hay cambios sin guardar, pregunta.
-      ov.dispatchEvent(new MouseEvent('click', {bubbles: true}));
-      if(ov.classList.contains('active')){ try{ history.pushState(Object.assign({}, history.state || {}, {ggModal: true}), ''); ggModalEntrada = true; }catch(e){} }
-      return;
-    }
     const st = ev.state;
     const v = (st && st.gg) ? st.v : (location.hash || '').replace('#', '');
     if(!v || !document.getElementById('view-' + v)) return;
@@ -3060,15 +3051,8 @@ function openModal(html, opts){
   box.classList.toggle('modal-xl', !!(opts && opts.xl));
   box.classList.toggle('modal-order', !!(opts && opts.order));
   wrapModalBody(box);
-  const ov = document.getElementById('modal-overlay');
-  const yaAbierta = ov.classList.contains('active');
-  ov.classList.add('active');
-  // «Atrás» del móvil con una ventana abierta (17/11): antes sacaba de la PANTALLA y la ventana se quedaba encima. Abrir una
-  // ventana añade una entrada al historial; «atrás» la cierra (por el mismo camino que tocar fuera, que respeta «cambios sin
-  // guardar»). Cambiar el contenido de una ventana ya abierta no añade otra entrada.
-  if(!yaAbierta){ try{ history.pushState(Object.assign({}, history.state || {}, {ggModal: true}), ''); ggModalEntrada = true; }catch(e){} }
+  document.getElementById('modal-overlay').classList.add('active');
 }
-let ggModalEntrada = false, ggModalIgnorarPop = 0;
 
 // Envuelve automáticamente todo lo que no sea el header ni el pie de un
 // modal en un contenedor ".modal-body" con su propio scroll independiente.
@@ -3095,12 +3079,6 @@ function wrapModalBody(box){
   else box.prepend(body);
 }
 function closeModal(){
-  const ov0 = document.getElementById('modal-overlay');
-  if(ov0.classList.contains('active') && ggModalEntrada){
-    ggModalEntrada = false;
-    // Se cerró con un botón: se quita también su entrada del historial (si no, el siguiente «atrás» no haría nada).
-    if(history.state && history.state.ggModal){ ggModalIgnorarPop++; try{ history.back(); }catch(e){ ggModalIgnorarPop--; } }
-  }
   document.getElementById('modal-overlay').classList.remove('active');
   document.getElementById('modal-box').innerHTML = '';
   document.getElementById('modal-box').classList.remove('modal-xl');
