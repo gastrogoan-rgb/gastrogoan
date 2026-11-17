@@ -39,6 +39,8 @@ const r = await page.evaluate(() => {
   DB.ge.variables = [{id:1, mes:f.getMonth(), año:f.getFullYear(), fecha:`${mes}-05`, importe:2900, iva:10, proveedor:'X', categoria:'MATERIA PRIMA'}];   // 29 %: por debajo del objetivo
   DB.mermas = []; DB.preciosHistorial = [];
   out.bien = plan360DiagnosticoDatos();
+  out.r3 = plan360PuntuacionesHtml({foodCostPct:35, personalPct:30, mermasPct:2});
+  out.r2 = plan360PuntuacionesHtml({foodCostPct:35, personalPct:30});
   return out;
 });
 await caso('Sin ventas en el último mes completo no hay diagnóstico (no se inventa nada)', async () => assert.equal(r.sinVentas, null));
@@ -56,6 +58,10 @@ await caso('El documento muestra las cifras, la estimación y se abre en la vent
   assert.ok(/6[.]?000/.test(r.html) && /8[.]?400/.test(r.html), 'faltan cifras'); assert.ok(/estimación/i.test(r.html)); assert.ok(r.abierto);
 });
 await caso('Con el food cost por debajo de SU objetivo no se le dice nada de food cost', async () => assert.ok(!r.bien.hallazgos.some(x => x.id === 'foodcost')));
+await caso('Con 3 áreas medibles sale un radar (SVG con un polígono); con 2 queda la lista, sin radar', async () => {
+  assert.ok(r.r3.includes('<svg') && r.r3.includes('<polygon'), 'falta el radar'); assert.ok(!r.r2.includes('<svg'), 'radar con solo 2 ejes');
+  assert.ok(/Costes de cocina/.test(r.r3) && /Control de mermas/.test(r.r3));
+});
 await browser.close();
 console.log(mal ? '\n❌ ' + mal + ' caso(s) fallaron' : '\n✅ Plan 360 · dinero sobre la mesa: ' + ok + ' casos en orden');
 process.exit(mal ? 1 : 0);

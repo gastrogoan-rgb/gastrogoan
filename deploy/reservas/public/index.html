@@ -841,7 +841,8 @@
   .o-i span{position:absolute;top:7px;left:7px;width:26px;height:26px;display:grid;place-items:center;font:italic 700 14px/1 Georgia,'Times New Roman',serif}
   .o-p+.o-i{margin-left:8px}
   .o-inf{margin:-2px 0 8px;padding:10px 12px;border:1px solid var(--border);border-top:0;background:var(--paper)}
-  .inf-d{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--body)}
+  .inf-foto{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:3px;margin:0 0 10px}
+.inf-d{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--body)}
   .inf-al{padding:12px 14px;border:1px solid var(--border);background:var(--paper)}
   .inf-al.has{background:var(--red-l);border-color:#E3C8BF}
   .inf-t{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:8px}
@@ -4859,14 +4860,15 @@ function renderMenuDishesHtml(sec){
 }
 // «i» de un plato: descripción y ALÉRGENOS, siempre (un cliente alérgico no puede tener que adivinar). Sin alérgenos declarados lo dice.
 function infoPlatoHtml(id){
-  let nombre = '', desc = '';
+  let nombre = '', desc = '', foto = '';
   const f = findPlatoById(id);
-  if(f){ nombre = trPlato(f.plato); desc = f.plato.descripcion || f.plato.description || ''; }
+  if(f){ nombre = trPlato(f.plato); desc = f.plato.descripcion || f.plato.description || ''; foto = (typeof f.plato.foto === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(f.plato.foto)) ? f.plato.foto : ''; }
   else {
     outer: for(const m of (DB.menus || [])) for(const g of (m.grupos || [])) for(const o of (g.opciones || [])) if(o.id === id){ nombre = trItem(o); desc = o.descripcion || o.description || ''; break outer; }
   }
   const al = (DB.allergens || {})[id] || [];
   return {nombre, desc, al, html: `
+    ${foto ? `<img class="inf-foto" src="${foto}" alt="${escapeHtml(nombre)}" loading="lazy">` : ''}
     ${desc ? `<p class="inf-d">${escapeHtml(desc)}</p>` : ''}
     <div class="inf-al ${al.length ? 'has' : ''}">
       <div class="inf-t">${escapeHtml(t('info.alergenos'))}</div>
