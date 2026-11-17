@@ -230,6 +230,7 @@ th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:up
 h1,h2{letter-spacing:-.02em}
 input:focus,select:focus,textarea:focus{outline:2px solid #4A5D4E;outline-offset:0}
 code,pre,kbd{font-family:var(--mono)}
+#client-startdate:empty{display:none!important}
 </style>
 </head>
 <body>
@@ -5758,11 +5759,11 @@ function plantillaRef(){ return getApp().database().ref('gastrogoan/coachConfig/
 function renderPlantillaPage(){
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Plantilla del programa', 'Las tareas de este plan, guardadas para aplicarlas a otros clientes')}
-    <div class="card" style="font-size:15px">
-      <p style="margin-top:0">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
+    <div class="card" style="font-size:15px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <p style="margin:0;flex-basis:100%">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
       <button class="btn btn-sm" onclick="plantillaGuardar()"><i class="ti ti-device-floppy"></i> Guardar este plan como plantilla</button>
       <button class="btn btn-sm btn-primary" onclick="plantillaPonerAEsteCliente()"><i class="ti ti-copy"></i> Aplicar mi plantilla a este cliente</button>
-      <p class="muted" id="plantilla-estado" style="margin:10px 0 0;font-size:13px"></p>
+      <p class="muted" id="plantilla-estado" style="margin:0;flex-basis:100%;font-size:13px"></p>
     </div>`;
 }
 async function plantillaGuardar(){
@@ -5808,7 +5809,12 @@ function renderCobros360Page(){
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Cobros del Plan 360º', '950 € + IVA: al firmar y el día 15 (475 € + IVA cada uno), o uno solo')}
     <div class="card" style="font-size:15px">
-      ${COBROS360.map(x => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><input type="checkbox" ${c[x.k] ? 'checked' : ''} onchange="cobros360Marcar('${x.k}',this.checked)" style="width:22px;height:22px"> <span style="flex:1">${esc(x.n)}</span> <input type="number" min="0" step="1" value="${c[x.k] ? Number(c[x.k].importe) || 0 : x.importe}" onchange="cobros360Importe('${x.k}',this.value)" style="width:90px"> € + IVA ${c[x.k] ? `<span class="muted" style="font-size:12px">cobrado el ${esc(new Date(c[x.k].ts).toLocaleDateString('es-ES'))}</span>` : ''}</label>`).join('')}
+      ${COBROS360.map(x => `<div style="display:grid;grid-template-columns:auto minmax(80px,1fr) auto;gap:6px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <input type="checkbox" ${c[x.k] ? 'checked' : ''} onchange="cobros360Marcar('${x.k}',this.checked)" style="width:24px;height:24px;margin:0" aria-label="${esc(x.n)} cobrado">
+        <span style="font-weight:600;font-size:15px">${esc(x.n)}</span>
+        <span style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input type="number" min="0" step="1" value="${c[x.k] ? Number(c[x.k].importe) || 0 : x.importe}" onchange="cobros360Importe('${x.k}',this.value)" style="width:84px" aria-label="Importe de ${esc(x.n)}"> <span style="font-size:13px">€ + IVA</span></span>
+        ${c[x.k] ? `<span class="muted" style="grid-column:2/4;font-size:12px">Cobrado el ${esc(new Date(c[x.k].ts).toLocaleDateString('es-ES'))}</span>` : ''}
+      </div>`).join('')}
       <p style="margin:12px 0 0"><b>Cobrado:</b> ${cobrado} € + IVA · <b>Pendiente:</b> ${Math.max(0, 950 - cobrado)} € + IVA</p>
       <div style="margin-top:12px"><button class="btn btn-sm" onclick="cobros360Exportar()"><i class="ti ti-download"></i> Exportar cobros a CSV</button></div>
     </div>`;
