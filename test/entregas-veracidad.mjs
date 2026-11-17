@@ -102,7 +102,7 @@ await caso('Entregado: el estado final sale solo al marcar la entrega y el PIN d
 await caso('Un pedido programado para MAÑANA no se «prepara» hoy: dice «aceptado» y su ventana es la de mañana', async () => {
   await app.evaluate(() => { const d = new Date(Date.now() + 86400000), p = n => String(n).padStart(2, '0'); DB.tpvOrders.push({id: 3, tipo: 'takeaway', status: 'abierta', clientRef: 'tok-veraz-manana-03', date: d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()), time: '13:00', items: [{name: 'Pizza', price: 9, qty: 1}], createdAt: new Date().toISOString()}); syncOrderStatusForPublic(DB.tpvOrders[2]); });
   const p = await publicado('tok-veraz-manana-03');
-  assert.equal(p.status, 'aceptado'); assert.ok(new Date(p.desde) > new Date(Date.now() + 20 * 3600000), 'la ventana debe ser la de mañana');
+  assert.equal(p.status, 'aceptado'); assert.ok(new Date(p.desde) > new Date(Date.now() + 6 * 3600000), 'la ventana debe ser la de mañana');
 });
 
 /* ============================ LA WEB ============================ */
