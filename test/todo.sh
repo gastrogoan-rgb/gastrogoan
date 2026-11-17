@@ -220,6 +220,7 @@ lanzar; node test/plan360-cobros.mjs > "$SALIDA/p360co.txt" 2>&1 & P360O=$!
 lanzar; node test/plan360-plantilla.mjs > "$SALIDA/p360pl.txt" 2>&1 & P360L=$!
 lanzar; node test/plan360-informe-coach.mjs > "$SALIDA/p360ic.txt" 2>&1 & P360IC=$!
 lanzar; node test/fotos-platos.mjs > "$SALIDA/fotopl.txt" 2>&1 & PFOTOPL=$!
+lanzar; node test/tpv-nota-movil.mjs > "$SALIDA/tpvnm.txt" 2>&1 & PTPVNM=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -497,4 +498,5 @@ espera $P360O "Plan 360º · cobros del programa y CSV para el gestor" "$SALIDA/
 espera $P360L "Plan 360º · plantilla del programa (guardar y aplicar sin pisar nada)" "$SALIDA/p360pl.txt" "en orden"
 espera $P360IC "Plan 360º · informe semanal del coach: hechas/sin hacer, área y objetivos" "$SALIDA/p360ic.txt" "en orden"
 espera $PFOTOPL "Fotos de platos en la web de pedidos: miniatura pequeña, solo con el interruptor encendido" "$SALIDA/fotopl.txt" "en orden"
+espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm.txt" "en orden"
 exit $FALLOS

@@ -4477,7 +4477,7 @@ a.dp-txt{text-decoration:underline;text-decoration-color:var(--hair);text-underl
 .tp-plato-pre{font-family:var(--mono);font-size:14px;font-weight:600;color:#33523A}
 .tp-plato-n{position:absolute;top:8px;right:8px;min-width:30px;height:24px;padding:0 7px;border-radius:12px;background:var(--olive);color:#fff;font-family:var(--mono);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
 .tp-plato-acc{display:flex;flex-direction:column;border-left:1px solid var(--hair)}
-.tp-plato-acc button{flex:1;min-width:44px;min-height:38px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px}
+.tp-plato-acc button{flex:1;min-width:44px;min-height:44px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px}
 .tp-plato-acc button + button{border-top:1px solid var(--hair)}
 .tp-plato-acc button:hover{background:var(--brand-cream);color:var(--ink)}
 .tp-plato-acc button:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
