@@ -6157,13 +6157,32 @@ function plan360Puntuaciones(k){
   if(k.nps != null && k.npsN >= 3) out.push({id:'nps', nombre:{es:'Satisfacción de clientes', ca:'Satisfacció de clients', en:'Customer satisfaction'}, puntos: clamp(k.nps * 10), dato: `${k.nps} / 10`});
   return out;
 }
+/* Radar de las áreas medibles (17/11): con 3 o más ejes se dibuja como polígono sobre anillos de 25/50/75/100; con menos
+   no es un radar, se queda como lista. Va en SVG con texto HTML-escapado, para que salga igual en pantalla y al imprimir. */
+function plan360RadarSvg(ps){
+  const L = o => gl(o);
+  const n = ps.length, cx = 150, cy = 120, r = 78;
+  const pt = (i, f) => { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(ang) * r * f, cy + Math.sin(ang) * r * f]; };
+  const poli = f => ps.map((_, i) => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' ');
+  const anillos = [.25, .5, .75, 1].map(f => `<polygon points="${poli(f)}" fill="none" stroke="#E7E2D9" stroke-width="1"/>`).join('');
+  const ejes = ps.map((_, i) => { const [x, y] = pt(i, 1); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E7E2D9" stroke-width="1"/>`; }).join('');
+  const area = `<polygon points="${ps.map((x, i) => pt(i, x.puntos / 100).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="#4A5D4E" fill-opacity=".22" stroke="#4A5D4E" stroke-width="2" stroke-linejoin="round"/>`;
+  const puntos = ps.map((x, i) => { const [px, py] = pt(i, x.puntos / 100); return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.5" fill="#4A5D4E"/>`; }).join('');
+  const rot = ps.map((x, i) => {
+    const [tx, ty] = pt(i, 1.2);
+    const anc = tx < cx - 8 ? 'end' : tx > cx + 8 ? 'start' : 'middle';
+    return `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="${anc}" font-family="Schibsted Grotesk,sans-serif" font-size="11" fill="#3D3A34">${escapeHtml(L(x.nombre))}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 300 240" role="img" aria-label="${escapeHtml(L({es:'Radar de áreas', ca:'Radar d\'àrees', en:'Area radar'}))}" style="width:100%;max-width:420px;height:auto;display:block;margin:6px auto">${anillos}${ejes}${area}${puntos}${rot}</svg>`;
+}
 function plan360PuntuacionesHtml(k){
   const ps = plan360Puntuaciones(k);
   if(!ps.length) return '';
   const L = o => gl(o);
   const color = n => n >= 80 ? '#3F6B4A' : n >= 50 ? '#B07D1F' : '#A33F2E';
   return `<h2 style="font:600 17px 'Schibsted Grotesk',sans-serif;margin:22px 0 6px">${escapeHtml(L({es:'Cómo está cada área', ca:'Com està cada àrea', en:'How each area is doing'}))}</h2>
-    ${ps.map(x => `<div style="display:grid;grid-template-columns:1fr 60px;gap:2px 10px;margin:8px 0;align-items:end"><div style="font-size:13px"><strong>${escapeHtml(L(x.nombre))}</strong> <span style="color:#716C65;font-size:12px">· ${escapeHtml(x.dato)}</span></div><div style="text-align:right;font:600 16px 'IBM Plex Mono',monospace;color:${color(x.puntos)}">${x.puntos}</div><div style="grid-column:1/3;height:6px;background:#E7E2D9"><div style="height:6px;width:${x.puntos}%;background:${color(x.puntos)}"></div></div></div>`).join('')}
+    ${ps.length >= 3 ? plan360RadarSvg(ps) : ''}
+    ${ps.map(x => `<div style="display:flex;justify-content:space-between;gap:10px;margin:6px 0;font-size:13px;border-bottom:1px solid #E7E2D9;padding-bottom:6px"><span><strong>${escapeHtml(L(x.nombre))}</strong> <span style="color:#716C65;font-size:12px">· ${escapeHtml(x.dato)}</span></span><span style="font:600 16px 'IBM Plex Mono',monospace;color:${color(x.puntos)}">${x.puntos}</span></div>`).join('')}
     <p style="color:#716C65;font-size:11.5px">${escapeHtml(L({es:'100 = cumples tu objetivo. Costes y equipo, frente a los objetivos que fijaste en Tesorería; mermas frente a lo comprado; satisfacción, nota media de tus clientes sobre 10.', ca:'100 = compleixes el teu objectiu. Costos i equip, davant dels objectius que vas fixar a Tresoreria; minves davant del comprat; satisfacció, nota mitjana dels teus clients sobre 10.', en:'100 = you meet your target. Costs and team, against the targets you set in Treasury; waste against purchases; satisfaction, your customers\' average score out of 10.'}))}</p>`;
 }
 function plan360DiagnosticoHtml(){
@@ -6980,6 +6999,30 @@ function plan360LibroPdfData(doc){
   const data = doc.pdfData || (doc.pdfName && nodo && nodo.data) || '';
   return typeof data === 'string' && data.startsWith('data:application/pdf') ? data : '';
 }
+/* Un <embed> de PDF no se ve en Android (Chrome móvil no lo pinta) y un data:
+   no se puede abrir en pestaña nueva: se convierte a Blob y se abre/descarga. */
+function plan360LibroBlobUrl(){
+  const doc = (DB.business.plan360Docs || []).find(d => d.id === 'identidad');
+  const pdf = plan360LibroPdfData(doc);
+  if(!pdf) return null;
+  try{
+    const bin = atob(pdf.slice(pdf.indexOf(',') + 1));
+    const u8 = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return {url: URL.createObjectURL(new Blob([u8], {type:'application/pdf'})), name: (doc && doc.pdfName) || 'libro-de-marca.pdf'};
+  }catch(e){ return null; }
+}
+function plan360LibroAbrir(){
+  const b = plan360LibroBlobUrl();
+  if(!b) return;
+  if(!window.open(b.url, '_blank')) location.href = b.url;
+}
+function plan360LibroDescargar(){
+  const b = plan360LibroBlobUrl();
+  if(!b) return;
+  const a = document.createElement('a');
+  a.href = b.url; a.download = b.name; document.body.appendChild(a); a.click(); a.remove();
+}
 function renderPlan360LibroMarca(){
   const doc = (DB.business.plan360Docs || []).find(d => d.id === 'identidad');
   const pdf = plan360LibroPdfData(doc);
@@ -6989,9 +7032,10 @@ function renderPlan360LibroMarca(){
   document.getElementById('plan360-content').innerHTML = `
     <button class="btn btn-sm btn-back" onclick="renderPlan360Docs()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(doc.title)}</div>
-    <a href="${escapeHtml(pdf)}" download="${escapeHtml(doc.pdfName || 'libro-de-marca.pdf')}" class="btn btn-primary" style="margin-top:10px"><i class="ti ti-download"></i> ${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</a>
-    <div class="card" style="margin-top:14px;padding:0;overflow:hidden">
-      <embed src="${escapeHtml(pdf)}" type="application/pdf" style="width:100%;height:75vh;display:block">
+    <div class="card" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <button class="btn btn-primary btn-toque" onclick="plan360LibroAbrir()"><i class="ti ti-file-text"></i> ${escapeHtml(t('plan360.libroMarcaAbrir'))}</button>
+      <button class="btn btn-toque" onclick="plan360LibroDescargar()"><i class="ti ti-download"></i> ${escapeHtml(t('plan360.libroMarcaDescargarPdf'))}</button>
+      <p class="muted" style="margin:0;flex-basis:100%;font-size:13px">${escapeHtml(t('plan360.libroMarcaAyuda'))}</p>
     </div>
   `;
 }
