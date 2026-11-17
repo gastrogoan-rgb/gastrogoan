@@ -8468,6 +8468,9 @@ function initPublicRequestsListener(){
             propinasPendientes: (req.pagarAhora && typeof req.propina === 'number' && req.propina > 0) ? [{ref: req.clientRef, importe: req.propina}] : []
           });
         }
+      }else if(req.type === 'pedido' && req.plataforma){
+        // Pedido de una plataforma (Glovo, Uber Eats…) llegado por el buzón: ver recibirPedidoPlataforma.
+        if(recibirPedidoPlataforma(req)) notifyNewRequest = true;
       }else if(req.type === 'pedido'){
         // Los extras elegidos en la web (req.items[].modificadores, {nombre,
         // precio} igual que ya guarda confirmAddOrderItem en el TPV) se
@@ -8579,6 +8582,45 @@ function initPublicRequestsListener(){
   }).catch(e => console.error('Error escuchando pedidos públicos', e));
 }
 
+/* ── Pedidos de plataformas externas (Glovo, Uber Eats, Just Eat, Deliveroo…) — 17/11 ──────────────────────────────────
+   Entran por el MISMO buzón que los de la web (`requests`, type 'pedido') con `plataforma`, mandados por el puente
+   (worker/pedidos-externos-worker.js) o por un agregador. Aquí se leen los datos tal cual los da la plataforma (la carta
+   del negocio no sirve para revisar sus precios) y el pedido queda SIEMPRE por aceptar: nunca entra solo en cocina, porque
+   aceptarlo en la plataforma es cosa de quien tiene su tablet. Una plataforma reintenta el aviso hasta 3 veces: se
+   deduplica por (plataforma, referencia). Devuelve true si creó un pedido nuevo. */
+const PLATAFORMAS_PEDIDO = {glovo:'Glovo', ubereats:'Uber Eats', justeat:'Just Eat', deliveroo:'Deliveroo', pedidosya:'PedidosYa', otro:'Plataforma'};
+function recibirPedidoPlataforma(req){
+  const canal = String(req.plataforma || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'otro';
+  const ref = String(req.ref || req.clientRef || '').slice(0, 60);
+  if(ref && DB.tpvOrders.some(o => o.plataforma === canal && o.plataformaRef === ref)) return false;
+  const num = (v, max) => { const n = Number(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : 0; };
+  const items = (Array.isArray(req.items) ? req.items : []).slice(0, 60).map(l => ({
+    platoId: null, recipeId: null,
+    name: String((l && (l.nombre || l.name)) || '').slice(0, 120) || '?',
+    price: num(l && (l.precio != null ? l.precio : l.price), 5000),
+    qty: Math.max(1, Math.round(num(l && (l.cantidad != null ? l.cantidad : l.qty), 99)) || 1),
+    tanda: '', notas: String((l && l.notas) || '').slice(0, 200), modificadores: []
+  })).filter(l => l.name);
+  if(!items.length) return false;
+  const recoger = /recoger|takeaway|pickup/i.test(String(req.tipo || req.entrega || ''));
+  DB.tpvOrders.push({
+    id: genId(), tableId: null, tipo: recoger ? 'takeaway' : 'delivery',
+    clienteNombre: String(req.clienteNombre || req.cliente || '').slice(0, 80),
+    clienteTelefono: String(req.clienteTelefono || req.telefono || '').slice(0, 30), clienteEmail: '',
+    clienteDireccion: String(req.clienteDireccion || req.direccion || '').slice(0, 160), clienteCodigoPostal: String(req.codigoPostal || '').slice(0, 10),
+    notas: String(req.notas || '').slice(0, 300), date: '', time: String(req.hora || '').slice(0, 5),
+    costeEnvio: 0, propina: 0, status: 'pendiente-online', items, tandas: [], createdAt: new Date().toISOString(),
+    origenOnline: true, clientRef: null, clientId: null,
+    plataforma: canal, plataformaRef: ref || undefined,
+    // Lo cobra la plataforma: el restaurante recibe el importe menos su comisión.
+    pagado: true, metodoPagoLocal: 'plataforma',
+    comisionPlataforma: req.comision != null ? num(req.comision, 5000) : undefined,
+    totalPlataforma: req.total != null ? num(req.total, 50000) : undefined,
+    pendienteVerificarZona: false, phoneOdd: false
+  });
+  logAudit('edit', 'Pedido de ' + (PLATAFORMAS_PEDIDO[canal] || canal) + (ref ? ' #' + ref : ''));
+  return true;
+}
 function buildSucursalesList(){
   const slots = getBusinessSlots();
   const thisSlot = slots.find(s => s.id === ACTIVE_SLOT);
@@ -12391,6 +12433,19 @@ function flushCloudSync(){
       pendingJson[key] = json;
     }
   });
+  /* El bloque `business` NO se sube entero (17/11, Plan 360º): lo escriben a la vez el negocio y el coach. Una tablet que
+     vuelve a tener conexión y sube su `business` completo antes de que baje lo que el coach cambió entre tanto lo pisaba.
+     Ahora se sube solo cada clave de primer nivel que ha cambiado de verdad aquí (`business/plan360Program`, etc.): lo que el
+     coach tocó y esta tablet no, no se reescribe. */
+  if(updates.business && lastSyncedSnapshot.business){
+    try{
+      const antes = JSON.parse(lastSyncedSnapshot.business), ahora = DB.business, sub = {};
+      Object.keys(ahora).forEach(k => { if(canonicalStringify(ahora[k]) !== canonicalStringify(antes[k])) sub['business/' + k] = ahora[k]; });
+      Object.keys(antes).forEach(k => { if(!(k in ahora)) sub['business/' + k] = null; });
+      delete updates.business;
+      Object.assign(updates, sub);
+    }catch(e){ /* si el snapshot no se puede leer, se sube entero como siempre */ }
+  }
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
   const seqAlSubir = cambiosLocalesSeq;
@@ -12401,7 +12456,7 @@ function flushCloudSync(){
   try{
     cloudRef.update(sinIndefinidos(updates)).then(() => {
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
-      keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+      keys.forEach(key => { if(key.startsWith('business/')) lastSyncedSnapshot.business = pendingJson.business; else lastSyncedSnapshot[key] = pendingJson[key]; });
       lastSyncOkAt = Date.now();
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio

@@ -1598,6 +1598,11 @@ function distTareasDelDia(emp, ds, idx, date){
     (lt.tipo === 'mensual' && lt.diaMes === date.getDate()) || (lt.tipo === 'puntual' && lt.fecha === ds)
   )).forEach(lt => out.push({k:'limp', id:lt.id, text: lt.area + (lt.producto ? ` (${lt.producto})` : ''), done:!!limpiezaCheckInfo(checksMes, lt.id), canToggle:canToggleLimpiezaTarea(lt), monthKey}));
   getPromosForEmployeeDate(emp.id, ds).forEach(p => out.push({k:'promo', id:p.id, text:p.titulo, done:!!(promoDoneInfo(p, ds) || {}).done}));
+  // Tareas del Plan 360º que el propietario ha pasado a ESTE empleado (17/11): salen el día que toca, como «Puesta por el coach».
+  if(DB.business && DB.business.plan360StartDate) (DB.business.plan360Program || []).filter(d => d && d.phase === 'trabajo').forEach(d => {
+    if(plan360DateForDay(d.day) !== ds) return;
+    plan360TareasReales(d).filter(tk => tk.asignadoA && String(tk.asignadoA) === String(emp.id)).forEach(tk => out.push({k:'p360', id:tk.id, text:tk.title, done:tk.status === 'hecha', day:d.day}));
+  });
   return out;
 }
 // Cifras de una semana (offset 0 = la actual): total, hechas, atrasadas y el primer día con algo atrasado.
@@ -1773,11 +1778,13 @@ function dpFilaHtml(emp, ds, tk, puedeGestionar){
   const k = escapeJsAttr(String(tk.id));
   const onchange = tk.k === 'limp' ? `toggleLimpiezaCheckMesFromDist('${tk.monthKey}',${tk.id},this.checked)`
     : tk.k === 'promo' ? `togglePromoDone(${tk.id},this.checked,'${ds}')`
+    : tk.k === 'p360' ? `plan360TareaDesdeMiPuesto(${tk.day},${Number(tk.id) || 0},this.checked)`
     : `toggleDistTareaDone('${ds}','${k}',this.checked)`;
   // Solo la etiqueta que toca: la de «Cada lunes» necesita el día, y las demás tareas no lo tienen.
   const etiqueta = tk.k === 'prod' ? `<span class="dp-et"><i class="ti ti-repeat"></i> ${gl({es:'Cada ' + weekDayFull(tk.idx).toLowerCase(), ca:'Cada ' + weekDayFull(tk.idx).toLowerCase(), en:'Every ' + weekDayFull(tk.idx)})}</span>`
     : tk.k === 'unica' ? `<span class="dp-et"><i class="ti ti-calendar-event"></i> ${gl({es:'Solo este día', ca:'Només aquest dia', en:'This day only'})}</span>`
     : tk.k === 'limp' ? `<span class="dp-et"><i class="ti ti-spray"></i> ${gl({es:'Limpieza', ca:'Neteja', en:'Cleaning'})}</span>`
+    : tk.k === 'p360' ? `<span class="dp-et"><i class="ti ti-compass"></i> Plan 360º</span>`
     : `<span class="dp-et"><i class="ti ti-speakerphone"></i> Promo</span>`;
   const puedeTocar = (tk.k === 'prod' || tk.k === 'unica') && (puedeGestionar || tk.bySelf);
   const menu = puedeTocar ? ggMenuAcciones([
@@ -1792,6 +1799,7 @@ function dpFilaHtml(emp, ds, tk, puedeGestionar){
     ? (tk.bySelf
       ? `<span class="dp-origen mia"><i class="ti ti-user"></i> ${verComoEmpleado ? gl({es:'Puesta por mí', ca:'Posada per mi', en:'Set by me'}) : gl({es:'Puesta por ' + emp.name.split(' ')[0], ca:'Posada per ' + emp.name.split(' ')[0], en:'Set by ' + emp.name.split(' ')[0]})}</span>`
       : `<span class="dp-origen jefe"><i class="ti ti-briefcase"></i> ${gl({es:'Puesta por el jefe', ca:'Posada pel cap', en:'Set by the boss'})}</span>`)
+    : tk.k === 'p360' ? `<span class="dp-origen jefe"><i class="ti ti-compass"></i> ${gl({es:'Puesta por el coach', ca:'Posada pel coach', en:'Set by the coach'})}</span>`
     : '';
   return `
     <div class="dp-tarea${tk.done ? ' is-hecha' : ''}${tk.bySelf ? ' es-mia' : ''}">
@@ -5875,6 +5883,14 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360HayPlanDeAccion() ? `<div class="p360-card" onclick="plan360CompartirSemana()">
+        <i class="ti ti-brand-whatsapp"></i>
+        <div><h3>${escapeHtml(gl({es:'Resumen de la semana', ca:'Resum de la setmana', en:'Weekly summary'}))}</h3><p>${escapeHtml(gl({es:'Lo hecho, tus objetivos y lo ganado desde el Día 1, listo para WhatsApp.', ca:'El fet, els teus objectius i el guanyat des del Dia 1, a punt per a WhatsApp.', en:'What is done, your goals and what you have gained since Day 1, ready for WhatsApp.'}))}</p></div>
+      </div>` : ''}
+      ${plan360ActasLista().length ? `<div class="p360-card" onclick="plan360AbrirActas()">
+        <i class="ti ti-notes"></i>
+        <div><h3>${escapeHtml(gl({es:'Actas de reunión', ca:'Actes de reunió', en:'Meeting minutes'}))}</h3><p>${escapeHtml(gl({es:'Lo que se decidió en cada reunión con tu coach.', ca:'El que es va decidir a cada reunió amb el teu coach.', en:'What was decided at each meeting with your coach.'}))}</p></div>
+      </div>` : ''}
       ${plan360DiagnosticoDatos() ? `<div class="p360-card" onclick="plan360AbrirDiagnostico()">
         <i class="ti ti-coins"></i>
         <div><h3>${escapeHtml(gl({es:'Dinero sobre la mesa', ca:'Diners sobre la taula', en:'Money on the table'}))}</h3><p>${escapeHtml(gl({es:'Lo que dicen tus propias cifras del último mes, traducido a euros al año.', ca:'El que diuen les teves pròpies xifres de l\'últim mes, traduït a euros a l\'any.', en:'What your own figures for the last month say, translated into euros per year.'}))}</p></div>
@@ -6178,6 +6194,59 @@ const PLAN360_ENLACES = {
   promocion: {es:'Promoción', ca:'Promoció', en:'Promotion'}, clientes: {es:'Clientes', ca:'Clients', en:'Customers'}, reservas: {es:'Reservas', ca:'Reserves', en:'Bookings'},
   tpv: {es:'TPV', ca:'TPV', en:'POS'}, economia: {es:'Gestión Económica', ca:'Gestió Econòmica', en:'Financial Management'}, minegocio: {es:'Mi Negocio', ca:'El Meu Negoci', en:'My Business'},
 };
+/* ── Resumen de la semana para WhatsApp (17/11): texto plano (sin HTML) con lo hecho de la semana en curso (lunes a domingo, por
+   la fecha de cada día del programa), cada objetivo con su última medición y, si hay Día 1, lo ganado al mes. */
+function plan360SemanaTexto(){
+  const b = DB.business || {}, L = o => gl(o);
+  const hoy = todayStr(), [yy, mm, dd] = hoy.split('-').map(Number);
+  const dow = (new Date(yy, mm - 1, dd).getDay() + 6) % 7;
+  const lunes = addDaysStr(hoy, -dow), domingo = addDaysStr(lunes, 6);
+  const prog = b.plan360Program || [];
+  const dSem = prog.filter(d => d.phase === 'trabajo' && b.plan360StartDate && plan360DateForDay(d.day) >= lunes && plan360DateForDay(d.day) <= domingo);
+  const tareas = dSem.reduce((a, d) => a.concat(plan360TareasReales(d)), []);
+  const hechas = tareas.filter(t2 => t2.status === 'hecha').length;
+  const d2 = prog.find(x => x.day === 2);
+  const objs = ((d2 && d2.objectives) || []).filter(o => o.titulo);
+  const ultima = o => { const ms = (o.mediciones || []).filter(m => m && m.valor !== '' && m.valor != null); return ms.length ? String(ms[ms.length - 1].valor) : null; };
+  const mar = typeof plan360MarcadorEuros === 'function' ? plan360MarcadorEuros() : null;
+  const ganado = mar ? mar.filas.filter(f => f.euros != null && f.k !== 'resultado').reduce((n, f) => n + f.euros, 0) : null;
+  const eur = v => Math.round(v).toLocaleString(localeActual()) + ' €';
+  const f = d => plan360FechaLegible(d).replace(/ de \d{4}$/, '');
+  const lineas = [
+    `*${L({es:'Plan 360º · semana del ', ca:'Pla 360º · setmana del ', en:'360º Plan · week of '})}${f(lunes)} ${L({es:'al', ca:'al', en:'to'})} ${f(domingo)}*${b.businessName || b.name ? ' · ' + (b.businessName || b.name) : ''}`,
+    '',
+    tareas.length ? `✅ ${L({es:'Tareas', ca:'Tasques', en:'Tasks'})}: ${hechas} ${L({es:'de', ca:'de', en:'of'})} ${tareas.length} ${L({es:'hechas', ca:'fetes', en:'done'})}` : `✅ ${L({es:'Sin tareas esta semana', ca:'Sense tasques aquesta setmana', en:'No tasks this week'})}`,
+  ];
+  if(objs.length){ lineas.push('', '🎯 ' + L({es:'Objetivos', ca:'Objectius', en:'Goals'})); objs.slice(0, 6).forEach(o => { const u = ultima(o); lineas.push(`• ${o.titulo}${u ? ': ' + u : ''}`); }); }
+  if(ganado != null && Math.abs(ganado) >= 1) lineas.push('', `💶 ${L({es:'Desde que empezamos', ca:'Des que vam començar', en:'Since we started'})}: ${ganado >= 0 ? '+' : '−'}${eur(Math.abs(ganado))}${L({es:' al mes', ca:' al mes', en:' per month'})}`);
+  return lineas.join('\n');
+}
+function plan360CompartirSemana(){
+  const texto = plan360SemanaTexto();
+  const abrir = () => { try{ window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener'); }catch(e){} };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(() => showToast(gl({es:'Resumen copiado. Se abre WhatsApp.', ca:'Resum copiat. S\'obre WhatsApp.', en:'Summary copied. Opening WhatsApp.'})), () => {}).finally(abrir);
+  }else abrir();
+}
+/* ── Actas de reunión (17/11): las deja el coach desde su panel («Acta en vivo», plan360Actas = un objeto por id) y el
+   negocio las lee aquí, y las puede imprimir o guardar en PDF. Las tareas y objetivos que salieron de ella ya están en su plan. */
+function plan360ActasLista(){
+  const a = (DB.business || {}).plan360Actas;
+  if(!a || typeof a !== 'object') return [];
+  return Object.values(a).filter(x => x && Array.isArray(x.decisiones)).sort((p, q) => (q.enviadoEn || 0) - (p.enviadoEn || 0));
+}
+function plan360ActasHtml(){
+  const L = o => gl(o);
+  const tipo = {tarea: {es:'Tarea', ca:'Tasca', en:'Task'}, objetivo: {es:'Objetivo', ca:'Objectiu', en:'Goal'}, nota: {es:'Nota', ca:'Nota', en:'Note'}};
+  const lista = plan360ActasLista();
+  if(!lista.length) return `<p class="m">${escapeHtml(L({es:'Todavía no hay actas.', ca:'Encara no hi ha actes.', en:'There are no minutes yet.'}))}</p>`;
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.t{width:90px;font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px}</style>
+    ${lista.map(a => `<h2>${escapeHtml(L({es:'Reunión del ', ca:'Reunió del ', en:'Meeting of '}))}${escapeHtml(plan360FechaLegible(a.fecha))}</h2>
+      <table>${a.decisiones.map(x => `<tr><td class="t">${escapeHtml(L(tipo[x.tipo] || tipo.nota))}</td><td>${escapeHtml(x.texto || '')}${x.tipo === 'tarea' && x.dia ? `<div class="m">${escapeHtml(L({es:'Día ', ca:'Dia ', en:'Day '}))}${escapeHtml(String(x.dia))}</div>` : ''}</td></tr>`).join('')}</table>`).join('')}`;
+}
+function plan360AbrirActas(){
+  printReportWindow(gl({es:'Actas de reunión · Plan 360º', ca:'Actes de reunió · Pla 360º', en:'Meeting minutes · 360º Plan'}), plan360ActasHtml());
+}
 /* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
    casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */
 function plan360HayPlanDeAccion(){
@@ -6438,6 +6507,43 @@ function plan360MarcadorEurosHtml(){
     </div>`).join('')}
   </div>`;
 }
+/* «Mi mantenimiento» (17/11): lo que el negocio necesita saber de SU servicio sin llamar al coach: cuánto paga, qué meses lleva
+   cobrados, cuándo se renueva y cómo pedir la baja. Lo escribe el coach (plan360Servicio: cuota, cobros, mantHasta); la app
+   solo añade la solicitud de baja (`baja`), y solo el propietario. La baja es a fin del mes en curso. */
+function plan360MantServicioHtml(){
+  const sv = (DB.business || {}).plan360Servicio || {};
+  const L = o => gl(o);
+  const cuota = Number(sv.cuota) > 0 ? Number(sv.cuota) : 75;
+  const cobros = (sv.cobros && typeof sv.cobros === 'object') ? sv.cobros : {};
+  const ult = Object.keys(cobros).filter(k => /^\d{4}-\d{2}$/.test(k)).sort().slice(-6);
+  const mesTxt = k => { const [y, m] = k.split('-').map(Number); return plan360Mayus(new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'short', year: 'numeric'})); };
+  const baja = sv.baja && sv.baja.ts ? sv.baja : null;
+  const esOwner = plan360EsOwner();
+  return `<div class="card" style="margin-top:12px" id="p360-mant-servicio">
+    <div class="txt-xs" style="font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)"><i class="ti ti-receipt"></i> ${escapeHtml(L({es:'Mi mantenimiento', ca:'El meu manteniment', en:'My maintenance'}))}</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin:6px 0">
+      <div><div class="txt-xs txt-muted">${escapeHtml(L({es:'Cuota', ca:'Quota', en:'Fee'}))}</div><b>${cuota} € + IVA ${escapeHtml(L({es:'al mes', ca:'al mes', en:'a month'}))}</b></div>
+      ${sv.mantHasta ? `<div><div class="txt-xs txt-muted">${escapeHtml(L({es:'Pagado hasta', ca:'Pagat fins', en:'Paid until'}))}</div><b>${escapeHtml(/^\d{4}-\d{2}$/.test(sv.mantHasta) ? (() => { const [y, m] = sv.mantHasta.split('-').map(Number); return plan360Mayus(new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'})); })() : plan360FechaLegible(sv.mantHasta))}</b></div>` : ''}
+    </div>
+    ${ult.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${ult.map(k => `<span class="badge" style="background:var(--green-bg,#E4EDE6);color:var(--green,#3F6B4A)"><i class="ti ti-check"></i> ${escapeHtml(mesTxt(k))}</span>`).join('')}</div>` : `<p class="txt-xs txt-muted" style="margin:4px 0 8px">${escapeHtml(L({es:'Todavía no hay cobros apuntados.', ca:'Encara no hi ha cobraments apuntats.', en:'No payments recorded yet.'}))}</p>`}
+    ${baja ? `<div style="background:var(--amber-bg,#F6EBD0);padding:10px;border-radius:6px;font-size:13px">${escapeHtml(L({es:'Has pedido la baja el ', ca:'Has demanat la baixa el ', en:'You asked to cancel on '}))}<b>${escapeHtml(new Date(baja.ts).toLocaleDateString(localeActual()))}</b>${escapeHtml(L({es:': será efectiva a fin de mes.', ca:': serà efectiva a final de mes.', en:': effective at the end of the month.'}))}
+        ${esOwner ? ` <button class="btn btn-sm btn-toque" onclick="plan360RetirarBaja()">${escapeHtml(L({es:'Retirar la solicitud', ca:'Retirar la sol·licitud', en:'Withdraw the request'}))}</button>` : ''}</div>`
+      : (esOwner ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
+  </div>`;
+}
+function plan360SolicitarBaja(){
+  if(!plan360EsOwner()) return;
+  if(!confirm(gl({es:'¿Pedir la baja del mantenimiento? Será efectiva a fin de este mes y tu coach la recibe al momento.', ca:'Demanar la baixa del manteniment? Serà efectiva a final d\'aquest mes i el teu coach la rep a l\'instant.', en:'Request cancellation of the maintenance? It takes effect at the end of this month and your coach gets it right away.'}))) return;
+  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {baja: {ts: Date.now(), por: 'negocio'}});
+  saveDB(); plan360PingActivity(); showToast(gl({es:'Baja solicitada', ca:'Baixa sol·licitada', en:'Cancellation requested'}));
+  renderPlan360Mant();
+}
+function plan360RetirarBaja(){
+  if(!plan360EsOwner()) return;
+  const sv = Object.assign({}, DB.business.plan360Servicio || {}); delete sv.baja;
+  DB.business.plan360Servicio = sv;
+  saveDB(); plan360PingActivity(); renderPlan360Mant();
+}
 function renderPlan360Mant(clave){
   if(clave) plan360MantMes = clave;
   if(!plan360MantMes) plan360MantMes = plan360MantClave(new Date());
@@ -6500,6 +6606,7 @@ function renderPlan360Mant(clave){
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.mant.title'), t('plan360.mant.desc'))}
     <div style="margin-top:12px">${plan360MantMarcadorHtml()}</div>
+    ${plan360MantServicioHtml()}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
       <button class="btn btn-sm" onclick="plan360MantMover(-1)" aria-label="${escapeHtml(t('plan360.mant.prev'))}"><i class="ti ti-chevron-left"></i></button>
       <strong style="flex:1;text-align:center;font-size:16px">${escapeHtml(plan360Mayus(nombreMes))}</strong>
@@ -7488,6 +7595,8 @@ function plan360TaskRow(day, tk, i){
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
+    ${plan360EsOwner() && (DB.employees || []).length ? `<div class="field" style="margin:4px 0 8px"><label>${escapeHtml(gl({es:'Pasar a un empleado', ca:'Passar a un empleat', en:'Hand to an employee'}))}</label>
+      <select onchange="plan360AsignarTarea(${day},${i},this.value,${Number(tk.id) || 0})"><option value="">${escapeHtml(gl({es:'— la hago yo —', ca:'— la faig jo —', en:'— I do it —'}))}</option>${(DB.employees || []).filter(e => e.activo !== false).map(e => `<option value="${escapeHtml(String(e.id))}" ${String(tk.asignadoA || '') === String(e.id) ? 'selected' : ''}>${escapeHtml(e.name)}</option>`).join('')}</select></div>` : ''}
     <div class="p360-estados" role="group">
       ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
     </div>
@@ -7502,6 +7611,24 @@ function plan360TaskRow(day, tk, i){
 function plan360BuscarTarea(d, i, id){
   const tareas = (d && d.tasks) || [];
   return (id && tareas.find(tk => Number(tk.id) === Number(id))) || (!id ? tareas[i] : null);
+}
+function plan360AsignarTarea(day, i, empId, id){
+  if(!plan360EsOwner()) return;
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk) return;
+  if(empId) tk.asignadoA = empId; else delete tk.asignadoA;
+  saveDB(); plan360PingActivity();
+  showToast(empId ? gl({es:'Tarea pasada a ' + ((DB.employees || []).find(e => String(e.id) === String(empId)) || {}).name + ': le saldrá en «Mi puesto» ese día.', ca:'Tasca passada: li sortirà a «El meu lloc» aquell dia.', en:'Task handed over: it will show in their “My post” that day.'}) : gl({es:'Tarea de nuevo contigo.', ca:'Tasca de nou amb tu.', en:'Task back with you.'}));
+}
+// Lo marca el empleado desde «Mi puesto»: la misma tarea del programa, el mismo estado que ve el coach.
+function plan360TareaDesdeMiPuesto(day, id, hecha){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = d && (d.tasks || []).find(x => Number(x.id) === Number(id));
+  if(!tk) return;
+  tk.status = hecha ? 'hecha' : 'pendiente';
+  saveDB(); plan360PingActivity();
+  if(typeof renderDistDetail === 'function') renderDistDetail();
 }
 function plan360SetTaskEstado(day, i, estado, id){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);

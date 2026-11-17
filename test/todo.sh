@@ -212,6 +212,12 @@ lanzar; node test/plan360-diagnostico.mjs > "$SALIDA/p360dg.txt" 2>&1 & P360G=$!
 lanzar; node test/plan360-carta.mjs > "$SALIDA/p360ca.txt" 2>&1 & P360C=$!
 lanzar; node test/plan360-auto.mjs > "$SALIDA/p360au.txt" 2>&1 & P360U=$!
 lanzar; node test/plan360-enlace.mjs > "$SALIDA/p360en.txt" 2>&1 & P360E=$!
+lanzar; node test/plan360-equipo.mjs > "$SALIDA/p360eq.txt" 2>&1 & P360Q=$!
+lanzar; node test/plan360-acta.mjs > "$SALIDA/p360ac.txt" 2>&1 & P360T=$!
+lanzar; node test/pedidos-plataforma.mjs > "$SALIDA/platf.txt" 2>&1 & PPLAT=$!
+lanzar; node test/plan360-servicio.mjs > "$SALIDA/p360sv.txt" 2>&1 & P360S=$!
+lanzar; node test/plan360-cobros.mjs > "$SALIDA/p360co.txt" 2>&1 & P360O=$!
+lanzar; node test/plan360-plantilla.mjs > "$SALIDA/p360pl.txt" 2>&1 & P360L=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -481,4 +487,10 @@ espera $P360G "Plan 360º · «Dinero sobre la mesa»: diagnóstico en euros al 
 espera $P360C "Plan 360º · ingeniería de carta (estrellas, caballos, puzles, perros)" "$SALIDA/p360ca.txt" "en orden"
 espera $P360U "Plan 360º · objetivos que se miden solos con una cifra de la app" "$SALIDA/p360au.txt" "en orden"
 espera $P360E "Plan 360º · tareas con «Se hace en…» y botón «Ir a…»" "$SALIDA/p360en.txt" "en orden"
+espera $P360Q "Plan 360º · tareas pasadas al equipo salen en «Mi puesto» como «Puesta por el coach»" "$SALIDA/p360eq.txt" "en orden"
+espera $P360T "Plan 360º · acta en vivo: el coach apunta decisiones y el negocio las lee" "$SALIDA/p360ac.txt" "en orden"
+espera $PPLAT "Pedidos de plataformas (Glovo, Uber Eats…): entran por el buzón, por aceptar, sin duplicados, con su etiqueta" "$SALIDA/platf.txt" "en orden"
+espera $P360S "Plan 360º · «Mi mantenimiento» (cuota, cobros, baja) y resumen semanal para WhatsApp" "$SALIDA/p360sv.txt" "en orden"
+espera $P360O "Plan 360º · cobros del programa y CSV para el gestor" "$SALIDA/p360co.txt" "en orden"
+espera $P360L "Plan 360º · plantilla del programa (guardar y aplicar sin pisar nada)" "$SALIDA/p360pl.txt" "en orden"
 exit $FALLOS

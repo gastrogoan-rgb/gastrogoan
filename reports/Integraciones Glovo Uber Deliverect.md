@@ -30,3 +30,18 @@ Fuentes leídas: la definición oficial de la API de partners de Glovo (api-docs
 2. Construir **un núcleo común «pedido de plataforma»**: Worker + buzón + entrada en el TPV con su canal, su comisión y sus estados. Así cada plataforma es solo un adaptador. Esfuerzo: núcleo ~1 semana; Glovo ~1 semana + su certificación; Uber Eats ~1 semana + la suya.
 3. Deliverect, solo para quien quiera todas las plataformas en una tablet y acepte su cuota.
 4. ⚠️ Lo que se guarde en la nube de la plataforma tiene que ser pequeño y borrarse al entregarse: a 5.000 negocios crecería con cada pedido.
+
+
+## Actualización 17/11 — el núcleo ya está construido
+- **Hecho y probado:** `worker/pedidos-externos-worker.js` (el puente: `POST /pedido` → buzón del restaurante) y, en la app, `recibirPedidoPlataforma` (js/core.js): el pedido sale en el TPV con su etiqueta (GLOVO, UBER EATS…), por aceptar, deduplicado por (plataforma, referencia) y marcado como cobrado por la plataforma con su comisión. Prueba `test/pedidos-plataforma.mjs`.
+- **Lo que falta no es código, es acceso:** una fuente que mande los pedidos al puente. Investigado el 17/11:
+  - **Glovo Partners API**: necesita ser partner de Glovo (cuenta Partners por local, enlace servidor a servidor autorizado desde su panel; entorno de pruebas con credenciales de staging). Sin aprobación no hay acceso.
+  - **Uber Eats Marketplace API**: acceso por escrito de Uber, NDA y acuerdo de licencia de API, a través de su gestor de socios. Los webhooks de pedido existen una vez aprobado.
+  - **Deliverect**: formulario de partner y equipo de Partnerships; la API de TPV NO permite consultar (polling): solo webhook a una URL nuestra, que es justo este puente. Entorno de pruebas a petición. El restaurante paga su cuota.
+  - **Agregadores con TPV ya integrados** (Sinqro, Last.app, OrderOut…): enlazan Glovo/Uber/Just Eat con un TPV por API nativa; no consta una API pública para desarrolladores y precios sin confirmar.
+  - **Correo del restaurante → Cloudflare Email Routing → Email Worker → puente** (gratis, en tiempo real, sin servidor): técnicamente viable (el Email Worker lee el correo con `postal-mime` y hace POST). **Sin confirmar** si Glovo, Uber Eats y Just Eat mandan al restaurante un correo con el detalle de cada pedido. Hay que comprobarlo con un restaurante real antes de construir el lector.
+  - Descartados: OCR de tickets o de pantalla y RPA (robot que entra al portal): frágiles, guardan contraseñas ajenas y incumplen las condiciones de las plataformas.
+
+## PENDIENTE (anotado el 17/11 a petición del dueño)
+- **Negocios SIN pantalla para el delivery** (el pedido de Glovo/Uber llega a un móvil o a una tablet que no es la del TPV, o no hay pantalla en cocina): ver qué hacer con ellos. Opciones a estudiar: aviso sonoro y en el móvil del dueño, impresión automática de la comanda por el navegador, o WhatsApp al encargado. Se mira DESPUÉS de cerrar la vía de los pedidos en pantalla.
+- **Pantalla compartida con el portal de la plataforma** (idea del dueño): estudiado, ver conclusión en la conversación del 17/11 (iframe no; captura de pantalla + OCR frágil; extensión de navegador que lee el portal, posible en ordenador; la API oficial o el correo siguen siendo lo sólido). El dueño tiene una cuenta activa de Glovo de un negocio anterior: sirve para probar y para pedir acceso a la API como socio.

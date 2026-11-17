@@ -4335,6 +4335,18 @@ function renderClientGrid(){
         <i class="ti ti-folder"></i>
         <div><h3>Recursos</h3><p>Identidad de marca, playbooks y demás documentos del programa</p></div>
       </div>
+      <div class="p360-card" onclick="renderPlantillaPage()">
+        <i class="ti ti-copy"></i>
+        <div><h3>Plantilla del programa</h3><p>Guarda este plan como plantilla y aplícala a otro cliente en un clic</p></div>
+      </div>
+      <div class="p360-card" onclick="renderCobros360Page()">
+        <i class="ti ti-receipt-euro"></i>
+        <div><h3>Cobros del Plan 360º</h3><p>Firma y día 15, lo cobrado y lo pendiente, y exportar a CSV</p></div>
+      </div>
+      <div class="p360-card" onclick="renderActaPage()">
+        <i class="ti ti-notes"></i>
+        <div><h3>Acta en vivo</h3><p>Durante la reunión: cada decisión pasa a tarea u objetivo y se envía al negocio</p></div>
+      </div>
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
       <div>Programa de 28 días</div>
@@ -5712,6 +5724,186 @@ function plan360PageHeader(title, subtitle){
   return `<button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
     <h2 style="margin:10px 0 4px">${esc(title)}</h2>
     ${subtitle ? `<p class="muted" style="margin-bottom:10px">${esc(subtitle)}</p>` : ''}`;
+}
+
+/* ---- Plantilla del programa (17/11) ----
+   Ahorra horas por cliente: las tareas de un programa bien montado se guardan en tu plantilla privada
+   (gastrogoan/coachConfig/programaPlantilla, solo admin) y se aplican a otro cliente. Aplicar NO pisa nada: añade solo las
+   tareas que ese día todavía no tiene (mismo título). Se guardan título, descripción y «Se hace en…»; nunca el estado,
+   las notas ni los archivos del cliente de origen. */
+function plantillaDesdePrograma(prog){
+  const out = {};
+  (prog || []).filter(d => d && d.phase === 'trabajo').forEach(d => {
+    (d.tasks || []).filter(tk => tk && String(tk.title || '').trim()).forEach(tk => {
+      const t = {day: d.day, title: String(tk.title).trim().slice(0, 140), description: String(tk.description || '').slice(0, 1200)};
+      if(tk.enlace) t.enlace = String(tk.enlace).slice(0, 30);
+      out['t' + Object.keys(out).length] = t;
+    });
+  });
+  return out;
+}
+function plantillaAplicar(prog, tpl){
+  let n = 0;
+  Object.values(tpl || {}).forEach(t => {
+    const d = (prog || []).find(x => x && x.day === t.day && x.phase === 'trabajo'); if(!d) return;
+    if(!Array.isArray(d.tasks)) d.tasks = [];
+    if(d.tasks.some(x => x && String(x.title || '').trim().toLowerCase() === String(t.title || '').trim().toLowerCase())) return;
+    const nueva = {id: plan360GenId(), objectiveId: null, title: t.title, description: t.description || '', status: 'pendiente', note: '', fileData: null, fileName: null};
+    if(t.enlace) nueva.enlace = t.enlace;
+    d.tasks.push(nueva); n++;
+  });
+  return n;
+}
+function plantillaRef(){ return getApp().database().ref('gastrogoan/coachConfig/programaPlantilla'); }
+function renderPlantillaPage(){
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Plantilla del programa', 'Las tareas de este plan, guardadas para aplicarlas a otros clientes')}
+    <div class="card" style="font-size:15px">
+      <p style="margin-top:0">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
+      <button class="btn btn-sm" onclick="plantillaGuardar()"><i class="ti ti-device-floppy"></i> Guardar este plan como plantilla</button>
+      <button class="btn btn-sm btn-primary" onclick="plantillaPonerAEsteCliente()"><i class="ti ti-copy"></i> Aplicar mi plantilla a este cliente</button>
+      <p class="muted" id="plantilla-estado" style="margin:10px 0 0;font-size:13px"></p>
+    </div>`;
+}
+async function plantillaGuardar(){
+  const tpl = plantillaDesdePrograma(remoteBiz.plan360Program);
+  const est = document.getElementById('plantilla-estado');
+  if(!Object.keys(tpl).length){ est.textContent = 'Este cliente no tiene tareas que guardar.'; return; }
+  try{ await plantillaRef().set(tpl); est.textContent = 'Plantilla guardada (' + Object.keys(tpl).length + ' tareas).'; }
+  catch(e){ est.textContent = 'No se pudo guardar en la plataforma (¿reglas de coachConfig publicadas?): ' + (e.message || e.code || 'error'); }
+}
+async function plantillaPonerAEsteCliente(){
+  const est = document.getElementById('plantilla-estado');
+  try{
+    const snap = await plantillaRef().once('value'); const tpl = snap.val();
+    if(!tpl){ est.textContent = 'Todavía no hay plantilla guardada.'; return; }
+    const n = plantillaAplicar(remoteBiz.plan360Program, tpl);
+    if(n){ saveRemoteBiz(); }
+    est.textContent = n ? 'Añadidas ' + n + ' tareas.' : 'Nada que añadir: este plan ya tiene todas las tareas de la plantilla.';
+  }catch(e){ est.textContent = 'No se pudo leer la plantilla: ' + (e.message || e.code || 'error'); }
+}
+
+/* ---- Cobros del Plan 360º (17/11) ----
+   950 € + IVA: un pago al firmar, o dos de 475 € + IVA (al firmar y el día 15). Se apuntan en plan360Servicio.cobros360 =
+   {firma:{ts,importe}, dia15:{ts,importe}} (objetos con clave, nunca lista). Junto a los cobros del mantenimiento
+   (plan360Servicio.cobros) salen en un CSV para el gestor. La app del negocio NO toca esta clave. */
+const COBROS360 = [{k: 'firma', n: 'Al firmar', importe: 475}, {k: 'dia15', n: 'Día 15', importe: 475}];
+function cobros360Datos(){
+  const sv = (remoteBiz && remoteBiz.plan360Servicio) || {};
+  const c = (sv.cobros360 && typeof sv.cobros360 === 'object') ? sv.cobros360 : {};
+  return {sv, c};
+}
+function cobros360CsvTexto(){
+  const {sv, c} = cobros360Datos();
+  const f = ts => ts ? new Date(ts).toISOString().slice(0, 10) : '';
+  const filas = [['concepto', 'periodo', 'fecha', 'base_imponible_eur', 'iva_21_pct_eur', 'total_eur']];
+  COBROS360.forEach(x => { if(c[x.k]){ const b = Number(c[x.k].importe) || 0; filas.push(['Plan 360 - ' + x.n, '', f(c[x.k].ts), b.toFixed(2), (b * 0.21).toFixed(2), (b * 1.21).toFixed(2)]); } });
+  const cm = (sv.cobros && typeof sv.cobros === 'object') ? sv.cobros : {};
+  Object.keys(cm).sort().forEach(k => { const b = Number(cm[k].importe) || 0; filas.push(['Mantenimiento', k, f(cm[k].ts), b.toFixed(2), (b * 0.21).toFixed(2), (b * 1.21).toFixed(2)]); });
+  return '\ufeff' + filas.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+}
+function renderCobros360Page(){
+  const {c} = cobros360Datos();
+  const cobrado = COBROS360.reduce((n, x) => n + (c[x.k] ? Number(c[x.k].importe) || 0 : 0), 0);
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Cobros del Plan 360º', '950 € + IVA: al firmar y el día 15 (475 € + IVA cada uno), o uno solo')}
+    <div class="card" style="font-size:15px">
+      ${COBROS360.map(x => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><input type="checkbox" ${c[x.k] ? 'checked' : ''} onchange="cobros360Marcar('${x.k}',this.checked)" style="width:22px;height:22px"> <span style="flex:1">${esc(x.n)}</span> <input type="number" min="0" step="1" value="${c[x.k] ? Number(c[x.k].importe) || 0 : x.importe}" onchange="cobros360Importe('${x.k}',this.value)" style="width:90px"> € + IVA ${c[x.k] ? `<span class="muted" style="font-size:12px">cobrado el ${esc(new Date(c[x.k].ts).toLocaleDateString('es-ES'))}</span>` : ''}</label>`).join('')}
+      <p style="margin:12px 0 0"><b>Cobrado:</b> ${cobrado} € + IVA · <b>Pendiente:</b> ${Math.max(0, 950 - cobrado)} € + IVA</p>
+      <div style="margin-top:12px"><button class="btn btn-sm" onclick="cobros360Exportar()"><i class="ti ti-download"></i> Exportar cobros a CSV</button></div>
+    </div>`;
+}
+function cobros360Marcar(k, si){
+  const sv = (remoteBiz.plan360Servicio = remoteBiz.plan360Servicio || {});
+  sv.cobros360 = (sv.cobros360 && typeof sv.cobros360 === 'object') ? sv.cobros360 : {};
+  if(si) sv.cobros360[k] = {ts: Date.now(), importe: (COBROS360.find(x => x.k === k) || {}).importe || 0};
+  else delete sv.cobros360[k];
+  saveRemoteBiz(); renderCobros360Page();
+}
+function cobros360Importe(k, v){
+  const n = Number(v); if(!(n >= 0)) return;
+  const sv = (remoteBiz.plan360Servicio = remoteBiz.plan360Servicio || {});
+  if(sv.cobros360 && sv.cobros360[k]){ sv.cobros360[k].importe = n; saveRemoteBiz(); renderCobros360Page(); }
+}
+function cobros360Exportar(){
+  const blob = new Blob([cobros360CsvTexto()], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cobros-' + (currentTenantId || 'cliente') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---- Acta en vivo (17/11) ----
+   Pantalla pensada para tenerla abierta delante del cliente (letra grande, una cosa cada vez). Cada decisión se apunta con
+   un toque: «tarea» (al día que toca del programa), «objetivo» (al Día 2) o «nota» (solo queda en el acta). «Enviar el acta»
+   crea las tareas y los objetivos de verdad y guarda el acta en plan360Actas (un objeto por id, nunca una lista: la
+   fusión no se pisa por posición). El borrador vive en memoria hasta enviarlo. */
+let actaBorrador = [];
+function actaSanitizar(t){ return String(t == null ? '' : t).trim().slice(0, 600); }
+function actaDiasOpciones(){
+  return (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo').map(d => {
+    const f = plan360FormatDate(d.day);
+    return `<option value="${d.day}">Día ${d.day} · ${esc(f.weekday)} ${esc(f.dayMonth)}</option>`;
+  }).join('');
+}
+function renderActaPage(){
+  const act = (remoteBiz.plan360Actas && typeof remoteBiz.plan360Actas === 'object') ? Object.values(remoteBiz.plan360Actas).sort((a, b) => (b.enviadoEn || 0) - (a.enviadoEn || 0)) : [];
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Acta en vivo', 'Lo que se decide en la reunión, apuntado al momento')}
+    <div class="card" style="font-size:16px">
+      <div class="field" style="margin-bottom:10px"><label>Decisión</label><textarea id="acta-texto" rows="3" style="font-size:17px" placeholder="Qué se ha decidido"></textarea></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="margin:0"><label>Se convierte en</label><select id="acta-tipo" onchange="document.getElementById('acta-dia-box').style.display = this.value === 'tarea' ? '' : 'none'"><option value="tarea">Tarea</option><option value="objetivo">Objetivo</option><option value="nota">Solo nota</option></select></div>
+        <div class="field" style="margin:0" id="acta-dia-box"><label>Para el día</label><select id="acta-dia">${actaDiasOpciones()}</select></div>
+        <button class="btn btn-primary" onclick="actaAnadir()">Añadir decisión</button>
+      </div>
+    </div>
+    <div id="acta-lista">${actaListaHtml()}</div>
+    ${act.length ? `<h3 style="margin:18px 0 6px">Actas ya enviadas</h3>${act.map(a => `<div class="card" style="margin-bottom:8px;font-size:13px"><strong>${esc(a.fecha || '')}</strong> · ${(a.decisiones || []).length} decisiones</div>`).join('')}` : ''}`;
+}
+function actaListaHtml(){
+  if(!actaBorrador.length) return '<p class="muted" style="margin:14px 0">Todavía no hay decisiones en esta acta.</p>';
+  const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
+  return `<div class="card" style="margin-top:12px">${actaBorrador.map((x, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo]}${x.tipo === 'tarea' ? ' · día ' + x.dia : ''}</span><div style="flex:1;font-size:15px">${esc(x.texto)}</div><button class="btn btn-sm" onclick="actaQuitar(${i})">Quitar</button></div>`).join('')}
+    <div style="margin-top:12px"><button class="btn btn-primary" onclick="actaEnviar()">Enviar el acta al negocio</button> <span class="muted" style="font-size:12px">Crea las tareas y los objetivos y deja el acta en su app.</span></div></div>`;
+}
+function actaAnadir(){
+  const texto = actaSanitizar(document.getElementById('acta-texto').value);
+  if(!texto){ alert('Escribe la decisión.'); return; }
+  const tipo = document.getElementById('acta-tipo').value;
+  actaBorrador.push({tipo, texto, dia: tipo === 'tarea' ? Number(document.getElementById('acta-dia').value) : null});
+  document.getElementById('acta-texto').value = '';
+  document.getElementById('acta-lista').innerHTML = actaListaHtml();
+}
+function actaQuitar(i){ actaBorrador.splice(i, 1); document.getElementById('acta-lista').innerHTML = actaListaHtml(); }
+function actaAplicar(){
+  // Devuelve cuántas tareas y objetivos creó. Separada de la pantalla para poder probarla.
+  const prog = remoteBiz.plan360Program || [];
+  let tareas = 0, objetivos = 0;
+  actaBorrador.forEach(x => {
+    if(x.tipo === 'tarea'){
+      const d = prog.find(y => y.day === x.dia && y.phase === 'trabajo'); if(!d) return;
+      if(!Array.isArray(d.tasks)) d.tasks = [];
+      d.tasks.push({id: plan360GenId(), objectiveId: null, title: x.texto.slice(0, 140), description: x.texto.length > 140 ? x.texto : '', status: 'pendiente', note: '', fileData: null, fileName: null});
+      tareas++;
+    }else if(x.tipo === 'objetivo'){
+      const d2 = prog.find(y => y.day === 2); if(!d2) return;
+      if(!Array.isArray(d2.objectives)) d2.objectives = [];
+      d2.objectives.push({id: plan360GenId(), titulo: x.texto.slice(0, 140), explicacion: x.texto.length > 140 ? x.texto : '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
+      objetivos++;
+    }
+  });
+  if(!remoteBiz.plan360Actas || typeof remoteBiz.plan360Actas !== 'object' || Array.isArray(remoteBiz.plan360Actas)) remoteBiz.plan360Actas = {};
+  const id = String(plan360GenId());
+  remoteBiz.plan360Actas[id] = {id, fecha: todayStr(), enviadoEn: Date.now(), decisiones: actaBorrador.map(x => ({tipo: x.tipo, texto: x.texto, dia: x.dia}))};
+  return {tareas, objetivos, id};
+}
+function actaEnviar(){
+  if(!actaBorrador.length) return;
+  if(!confirm('¿Enviar el acta? Se crearán las tareas y los objetivos y el negocio la verá en su app.')) return;
+  const r = actaAplicar();
+  actaBorrador = [];
+  saveRemoteBiz();
+  renderActaPage();
+  alert('Acta enviada: ' + r.tareas + ' tareas y ' + r.objetivos + ' objetivos creados.');
 }
 
 /* ---- Documentación inicial ---- */

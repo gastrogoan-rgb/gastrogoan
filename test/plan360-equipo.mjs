@@ -1,0 +1,53 @@
+// Plan 360º · tareas del Plan 360º pasadas al equipo (17/11).
+import puppeteer from 'puppeteer-core';
+import assert from 'node:assert/strict';
+let ok = 0, mal = 0;
+const caso = async (n, f) => { try{ await f(); console.log('✅ ' + n); ok++; }catch(e){ console.log('❌ ' + n + '\n     ⤷ ' + e.message); mal++; } };
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:true});
+const page = await browser.newPage();
+await page.setRequestInterception(true);
+page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver/.test(r.url()) ? r.abort() : r.continue());
+await page.goto('http://localhost:8950/index.html', {waitUntil:'domcontentloaded'});
+await page.evaluate(() => {
+  localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code:'P360EQ1', tenantId: ggBizTenantId('P360EQ1')}));
+  localStorage.setItem('gastrogoan_owner_login','1');
+  localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()}));
+  localStorage.setItem('gastrogoan_owner_pass_prompted','1');
+});
+await page.reload({waitUntil:'domcontentloaded'});
+await new Promise(r => setTimeout(r, 2000));
+const r = await page.evaluate(() => {
+  ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
+  DB.business.plan360 = true; delete DB.business.plan360Program; ensurePlan360Program();
+  const hoy = todayStr();
+  DB.business.plan360StartDate = addDaysStr(hoy, -4);                       // hoy es el día 5
+  DB.employees = [{id:'e1', name:'Ana Pérez', area:'cocina', activo:true}, {id:'e2', name:'Luis Gil', area:'cocina', activo:true}];
+  const prog = DB.business.plan360Program; prog.filter(d => d.phase === 'trabajo').forEach(d => { d.tasks = []; });
+  const d5 = prog.find(x => x.day === 5), d6 = prog.find(x => x.day === 6);
+  d5.tasks = [{id:101, title:'Pesar el pescado al recibir', status:'pendiente'}, {id:102, title:'Sin asignar', status:'pendiente'}];
+  d6.tasks = [{id:103, title:'Mañana: ficha del arroz', status:'pendiente'}];
+  const out = {};
+  out.selector = plan360TaskRow(5, d5.tasks[0], 0).includes('Pasar a un empleado') && plan360TaskRow(5, d5.tasks[0], 0).includes('Ana Pérez');
+  plan360AsignarTarea(5, 0, 'e1', 101); plan360AsignarTarea(6, 0, 'e1', 103);
+  const dia = date => distTareasDelDia(DB.employees[0], dateStr(date), 0, date);
+  const hoyD = new Date(), manD = new Date(Date.now() + 86400000);
+  out.anaHoy = dia(hoyD).filter(x => x.k === 'p360').map(x => x.text);
+  out.anaManana = dia(manD).filter(x => x.k === 'p360').map(x => x.text);
+  out.luisHoy = distTareasDelDia(DB.employees[1], dateStr(hoyD), 0, hoyD).filter(x => x.k === 'p360').length;
+  out.fila = dpFilaHtml(DB.employees[0], dateStr(hoyD), dia(hoyD).find(x => x.k === 'p360'), false);
+  plan360TareaDesdeMiPuesto(5, 101, true);
+  out.estado = d5.tasks[0].status;
+  out.hechaEnMiPuesto = dia(hoyD).find(x => x.k === 'p360').done;
+  plan360AsignarTarea(5, 0, '', 101);
+  out.tras = dia(hoyD).filter(x => x.k === 'p360').length;
+  return out;
+});
+await caso('El propietario ve «Pasar a un empleado» con la plantilla en cada tarea', async () => assert.equal(r.selector, true));
+await caso('La tarea pasada a Ana sale en SU «Mi puesto» el día que toca (hoy) y no el de mañana', async () => { assert.deepEqual(r.anaHoy, ['Pesar el pescado al recibir']); assert.deepEqual(r.anaManana, ['Mañana: ficha del arroz']); });
+await caso('A otro empleado no le sale nada', async () => assert.equal(r.luisHoy, 0));
+await caso('Dice «Puesta por el coach» y la etiqueta Plan 360º', async () => assert.ok(/Puesta por el coach/.test(r.fila) && /Plan 360º/.test(r.fila)));
+await caso('Marcarla desde «Mi puesto» cambia la MISMA tarea del programa (lo que ve el coach)', async () => { assert.equal(r.estado, 'hecha'); assert.equal(r.hechaEnMiPuesto, true); });
+await caso('Quitarla la devuelve al propietario y desaparece de «Mi puesto»', async () => assert.equal(r.tras, 0));
+await browser.close();
+console.log(mal ? '\n❌ ' + mal + ' caso(s) fallaron' : '\n✅ Plan 360 · tareas al equipo: ' + ok + ' casos en orden');
+process.exit(mal ? 1 : 0);
