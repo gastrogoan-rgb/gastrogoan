@@ -5883,6 +5883,10 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360ActasLista().length ? `<div class="p360-card" onclick="plan360AbrirActas()">
+        <i class="ti ti-notes"></i>
+        <div><h3>${escapeHtml(gl({es:'Actas de reunión', ca:'Actes de reunió', en:'Meeting minutes'}))}</h3><p>${escapeHtml(gl({es:'Lo que se decidió en cada reunión con tu coach.', ca:'El que es va decidir a cada reunió amb el teu coach.', en:'What was decided at each meeting with your coach.'}))}</p></div>
+      </div>` : ''}
       ${plan360DiagnosticoDatos() ? `<div class="p360-card" onclick="plan360AbrirDiagnostico()">
         <i class="ti ti-coins"></i>
         <div><h3>${escapeHtml(gl({es:'Dinero sobre la mesa', ca:'Diners sobre la taula', en:'Money on the table'}))}</h3><p>${escapeHtml(gl({es:'Lo que dicen tus propias cifras del último mes, traducido a euros al año.', ca:'El que diuen les teves pròpies xifres de l\'últim mes, traduït a euros a l\'any.', en:'What your own figures for the last month say, translated into euros per year.'}))}</p></div>
@@ -6186,6 +6190,25 @@ const PLAN360_ENLACES = {
   promocion: {es:'Promoción', ca:'Promoció', en:'Promotion'}, clientes: {es:'Clientes', ca:'Clients', en:'Customers'}, reservas: {es:'Reservas', ca:'Reserves', en:'Bookings'},
   tpv: {es:'TPV', ca:'TPV', en:'POS'}, economia: {es:'Gestión Económica', ca:'Gestió Econòmica', en:'Financial Management'}, minegocio: {es:'Mi Negocio', ca:'El Meu Negoci', en:'My Business'},
 };
+/* ── Actas de reunión (17/11): las deja el coach desde su panel («Acta en vivo», plan360Actas = un objeto por id) y el
+   negocio las lee aquí, y las puede imprimir o guardar en PDF. Las tareas y objetivos que salieron de ella ya están en su plan. */
+function plan360ActasLista(){
+  const a = (DB.business || {}).plan360Actas;
+  if(!a || typeof a !== 'object') return [];
+  return Object.values(a).filter(x => x && Array.isArray(x.decisiones)).sort((p, q) => (q.enviadoEn || 0) - (p.enviadoEn || 0));
+}
+function plan360ActasHtml(){
+  const L = o => gl(o);
+  const tipo = {tarea: {es:'Tarea', ca:'Tasca', en:'Task'}, objetivo: {es:'Objetivo', ca:'Objectiu', en:'Goal'}, nota: {es:'Nota', ca:'Nota', en:'Note'}};
+  const lista = plan360ActasLista();
+  if(!lista.length) return `<p class="m">${escapeHtml(L({es:'Todavía no hay actas.', ca:'Encara no hi ha actes.', en:'There are no minutes yet.'}))}</p>`;
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.t{width:90px;font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px}</style>
+    ${lista.map(a => `<h2>${escapeHtml(L({es:'Reunión del ', ca:'Reunió del ', en:'Meeting of '}))}${escapeHtml(plan360FechaLegible(a.fecha))}</h2>
+      <table>${a.decisiones.map(x => `<tr><td class="t">${escapeHtml(L(tipo[x.tipo] || tipo.nota))}</td><td>${escapeHtml(x.texto || '')}${x.tipo === 'tarea' && x.dia ? `<div class="m">${escapeHtml(L({es:'Día ', ca:'Dia ', en:'Day '}))}${escapeHtml(String(x.dia))}</div>` : ''}</td></tr>`).join('')}</table>`).join('')}`;
+}
+function plan360AbrirActas(){
+  printReportWindow(gl({es:'Actas de reunión · Plan 360º', ca:'Actes de reunió · Pla 360º', en:'Meeting minutes · 360º Plan'}), plan360ActasHtml());
+}
 /* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
    casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */
 function plan360HayPlanDeAccion(){

@@ -4335,6 +4335,10 @@ function renderClientGrid(){
         <i class="ti ti-folder"></i>
         <div><h3>Recursos</h3><p>Identidad de marca, playbooks y demás documentos del programa</p></div>
       </div>
+      <div class="p360-card" onclick="renderActaPage()">
+        <i class="ti ti-notes"></i>
+        <div><h3>Acta en vivo</h3><p>Durante la reunión: cada decisión pasa a tarea u objetivo y se envía al negocio</p></div>
+      </div>
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
       <div>Programa de 28 días</div>
@@ -5712,6 +5716,81 @@ function plan360PageHeader(title, subtitle){
   return `<button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
     <h2 style="margin:10px 0 4px">${esc(title)}</h2>
     ${subtitle ? `<p class="muted" style="margin-bottom:10px">${esc(subtitle)}</p>` : ''}`;
+}
+
+/* ---- Acta en vivo (17/11) ----
+   Pantalla pensada para tenerla abierta delante del cliente (letra grande, una cosa cada vez). Cada decisión se apunta con
+   un toque: «tarea» (al día que toca del programa), «objetivo» (al Día 2) o «nota» (solo queda en el acta). «Enviar el acta»
+   crea las tareas y los objetivos de verdad y guarda el acta en plan360Actas (un objeto por id, nunca una lista: la
+   fusión no se pisa por posición). El borrador vive en memoria hasta enviarlo. */
+let actaBorrador = [];
+function actaSanitizar(t){ return String(t == null ? '' : t).trim().slice(0, 600); }
+function actaDiasOpciones(){
+  return (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo').map(d => {
+    const f = plan360FormatDate(d.day);
+    return `<option value="${d.day}">Día ${d.day} · ${esc(f.weekday)} ${esc(f.dayMonth)}</option>`;
+  }).join('');
+}
+function renderActaPage(){
+  const act = (remoteBiz.plan360Actas && typeof remoteBiz.plan360Actas === 'object') ? Object.values(remoteBiz.plan360Actas).sort((a, b) => (b.enviadoEn || 0) - (a.enviadoEn || 0)) : [];
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Acta en vivo', 'Lo que se decide en la reunión, apuntado al momento')}
+    <div class="card" style="font-size:16px">
+      <div class="field" style="margin-bottom:10px"><label>Decisión</label><textarea id="acta-texto" rows="3" style="font-size:17px" placeholder="Qué se ha decidido"></textarea></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="margin:0"><label>Se convierte en</label><select id="acta-tipo" onchange="document.getElementById('acta-dia-box').style.display = this.value === 'tarea' ? '' : 'none'"><option value="tarea">Tarea</option><option value="objetivo">Objetivo</option><option value="nota">Solo nota</option></select></div>
+        <div class="field" style="margin:0" id="acta-dia-box"><label>Para el día</label><select id="acta-dia">${actaDiasOpciones()}</select></div>
+        <button class="btn btn-primary" onclick="actaAnadir()">Añadir decisión</button>
+      </div>
+    </div>
+    <div id="acta-lista">${actaListaHtml()}</div>
+    ${act.length ? `<h3 style="margin:18px 0 6px">Actas ya enviadas</h3>${act.map(a => `<div class="card" style="margin-bottom:8px;font-size:13px"><strong>${esc(a.fecha || '')}</strong> · ${(a.decisiones || []).length} decisiones</div>`).join('')}` : ''}`;
+}
+function actaListaHtml(){
+  if(!actaBorrador.length) return '<p class="muted" style="margin:14px 0">Todavía no hay decisiones en esta acta.</p>';
+  const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
+  return `<div class="card" style="margin-top:12px">${actaBorrador.map((x, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo]}${x.tipo === 'tarea' ? ' · día ' + x.dia : ''}</span><div style="flex:1;font-size:15px">${esc(x.texto)}</div><button class="btn btn-sm" onclick="actaQuitar(${i})">Quitar</button></div>`).join('')}
+    <div style="margin-top:12px"><button class="btn btn-primary" onclick="actaEnviar()">Enviar el acta al negocio</button> <span class="muted" style="font-size:12px">Crea las tareas y los objetivos y deja el acta en su app.</span></div></div>`;
+}
+function actaAnadir(){
+  const texto = actaSanitizar(document.getElementById('acta-texto').value);
+  if(!texto){ alert('Escribe la decisión.'); return; }
+  const tipo = document.getElementById('acta-tipo').value;
+  actaBorrador.push({tipo, texto, dia: tipo === 'tarea' ? Number(document.getElementById('acta-dia').value) : null});
+  document.getElementById('acta-texto').value = '';
+  document.getElementById('acta-lista').innerHTML = actaListaHtml();
+}
+function actaQuitar(i){ actaBorrador.splice(i, 1); document.getElementById('acta-lista').innerHTML = actaListaHtml(); }
+function actaAplicar(){
+  // Devuelve cuántas tareas y objetivos creó. Separada de la pantalla para poder probarla.
+  const prog = remoteBiz.plan360Program || [];
+  let tareas = 0, objetivos = 0;
+  actaBorrador.forEach(x => {
+    if(x.tipo === 'tarea'){
+      const d = prog.find(y => y.day === x.dia && y.phase === 'trabajo'); if(!d) return;
+      if(!Array.isArray(d.tasks)) d.tasks = [];
+      d.tasks.push({id: plan360GenId(), objectiveId: null, title: x.texto.slice(0, 140), description: x.texto.length > 140 ? x.texto : '', status: 'pendiente', note: '', fileData: null, fileName: null});
+      tareas++;
+    }else if(x.tipo === 'objetivo'){
+      const d2 = prog.find(y => y.day === 2); if(!d2) return;
+      if(!Array.isArray(d2.objectives)) d2.objectives = [];
+      d2.objectives.push({id: plan360GenId(), titulo: x.texto.slice(0, 140), explicacion: x.texto.length > 140 ? x.texto : '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
+      objetivos++;
+    }
+  });
+  if(!remoteBiz.plan360Actas || typeof remoteBiz.plan360Actas !== 'object' || Array.isArray(remoteBiz.plan360Actas)) remoteBiz.plan360Actas = {};
+  const id = String(plan360GenId());
+  remoteBiz.plan360Actas[id] = {id, fecha: todayStr(), enviadoEn: Date.now(), decisiones: actaBorrador.map(x => ({tipo: x.tipo, texto: x.texto, dia: x.dia}))};
+  return {tareas, objetivos, id};
+}
+function actaEnviar(){
+  if(!actaBorrador.length) return;
+  if(!confirm('¿Enviar el acta? Se crearán las tareas y los objetivos y el negocio la verá en su app.')) return;
+  const r = actaAplicar();
+  actaBorrador = [];
+  saveRemoteBiz();
+  renderActaPage();
+  alert('Acta enviada: ' + r.tareas + ' tareas y ' + r.objetivos + ' objetivos creados.');
 }
 
 /* ---- Documentación inicial ---- */
