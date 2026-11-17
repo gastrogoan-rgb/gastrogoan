@@ -317,3 +317,10 @@ Criterio de orden: lo que más vende en la mesa y lo que más protege los datos,
 ### Estado final de la sesión del 17/11 (noche)
 Hecho, probado y publicado por tandas (ver sellos en el historial de `main`): Fase 0 completa (0.1, 0.2, 0.3, 0.4*, 0.5, 0.6, 0.7), informe de cierre + oferta de mantenimiento como paso siguiente, avisos del Panel y la campana, plan de acción imprimible, «Dinero sobre la mesa» (food cost/personal/mermas en €/año), ingeniería de carta, puntuación por área, objetivos que se miden solos, tareas con «Ir a…», tareas al equipo en «Mi puesto», acta en vivo, resumen semanal para WhatsApp, «Mi mantenimiento» (cuota, cobros, baja), cobros del programa + CSV para el gestor y plantilla del programa. (*0.4: el negocio se sube por claves; la prueba de bucle del emulador pasa; 5 pruebas antiguas del emulador de QR/espejo fallan igual con el código de antes, ver abajo.)
 Pendiente, con motivo: **P7 privacidad** (tu DNI sigue en la plantilla del contrato; sacarlo exige que lo escribas una vez en el panel y es decisión tuya), reglas `coaching360`/`tenantLookup` (requieren publicar reglas), **P9 enlace de pago de Stripe automático** (a propósito, para el final) y las pruebas del emulador de QR/espejo (preexistentes).
+
+### Corrección de fondo, 17/11 (sincronización y reglas)
+- La **sonda de reglas** daba un falso «reglas antiguas» si el inicio de sesión de Firebase tardaba (ahora espera a la sesión y solo un «permiso denegado» CON sesión cuenta). Prueba nueva `test/emulador/espejo-sesion.mjs` (falla sin el arreglo).
+- El **eco de lo recién subido** pisaba lo tocado entre medias: una mesa nueva perdía su token y su QR quedaba «no válido» (`subidaEnVuelo` en js/core.js).
+- Publicar el espejo sin sesión ya no enseña un aviso al hostelero.
+- ⚠️ Al correr `test/emulador/run.sh` por partes, un emulador viejo puede quedarse vivo y contaminar la siguiente pasada: matar `firebase emulators:start`, `firebase-database-emulator` y `http.server 8951` antes de cada ejecución.
+- Endurecer `tenantLookup`/`coaching360`: decidido no hacerlo (ver `reglas/NOTAS.md`).
