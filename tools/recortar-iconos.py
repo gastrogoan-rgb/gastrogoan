@@ -32,7 +32,7 @@ COMPLETO = RAIZ / 'css' / 'tabler-icons.min.css'
 # suponer la forma exacta: hay sitios con `class="ti ti-x"`, otros con
 # mapas tipo {manos: 'ti-droplet'} y otros donde se arma al vuelo.
 FUENTES = ['js/*.js', 'index.html', 'reservagastrogoan.html',
-           'css/styles.css', 'generador-licencias.html', 'catalogo.html',
+           'css/styles.css', 'generador-licencias.html',
            # El catálogo de actividades del mantenimiento vive en el panel del
            # coach, pero sus iconos se pintan en la app (viajan como dato).
            'admin-panel/plan360.html']
