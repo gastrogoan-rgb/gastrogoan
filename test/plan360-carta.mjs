@@ -43,6 +43,17 @@ await caso('Con menos de 4 platos con receta no hay carta que analizar (no se in
 await caso('El documento nombra cada grupo con su consejo', async () => {
   for(const t of ['Estrellas', 'Caballos de batalla', 'Puzles', 'Perros', 'Paella', 'Solomillo']) assert.ok(r.html.includes(t), 'falta ' + t);
 });
+const q = await page.evaluate(() => {
+  DB.ge.config.distPct = {per:30, gf:20, mp:30, og:10, ben:10};
+  const a = plan360Puntuaciones({foodCostPct:35, personalPct:28, mermasPct:2, nps:8.5, npsN:10});
+  const b = plan360Puntuaciones({foodCostPct:null, personalPct:null, mermasPct:null, nps:9, npsN:1});
+  return {a: Object.fromEntries(a.map(x => [x.id, x.puntos])), b: b.length, html: plan360PuntuacionesHtml({foodCostPct:35, personalPct:28, mermasPct:2, nps:8.5, npsN:10})};
+});
+await caso('Puntuaciones: food cost 35 % con objetivo 30 % = 50; personal por debajo del objetivo = 100; mermas 2 % = 60; nota 8,5 = 85', async () => {
+  assert.equal(q.a.foodcost, 50); assert.equal(q.a.personal, 100); assert.equal(q.a.mermas, 60); assert.equal(q.a.nps, 85);
+});
+await caso('Lo que no se puede medir no sale (nunca un 0 por falta de datos; con una sola encuesta no hay nota)', async () => assert.equal(q.b, 0));
+await caso('El documento dice contra qué se mide cada área', async () => assert.ok(/Cómo está cada área/.test(q.html) && /objetivos que fijaste/.test(q.html)));
 await browser.close();
 console.log(mal ? '\n❌ ' + mal + ' caso(s) fallaron' : '\n✅ Plan 360 · ingeniería de carta: ' + ok + ' casos en orden');
 process.exit(mal ? 1 : 0);

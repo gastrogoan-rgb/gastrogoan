@@ -6079,7 +6079,7 @@ function plan360DiagnosticoDatos(){
         detalle: {es:`+${al.subida.pct} %${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`, ca:`+${al.subida.pct} %${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`, en:`+${al.subida.pct}%${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`}});
     }
     hallazgos.sort((a, b) => (b.euros || 0) - (a.euros || 0));
-    return {mes, netas: k.netas, hallazgos, carta: plan360IngenieriaCarta(f.getFullYear(), f.getMonth()), total: hallazgos.reduce((n, h) => n + (h.euros || 0), 0)};
+    return {mes, netas: k.netas, hallazgos, kpis: k, carta: plan360IngenieriaCarta(f.getFullYear(), f.getMonth()), total: hallazgos.reduce((n, h) => n + (h.euros || 0), 0)};
   }catch(e){ return null; }
 }
 /* Ingeniería de carta (Kasavana-Smith, 17/11): cada plato vendido el mes se coloca por POPULARIDAD (su parte de las
@@ -6124,6 +6124,32 @@ function plan360CartaHtml(ic){
     ${grupo(ic.puzles, {es:'Puzles', ca:'Trencaclosques', en:'Puzzles'}, {es:'Dejan mucho pero se piden poco: dales sitio en la carta y que el equipo los sugiera.', ca:'Deixen molt però es demanen poc: dóna-los lloc a la carta i que l\'equip els suggereixi.', en:'They earn a lot but few order them: give them a better spot and have the team suggest them.'}, '#4A5D4E')}
     ${grupo(ic.perros, {es:'Perros', ca:'Gossos', en:'Dogs'}, {es:'Ni se venden ni dejan: candidatos a quitar o reinventar.', ca:'Ni es venen ni deixen: candidats a treure o reinventar.', en:'Neither sell nor earn: candidates to drop or rework.'}, '#A33F2E')}`;
 }
+/* Puntuación 0-100 por área MEDIBLE (17/11). Sin inventar autoridad: food cost y personal se miden contra el objetivo que
+   el propio negocio fijó en Tesorería (100 si lo cumple; pierde 10 puntos por punto de desviación), las mermas contra el
+   % de lo comprado (5 % = 0) y la satisfacción es la nota media de los clientes sobre 10. Lo que no se puede medir
+   (sin ventas, sin encuestas) no sale: nunca un 0 por falta de datos. */
+function plan360Puntuaciones(k){
+  if(!k) return [];
+  const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+  const objFc = geFoodCostObjPct();
+  const dp = (DB.ge && DB.ge.config && DB.ge.config.distPct) || {};
+  const objPer = dp.per != null ? Number(dp.per) : 30;
+  const out = [];
+  if(k.foodCostPct != null) out.push({id:'foodcost', nombre:{es:'Costes de cocina', ca:'Costos de cuina', en:'Kitchen costs'}, puntos: clamp(100 - Math.max(0, k.foodCostPct - objFc) * 10), dato: `${k.foodCostPct} % / ${objFc} %`});
+  if(k.personalPct != null) out.push({id:'personal', nombre:{es:'Equipo', ca:'Equip', en:'Team'}, puntos: clamp(100 - Math.max(0, k.personalPct - objPer) * 10), dato: `${k.personalPct} % / ${objPer} %`});
+  if(k.mermasPct != null) out.push({id:'mermas', nombre:{es:'Control de mermas', ca:'Control de minves', en:'Waste control'}, puntos: clamp(100 - k.mermasPct * 20), dato: `${k.mermasPct} %`});
+  if(k.nps != null && k.npsN >= 3) out.push({id:'nps', nombre:{es:'Satisfacción de clientes', ca:'Satisfacció de clients', en:'Customer satisfaction'}, puntos: clamp(k.nps * 10), dato: `${k.nps} / 10`});
+  return out;
+}
+function plan360PuntuacionesHtml(k){
+  const ps = plan360Puntuaciones(k);
+  if(!ps.length) return '';
+  const L = o => gl(o);
+  const color = n => n >= 80 ? '#3F6B4A' : n >= 50 ? '#B07D1F' : '#A33F2E';
+  return `<h2 style="font:600 17px 'Schibsted Grotesk',sans-serif;margin:22px 0 6px">${escapeHtml(L({es:'Cómo está cada área', ca:'Com està cada àrea', en:'How each area is doing'}))}</h2>
+    ${ps.map(x => `<div style="display:grid;grid-template-columns:1fr 60px;gap:2px 10px;margin:8px 0;align-items:end"><div style="font-size:13px"><strong>${escapeHtml(L(x.nombre))}</strong> <span style="color:#716C65;font-size:12px">· ${escapeHtml(x.dato)}</span></div><div style="text-align:right;font:600 16px 'IBM Plex Mono',monospace;color:${color(x.puntos)}">${x.puntos}</div><div style="grid-column:1/3;height:6px;background:#E7E2D9"><div style="height:6px;width:${x.puntos}%;background:${color(x.puntos)}"></div></div></div>`).join('')}
+    <p style="color:#716C65;font-size:11.5px">${escapeHtml(L({es:'100 = cumples tu objetivo. Costes y equipo, frente a los objetivos que fijaste en Tesorería; mermas frente a lo comprado; satisfacción, nota media de tus clientes sobre 10.', ca:'100 = compleixes el teu objectiu. Costos i equip, davant dels objectius que vas fixar a Tresoreria; minves davant del comprat; satisfacció, nota mitjana dels teus clients sobre 10.', en:'100 = you meet your target. Costs and team, against the targets you set in Treasury; waste against purchases; satisfaction, your customers\' average score out of 10.'}))}</p>`;
+}
 function plan360DiagnosticoHtml(){
   const d = plan360DiagnosticoDatos();
   if(!d) return '';
@@ -6135,6 +6161,7 @@ function plan360DiagnosticoHtml(){
   return `<p style="color:#716C65;font-size:12px;margin:0 0 4px">${escapeHtml(L({es:'Datos de ', ca:'Dades de ', en:'Data from '}))}${escapeHtml(mesTxt)} · ${escapeHtml(L({es:'ventas netas ', ca:'vendes netes ', en:'net sales '}))}${escapeHtml(eur(d.netas))}</p>
     ${d.total > 0 ? `<div style="margin:14px 0 6px"><span style="font:600 30px 'IBM Plex Mono',monospace">${escapeHtml(eur(d.total))}</span><span style="color:#716C65;font-size:13px"> ${escapeHtml(L({es:'al año, sumando lo que se puede medir', ca:'a l\'any, sumant el que es pot mesurar', en:'per year, adding what can be measured'}))}</span></div>` : ''}
     <table style="width:100%;border-collapse:collapse">${filas}</table>
+    ${plan360PuntuacionesHtml(d.kpis)}
     ${plan360CartaHtml(d.carta)}
     <p style="color:#716C65;font-size:11.5px;margin-top:14px">${escapeHtml(L({es:'Es una estimación: diferencia respecto a TUS objetivos (Tesorería) × las ventas netas del mes × 12. No incluye efectos de estacionalidad. Mismas cifras que tu Cuenta de Resultados.', ca:'És una estimació: diferència respecte als TEUS objectius (Tresoreria) × les vendes netes del mes × 12. No inclou efectes d\'estacionalitat. Les mateixes xifres que el teu Compte de Resultats.', en:'This is an estimate: the difference against YOUR targets (Treasury) × the month\'s net sales × 12. It does not include seasonality. Same figures as your Profit & Loss.'}))}</p>`;
 }
