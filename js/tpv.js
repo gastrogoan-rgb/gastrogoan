@@ -533,7 +533,7 @@ function mesaWaiterChipHtml(camareroId, openedByOwner){
     if(!openedByOwner) return '';
     return `
       <span class="mesa-waiter-chip" title="${escapeHtml(t('label.waiter'))}: ${escapeHtml(t('label.owner'))}">
-        <span class="mesa-waiter-avatar" style="background:#1C1A17">${escapeHtml(t('label.owner').charAt(0).toUpperCase())}</span>
+        <span class="mesa-waiter-avatar is-propietario">${escapeHtml(t('label.owner').charAt(0).toUpperCase())}</span>
         ${escapeHtml(t('label.owner'))}
       </span>
     `;
@@ -1284,10 +1284,11 @@ function openNewOrderPaxModal(tableId){
     </div>
     <div class="field">
       <label>${t('label.clientType')}</label>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()" style="width:auto"> ${t('label.walkInClient')}</label>
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> ${t('label.hasReservation')}${pendingReservas.length?` (${pendingReservas.length} ${t('common.today')})`:''}</label>
+      <div class="ao-tipo" role="radiogroup" aria-label="${escapeHtml(t('label.clientType'))}">
+        <label class="ao-op"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()"><span>${t('label.walkInClient')}</span></label>
+        <label class="ao-op${!pendingReservas.length ? ' is-off' : ''}"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" ${!pendingReservas.length?'disabled':''}><span>${t('label.hasReservation')}${pendingReservas.length ? ` (${pendingReservas.length} ${t('common.today')})` : ''}</span></label>
       </div>
+      ${!pendingReservas.length ? `<small class="ao-nota">${escapeHtml(gl({es:'No quedan reservas por llegar hoy.', ca:'No queden reserves per arribar avui.', en:'No reservations left to arrive today.'}))}</small>` : ''}
     </div>
     <div class="field" id="new-order-reserva-field" style="display:none">
       <label>${t('label.selectReservation')}</label>
@@ -2576,7 +2577,7 @@ function renderMarkDishOutModal(){
     <div class="dishout-plato${agotado?' is-off':''}"><span>${escapeHtml(nombre)}</span>${interruptor(agotado, onclick)}</div>`;
 
   let titulo = t(area==='sala' ? 'title.markDishOutSala' : 'title.markDishOut');
-  let migas = '', atras = '', cuerpo = '', ayuda = `<p class="dishout-ayuda">${t('label.markDishOutHelp')}</p>`;
+  let migas = '', atras = '', cuerpo = '', ayuda = `<p class="dishout-ayuda">${tA('label.markDishOutHelp')}</p>`;
 
   const carta = nav.cartaId != null ? cartas.find(c => c.id === nav.cartaId) : null;
   const menu = nav.menuId != null ? menus.find(m => m.id === nav.menuId) : null;

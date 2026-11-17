@@ -708,8 +708,8 @@ function avisosRenderPanel(filas){
       <div class="av-txt">${f.html}</div>
       <div class="av-bt">
         ${(f.acciones || []).map(a => `<button type="button" class="btn btn-sm btn-fino${a[2] ? ' is-on' : ''}" onclick="${a[1]}">${a[0]}</button>`).join('')}
-        ${f.ir ? `<button type="button" class="btn btn-sm btn-fino" onclick="avisosIr(&quot;${f.ir.replace(/"/g, '&quot;')}&quot;)">${gl({es: 'Ver', ca: 'Veure', en: 'View'})}</button>` : ''}
-        ${f.ocultable ? `<button type="button" class="btn btn-sm btn-fino" onclick="avisosMarcarVisto('${f.id}', ${f.count})">${gl({es: 'Visto', ca: 'Vist', en: 'Seen'})}</button>` : ''}
+        ${f.ir ? `<button type="button" class="btn btn-sm btn-fino btn-toque" onclick="avisosIr(&quot;${f.ir.replace(/"/g, '&quot;')}&quot;)">${gl({es: 'Ver', ca: 'Veure', en: 'View'})}</button>` : ''}
+        ${f.ocultable ? `<button type="button" class="btn btn-sm btn-fino btn-toque" onclick="avisosMarcarVisto('${f.id}', ${f.count})">${gl({es: 'Visto', ca: 'Vist', en: 'Seen'})}</button>` : ''}
       </div>
     </div>`;
   cuerpo.innerHTML = filas.length

@@ -7370,3 +7370,51 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 @media (max-width:430px){
   .tp-or-chips .tp-ack-t{display:none}
 }
+
+/* PENDIENTES · AGENTE A · 16/11 (vídeo en un móvil real: cocina, distribución, limpieza, stock, mega lista, fichas y TPV) */
+/* Botón con caja y zona de toque de 44 px (Ver, Copiar enlace…): la regla de móvil de toda la app fija .btn a 36,5 px con !important. */
+.btn.btn-toque{min-height:44px !important;min-width:44px;justify-content:center}
+.btn.btn-fino.btn-toque::before{top:0;bottom:0;height:auto;margin-top:0}
+/* Foco y pulsado SIEMPRE en oliva, nunca en tinta/negro (el «+» de Stock y el selector de IVA salían con un aro negro). */
+:where(button,[role="button"],a,summary,[tabindex]):focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--olive)}
+.btn:focus:not(:focus-visible){outline:none}
+/* Iniciales del propietario en el chip de la mesa: oliva (antes un cuadrado negro) */
+.mesa-waiter-avatar.is-propietario{background:var(--olive);color:#fff}
+/* Ficha técnica en móvil: el número, el lápiz y el «⋯» le robaban el ancho al texto del paso (columna de ~170 px, palabras partidas).
+   Ahora el paso se lee a todo el ancho y los mandos van en su propia fila, a la derecha. */
+.fi-paso-leer,.fi-paso-txt{text-transform:none;letter-spacing:normal;hyphens:manual;word-break:normal;overflow-wrap:break-word}
+@media (max-width:760px){
+  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c" ". acc"}
+  .fi-paso > .fi-paso-n{grid-area:n}
+  .fi-paso > .fi-paso-c{grid-area:c}
+  .fi-paso > .fi-paso-acc{grid-area:acc;justify-self:end;margin-top:6px}
+}
+/* Mi puesto: el aviso de atrasadas se lee de un vistazo y «Verlas» es un botón de 44 px */
+.dp-aviso .dp-aviso-ver{flex:0 0 auto;min-height:44px}
+/* Limpieza: lo que cuelga de una tarea (producto, responsable) envuelve, nunca se recorta */
+.lp-tarea-sub > span{min-width:0;overflow-wrap:break-word}
+/* Stock en móvil: la tarjeta de un producto más compacta sin quitar nada */
+@media (max-width:760px){
+  .st-fila{padding-top:6px;padding-bottom:6px}
+  .st-nom{padding-top:0}
+  .st-sub{margin-top:2px}
+  .st-qty{padding:2px 0 0}
+}
+/* TPV · «Abrir mesa»: el tipo de cliente son dos opciones legibles (tinta, sin mono gris), con el aro bien visible */
+.ao-tipo{display:flex;flex-wrap:wrap;gap:8px}
+.field .ao-op,.ao-op{flex:1 1 140px;display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;margin:0;background:#fff;border:1px solid #716C65;border-radius:3px;font-family:inherit;font-size:15px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);cursor:pointer}
+.field .ao-op input,.ao-op input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--olive)}
+.ao-op:has(input:checked){border-color:var(--olive);background:#F0F5F1;box-shadow:inset 0 0 0 1px var(--olive)}
+.ao-op.is-off{background:#F1EFE9;border-color:var(--hair);color:#5E5A53;cursor:default}
+.ao-nota{display:block;margin-top:6px;font-size:13px;line-height:1.4;color:#5E5A53}
+/* TPV · «Cobrar 0,00 €» desactivado: texto legible (≥4,5:1) en vez de un gris al 45 % de opacidad, y el motivo a la vista */
+.tp-or-acciones .tp-or-cobrar:disabled{opacity:1;background:#E9E5DC !important;color:#4A463F !important;cursor:not-allowed}
+.tp-or-acciones .tp-or-cobrar:disabled::before{background:#E9E5DC !important;border-color:#B8B2A6 !important}
+.tp-or-acciones .tp-or-cobrar:disabled .ti,.tp-or-acciones .tp-or-cobrar:disabled b{color:#4A463F}
+.tp-or-acciones:has(.tp-or-why){flex-wrap:wrap}
+.tp-or-why{flex:1 1 100%;margin:0 0 6px;font-size:13px;line-height:1.4;color:#4A463F}
+.tp-or-why .ti{vertical-align:-2px;color:var(--olive)}
+/* TPV · lista de mesas vacía con filtros: mensaje y salida a un toque */
+.tp-vacio{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.tp-vacio > span{max-width:32ch;overflow-wrap:break-word}
