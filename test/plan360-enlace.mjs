@@ -21,7 +21,7 @@ const r = await page.evaluate(() => {
   const a = plan360TaskRow(5, {id:'t1', title:'Revisar el escandallo del arroz', description:'x', status:'pendiente', enlace:'escandallo'}, 0);
   const b = plan360TaskRow(5, {id:'t2', title:'Sin enlace', description:'x', status:'pendiente'}, 1);
   const c = plan360TaskRow(5, {id:'t3', title:'Enlace inventado', description:'x', status:'pendiente', enlace:'alert(1)'}, 2);
-  return {a, b, c, claves: Object.keys(PLAN360_ENLACES)};
+  return {a, b, c, claves: Object.keys(PLAN360_ENLACES), sinArea: Object.keys(PLAN360_ENLACES).filter(k => !PLAN360_AREA_DE_ENLACE[k])};
 });
 await caso('Una tarea con enlace pinta el botón «Ir a Escandallo» que navega a esa pantalla', async () => {
   assert.ok(/onclick="navigate\('escandallo'\)"/.test(r.a) && /Ir a Escandallo/.test(r.a));
@@ -32,6 +32,9 @@ await caso('Sin enlace no hay botón; un enlace que no está en la lista se igno
 await caso('Todas las pantallas del enlace existen como vista de la app', async () => {
   const faltan = await page.evaluate(ks => ks.filter(k => !document.getElementById('view-' + k)), r.claves);
   assert.deepEqual(faltan, []);
+});
+await caso('Cada tarea con enlace dice su área (Cocina/Sala/Gestión); sin enlace, ninguna', async () => {
+  assert.ok(/p360-tarea-area[^>]*>Cocina</.test(r.a)); assert.ok(!/p360-tarea-area/.test(r.b)); assert.deepEqual(r.sinArea, []);
 });
 await browser.close();
 console.log(mal ? '\n❌ ' + mal + ' caso(s) fallaron' : '\n✅ Plan 360 · tareas con enlace: ' + ok + ' casos en orden');

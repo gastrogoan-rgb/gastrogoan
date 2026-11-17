@@ -6215,6 +6215,13 @@ const PLAN360_ENLACES = {
 };
 /* ── Resumen de la semana para WhatsApp (17/11): texto plano (sin HTML) con lo hecho de la semana en curso (lunes a domingo, por
    la fecha de cada día del programa), cada objetivo con su última medición y, si hay Día 1, lo ganado al mes. */
+/* Área de una tarea según la pantalla a la que lleva (la elige el coach en «Se hace en»): sin enlace, sin área, nunca inventada. */
+const PLAN360_AREA_DE_ENLACE = {
+  escandallo:'cocina', fichas:'cocina', megalista:'cocina', proveedores:'cocina', stock:'cocina', pedidos:'cocina', carta:'cocina', limpieza:'cocina',
+  tpv:'sala', reservas:'sala', clientes:'sala', promocion:'sala', horarios:'gestion', economia:'gestion', minegocio:'gestion',
+};
+const PLAN360_AREAS = {cocina:{es:'Cocina', ca:'Cuina', en:'Kitchen'}, sala:{es:'Sala', ca:'Sala', en:'Front of house'}, gestion:{es:'Gestión', ca:'Gestió', en:'Management'}};
+function plan360AreaDeTarea(tk){ const k = tk && PLAN360_AREA_DE_ENLACE[tk.enlace]; return k ? {k, nombre: PLAN360_AREAS[k]} : null; }
 function plan360SemanaTexto(){
   const b = DB.business || {}, L = o => gl(o);
   const hoy = todayStr(), [yy, mm, dd] = hoy.split('-').map(Number);
@@ -7635,6 +7642,7 @@ function plan360TaskRow(day, tk, i){
   const estado = tk.status || 'pendiente';
   return `<div class="card p360-tarea">
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
+    ${plan360AreaDeTarea(tk) ? `<div class="p360-tarea-area txt-xs" style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--olive,#4A5D4E);margin-bottom:2px">${escapeHtml(gl(plan360AreaDeTarea(tk).nombre))}</div>` : ''}
     <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
