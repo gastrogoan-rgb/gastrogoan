@@ -7884,7 +7884,25 @@ function asegurarTokenMesa(tbl){
 }
 function mesaPorTokenQr(token){
   if(typeof token !== 'string' || token.length < 16 || token.length > 64) return null;
-  return (DB.tables || []).find(tb => tb && tb.qrToken === token) || null;
+  return (DB.tables || []).find(tb => tb && (tb.qrToken === token || (Array.isArray(tb.qrAlias) && tb.qrAlias.includes(token)))) || null;
+}
+/* Alias de QR (17/11, decisión del dueño): si al fusionar con la nube el token de una mesa cambia SIN que nadie lo haya rotado
+   (dos aparatos le dieron token a la vez y gana el de la nube), el QR que ya se imprimió con el token perdido sigue valiendo:
+   se guarda como alias (máx. 5). Rotar a propósito («Cambiar código») borra los alias: ahí sí se quiere invalidar el QR viejo. */
+function qrTokensDeMesas(lista){
+  const m = {};
+  (lista || []).forEach(tb => { if(tb && tb.id != null && typeof tb.qrToken === 'string') m[tb.id] = {tok: tb.qrToken, rot: tb.qrRotadoEn || 0}; });
+  return m;
+}
+function conservarAliasQr(antes, lista){
+  (lista || []).forEach(tb => {
+    const a = tb && antes[tb.id];
+    if(!a || typeof tb.qrToken !== 'string' || tb.qrToken === a.tok) return;
+    if((tb.qrRotadoEn || 0) !== a.rot) return;               // lo rotó alguien a propósito: el viejo NO vale
+    const alias = (Array.isArray(tb.qrAlias) ? tb.qrAlias : []).filter(x => x !== tb.qrToken && x !== a.tok);
+    alias.unshift(a.tok);
+    tb.qrAlias = alias.slice(0, 5);
+  });
 }
 function enlaceQrMesa(tbl){
   const link = getPublicClientLink();
@@ -7929,12 +7947,15 @@ function publicarMesasQr(espejoApp, publicId){
   if(cfg.activo){
     (DB.tables || []).forEach(tbl => {
       if(!tbl || typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) return;
-      vivos.add(tbl.qrToken);
       const data = cuentaPublicaMesa(tbl);
       const firma = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
-      if(mesaQrPublicado[tbl.qrToken] === firma) return;
-      mesaQrPublicado[tbl.qrToken] = firma;
-      nodo(tbl.qrToken).set(sinIndefinidos(data)).catch(e => { delete mesaQrPublicado[tbl.qrToken]; console.error('No se pudo publicar la cuenta de la mesa', e); });
+      [tbl.qrToken].concat(Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(tok => {
+        if(typeof tok !== 'string' || tok.length < 16) return;
+        vivos.add(tok);
+        if(mesaQrPublicado[tok] === firma) return;
+        mesaQrPublicado[tok] = firma;
+        nodo(tok).set(sinIndefinidos(data)).catch(e => { delete mesaQrPublicado[tok]; console.error('No se pudo publicar la cuenta de la mesa', e); });
+      });
     });
   }
   // Tokens que ya no valen (mesa rotada, borrada o QR desactivado).
@@ -9819,7 +9840,9 @@ function applyRemoteBlock(key, remoteValue){
     merged = mergeListaDeNombres(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
+    const tokensAntes = key === 'tables' ? qrTokensDeMesas(DB[key]) : null;
     merged = mergeArraysById(DB[key], merged);
+    if(tokensAntes) conservarAliasQr(tokensAntes, merged);
     if(PREFER_LOCAL_ARRAYS.has(key)){
       merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
@@ -10830,6 +10853,9 @@ async function rotarTokenMesa(tableId){
   if(!(await confirmModal(t('qrMesa.mn.rotarConfirm').replace('${mesa}', tbl.name || ''), {confirmLabel: t('qrMesa.mn.rotar')}))) return;
   const viejo = tbl.qrToken;
   tbl.qrToken = nuevoTokenMesaQr();
+  tbl.qrRotadoEn = Date.now();
+  (Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(retirarTokenMesaPublicado);
+  delete tbl.qrAlias;
   retirarTokenMesaPublicado(viejo);
   saveDB();
   if(typeof syncPublicMirror === 'function') syncPublicMirror();

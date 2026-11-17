@@ -574,6 +574,21 @@ await caso('Ningún error de JavaScript', async () => {
 });
 
 console.log('\n' + '═'.repeat(64));
+await caso('Un QR impreso con el token que se perdió al sincronizar sigue valiendo (alias); rotar a propósito lo invalida', async () => {
+  const r = await app.evaluate(() => {
+    const tb = {id: 9901, name: 'Mesa alias', qrToken: 'tokenLocalAAAAAAAAAA1'};
+    const antes = qrTokensDeMesas([tb]);
+    const remota = [{id: 9901, name: 'Mesa alias', qrToken: 'tokenNubeBBBBBBBBBBB2'}];
+    conservarAliasQr(antes, remota);
+    DB.tables.push(remota[0]);
+    const vale = !!mesaPorTokenQr('tokenLocalAAAAAAAAAA1') && !!mesaPorTokenQr('tokenNubeBBBBBBBBBBB2');
+    const rotada = [{id: 9901, qrToken: 'tokenNuevoCCCCCCCCCC3', qrRotadoEn: 123}];
+    conservarAliasQr(qrTokensDeMesas([remota[0]]), rotada);
+    DB.tables.pop();
+    return {vale, aliasTrasRotar: rotada[0].qrAlias || null};
+  });
+  assert.ok(r.vale, 'el token viejo debería seguir valiendo'); assert.equal(r.aliasTrasRotar, null);
+});
 const fallos = res.filter(x => !x).length;
 console.log(fallos ? `❌ ${fallos} de ${res.length} fallaron` : `✅ los ${res.length} casos pasaron`);
 await browser.close();
