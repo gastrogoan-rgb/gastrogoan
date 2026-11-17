@@ -6478,6 +6478,14 @@ function objRow(o, i){
         <option value="complementario" ${o.prioridad==='complementario'?'selected':''}>Complementario</option>
       </select>
     </div>
+    <div class="field">
+      <label>Se mide solo con (opcional)</label>
+      <select id="obj-auto-${i}">
+        <option value="">— lo mide a mano el negocio —</option>
+        ${Object.entries(PLAN360_METRICAS_AUTO_PANEL).map(([k, n]) => `<option value="${k}" ${o.metricaAuto===k?'selected':''}>${esc(n)}</option>`).join('')}
+      </select>
+      <div class="txt-xs" style="color:var(--muted)">La app apunta sola la cifra del último mes completo cada semana, a partir del Día 1.</div>
+    </div>
   </div>`;
 }
 function renderPresencialPage(d){
@@ -8770,6 +8778,8 @@ function addObjective(day){
   d.objectives.push({id: plan360GenId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
   document.getElementById('obj-list').innerHTML = d.objectives.map((o, i) => objRow(o, i)).join('');
 }
+// Misma lista que PLAN360_METRICAS_AUTO de la app (js/finance.js)
+const PLAN360_METRICAS_AUTO_PANEL = {foodCostPct:'Food cost', personalPct:'Coste de personal sobre ventas', mermasPct:'Mermas sobre lo comprado', ticketMedio:'Ticket medio', netas:'Ventas netas del mes', nps:'Nota media de clientes (sobre 10)'};
 function syncObjectivesFromForm(d){
   d.objectives.forEach((o, i) => {
     const tt = document.getElementById('obj-titulo-' + i);
@@ -8778,6 +8788,8 @@ function syncObjectivesFromForm(d){
     if(tt) o.titulo = tt.value.trim();
     if(ex) o.explicacion = ex.value.trim();
     if(pr) o.prioridad = pr.value;
+    const au = document.getElementById('obj-auto-' + i);
+    if(au){ if(au.value) o.metricaAuto = au.value; else delete o.metricaAuto; }
   });
 }
 function savePresencial(day){

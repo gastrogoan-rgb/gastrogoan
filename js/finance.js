@@ -947,6 +947,43 @@ function impuestoAnual(baseAnual, opts={}){
 const KPI_MESES_GUARDADOS = 15;
 function r2(n){ return Math.round((Number(n)||0)*100)/100; }
 function r1(n){ return Math.round((Number(n)||0)*10)/10; }
+// Objetivos que se miden SOLOS (17/11): el coach elige «se mide con…» y la app apunta cada semana la cifra del último mes
+// completo (la del Día 1 de salida), sin que nadie teclee nada. Lista idéntica en el panel del coach (plan360.html).
+const PLAN360_METRICAS_AUTO = {
+  foodCostPct: {es:'Food cost', ca:'Food cost', en:'Food cost', u:' %', mejorSiBaja:true},
+  personalPct: {es:'Coste de personal sobre ventas', ca:'Cost de personal sobre vendes', en:'Staff cost over sales', u:' %', mejorSiBaja:true},
+  mermasPct: {es:'Mermas sobre lo comprado', ca:'Minves sobre el comprat', en:'Waste over purchases', u:' %', mejorSiBaja:true},
+  ticketMedio: {es:'Ticket medio', ca:'Tiquet mitjà', en:'Average ticket', u:' €', mejorSiBaja:false},
+  netas: {es:'Ventas netas del mes', ca:'Vendes netes del mes', en:'Net sales for the month', u:' €', mejorSiBaja:false},
+  nps: {es:'Nota media de clientes (sobre 10)', ca:'Nota mitjana de clients (sobre 10)', en:'Customer average score (out of 10)', u:'', mejorSiBaja:false},
+};
+function plan360MedirObjetivosAuto(k){
+  const prog = DB.business.plan360Program; if(!Array.isArray(prog) || !k) return false;
+  const d2 = prog.find(x => x.day === 2); if(!d2 || !Array.isArray(d2.objectives)) return false;
+  const hoy = todayStr();
+  const hace7 = addDaysStr(hoy, -7);
+  const d = new Date(), ult = (k.meses || {})[`${new Date(d.getFullYear(), d.getMonth() - 1, 1).getFullYear()}-${String(new Date(d.getFullYear(), d.getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`];
+  let cambio = false;
+  d2.objectives.forEach(o => {
+    const def = o && PLAN360_METRICAS_AUTO[o.metricaAuto]; if(!def) return;
+    if(!Array.isArray(o.mediciones)) o.mediciones = [];
+    const fmt = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + def.u;
+    // Punto de partida: el Día 1 (si lo hay y aún no está apuntado)
+    if(!o.mediciones.some(m => m && m.auto) && k.dia1 && k.dia1[o.metricaAuto] != null){
+      o.mediciones.unshift({fecha: DB.business.plan360StartDate || hoy, valor: fmt(k.dia1[o.metricaAuto]), nota: gl({es:'Punto de partida (Día 1)', ca:'Punt de partida (Dia 1)', en:'Starting point (Day 1)'}), auto: true, num: k.dia1[o.metricaAuto]});
+      cambio = true;
+    }
+    const v = ult && ult[o.metricaAuto];
+    if(v == null) return;
+    const autos = o.mediciones.filter(m => m && m.auto);
+    const ultima = autos[autos.length - 1];
+    if(ultima && ultima.fecha > hace7) return;                    // como mucho una medición por semana
+    if(ultima && ultima.num === v) return;                        // sin cambio, nada que apuntar
+    o.mediciones.push({fecha: hoy, valor: fmt(v), nota: gl({es:'Medido por la app', ca:'Mesurat per l\'app', en:'Measured by the app'}), auto: true, num: v});
+    cambio = true;
+  });
+  return cambio;
+}
 const PLAN360_DIA1_MIN_DIAS = 10;   // días con venta que hacen falta en el mes anterior para fiarse del «antes»
 function plan360KpisMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
@@ -1052,6 +1089,7 @@ function plan360ActualizarKpis(forzar){
     if(comoNube(k) === comoNube(JSON.parse(prev) || {})) return;
     k.ts = new Date().toISOString();
     b.plan360Kpis = k;
+    plan360MedirObjetivosAuto(k);
     saveDB();
   }catch(e){ console.error('Indicadores para el coach', e); }
 }
