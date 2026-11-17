@@ -230,6 +230,7 @@ th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:up
 h1,h2{letter-spacing:-.02em}
 input:focus,select:focus,textarea:focus{outline:2px solid #4A5D4E;outline-offset:0}
 code,pre,kbd{font-family:var(--mono)}
+#client-startdate:empty{display:none!important}
 </style>
 </head>
 <body>
@@ -4343,6 +4344,10 @@ function renderClientGrid(){
         <i class="ti ti-receipt-euro"></i>
         <div><h3>Cobros del Plan 360º</h3><p>Firma y día 15, lo cobrado y lo pendiente, y exportar a CSV</p></div>
       </div>
+      <div class="p360-card" onclick="renderInformeSemanaPage()">
+        <i class="ti ti-report"></i>
+        <div><h3>Informe de la semana</h3><p>Lo hecho, los objetivos y lo ganado, con el área de cada tarea, listo para copiar</p></div>
+      </div>
       <div class="p360-card" onclick="renderActaPage()">
         <i class="ti ti-notes"></i>
         <div><h3>Acta en vivo</h3><p>Durante la reunión: cada decisión pasa a tarea u objetivo y se envía al negocio</p></div>
@@ -5758,11 +5763,11 @@ function plantillaRef(){ return getApp().database().ref('gastrogoan/coachConfig/
 function renderPlantillaPage(){
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Plantilla del programa', 'Las tareas de este plan, guardadas para aplicarlas a otros clientes')}
-    <div class="card" style="font-size:15px">
-      <p style="margin-top:0">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
+    <div class="card" style="font-size:15px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <p style="margin:0;flex-basis:100%">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
       <button class="btn btn-sm" onclick="plantillaGuardar()"><i class="ti ti-device-floppy"></i> Guardar este plan como plantilla</button>
       <button class="btn btn-sm btn-primary" onclick="plantillaPonerAEsteCliente()"><i class="ti ti-copy"></i> Aplicar mi plantilla a este cliente</button>
-      <p class="muted" id="plantilla-estado" style="margin:10px 0 0;font-size:13px"></p>
+      <p class="muted" id="plantilla-estado" style="margin:0;flex-basis:100%;font-size:13px"></p>
     </div>`;
 }
 async function plantillaGuardar(){
@@ -5802,13 +5807,57 @@ function cobros360CsvTexto(){
   Object.keys(cm).sort().forEach(k => { const b = Number(cm[k].importe) || 0; filas.push(['Mantenimiento', k, f(cm[k].ts), b.toFixed(2), (b * 0.21).toFixed(2), (b * 1.21).toFixed(2)]); });
   return '\ufeff' + filas.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
 }
+/* ---- Informe de la semana para el coach (17/11): el mismo texto que el negocio comparte por WhatsApp, pero con el área de
+   cada tarea y las que se quedaron sin hacer. Solo lee lo que ya está en la nube del negocio: no escribe nada. ---- */
+const INFORME_AREA_ENLACE = {escandallo:'Cocina', fichas:'Cocina', megalista:'Cocina', proveedores:'Cocina', stock:'Cocina', pedidos:'Cocina', carta:'Cocina', limpieza:'Cocina',
+  tpv:'Sala', reservas:'Sala', clientes:'Sala', promocion:'Sala', horarios:'Gestión', economia:'Gestión', minegocio:'Gestión'};
+function informeSemanaCoachTexto(){
+  const b = remoteBiz || {};
+  const hoy = todayStr(), [yy, mm, dd] = hoy.split('-').map(Number);
+  const dow = (new Date(yy, mm - 1, dd).getDay() + 6) % 7;
+  const lunes = addDaysStr(hoy, -dow), domingo = addDaysStr(lunes, 6);
+  const prog = Array.isArray(b.plan360Program) ? b.plan360Program : [];
+  const dSem = b.plan360StartDate ? prog.filter(d => d && d.phase === 'trabajo' && plan360DateForDay(d.day) >= lunes && plan360DateForDay(d.day) <= domingo) : [];
+  const tareas = dSem.reduce((a, d) => a.concat((d.tasks || []).filter(t => t && t.title)), []);
+  const por = e => tareas.filter(t => (t.status || 'pendiente') === e);
+  const lin = t => '• ' + t.title + (INFORME_AREA_ENLACE[t.enlace] ? ' (' + INFORME_AREA_ENLACE[t.enlace] + ')' : '') + (t.note ? ' — ' + t.note : '');
+  const d2 = prog.find(x => x && x.day === 2);
+  const objs = ((d2 && d2.objectives) || []).filter(o => o && o.titulo);
+  const ult = o => { const ms = (o.mediciones || []).filter(m => m && m.valor !== '' && m.valor != null); return ms.length ? String(ms[ms.length - 1].valor) : null; };
+  const f = s => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', {day:'numeric', month:'long'});
+  const L = [`Plan 360º · semana del ${f(lunes)} al ${f(domingo)}${b.name || b.businessName ? ' · ' + (b.name || b.businessName) : ''}`, ''];
+  if(!tareas.length) L.push('Sin tareas esta semana.');
+  else{
+    L.push(`Tareas: ${por('hecha').length} de ${tareas.length} hechas.`);
+    if(por('hecha').length){ L.push('', 'Hechas'); por('hecha').forEach(t => L.push(lin(t))); }
+    const pend = por('pendiente').concat(por('no_hecha'));
+    if(pend.length){ L.push('', 'Sin hacer'); pend.forEach(t => L.push(lin(t))); }
+  }
+  if(objs.length){ L.push('', 'Objetivos'); objs.slice(0, 8).forEach(o => { const u = ult(o); L.push('• ' + o.titulo + (u ? ': ' + u : ' (sin medir)')); }); }
+  return L.join('\n');
+}
+function renderInformeSemanaPage(){
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Informe de la semana', 'Lunes a domingo, con el área de cada tarea')}
+    <div class="card"><pre id="informe-semana-txt" style="white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;font:14px/1.5 'Schibsted Grotesk',sans-serif;margin:0 0 12px">${esc(informeSemanaCoachTexto())}</pre>
+      <button class="btn btn-sm btn-primary" onclick="informeSemanaCopiar()"><i class="ti ti-copy"></i> Copiar</button></div>`;
+}
+function informeSemanaCopiar(){
+  const t = (document.getElementById('informe-semana-txt') || {}).textContent || '';
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(() => alert('Informe copiado.'), () => {});
+}
 function renderCobros360Page(){
   const {c} = cobros360Datos();
   const cobrado = COBROS360.reduce((n, x) => n + (c[x.k] ? Number(c[x.k].importe) || 0 : 0), 0);
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Cobros del Plan 360º', '950 € + IVA: al firmar y el día 15 (475 € + IVA cada uno), o uno solo')}
     <div class="card" style="font-size:15px">
-      ${COBROS360.map(x => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><input type="checkbox" ${c[x.k] ? 'checked' : ''} onchange="cobros360Marcar('${x.k}',this.checked)" style="width:22px;height:22px"> <span style="flex:1">${esc(x.n)}</span> <input type="number" min="0" step="1" value="${c[x.k] ? Number(c[x.k].importe) || 0 : x.importe}" onchange="cobros360Importe('${x.k}',this.value)" style="width:90px"> € + IVA ${c[x.k] ? `<span class="muted" style="font-size:12px">cobrado el ${esc(new Date(c[x.k].ts).toLocaleDateString('es-ES'))}</span>` : ''}</label>`).join('')}
+      ${COBROS360.map(x => `<div style="display:grid;grid-template-columns:auto minmax(80px,1fr) auto;gap:6px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <input type="checkbox" ${c[x.k] ? 'checked' : ''} onchange="cobros360Marcar('${x.k}',this.checked)" style="width:24px;height:24px;margin:0" aria-label="${esc(x.n)} cobrado">
+        <span style="font-weight:600;font-size:15px">${esc(x.n)}</span>
+        <span style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input type="number" min="0" step="1" value="${c[x.k] ? Number(c[x.k].importe) || 0 : x.importe}" onchange="cobros360Importe('${x.k}',this.value)" style="width:84px" aria-label="Importe de ${esc(x.n)}"> <span style="font-size:13px">€ + IVA</span></span>
+        ${c[x.k] ? `<span class="muted" style="grid-column:2/4;font-size:12px">Cobrado el ${esc(new Date(c[x.k].ts).toLocaleDateString('es-ES'))}</span>` : ''}
+      </div>`).join('')}
       <p style="margin:12px 0 0"><b>Cobrado:</b> ${cobrado} € + IVA · <b>Pendiente:</b> ${Math.max(0, 950 - cobrado)} € + IVA</p>
       <div style="margin-top:12px"><button class="btn btn-sm" onclick="cobros360Exportar()"><i class="ti ti-download"></i> Exportar cobros a CSV</button></div>
     </div>`;
