@@ -7231,6 +7231,21 @@ async function ggLimpiarSondaRequest(ref){
   try{ await ref.child('_claimedAt').set(Date.now()); }catch(_){}
   try{ await ref.remove(); }catch(_){}
 }
+/* La sonda escribe en la nube del negocio, y la nube del negocio solo deja escribir a una sesión iniciada. Si la sonda corría ANTES
+   de que terminara el inicio de sesión anónimo (más lento con mala cobertura o con la máquina cargada), Firebase contestaba
+   «permiso denegado», la app lo leía como «reglas antiguas» y el negocio se quedaba en la nube compartida —y con el aviso rojo de
+   «actualiza tus reglas»— hasta el siguiente arranque, AUNQUE las tuviera bien pegadas (17/11; lo cazó el emulador). Ahora espera a
+   la sesión, y solo un «permiso denegado» CON sesión cuenta como reglas antiguas: un corte de red o un tiempo agotado no. */
+function ggEsperarSesionNegocio(app, ms){
+  return new Promise(resolve => {
+    let a; try{ a = app.auth(); }catch(e){ return resolve(false); }
+    if(a.currentUser) return resolve(true);
+    let hecho = false, off = () => {};
+    const t = setTimeout(() => { if(!hecho){ hecho = true; off(); resolve(false); } }, ms);
+    off = a.onAuthStateChanged(u => { if(u && !hecho){ hecho = true; clearTimeout(t); off(); resolve(true); } });
+  });
+}
+const ggEsPermisoDenegado = e => /permission[_ ]denied/i.test(String((e && (e.code || e.message)) || e));
 async function comprobarEspejoEnNubePropia(){
   const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
   const publicId = getPublicId();
@@ -7238,6 +7253,7 @@ async function comprobarEspejoEnNubePropia(){
   let app;
   try{ app = firebase.app(); }catch(e){ return false; }
   if(!app) return false;
+  if(!(await ggEsperarSesionNegocio(app, 20000))) return false;   // sin sesión aún: no se sabe nada, se vuelve a intentar
   try{
     // Se prueban los nodos que las reglas VIEJAS no contemplaban: si estos
     // pasan, el resto también.
@@ -7321,6 +7337,7 @@ async function comprobarEspejoEnNubePropia(){
       }
       reglasAntiguas = false; reglasFallo = null;
     }catch(e2){
+      if(!ggEsPermisoDenegado(e2)){ console.warn('No se pudo comprobar las reglas del negocio (no es un permiso denegado)', e2 && e2.message); return true; }
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
       reglasAntiguas = true; reglasFallo = {paso, msg: String((e2 && e2.message) || e2)};
       // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
@@ -7338,6 +7355,7 @@ async function comprobarEspejoEnNubePropia(){
        mudanza —de la que depende que esto aguante 5.000 negocios— no ocurría
        jamás para él. Ahora se anota para poder decírselo en el panel de nube. */
     console.warn('La nube del negocio todavía no acepta el espejo público completo; se sigue usando la compartida', e && e.message);
+    if(!ggEsPermisoDenegado(e)) return false;   // red, tiempo agotado…: no es un veredicto sobre las reglas
     espejoEnNubePropia = false;
     reglasAntiguas = true; reglasFallo = {paso: (typeof paso === 'string' ? paso : 'conexión'), msg: String((e && e.message) || e)};
     return false;
@@ -9783,6 +9801,7 @@ function applyRemoteBlock(key, remoteValue){
   // local — se necesita para saber, después, si el resultado fusionado
   // lleva algo que la nube todavía no tiene (ver mergedFromLocal más abajo).
   const remoteOnlyJson = canonicalStringify(merged);
+  if(subidaEnVuelo[key] && subidaEnVuelo[key] === remoteOnlyJson) return;   // el eco de lo que acabamos de subir: no es de otro aparato
   const remotaBase = merged;   // para reconocer, al final, que la fusión no cambió ni una fila de la nube (ver más abajo)
   if(LISTAS_DE_NOMBRES.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     merged = mergeListaDeNombres(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
@@ -12417,6 +12436,13 @@ function marcarNubeAlDia(opciones){
     updateSyncBadge('online');
   }
 }
+/* Lo que se acaba de MANDAR a la nube y aún no ha confirmado el servidor, por bloque. Firebase devuelve el «eco» local de una
+   escritura antes de confirmarla, es decir ANTES de que lastSyncedSnapshot se actualice: ese eco llegaba con una base vieja, se
+   tomaba por un cambio de OTRO aparato y, como la nube gana el objeto entero, pisaba lo que se hubiera tocado aquí entre medias.
+   Caso real (17/11, lo cazó el emulador): se crea una mesa, se sube; se abre su QR (la mesa recibe su token); llega el eco de la mesa
+   SIN token y se lo lleva por delante → el QR que se acaba de mostrar queda «no válido». Si lo que llega es exactamente lo que se
+   mandó, no es de nadie más: se ignora. */
+const subidaEnVuelo = {};
 function flushCloudSync(){
   cloudSyncTimer = null;
   if(!cloudRef || !lastSyncedSnapshot) return;
@@ -12449,12 +12475,17 @@ function flushCloudSync(){
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
   const seqAlSubir = cambiosLocalesSeq;
+  const bloquesEnVuelo = Object.keys(pendingJson);
+  bloquesEnVuelo.forEach(k => { subidaEnVuelo[k] = pendingJson[k]; });
+  const soltarEnVuelo = () => bloquesEnVuelo.forEach(k => { if(subidaEnVuelo[k] === pendingJson[k]) delete subidaEnVuelo[k]; });
   const onFail = (e) => {
+    soltarEnVuelo();
     recordSyncError(e);
     scheduleCloudSyncRetry();
   };
   try{
     cloudRef.update(sinIndefinidos(updates)).then(() => {
+      soltarEnVuelo();
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { if(key.startsWith('business/')) lastSyncedSnapshot.business = pendingJson.business; else lastSyncedSnapshot[key] = pendingJson[key]; });
       lastSyncOkAt = Date.now();

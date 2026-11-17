@@ -53,7 +53,7 @@ await caso('La app usa la nube del negocio como espejo', async () => {
   assert.equal(await app.evaluate(() => espejoEnNubePropia), true);
 });
 await caso('Activar el QR da token a cada mesa y los dos llegan a la nube', async () => {
-  await app.evaluate(() => { const c = document.createElement('input'); c.type = 'checkbox'; c.id = 'mn-qrmesa-activo'; c.checked = true; document.body.appendChild(c); saveQrMesaConfig(); });
+  await app.evaluate(() => { const c = document.createElement('input'); c.type = 'checkbox'; c.id = 'mn-qrmesa-activo'; c.checked = true; document.body.appendChild(c); /* desde el 12/11 hay que ELEGIR cómo se cobra (sin valor por defecto): sin esto el QR no se activa */ const l = document.createElement('input'); l.type = 'checkbox'; l.id = 'mn-qrmesa-local'; l.checked = true; document.body.appendChild(l); saveQrMesaConfig(); });
   await w(4000);
   const tk = await tokens(), n = await nube();
   assert.ok(tk.every(Boolean), 'todas las mesas tienen token: ' + JSON.stringify(tk));
