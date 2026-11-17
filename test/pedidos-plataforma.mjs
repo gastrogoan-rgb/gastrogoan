@@ -20,15 +20,17 @@ await new Promise(r => setTimeout(r, 2000));
 const r = await page.evaluate(() => {
   ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
   DB.tpvOrders = [];
+  DB.business.deliveryPlatforms = [{id:'pl1', nombre:'Glovo', comisionPct:30, ivaPct:21}];
   const req = {type:'pedido', plataforma:'glovo', ref:'G-1001', tipo:'domicilio', clienteNombre:'Marta', clienteTelefono:'600111222', clienteDireccion:'C/ Mayor 5', hora:'21:30', total:24.5, comision:5.1,
     items:[{nombre:'Hamburguesa', cantidad:2, precio:9.5, notas:'sin cebolla'}, {nombre:'Patatas', cantidad:1, precio:5.5}]};
   const a = recibirPedidoPlataforma(req);
   const b = recibirPedidoPlataforma(JSON.parse(JSON.stringify(req)));              // reintento de la plataforma: mismo pedido
   const o = DB.tpvOrders[0];
+  const priv = {tel:o.clienteTelefono, dir:o.clienteDireccion, nom:o.clienteNombre, platId:o.plataformaId, sinFicha:o.sinFichaCliente};
   const c = recibirPedidoPlataforma({type:'pedido', plataforma:'ubereats', ref:'U-7', tipo:'recoger', items:[{nombre:'Pizza', cantidad:1, precio:11}]});
   const sinLineas = recibirPedidoPlataforma({type:'pedido', plataforma:'glovo', ref:'X', items:[]});
   const raro = recibirPedidoPlataforma({type:'pedido', plataforma:'<img>GLOVO!!', ref:'R', items:[{nombre:'<b>x</b>', cantidad:-5, precio:'abc'}]});
-  return {a, b, c, sinLineas, raro, n: DB.tpvOrders.length, o: {tipo:o.tipo, status:o.status, plat:o.plataforma, ref:o.plataformaRef, items:o.items.map(l => [l.name, l.qty, l.price]), com:o.comisionPlataforma, tot:o.totalPlataforma, pagado:o.pagado, metodo:o.metodoPagoLocal, hora:o.time}, o2tipo: DB.tpvOrders[1].tipo, rarosPlat: DB.tpvOrders[2] && DB.tpvOrders[2].plataforma, rarosItem: DB.tpvOrders[2] && DB.tpvOrders[2].items[0], chip: plataformaChip(o), chipVacio: plataformaChip({})};
+  return {priv, a, b, c, sinLineas, raro, n: DB.tpvOrders.length, o: {tipo:o.tipo, status:o.status, plat:o.plataforma, ref:o.plataformaRef, items:o.items.map(l => [l.name, l.qty, l.price]), com:o.comisionPlataforma, tot:o.totalPlataforma, pagado:o.pagado, metodo:o.metodoPagoLocal, hora:o.time}, o2tipo: DB.tpvOrders[1].tipo, rarosPlat: DB.tpvOrders[2] && DB.tpvOrders[2].plataforma, rarosItem: DB.tpvOrders[2] && DB.tpvOrders[2].items[0], chip: plataformaChip(o), chipVacio: plataformaChip({})};
 });
 await caso('Un pedido de Glovo del buzón crea el pedido por ACEPTAR (nunca entra solo en cocina), con su canal y su referencia', async () => {
   assert.equal(r.a, true); assert.equal(r.o.status, 'pendiente-online'); assert.equal(r.o.plat, 'glovo'); assert.equal(r.o.ref, 'G-1001'); assert.equal(r.o.tipo, 'delivery'); assert.equal(r.o.hora, '21:30');
@@ -47,6 +49,10 @@ await caso('El puente normaliza: canal en minúsculas, coma decimal, tipo, sin c
   assert.equal(n.plataforma, 'glovo'); assert.equal(n.ref, 'A1'); assert.equal(n.tipo, 'recoger'); assert.equal(n.total, 12.5);
   assert.deepEqual(n.items, [{nombre:'Pan', cantidad:3, precio:1.5, notas:''}]); assert.ok(!('malo' in n)); assert.equal(n.clienteNombre.length, 80); assert.equal(n.type, 'pedido'); assert.ok(n.createdAt > 0);
 });
+await caso('Datos del cliente de la plataforma: se guarda el nombre, NO el teléfono ni la dirección, y nunca se crea ficha', async () => {
+  assert.equal(r.priv.tel, ''); assert.equal(r.priv.dir, ''); assert.equal(r.priv.nom, 'Marta'); assert.equal(r.priv.sinFicha, true);
+});
+await caso('El pedido se enlaza con la plataforma configurada en Mi Negocio (para que se aplique su comisión)', async () => assert.equal(r.priv.platId, 'pl1'));
 await browser.close();
 console.log(mal ? '\n❌ ' + mal + ' caso(s) fallaron' : '\n✅ Pedidos de plataformas: ' + ok + ' casos en orden');
 process.exit(mal ? 1 : 0);
