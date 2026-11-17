@@ -200,6 +200,8 @@ lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impres
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
 lanzar; node test/video-movil-paquete2.mjs > "$SALIDA/videom2.txt" 2>&1 & PVM2=$!
 lanzar; node test/pendientes-agente-a.mjs > "$SALIDA/pvma.txt" 2>&1 & PVMA=$!
+lanzar; node test/pendientes-movil-b.mjs > "$SALIDA/pvmb.txt" 2>&1 & PVMB=$!
+lanzar; node test/contraste-movil.mjs > "$SALIDA/contrastem.txt" 2>&1 & PCOM=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -457,4 +459,6 @@ espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería s
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
 espera $PVMA "Vídeo móvil, pendientes zona A (ficha, Mi puesto, Limpieza, Stock, Mega Lista, TPV, foco oliva, botones Ver/Copiar enlace con caja y 44 px): 5 anchos, nombres largos" "$SALIDA/pvma.txt" "Todo en orden"
+espera $PVMB "Vídeo móvil, pendientes zona B (Nube, Manual, Gestión, Panel, Novedades, Oferta, Mi Negocio, carga temprana)" "$SALIDA/pvmb.txt" "todo en orden"
+espera $PCOM "Contraste del texto a 360 px con datos llenos" "$SALIDA/contrastem.txt" "llega a 4,5:1"
 exit $FALLOS
