@@ -206,6 +206,7 @@ lanzar; node test/plan360-fusion.mjs > "$SALIDA/p360fusion.txt" 2>&1 & P360F=$!
 lanzar; node test/plan360-fecha.mjs > "$SALIDA/p360fecha.txt" 2>&1 & P360D=$!
 lanzar; node test/plan360-panel-fusion.mjs > "$SALIDA/p360pf.txt" 2>&1 & P360P=$!
 lanzar; node test/plan360-informe.mjs > "$SALIDA/p360inf.txt" 2>&1 & P360I=$!
+lanzar; node test/plan360-avisos.mjs > "$SALIDA/p360av.txt" 2>&1 & P360V=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -469,4 +470,5 @@ espera $P360F "Plan 360º · la fusión a tres bandas casa tareas/objetivos/inve
 espera $P360D "Plan 360º · la fecha de inicio la confirma el coach y el «antes» es un mes completo" "$SALIDA/p360fecha.txt" "en orden"
 espera $P360P "Plan 360º · el panel del coach funde el programa con la nube antes de subirlo" "$SALIDA/p360pf.txt" "en orden"
 espera $P360I "Plan 360º · informe de cierre primero, oferta de mantenimiento después" "$SALIDA/p360inf.txt" "en orden"
+espera $P360V "Plan 360º · avisos de tareas de hoy/atrasadas e informe de cierre en el Panel y la campana" "$SALIDA/p360av.txt" "en orden"
 exit $FALLOS

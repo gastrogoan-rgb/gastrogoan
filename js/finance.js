@@ -1171,6 +1171,26 @@ function dashTrendPintar(){
 }
 
 /* Lista de avisos de la app (la usan el Panel, en «Hoy — Atención», y la campana de la cabecera). */
+// Avisos del Plan 360º para el Panel y la campana: [] si no es el propietario, si no hay programa o si aún no hay fecha de
+// inicio confirmada (sin fecha no hay «hoy» ni atrasados).
+function plan360AvisosDeHoy(){
+  try{
+    if(typeof plan360EsOwner !== 'function' || !plan360EsOwner()) return [];
+    const b = DB.business || {};
+    if(!Array.isArray(b.plan360Program) || !b.plan360StartDate || typeof plan360DiaDeHoy !== 'function') return [];
+    const diaHoy = plan360DiaDeHoy();
+    if(diaHoy === null || diaHoy < 1) return [];
+    const out = [];
+    const prog = b.plan360Program.filter(d => d.phase === 'trabajo');
+    const deHoy = prog.filter(d => d.day === diaHoy).reduce((n, d) => n + plan360TareasReales(d).filter(x => x.status !== 'hecha').length, 0);
+    const atrasadas = plan360TareasAtrasadas(diaHoy).length;
+    if(deHoy + atrasadas > 0) out.push({count: deHoy + atrasadas, icon:'ti-target-arrow', label: gl({es: atrasadas ? `Tareas del Plan 360º (${atrasadas} atrasadas)` : 'Tareas del Plan 360º para hoy', ca: atrasadas ? `Tasques del Pla 360º (${atrasadas} endarrerides)` : 'Tasques del Pla 360º per a avui', en: atrasadas ? `360º Plan tasks (${atrasadas} overdue)` : '360º Plan tasks for today'}), onclick: `navigate('plan360')`, warn: atrasadas > 0});
+    const c = b.plan360Cierre || {};
+    const mant = c.mantenimiento || {};
+    if(diaHoy >= 28 && !c.informeVistoEn && !mant.respuesta) out.push({count: 1, icon:'ti-file-text', label: gl({es:'Tu informe de cierre del Plan 360º está listo', ca:'El teu informe de tancament del Pla 360º està a punt', en:'Your 360º Plan closing report is ready'}), onclick: `navigate('plan360')`});
+    return out;
+  }catch(e){ return []; }
+}
 function avisosDeLaApp(){
   const today = new Date();
   const todayDate = todayStr();
@@ -1243,6 +1263,8 @@ function avisosDeLaApp(){
     {count: bajadasDePrecio(14).length, icon:'ti-trending-down', label: gl({es:'Bajadas de precio', ca:'Baixades de preu', en:'Price drops'}), onclick: `abrirCambiosPrecio('bajan')`},
     // Solo si hay mantenimiento y entra el dueño: las tareas del coach son suyas.
     ...((plan360MantHayAlgo() && plan360EsOwner()) ? [{count: plan360MantPendientesSemana().length, icon:'ti-calendar-repeat', label: t('dash.att.coachTasks'), onclick: `plan360IrAMantenimiento()`, warn:true}] : []),
+    // Plan 360º (17/11): lo que toca hoy y lo atrasado, y el informe de cierre cuando está listo. Solo el propietario.
+    ...(plan360AvisosDeHoy()),
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
@@ -1263,7 +1285,8 @@ function avisosDeLaApp(){
     'ti-tool': {id:'mantenimiento', c:1}, 'ti-bug': {id:'plagas', c:1},
     'ti-cake': {id:'cumples', c:1, d:1, o:1}, 'ti-credit-card-off': {id:'pagosSinCasar', c:1, d:1}, 'ti-trending-up': {id:'subidas', c:1, d:1, o:1},
     'ti-trending-down': {id:'bajadas', c:1, d:1, o:1}, 'ti-calendar-repeat': {id:'coach', c:1, d:1}, 'ti-file-invoice': {id:'facturas', c:1, d:1},
-    'ti-cash-register': {id:'caja', c:1, d:1}
+    'ti-cash-register': {id:'caja', c:1, d:1},
+    'ti-target-arrow': {id:'plan360Tareas', c:1, d:1}, 'ti-file-text': {id:'plan360Cierre', c:1, d:1}
   };
   attentionItems.forEach(i => { const m = META[i.icon]; if(m){ i.id = m.id; i.campana = !!m.c; i.soloDueno = !!m.d; i.ocultable = !!m.o; } });
   return attentionItems;
