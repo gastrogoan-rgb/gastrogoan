@@ -9084,6 +9084,10 @@ function syncPublicMirror(){
         espejoUltimoEnvio = {huella, ts: ahoraMs};
         app.database().ref('gastrogoan/public/' + publicId + '/info').set(datosPublicos).catch(e => {
           espejoUltimoEnvio = {huella: '', ts: 0};   // que el próximo guardado lo reintente
+          // Sin sesión iniciada todavía (arranque, mala cobertura) la nube del negocio rechaza TODA escritura: eso no es un fallo
+          // de publicación ni merece un error rojo ni un aviso al hostelero; el próximo guardado lo reintenta con sesión (17/11).
+          let sinSesion = false; try{ sinSesion = !app.auth().currentUser; }catch(e2){}
+          if(sinSesion && ggEsPermisoDenegado(e)){ console.warn('Espejo público: aún sin sesión, se reintenta'); return; }
           console.error('Error publicando el espejo público', e);
           if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
         });
