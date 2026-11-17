@@ -5875,6 +5875,10 @@ function renderPlan360Grid(){
         <i class="ti ti-folder"></i>
         <div><h3>${escapeHtml(t('plan360.resources'))}</h3><p>${escapeHtml(t('plan360.resourcesDesc'))}</p></div>
       </div>
+      ${plan360DiagnosticoDatos() ? `<div class="p360-card" onclick="plan360AbrirDiagnostico()">
+        <i class="ti ti-coins"></i>
+        <div><h3>${escapeHtml(gl({es:'Dinero sobre la mesa', ca:'Diners sobre la taula', en:'Money on the table'}))}</h3><p>${escapeHtml(gl({es:'Lo que dicen tus propias cifras del último mes, traducido a euros al año.', ca:'El que diuen les teves pròpies xifres de l\'últim mes, traduït a euros a l\'any.', en:'What your own figures for the last month say, translated into euros per year.'}))}</p></div>
+      </div>` : ''}
       ${plan360HayPlanDeAccion() ? `<div class="p360-card" onclick="plan360ImprimirPlan()">
         <i class="ti ti-printer"></i>
         <div><h3>${escapeHtml(gl({es:'Mi plan de acción', ca:'El meu pla d\'acció', en:'My action plan'}))}</h3><p>${escapeHtml(gl({es:'Objetivos y tareas con casillas, para imprimir y colgar en la cocina.', ca:'Objectius i tasques amb caselles, per imprimir i penjar a la cuina.', en:'Goals and tasks with checkboxes, to print and pin up in the kitchen.'}))}</p></div>
@@ -6030,6 +6034,69 @@ function plan360CierreHtml(){
       </div>` : ''}
     </div>
   `;
+}
+/* ── «Dinero sobre la mesa» (17/11): el diagnóstico con los datos REALES del negocio. Cada hallazgo sale de las mismas
+   cifras que su Cuenta de Resultados (plan360KpisMes) y se compara con el objetivo que el propio negocio fijó en
+   Tesorería, no con un número del sector inventado. Euros al año = diferencia × ventas netas del mes × 12: una
+   estimación, y el documento lo dice. Devuelve null si el último mes completo no tiene ventas. */
+function plan360DiagnosticoDatos(){
+  try{
+    if(typeof plan360KpisMes !== 'function' || !DB.ge) return null;
+    const hoy = new Date();
+    const f = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    const k = plan360KpisMes(f.getFullYear(), f.getMonth());
+    if(!(k && k.netas > 0)) return null;
+    const mes = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`;
+    const objFc = geFoodCostObjPct();
+    const dp = (DB.ge.config && DB.ge.config.distPct) || {};
+    const objPer = dp.per != null ? Number(dp.per) : 30;
+    const r0 = x => Math.round(x);
+    const hallazgos = [];
+    if(k.foodCostPct != null && k.foodCostPct > objFc + 0.5){
+      hallazgos.push({id:'foodcost', euros: r0((k.foodCostPct - objFc) / 100 * k.netas * 12),
+        titulo: {es:`Tu food cost está ${(Math.round((k.foodCostPct - objFc) * 10) / 10).toString().replace('.', ',')} puntos por encima de tu objetivo`, ca:`El teu food cost està ${(Math.round((k.foodCostPct - objFc) * 10) / 10).toString().replace('.', ',')} punts per sobre del teu objectiu`, en:`Your food cost is ${Math.round((k.foodCostPct - objFc) * 10) / 10} points above your target`},
+        detalle: {es:`${k.foodCostPct} % frente a un objetivo del ${objFc} %.`, ca:`${k.foodCostPct} % davant d'un objectiu del ${objFc} %.`, en:`${k.foodCostPct}% against a ${objFc}% target.`}});
+    }
+    if(k.personalPct != null && k.personalPct > objPer + 0.5){
+      hallazgos.push({id:'personal', euros: r0((k.personalPct - objPer) / 100 * k.netas * 12),
+        titulo: {es:'El coste de personal pesa más de lo que te has marcado', ca:'El cost de personal pesa més del que t\'has marcat', en:'Staff cost weighs more than you set as a target'},
+        detalle: {es:`${k.personalPct} % de las ventas frente a un objetivo del ${objPer} %.`, ca:`${k.personalPct} % de les vendes davant d'un objectiu del ${objPer} %.`, en:`${k.personalPct}% of sales against a ${objPer}% target.`}});
+    }
+    if(k.mermas > 0){
+      hallazgos.push({id:'mermas', euros: r0(k.mermas * 12),
+        titulo: {es:'Lo que se tira o se pierde (mermas)', ca:'El que es llença o es perd (minves)', en:'What is thrown away or lost (waste)'},
+        detalle: {es:`${r0(k.mermas)} € el último mes${k.mermasPct != null ? ` (${k.mermasPct} % de lo comprado)` : ''}.`, ca:`${r0(k.mermas)} € l'últim mes${k.mermasPct != null ? ` (${k.mermasPct} % del comprat)` : ''}.`, en:`€${r0(k.mermas)} last month${k.mermasPct != null ? ` (${k.mermasPct}% of purchases)` : ''}.`}});
+    }
+    const al = k.alertas || {};
+    if(al.peorPlato && al.peorPlato.fc > objFc + 10){
+      hallazgos.push({id:'plato', euros: null,
+        titulo: {es:`«${al.peorPlato.plato}» es tu plato con peor food cost`, ca:`«${al.peorPlato.plato}» és el teu plat amb pitjor food cost`, en:`“${al.peorPlato.plato}” is your dish with the worst food cost`},
+        detalle: {es:`${al.peorPlato.fc} % (${al.peorPlato.unidades} unidades vendidas el último mes).`, ca:`${al.peorPlato.fc} % (${al.peorPlato.unidades} unitats venudes l'últim mes).`, en:`${al.peorPlato.fc}% (${al.peorPlato.unidades} units sold last month).`}});
+    }
+    if(al.subida){
+      hallazgos.push({id:'subida', euros: null,
+        titulo: {es:`${al.subida.producto || 'Un producto'} ha subido de precio`, ca:`${al.subida.producto || 'Un producte'} ha pujat de preu`, en:`${al.subida.producto || 'A product'} went up in price`},
+        detalle: {es:`+${al.subida.pct} %${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`, ca:`+${al.subida.pct} %${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`, en:`+${al.subida.pct}%${al.subida.proveedor ? ' (' + al.subida.proveedor + ')' : ''}.`}});
+    }
+    hallazgos.sort((a, b) => (b.euros || 0) - (a.euros || 0));
+    return {mes, netas: k.netas, hallazgos, total: hallazgos.reduce((n, h) => n + (h.euros || 0), 0)};
+  }catch(e){ return null; }
+}
+function plan360DiagnosticoHtml(){
+  const d = plan360DiagnosticoDatos();
+  if(!d) return '';
+  const L = o => gl(o);
+  const eur = v => Math.round(v).toLocaleString(localeActual()) + ' €';
+  const mesTxt = plan360FechaLegible(d.mes + '-01').replace(/^\d+ de /, '');
+  const filas = d.hallazgos.length ? d.hallazgos.map(h => `<tr><td style="padding:10px 10px 10px 0;border-bottom:1px solid #E7E2D9;vertical-align:top"><strong>${escapeHtml(L(h.titulo))}</strong><div style="color:#716C65;font-size:12px;margin-top:2px">${escapeHtml(L(h.detalle))}</div></td><td style="padding:10px 0;border-bottom:1px solid #E7E2D9;text-align:right;white-space:nowrap;font:600 15px 'IBM Plex Mono',monospace">${h.euros != null ? escapeHtml(eur(h.euros)) + '<span style="color:#716C65;font-size:11px"> ' + escapeHtml(L({es:'/año', ca:'/any', en:'/yr'})) + '</span>' : '<span style="color:#716C65;font-size:12px">—</span>'}</td></tr>`).join('')
+    : `<tr><td style="padding:10px 0">${escapeHtml(L({es:'Con las cifras del último mes no hay nada por encima de tus propios objetivos. Buen punto de partida.', ca:'Amb les xifres de l\'últim mes no hi ha res per sobre dels teus propis objectius. Bon punt de partida.', en:'With last month\'s figures nothing is above your own targets. A good starting point.'}))}</td></tr>`;
+  return `<p style="color:#716C65;font-size:12px;margin:0 0 4px">${escapeHtml(L({es:'Datos de ', ca:'Dades de ', en:'Data from '}))}${escapeHtml(mesTxt)} · ${escapeHtml(L({es:'ventas netas ', ca:'vendes netes ', en:'net sales '}))}${escapeHtml(eur(d.netas))}</p>
+    ${d.total > 0 ? `<div style="margin:14px 0 6px"><span style="font:600 30px 'IBM Plex Mono',monospace">${escapeHtml(eur(d.total))}</span><span style="color:#716C65;font-size:13px"> ${escapeHtml(L({es:'al año, sumando lo que se puede medir', ca:'a l\'any, sumant el que es pot mesurar', en:'per year, adding what can be measured'}))}</span></div>` : ''}
+    <table style="width:100%;border-collapse:collapse">${filas}</table>
+    <p style="color:#716C65;font-size:11.5px;margin-top:14px">${escapeHtml(L({es:'Es una estimación: diferencia respecto a TUS objetivos (Tesorería) × las ventas netas del mes × 12. No incluye efectos de estacionalidad. Mismas cifras que tu Cuenta de Resultados.', ca:'És una estimació: diferència respecte als TEUS objectius (Tresoreria) × les vendes netes del mes × 12. No inclou efectes d\'estacionalitat. Les mateixes xifres que el teu Compte de Resultats.', en:'This is an estimate: the difference against YOUR targets (Treasury) × the month\'s net sales × 12. It does not include seasonality. Same figures as your Profit & Loss.'}))}</p>`;
+}
+function plan360AbrirDiagnostico(){
+  printReportWindow(gl({es:'Dinero sobre la mesa · Plan 360º', ca:'Diners sobre la taula · Pla 360º', en:'Money on the table · 360º Plan'}), plan360DiagnosticoHtml());
 }
 /* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
    casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */

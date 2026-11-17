@@ -208,6 +208,7 @@ lanzar; node test/plan360-panel-fusion.mjs > "$SALIDA/p360pf.txt" 2>&1 & P360P=$
 lanzar; node test/plan360-informe.mjs > "$SALIDA/p360inf.txt" 2>&1 & P360I=$!
 lanzar; node test/plan360-avisos.mjs > "$SALIDA/p360av.txt" 2>&1 & P360V=$!
 lanzar; node test/plan360-plan-accion.mjs > "$SALIDA/p360pa.txt" 2>&1 & P360A=$!
+lanzar; node test/plan360-diagnostico.mjs > "$SALIDA/p360dg.txt" 2>&1 & P360G=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -473,4 +474,5 @@ espera $P360P "Plan 360º · el panel del coach funde el programa con la nube an
 espera $P360I "Plan 360º · informe de cierre primero, oferta de mantenimiento después" "$SALIDA/p360inf.txt" "en orden"
 espera $P360V "Plan 360º · avisos de tareas de hoy/atrasadas e informe de cierre en el Panel y la campana" "$SALIDA/p360av.txt" "en orden"
 espera $P360A "Plan 360º · «Mi plan de acción» imprimible: objetivos por prioridad, tareas con casilla" "$SALIDA/p360pa.txt" "en orden"
+espera $P360G "Plan 360º · «Dinero sobre la mesa»: diagnóstico en euros al año con las cifras reales" "$SALIDA/p360dg.txt" "en orden"
 exit $FALLOS
