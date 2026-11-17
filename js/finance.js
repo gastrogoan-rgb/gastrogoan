@@ -947,6 +947,7 @@ function impuestoAnual(baseAnual, opts={}){
 const KPI_MESES_GUARDADOS = 15;
 function r2(n){ return Math.round((Number(n)||0)*100)/100; }
 function r1(n){ return Math.round((Number(n)||0)*10)/10; }
+const PLAN360_DIA1_MIN_DIAS = 10;   // días con venta que hacen falta en el mes anterior para fiarse del «antes»
 function plan360KpisMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
   const ventas = activeSales().filter(v => (v.date||'').startsWith(mesStr));
@@ -1029,14 +1030,20 @@ function plan360ActualizarKpis(forzar){
       if(atras <= 1 || (!k.meses[c] && activeSales().some(v => (v.date||'').startsWith(c)))) k.meses[c] = plan360KpisMes(d.getFullYear(), d.getMonth());
     }
     Object.keys(k.meses).sort().slice(0, -KPI_MESES_GUARDADOS).forEach(c => delete k.meses[c]);
-    // Foto del Día 1: el mes completo anterior al inicio del plan (si no hay
-    // datos de ese mes, el propio mes del inicio). Una vez y para siempre.
-    if(!k.dia1 && b.plan360StartDate){
+    // Foto del Día 1: el mes COMPLETO anterior al inicio confirmado del plan, y solo si de verdad hay datos de ese mes
+    // (mínimo de días con venta). Antes, sin datos, se tomaba el propio mes del inicio: un mes a medias contra el que
+    // luego se medía el resultado. Sin mes completo no hay «antes»: «sin datos del Día 1», nunca un número inventado.
+    // Se recalcula si el coach cambia la fecha de inicio (dia1.desde).
+    if(b.plan360StartDate && (!k.dia1 || k.dia1.desde !== b.plan360StartDate)){
+      delete k.dia1;
       const [sy, sm] = b.plan360StartDate.split('-').map(Number);
       const base = new Date(sy, sm-2, 1);
-      let kp = plan360KpisMes(base.getFullYear(), base.getMonth()), clave = `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}`;
-      if(!(kp.netas > 0)){ kp = plan360KpisMes(sy, sm-1); clave = `${sy}-${String(sm).padStart(2,'0')}`; }
-      if(kp.netas > 0) k.dia1 = Object.assign({mes: clave}, kp);
+      const clave = `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}`;
+      const diasConVenta = new Set(activeSales().filter(v => (v.date||'').startsWith(clave)).map(v => v.date)).size;
+      if(diasConVenta >= PLAN360_DIA1_MIN_DIAS){
+        const kp = plan360KpisMes(base.getFullYear(), base.getMonth());
+        if(kp.netas > 0) k.dia1 = Object.assign({mes: clave, desde: b.plan360StartDate, dias: diasConVenta}, kp);
+      }
     }
     // Lo que el negocio NO ve como "cambio": la hora del cálculo va aparte.
     // Se compara como lo guarda Firebase (sin null, claves ordenadas): si no,

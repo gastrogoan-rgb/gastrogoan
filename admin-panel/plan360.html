@@ -4158,7 +4158,7 @@ function ensureRemotePlan360(){
   }
   // Se guarda al momento: sin guardar, cada día que se abría el negocio la
   // fecha de inicio era «hoy» otra vez y el calendario entero se desplazaba.
-  if(!remoteBiz.plan360StartDate){ remoteBiz.plan360StartDate = todayStr(); migracionIdsPendiente = true; }
+  // La fecha NO se fija sola (17/11): la pone el coach con «Guardar» y queda confirmada. Sin ella, el negocio ve «tu coach está fijando la primera visita».
   if(!remoteBiz.plan360Cierre) remoteBiz.plan360Cierre = plan360FreshCierre();
   if(!remoteBiz.plan360Contract){
     remoteBiz.plan360Contract = {
@@ -4212,6 +4212,7 @@ function renderStartDateControl(){
     <label style="margin:0">Fecha de inicio del programa</label>
     <input type="date" id="p360-startdate" value="${esc(remoteBiz.plan360StartDate || todayStr())}" style="width:auto;flex:none;min-width:160px">
     <button class="btn btn-sm btn-primary" onclick="saveStartDate()">Guardar</button>
+    ${remoteBiz.plan360StartDateConfirmed ? '' : '<span class="txt-xs" style="color:var(--red);font-weight:600">Sin confirmar: el negocio ve «tu coach está fijando la primera visita» hasta que guardes.</span>'}
   `;
 }
 function saveStartDate(){

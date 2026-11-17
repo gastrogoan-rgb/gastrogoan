@@ -5801,6 +5801,16 @@ function renderPlan360Grid(){
   // (que sigue a un clic, como histórico). Solo la primera vez por sesión.
   if(!plan360MantAutoAbierto && (DB.business.plan360Servicio || {}).fase === 'mant'){ plan360MantAutoAbierto = true; renderPlan360Mant(); return; }
   plan360MantAutoAbierto = true;
+  // Sin fecha de inicio (la confirma el coach, no se fija sola): no hay calendario que enseñar. Pintar los 28 días con
+  // fechas de «hoy» en adelante era enseñar un programa que todavía no ha empezado, con atrasados incluidos.
+  if(!DB.business.plan360StartDate){
+    document.getElementById('plan360-content').innerHTML = `
+      <div class="card" style="max-width:640px">
+        <h3><i class="ti ti-calendar-event"></i> ${escapeHtml(gl({es:'Tu coach está fijando la primera visita', ca:'El teu coach està fixant la primera visita', en:'Your coach is setting the first visit'}))}</h3>
+        <p class="txt-muted" style="margin:6px 0 0">${escapeHtml(gl({es:'En cuanto confirme la fecha, aquí aparecerá tu calendario de 4 semanas con lo que toca cada día. Mientras tanto no tienes que hacer nada.', ca:'Quan confirmi la data, aquí apareixerà el teu calendari de 4 setmanes amb el que toca cada dia. Mentrestant no has de fer res.', en:'As soon as the date is confirmed, your 4-week calendar with what is due each day will appear here. Until then there is nothing for you to do.'}))}</p>
+      </div>`;
+    return;
+  }
   const prog = DB.business.plan360Program || [];
   const trabajo = prog.filter(d => d.phase === 'trabajo');
   const hechos = trabajo.reduce((n, d) => n + plan360TareasReales(d).filter(x => x.status === 'hecha').length, 0);

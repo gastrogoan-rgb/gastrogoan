@@ -4825,9 +4825,9 @@ function ensurePlan360Program(){
   // La agenda es de fechas REALES, no de un contador "Día 1, Día 2...": el
   // día 1 empieza el día que de verdad arranca el programa con ese cliente.
   // Se fija una sola vez, la primera vez que se crea el programa.
-  if(!DB.business.plan360StartDate){
-    DB.business.plan360StartDate = todayStr();
-  }
+  // (17/11) La fecha de inicio YA NO se fija sola al abrir el programa: la confirma el coach desde su panel
+  // (plan360StartDateConfirmed). Fijada a «hoy», un negocio que entraba antes de la primera visita veía días
+  // atrasados y un «Día 1» y un «antes» de un mes que aún no había empezado. Sin fecha: «tu coach está fijando…».
   if(!DB.business.plan360Contract){
     DB.business.plan360Contract = {
       clienteNombre: '', clienteNIF: '', clienteDireccion: '', precio: '950 € + IVA', formaPago: 'Un pago al firmar, o dos de 475 € + IVA (al firmar y el día 15)',
