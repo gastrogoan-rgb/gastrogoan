@@ -8468,6 +8468,9 @@ function initPublicRequestsListener(){
             propinasPendientes: (req.pagarAhora && typeof req.propina === 'number' && req.propina > 0) ? [{ref: req.clientRef, importe: req.propina}] : []
           });
         }
+      }else if(req.type === 'pedido' && req.plataforma){
+        // Pedido de una plataforma (Glovo, Uber Eats…) llegado por el buzón: ver recibirPedidoPlataforma.
+        if(recibirPedidoPlataforma(req)) notifyNewRequest = true;
       }else if(req.type === 'pedido'){
         // Los extras elegidos en la web (req.items[].modificadores, {nombre,
         // precio} igual que ya guarda confirmAddOrderItem en el TPV) se
@@ -8579,6 +8582,45 @@ function initPublicRequestsListener(){
   }).catch(e => console.error('Error escuchando pedidos públicos', e));
 }
 
+/* ── Pedidos de plataformas externas (Glovo, Uber Eats, Just Eat, Deliveroo…) — 17/11 ──────────────────────────────────
+   Entran por el MISMO buzón que los de la web (`requests`, type 'pedido') con `plataforma`, mandados por el puente
+   (worker/pedidos-externos-worker.js) o por un agregador. Aquí se leen los datos tal cual los da la plataforma (la carta
+   del negocio no sirve para revisar sus precios) y el pedido queda SIEMPRE por aceptar: nunca entra solo en cocina, porque
+   aceptarlo en la plataforma es cosa de quien tiene su tablet. Una plataforma reintenta el aviso hasta 3 veces: se
+   deduplica por (plataforma, referencia). Devuelve true si creó un pedido nuevo. */
+const PLATAFORMAS_PEDIDO = {glovo:'Glovo', ubereats:'Uber Eats', justeat:'Just Eat', deliveroo:'Deliveroo', pedidosya:'PedidosYa', otro:'Plataforma'};
+function recibirPedidoPlataforma(req){
+  const canal = String(req.plataforma || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'otro';
+  const ref = String(req.ref || req.clientRef || '').slice(0, 60);
+  if(ref && DB.tpvOrders.some(o => o.plataforma === canal && o.plataformaRef === ref)) return false;
+  const num = (v, max) => { const n = Number(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : 0; };
+  const items = (Array.isArray(req.items) ? req.items : []).slice(0, 60).map(l => ({
+    platoId: null, recipeId: null,
+    name: String((l && (l.nombre || l.name)) || '').slice(0, 120) || '?',
+    price: num(l && (l.precio != null ? l.precio : l.price), 5000),
+    qty: Math.max(1, Math.round(num(l && (l.cantidad != null ? l.cantidad : l.qty), 99)) || 1),
+    tanda: '', notas: String((l && l.notas) || '').slice(0, 200), modificadores: []
+  })).filter(l => l.name);
+  if(!items.length) return false;
+  const recoger = /recoger|takeaway|pickup/i.test(String(req.tipo || req.entrega || ''));
+  DB.tpvOrders.push({
+    id: genId(), tableId: null, tipo: recoger ? 'takeaway' : 'delivery',
+    clienteNombre: String(req.clienteNombre || req.cliente || '').slice(0, 80),
+    clienteTelefono: String(req.clienteTelefono || req.telefono || '').slice(0, 30), clienteEmail: '',
+    clienteDireccion: String(req.clienteDireccion || req.direccion || '').slice(0, 160), clienteCodigoPostal: String(req.codigoPostal || '').slice(0, 10),
+    notas: String(req.notas || '').slice(0, 300), date: '', time: String(req.hora || '').slice(0, 5),
+    costeEnvio: 0, propina: 0, status: 'pendiente-online', items, tandas: [], createdAt: new Date().toISOString(),
+    origenOnline: true, clientRef: null, clientId: null,
+    plataforma: canal, plataformaRef: ref || undefined,
+    // Lo cobra la plataforma: el restaurante recibe el importe menos su comisión.
+    pagado: true, metodoPagoLocal: 'plataforma',
+    comisionPlataforma: req.comision != null ? num(req.comision, 5000) : undefined,
+    totalPlataforma: req.total != null ? num(req.total, 50000) : undefined,
+    pendienteVerificarZona: false, phoneOdd: false
+  });
+  logAudit('edit', 'Pedido de ' + (PLATAFORMAS_PEDIDO[canal] || canal) + (ref ? ' #' + ref : ''));
+  return true;
+}
 function buildSucursalesList(){
   const slots = getBusinessSlots();
   const thisSlot = slots.find(s => s.id === ACTIVE_SLOT);

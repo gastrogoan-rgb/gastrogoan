@@ -761,7 +761,7 @@ function tpvPedidoFichaHtml(o){
   return `
   <button type="button" class="tp-ped ${esDel ? 'es-delivery' : 'es-recoger'}${urgente ? ' es-urgente' : ''}" onclick="openTableOrder(null, ${o.id})" aria-label="${escapeHtml(nom + ', ' + fmtMoney(orderTotal(o)))}">
     <span class="tp-ped-top">
-      <span class="tp-ped-tipo"><i class="ti ${esDel ? 'ti-moped' : 'ti-walk'}"></i> ${escapeHtml(esDel ? t('label.deliveryShort') : t('label.pickupOrder'))}</span>
+      <span class="tp-ped-tipo">${plataformaChip(o)}<i class="ti ${esDel ? 'ti-moped' : 'ti-walk'}"></i> ${escapeHtml(esDel ? t('label.deliveryShort') : t('label.pickupOrder'))}</span>
       ${o.time ? `<span class="tp-ped-hora${urgente ? ' is-urgente' : ''}"><i class="ti ${urgente ? 'ti-alarm' : 'ti-clock'}"></i> ${escapeHtml(o.time)}</span>` : (mins !== null ? `<span class="tp-ped-hora">${fmtDurCorta(mins)}</span>` : '')}
     </span>
     <b class="tp-ped-nom">${escapeHtml(nom)}</b>
@@ -788,7 +788,7 @@ function renderTpvScheduledLaterCard(o){
   const esDel = o.tipo === 'delivery';
   return `
     <button type="button" class="tp-ped ${esDel ? 'es-delivery' : 'es-recoger'}" onclick="openTableOrder(null, ${o.id})">
-      <span class="tp-ped-top"><span class="tp-ped-tipo"><i class="ti ${esDel ? 'ti-moped' : 'ti-walk'}"></i> ${escapeHtml(esDel ? t('label.deliveryShort') : t('label.pickupOrder'))}</span><span class="tp-ped-hora"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span></span>
+      <span class="tp-ped-top"><span class="tp-ped-tipo">${plataformaChip(o)}<i class="ti ${esDel ? 'ti-moped' : 'ti-walk'}"></i> ${escapeHtml(esDel ? t('label.deliveryShort') : t('label.pickupOrder'))}</span><span class="tp-ped-hora"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span></span>
       <b class="tp-ped-nom">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</b>
       <span class="tp-ped-lineas">${(o.items || []).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}</span>
       <span class="tp-ped-total">${fmtMoney(orderTotal(o))}</span>
@@ -810,7 +810,7 @@ function renderTpvPendingOnline(){
         const esperaMin = o.createdAt ? minutesSince(o.createdAt) : 0;
         return `
         <article class="tp-ped is-nuevo ${esDel ? 'es-delivery' : 'es-recoger'}">
-          <span class="tp-ped-top"><span class="tp-ped-tipo"><i class="ti ${esDel ? 'ti-moped' : 'ti-shopping-bag'}"></i> ${escapeHtml(esDel ? t('label.deliveryShort') : t('label.pickupOrder'))}</span><span class="pm-et is-dto">${escapeHtml(t('badge.newF'))}</span></span>
+          <span class="tp-ped-top"><span class="tp-ped-tipo">${plataformaChip(o)}<i class="ti ${esDel ? 'ti-moped' : 'ti-shopping-bag'}"></i> ${escapeHtml(esDel ? t('label.deliveryShort') : t('label.pickupOrder'))}</span><span class="pm-et is-dto">${escapeHtml(t('badge.newF'))}</span></span>
           <b class="tp-ped-nom">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</b>
           ${o.clientRef ? `<span class="tp-ped-ref">Nº ${escapeHtml(codigoCortoPublico(o.clientRef))}</span>` : ''}
           ${esperaMin >= 30 ? `<span class="tp-ped-alerta"><i class="ti ti-clock-exclamation"></i> ${escapeHtml(t('label.waitingSince').replace('${min}', fmtDurMin(esperaMin)))}</span>` : ''}
@@ -886,4 +886,10 @@ function tpvNotasRapidasMarcar(){
     const on = partes.includes(b.getAttribute('data-nota').toLowerCase());
     b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+}
+
+// Etiqueta de la plataforma de origen (Glovo, Uber Eats…) en las fichas de para llevar y delivery; vacía para los pedidos propios.
+function plataformaChip(o){
+  if(!o || !o.plataforma) return '';
+  return `<span class="badge" style="margin-right:6px;font-weight:700">${escapeHtml(((typeof PLATAFORMAS_PEDIDO !== 'undefined' && PLATAFORMAS_PEDIDO[o.plataforma]) || o.plataforma).toUpperCase())}</span>`;
 }

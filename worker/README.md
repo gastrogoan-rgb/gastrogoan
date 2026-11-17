@@ -72,3 +72,13 @@ dueño (la plataforma no tiene nada que solo sepa el dueño). Por eso Mi Negocio
 enseña **a nombre de quién** está la cuenta de Stripe conectada; y una cuenta
 que ya cobra no se puede cambiar desde la app. Si alguna vez pasa, se arregla
 borrando `gastrogoan/private/{publicId}/stripe` en Firebase.
+
+
+## Puente de pedidos externos (`pedidos-externos-worker.js`, 17/11)
+
+Recibe un pedido de Glovo / Uber Eats / Just Eat / un agregador (ya normalizado, `POST /pedido`) y lo deja en el buzón de la
+nube del restaurante. La app lo muestra en el TPV con la etiqueta de la plataforma, **siempre por aceptar**. Formato del JSON y
+las cuatro fuentes posibles, en la cabecera del propio fichero. Se publica pegándolo a mano en Cloudflare (otro Worker, p. ej.
+`pedidos.gastrogoan.com`) con las variables `FIREBASE_DB_URL`, `FIREBASE_DB_SECRET` y, opcional, `PUENTE_CLAVE`.
+Pruebas: `test/pedidos-plataforma.mjs` (la parte de la app y la normalización del puente).
+⚠️ Pendiente de comprobar con una plataforma real: el formato de cada una y su plazo para aceptar el pedido.
