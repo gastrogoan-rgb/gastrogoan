@@ -295,3 +295,20 @@ Abre la app y en «Hoy» ve **qué toca, por qué, cuánto cuesta, quién lo hac
 
 ### Pendiente del plan (nada de esto está hecho)
 Fase 0.4 (la app sube `plan360*` por rutas; probar con el emulador de dos aparatos), modo cara a cara y acta en vivo, cuestionario por áreas, radar 360 y diagnóstico con datos reales, objetivos enganchados a un dato de la app, tareas al equipo, plantilla de programa, cobros del 360, mantenimiento en la app, peso/privacidad (DNI/IBAN fuera del código), manual del Plan 360 al día, y el resto de «Multiplicar el valor».
+
+
+---
+
+## Plan de ejecución autónomo (17/11, orden del dueño: «haz un plan, síguelo y no pares hasta acabar, decidiendo lo mejor para la app»)
+
+Criterio de orden: lo que más vende en la mesa y lo que más protege los datos, cada paso con su prueba, commit y push, y publicación por tandas tras batería completa. Marca `[x]` al terminar.
+
+- [x] P0 Fase 0 (0.1, 0.2, 0.3, 0.5, 0.6, 0.7), informe de cierre, avisos, plan de acción, «Dinero sobre la mesa» (publicado, sello 17/11 08:59).
+- [ ] P1 **Ingeniería de carta** (popularidad × margen: estrellas, caballos, puzles, perros) con las ventas y los escandallos del negocio, dentro del diagnóstico.
+- [ ] P2 **Radar 360** (0-100 por área, con lo medible de la app) y su comparación día 1 / hoy en el informe de cierre.
+- [ ] P3 **Objetivos enganchados a un dato de la app** (food cost, ticket medio, personal, NPS, mermas): se miden solos. Marcador «desde que empezamos».
+- [ ] P4 **Tarea con área y «dónde se hace»** (enlace a la pantalla de la app) y **tareas al equipo** (salen en «Mi puesto» como «Puesta por el coach»).
+- [ ] P5 **Modo cara a cara y acta en vivo** (panel del coach): decisiones → tareas/objetivos con un toque, «Enviar acta».
+- [ ] P6 **Fase 0.4**: la app sube `plan360*` por rutas (probar con el emulador de dos aparatos).
+- [ ] P7 **Fase 5**: DNI del coach y datos personales fuera del código (configuración privada), reglas de `coaching360` y `tenantLookup`.
+- [ ] P8 Manual y ayuda de todo lo nuevo, en es/ca/en; cierre del documento con qué ver y dónde.
