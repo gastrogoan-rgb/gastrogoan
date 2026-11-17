@@ -307,7 +307,7 @@ Criterio de orden: lo que más vende en la mesa y lo que más protege los datos,
 - [x] P1 **Ingeniería de carta** (popularidad × margen: estrellas, caballos, puzles, perros) con las ventas y los escandallos del negocio, dentro del diagnóstico.
 - [x] P2 (versión honesta: puntuación 0-100 por área MEDIBLE, sin radar con rangos inventados) **Radar 360** (0-100 por área, con lo medible de la app) y su comparación día 1 / hoy en el informe de cierre.
 - [x] P3 **Objetivos enganchados a un dato de la app** (food cost, ticket medio, personal, NPS, mermas): se miden solos. Marcador «desde que empezamos».
-- [ ] P4 **Tarea con área y «dónde se hace»** (enlace a la pantalla de la app) y **tareas al equipo** (salen en «Mi puesto» como «Puesta por el coach»).
+- [~] P4 (hecho: «dónde se hace» con botón «Ir a…»; pendiente: área y tareas al equipo en «Mi puesto») **Tarea con área y «dónde se hace»** (enlace a la pantalla de la app) y **tareas al equipo** (salen en «Mi puesto» como «Puesta por el coach»).
 - [ ] P5 **Modo cara a cara y acta en vivo** (panel del coach): decisiones → tareas/objetivos con un toque, «Enviar acta».
 - [ ] P6 **Fase 0.4**: la app sube `plan360*` por rutas (probar con el emulador de dos aparatos).
 - [ ] P7 **Fase 5**: DNI del coach y datos personales fuera del código (configuración privada), reglas de `coaching360` y `tenantLookup`.

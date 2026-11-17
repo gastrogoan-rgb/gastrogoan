@@ -6168,6 +6168,16 @@ function plan360DiagnosticoHtml(){
 function plan360AbrirDiagnostico(){
   printReportWindow(gl({es:'Dinero sobre la mesa · Plan 360º', ca:'Diners sobre la taula · Pla 360º', en:'Money on the table · 360º Plan'}), plan360DiagnosticoHtml());
 }
+// Pantallas a las que una tarea del Plan 360º puede llevar al negocio (el coach la elige en su panel: «Se hace en»).
+// Lista idéntica en el panel (PLAN360_ENLACES_PANEL en admin-panel/plan360.html).
+const PLAN360_ENLACES = {
+  escandallo: {es:'Escandallo', ca:'Escandall', en:'Costing'}, fichas: {es:'Fichas técnicas', ca:'Fitxes tècniques', en:'Recipe sheets'},
+  megalista: {es:'Mega Lista', ca:'Mega Llista', en:'Master list'}, proveedores: {es:'Proveedores', ca:'Proveïdors', en:'Suppliers'},
+  stock: {es:'Stock', ca:'Estoc', en:'Stock'}, pedidos: {es:'Pedidos', ca:'Comandes', en:'Orders'}, carta: {es:'Oferta Gastronómica', ca:'Oferta Gastronòmica', en:'Menu Offer'},
+  limpieza: {es:'Plan de Limpieza', ca:'Pla de Neteja', en:'Cleaning Plan'}, horarios: {es:'Personal y horarios', ca:'Personal i horaris', en:'Staff and schedules'},
+  promocion: {es:'Promoción', ca:'Promoció', en:'Promotion'}, clientes: {es:'Clientes', ca:'Clients', en:'Customers'}, reservas: {es:'Reservas', ca:'Reserves', en:'Bookings'},
+  tpv: {es:'TPV', ca:'TPV', en:'POS'}, economia: {es:'Gestión Económica', ca:'Gestió Econòmica', en:'Financial Management'}, minegocio: {es:'Mi Negocio', ca:'El Meu Negoci', en:'My Business'},
+};
 /* ── Plan de acción imprimible (17/11): los objetivos por prioridad y debajo, de cada uno, las tareas con su fecha y una
    casilla; lo que no cuelga de ningún objetivo, al final. Para colgar en la cocina o la oficina. */
 function plan360HayPlanDeAccion(){
@@ -7476,6 +7486,7 @@ function plan360TaskRow(day, tk, i){
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
     <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
+    ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
     <div class="p360-estados" role="group">
       ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
