@@ -4335,6 +4335,10 @@ function renderClientGrid(){
         <i class="ti ti-folder"></i>
         <div><h3>Recursos</h3><p>Identidad de marca, playbooks y demás documentos del programa</p></div>
       </div>
+      <div class="p360-card" onclick="renderCobros360Page()">
+        <i class="ti ti-receipt-euro"></i>
+        <div><h3>Cobros del Plan 360º</h3><p>Firma y día 15, lo cobrado y lo pendiente, y exportar a CSV</p></div>
+      </div>
       <div class="p360-card" onclick="renderActaPage()">
         <i class="ti ti-notes"></i>
         <div><h3>Acta en vivo</h3><p>Durante la reunión: cada decisión pasa a tarea u objetivo y se envía al negocio</p></div>
@@ -5716,6 +5720,54 @@ function plan360PageHeader(title, subtitle){
   return `<button class="btn btn-sm" onclick="renderClientGrid()">← Calendario</button>
     <h2 style="margin:10px 0 4px">${esc(title)}</h2>
     ${subtitle ? `<p class="muted" style="margin-bottom:10px">${esc(subtitle)}</p>` : ''}`;
+}
+
+/* ---- Cobros del Plan 360º (17/11) ----
+   950 € + IVA: un pago al firmar, o dos de 475 € + IVA (al firmar y el día 15). Se apuntan en plan360Servicio.cobros360 =
+   {firma:{ts,importe}, dia15:{ts,importe}} (objetos con clave, nunca lista). Junto a los cobros del mantenimiento
+   (plan360Servicio.cobros) salen en un CSV para el gestor. La app del negocio NO toca esta clave. */
+const COBROS360 = [{k: 'firma', n: 'Al firmar', importe: 475}, {k: 'dia15', n: 'Día 15', importe: 475}];
+function cobros360Datos(){
+  const sv = (remoteBiz && remoteBiz.plan360Servicio) || {};
+  const c = (sv.cobros360 && typeof sv.cobros360 === 'object') ? sv.cobros360 : {};
+  return {sv, c};
+}
+function cobros360CsvTexto(){
+  const {sv, c} = cobros360Datos();
+  const f = ts => ts ? new Date(ts).toISOString().slice(0, 10) : '';
+  const filas = [['concepto', 'periodo', 'fecha', 'base_imponible_eur', 'iva_21_pct_eur', 'total_eur']];
+  COBROS360.forEach(x => { if(c[x.k]){ const b = Number(c[x.k].importe) || 0; filas.push(['Plan 360 - ' + x.n, '', f(c[x.k].ts), b.toFixed(2), (b * 0.21).toFixed(2), (b * 1.21).toFixed(2)]); } });
+  const cm = (sv.cobros && typeof sv.cobros === 'object') ? sv.cobros : {};
+  Object.keys(cm).sort().forEach(k => { const b = Number(cm[k].importe) || 0; filas.push(['Mantenimiento', k, f(cm[k].ts), b.toFixed(2), (b * 0.21).toFixed(2), (b * 1.21).toFixed(2)]); });
+  return '\ufeff' + filas.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+}
+function renderCobros360Page(){
+  const {c} = cobros360Datos();
+  const cobrado = COBROS360.reduce((n, x) => n + (c[x.k] ? Number(c[x.k].importe) || 0 : 0), 0);
+  document.getElementById('client-grid').innerHTML = `
+    ${plan360PageHeader('Cobros del Plan 360º', '950 € + IVA: al firmar y el día 15 (475 € + IVA cada uno), o uno solo')}
+    <div class="card" style="font-size:15px">
+      ${COBROS360.map(x => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><input type="checkbox" ${c[x.k] ? 'checked' : ''} onchange="cobros360Marcar('${x.k}',this.checked)" style="width:22px;height:22px"> <span style="flex:1">${esc(x.n)}</span> <input type="number" min="0" step="1" value="${c[x.k] ? Number(c[x.k].importe) || 0 : x.importe}" onchange="cobros360Importe('${x.k}',this.value)" style="width:90px"> € + IVA ${c[x.k] ? `<span class="muted" style="font-size:12px">cobrado el ${esc(new Date(c[x.k].ts).toLocaleDateString('es-ES'))}</span>` : ''}</label>`).join('')}
+      <p style="margin:12px 0 0"><b>Cobrado:</b> ${cobrado} € + IVA · <b>Pendiente:</b> ${Math.max(0, 950 - cobrado)} € + IVA</p>
+      <div style="margin-top:12px"><button class="btn btn-sm" onclick="cobros360Exportar()"><i class="ti ti-download"></i> Exportar cobros a CSV</button></div>
+    </div>`;
+}
+function cobros360Marcar(k, si){
+  const sv = (remoteBiz.plan360Servicio = remoteBiz.plan360Servicio || {});
+  sv.cobros360 = (sv.cobros360 && typeof sv.cobros360 === 'object') ? sv.cobros360 : {};
+  if(si) sv.cobros360[k] = {ts: Date.now(), importe: (COBROS360.find(x => x.k === k) || {}).importe || 0};
+  else delete sv.cobros360[k];
+  saveRemoteBiz(); renderCobros360Page();
+}
+function cobros360Importe(k, v){
+  const n = Number(v); if(!(n >= 0)) return;
+  const sv = (remoteBiz.plan360Servicio = remoteBiz.plan360Servicio || {});
+  if(sv.cobros360 && sv.cobros360[k]){ sv.cobros360[k].importe = n; saveRemoteBiz(); renderCobros360Page(); }
+}
+function cobros360Exportar(){
+  const blob = new Blob([cobros360CsvTexto()], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cobros-' + (currentTenantId || 'cliente') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 /* ---- Acta en vivo (17/11) ----
