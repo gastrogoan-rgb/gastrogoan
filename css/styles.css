@@ -7359,3 +7359,62 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
   .mnl-av-mas{display:block;position:relative;z-index:1;min-height:44px;margin:6px 0 -6px;padding:0;background:none;border:0;font:600 13px var(--mono);color:var(--olive);text-align:left;cursor:pointer}
   .mnl-av-largo.is-plegado .mnl-av-mas{position:absolute;left:16px;bottom:0;margin:0}
 }
+/* Cuenta de Resultados: «¿Cómo se calcula?» ya no ocupa una fila entera en móvil. Pasa a un botón de
+   44 px (la etiqueta sigue ahí para lectores de pantalla) en la fila del año; Mensual|Trimestral, debajo. */
+@media (max-width:760px){
+  .cdr-barra{flex-wrap:wrap;align-items:center}
+  .cdr-barra .cdr-anio{order:1}
+  .cdr-barra .cdr-como{order:2;width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;padding:0 !important;margin-left:auto;justify-content:center;flex:none}
+  .cdr-barra .cdr-como #cdr-como-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .cdr-barra .cdr-gran{order:3;flex:1 0 100%}
+  .cdr-barra .cdr-gran .btn{flex:1 1 0;justify-content:center;min-height:44px !important}
+}
+/* Panel: la variación del año no se parte («4 / %» en dos renglones) y las comparaciones de una cifra
+   del día («-21 % vs sem. pasada») pasan al renglón de abajo en vez de salirse de la caja. */
+/* Entrada de pantalla en móvil SIN fundido desde transparente: medido con CPU ×6, el fundido de la vista (.28 s) y la
+   entrada en cascada de tarjetas (.08 s de retraso + .4 s, `backwards` = invisibles hasta arrancar) sumaban 0,4-0,8 s en
+   BLANCO al entrar en Sala o Gestión, justo después del trabajo de pintar. En un móvil lento se lee como «se ha colgado». */
+@media (max-width:760px){
+  .content .view.active,
+  .content .view.active .view-title,.content .view.active .view-header h2,
+  .content .view.active .view-subtitle,.content .view.active .view-header .view-sub,
+  .content .view.active :is(.card,.kpi,.table-wrap,.dash-hero,.module-card,.home-pulse,.folder-card){animation:none !important}
+}
+/* Mi Negocio (acordeón): con el título largo («Pedidos para llevar / domicilio», «Pago online con tarjeta (Stripe)») la
+   flecha caía a una segunda línea y en VeriFactu el icono se quedaba solo arriba. Sin salto de línea entre icono, título y
+   flecha: el que se parte, si hace falta, es el texto del título. */
+@media (max-width:760px){
+  .mn-grid > .card.mn-acc > h3{flex-wrap:nowrap}
+  .mn-grid > .card.mn-acc > h3 > i{flex:none}
+}
+/* Novedades en móvil: los 9 grupos de clientes y los 11 temas eran una columna de 20 filas de 56 px (~1.100 px de
+   lista) porque el mínimo de columna (170/190 px) no dejaba que cupieran dos en 340 px. Ahora van de dos en dos. */
+@media (max-width:760px){
+  .nv-segs,.nv-temas{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .nv-seg,.nv-tema{padding:8px 8px;gap:6px}
+  .nv-seg > .ti,.nv-tema > .ti{font-size:17px}
+}
+/* Novedades en móvil: «Nueva novedad» y «Enviadas y borradores» en una sola fila cuando caben (a 360 px sobraban
+   unos 20 px y cada botón iba en su fila con la mitad vacía). A 320 siguen envolviendo, como antes. */
+@media (max-width:760px){
+  .nv-subnav{gap:6px}
+  .nv-subnav > .left{gap:6px;flex:1 1 100%}
+  .nv-subnav > .left > .btn{padding-left:9px;padding-right:9px;letter-spacing:0}
+}
+/* Oferta en móvil: «Carta | Menús» y «Nueva Carta» en UNA fila (la norma de espacios muertos, hecha en PC y no aquí:
+   la regla general de la barra de herramientas daba el ancho entero a las pestañas y mandaba el botón a otra fila). */
+@media (max-width:760px){
+  #view-carta > .toolbar{justify-content:flex-start;flex-wrap:wrap;gap:6px}
+  #view-carta > .toolbar > .left{flex:0 1 auto;width:auto;min-width:0;flex-wrap:nowrap}
+  #view-carta > .toolbar > .btn{flex:0 1 auto;min-width:0;white-space:nowrap}
+}
+/* Contraste: la variación «vs año anterior» llevaba el rojo/verde de fondo claro sobre la fila oscura de
+   «Resultado neto» (2,2:1), y el chip ámbar de «Parcial» (inversiones) quedaba a 3,97:1. */
+#ge-cdr tr.total .txt-xs[style*="--red"]{color:#F0C4B8 !important}
+#ge-cdr tr.total .txt-xs[style*="--green"]{color:#C9D6CC !important}
+.gf-chip.is-amber{color:#6F5C2E}
+.dt-delta .dt-dv{white-space:nowrap;flex:none}
+.dt-delta{flex-wrap:wrap;row-gap:2px}
+@media (max-width:760px){
+  .dp-k-s .badge{white-space:normal;overflow-wrap:break-word;max-width:100%}
+}
