@@ -222,8 +222,8 @@ await caso('Una mesa abierta se distingue de una libre de un vistazo', async () 
   });
   assert.ok(!r.falta, 'hacen falta una mesa abierta y otra libre: ' + JSON.stringify(r));
   assert.ok(r.barraOcupada >= 6 && r.colorBarra !== 'rgba(0, 0, 0, 0)', 'la mesa abierta lleva una barra de color marcada: ' + JSON.stringify(r));
-  assert.equal(r.barraLibre, 'rgba(0, 0, 0, 0)', 'la libre no lleva barra: ' + JSON.stringify(r));
-  assert.equal(r.bordeLibre, 'dashed', 'la libre va con borde discontinuo: ' + JSON.stringify(r));
+  // Rediseño del 17/11: la libre lleva su propia barra (verde) y la abierta otra (ámbar); lo que las distingue es el color.
+  assert.ok(r.barraLibre !== r.colorBarra && r.fondoLibre !== r.fondoOcupada, 'libre y abierta no se distinguen por color: ' + JSON.stringify(r));
   assert.equal(r.bordeOcupada, 'solid', 'la abierta con borde continuo: ' + JSON.stringify(r));
 });
 

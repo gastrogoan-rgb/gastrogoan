@@ -7440,7 +7440,7 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
   .cdr-barra{flex-wrap:wrap;align-items:center}
   .cdr-barra .cdr-anio{order:1}
   .cdr-barra .cdr-como{order:2;width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;padding:0 !important;margin-left:auto;justify-content:center;flex:none}
-  .cdr-barra .cdr-como #cdr-como-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .cdr-barra .cdr-como #cdr-como-t{display:none} /* la etiqueta vive en el aria-label del botón (js/hr.js) */
   .cdr-barra .cdr-gran{order:3;flex:1 0 100%}
   .cdr-barra .cdr-gran .btn{flex:1 1 0;justify-content:center;min-height:44px !important}
 }
