@@ -204,6 +204,7 @@ lanzar; node test/pendientes-movil-b.mjs > "$SALIDA/pvmb.txt" 2>&1 & PVMB=$!
 lanzar; node test/contraste-movil.mjs > "$SALIDA/contrastem.txt" 2>&1 & PCOM=$!
 lanzar; node test/plan360-fusion.mjs > "$SALIDA/p360fusion.txt" 2>&1 & P360F=$!
 lanzar; node test/plan360-fecha.mjs > "$SALIDA/p360fecha.txt" 2>&1 & P360D=$!
+lanzar; node test/plan360-panel-fusion.mjs > "$SALIDA/p360pf.txt" 2>&1 & P360P=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -465,4 +466,5 @@ espera $PVMB "Vídeo móvil, pendientes zona B (Nube, Manual, Gestión, Panel, N
 espera $PCOM "Contraste del texto a 360 px con datos llenos" "$SALIDA/contrastem.txt" "llega a 4,5:1"
 espera $P360F "Plan 360º · la fusión a tres bandas casa tareas/objetivos/inversiones por id, no por posición" "$SALIDA/p360fusion.txt" "en orden"
 espera $P360D "Plan 360º · la fecha de inicio la confirma el coach y el «antes» es un mes completo" "$SALIDA/p360fecha.txt" "en orden"
+espera $P360P "Plan 360º · el panel del coach funde el programa con la nube antes de subirlo" "$SALIDA/p360pf.txt" "en orden"
 exit $FALLOS
