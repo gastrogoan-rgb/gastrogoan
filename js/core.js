@@ -12391,6 +12391,19 @@ function flushCloudSync(){
       pendingJson[key] = json;
     }
   });
+  /* El bloque `business` NO se sube entero (17/11, Plan 360º): lo escriben a la vez el negocio y el coach. Una tablet que
+     vuelve a tener conexión y sube su `business` completo antes de que baje lo que el coach cambió entre tanto lo pisaba.
+     Ahora se sube solo cada clave de primer nivel que ha cambiado de verdad aquí (`business/plan360Program`, etc.): lo que el
+     coach tocó y esta tablet no, no se reescribe. */
+  if(updates.business && lastSyncedSnapshot.business){
+    try{
+      const antes = JSON.parse(lastSyncedSnapshot.business), ahora = DB.business, sub = {};
+      Object.keys(ahora).forEach(k => { if(canonicalStringify(ahora[k]) !== canonicalStringify(antes[k])) sub['business/' + k] = ahora[k]; });
+      Object.keys(antes).forEach(k => { if(!(k in ahora)) sub['business/' + k] = null; });
+      delete updates.business;
+      Object.assign(updates, sub);
+    }catch(e){ /* si el snapshot no se puede leer, se sube entero como siempre */ }
+  }
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
   const seqAlSubir = cambiosLocalesSeq;
@@ -12401,7 +12414,7 @@ function flushCloudSync(){
   try{
     cloudRef.update(sinIndefinidos(updates)).then(() => {
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
-      keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+      keys.forEach(key => { if(key.startsWith('business/')) lastSyncedSnapshot.business = pendingJson.business; else lastSyncedSnapshot[key] = pendingJson[key]; });
       lastSyncOkAt = Date.now();
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio
