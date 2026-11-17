@@ -1086,7 +1086,10 @@ function dashSerieHtml(serie, o){
   const vals = serie.map(p => p.value);
   const min = Math.min(0, ...vals), max = Math.max(0, ...vals), rango = (max - min) || 1;
   const X = i => n > 1 ? i * 100 / (n - 1) : 50;
-  const Y = v => 10 + (1 - (v - min) / rango) * 76;
+  // Margen superior: con 10 % el globo de la cifra máxima no cabía ENCIMA del punto y se volcaba debajo,
+  // tapando la línea y los puntos vecinos. En las gráficas bajas (dt-corto) no hay sitio y se queda como antes.
+  const T = /\bdt-corto\b/.test(o.clase || '') ? 10 : 22;
+  const Y = v => T + (1 - (v - min) / rango) * (86 - T);
   const y0 = Y(0);
   const pts = serie.map((p, i) => [X(i), Y(p.value)]);
   let d = 'M' + pts[0][0].toFixed(2) + ',' + pts[0][1].toFixed(2);
@@ -1096,7 +1099,7 @@ function dashSerieHtml(serie, o){
   const conTag = new Set([iMax, iUlt]); if(min < 0) conTag.add(iMin);
   if(o.sinTags) conTag.clear();
   const id = o.id || 'ds';
-  const grid = [0.25, 0.5, 0.75].map(f => `<line x1="0" x2="100" y1="${(10 + f * 76).toFixed(2)}" y2="${(10 + f * 76).toFixed(2)}" class="dt-grid" vector-effect="non-scaling-stroke"/>`).join('');
+  const grid = [0.25, 0.5, 0.75].map(f => `<line x1="0" x2="100" y1="${(T + f * (86 - T)).toFixed(2)}" y2="${(T + f * (86 - T)).toFixed(2)}" class="dt-grid" vector-effect="non-scaling-stroke"/>`).join('');
   const cada = o.cadaEtiqueta || 1;
   return `
     <div class="dt-wrap${o.clase ? ' ' + o.clase : ''}" id="${id}">
@@ -1110,7 +1113,7 @@ function dashSerieHtml(serie, o){
         ${serie.map((p, i) => o.estatico
           ? `<span class="dt-punto${p.value < 0 ? ' neg' : p.value === 0 ? ' cero' : ''}${p.parcial ? ' parcial' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" aria-hidden="true"></span>`
           : `<button type="button" class="dt-punto${p.value < 0 ? ' neg' : p.value === 0 ? ' cero' : ''}${p.parcial ? ' parcial' : ''}${i === iUlt ? ' ult' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%" data-i="${i}"${o.tooltip ? ` data-v="${escapeHtml((p.nombre || p.label) + ': ' + (p.txt || fmtMoney(p.value)))}"` : ''} aria-label="${escapeHtml(p.nombre || p.label)}: ${escapeHtml(p.txt || fmtMoney(p.value))}" onmouseenter="dashSerieVer('${id}',${i})" onfocus="dashSerieVer('${id}',${i})" onclick="dashSerieVer('${id}',${i})"></button>`).join('')}
-        ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 22 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
+        ${[...conTag].map(i => `<span class="dt-tag${vals[i] < 0 ? ' neg' : ''}${pts[i][1] < 21 ? ' abajo' : ''}${i === 0 ? ' izq' : ''}${i === n - 1 ? ' der' : ''}" style="left:${pts[i][0].toFixed(2)}%;top:${pts[i][1].toFixed(2)}%">${escapeHtml(o.fmtTag ? o.fmtTag(vals[i]) : dashCompacto(vals[i]))}</span>`).join('')}
       </div>
       <div class="dt-ejes">${serie.map((p, i) => `<span class="${i % cada ? 'oculto' : ''}${p.parcial ? ' parcial' : ''}">${escapeHtml(p.label)}</span>`).join('')}</div>
     </div>`;
@@ -1155,7 +1158,7 @@ function dashTrendPintar(){
     </div>
     <div class="dt-cab">
       <div class="dt-titular" data-dt-titular="dt-anual"><b>${escapeHtml(fmtMoney(total))}</b> <span>${escapeHtml(gl({es:'últimos 11 meses completos', ca:'darrers 11 mesos complets', en:'last 11 full months'}))}</span></div>
-      ${delta != null ? `<span class="dt-delta ${igual ? 'igual' : (bueno ? 'bien' : 'mal')}"><i class="ti ${igual ? 'ti-minus' : (delta >= 0 ? 'ti-arrow-up-right' : 'ti-arrow-down-right')}"></i> ${igual ? '≈ 0' : Math.abs(delta).toFixed(0)} % <small>${escapeHtml(gl({es:'último mes completo frente al anterior', ca:'darrer mes complet respecte a l\'anterior', en:'last full month vs the one before'}))}</small></span>` : ''}
+      ${delta != null ? `<span class="dt-delta ${igual ? 'igual' : (bueno ? 'bien' : 'mal')}"><i class="ti ${igual ? 'ti-minus' : (delta >= 0 ? 'ti-arrow-up-right' : 'ti-arrow-down-right')}"></i> <span class="dt-dv">${igual ? '≈ 0' : Math.abs(delta).toFixed(0)} %</span> <small>${escapeHtml(gl({es:'último mes completo frente al anterior', ca:'darrer mes complet respecte a l\'anterior', en:'last full month vs the one before'}))}</small></span>` : ''}
     </div>
     ${dashSerieHtml(serie, {id:'dt-anual', cadaEtiqueta: 1})}`;
 }

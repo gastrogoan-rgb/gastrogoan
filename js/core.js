@@ -11527,6 +11527,28 @@ function renderOwnFirebaseForm(){
   `;
 }
 
+// El código de licencia es la «contraseña» del negocio (ver CLAUDE.md, límite
+// conocido de tenants/$tenantId): no se enseña entero a quien mira por encima
+// del hombro ni en una captura/vídeo. Se pinta oculto (••••••12) y se descubre
+// con «Mostrar»; el código completo nunca viaja en el HTML mientras está oculto.
+function licenciaMascara(code){
+  const c = String(code || '');
+  return '\u2022'.repeat(Math.max(4, c.length - 2)) + c.slice(-2);
+}
+function licenciaOcultaHtml(code, tag){
+  tag = tag || 'strong';
+  return `<${tag} class="nb-lic-cod" data-oculto="1">${escapeHtml(licenciaMascara(code))}</${tag}> <button type="button" class="btn btn-sm nb-lic-ver" onclick="licenciaAlternar(this)" aria-pressed="false">${escapeHtml(gl({es:'Mostrar', ca:'Mostra', en:'Show'}))}</button>`;
+}
+function licenciaAlternar(btn){
+  const cod = btn && btn.previousElementSibling;
+  const lic = getLicense();
+  if(!cod || !lic) return;
+  const oculto = cod.getAttribute('data-oculto') === '1';
+  cod.textContent = oculto ? lic.code : licenciaMascara(lic.code);
+  cod.setAttribute('data-oculto', oculto ? '0' : '1');
+  btn.setAttribute('aria-pressed', oculto ? 'true' : 'false');
+  btn.textContent = oculto ? gl({es:'Ocultar', ca:'Amaga', en:'Hide'}) : gl({es:'Mostrar', ca:'Mostra', en:'Show'});
+}
 function openCloudWizard(){
   const lic = getLicense();
   if(!lic){
@@ -11545,7 +11567,7 @@ function openCloudWizard(){
         <h3><i class="ti ti-cloud"></i> ${t('gate.setupCloud')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+      <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: ${licenciaOcultaHtml(lic.code)}</p>
       <div class="nb-aviso is-nota">
         ${t('gate.cloudIntro')}
       </div>
@@ -11570,7 +11592,7 @@ function openCloudWizard(){
       <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+    <p class="nb-lic"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: ${licenciaOcultaHtml(lic.code)}</p>
     ${reglasAntiguas ? `<div class="nb-aviso is-amber">
       <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${
         /* Dos casos MUY distintos y no se pueden contar igual:
@@ -11609,7 +11631,7 @@ function openCloudWizard(){
           lastSyncErrorCode ? `<div class="nb-detalle nb-codigo"><code>${escapeHtml(String(lastSyncErrorCode))}</code></div>` : ''
         }</div>`
       : `<div class="nb-aviso is-ok"><div class="nb-estado"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div></div>`}
-    <p class="nb-p"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
+    <p class="nb-p"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', licenciaOcultaHtml(lic.code, 'code'))}</p>
     <hr class="nb-hr">
     <p class="nb-sub"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</p>
     <p class="nb-ayuda">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>

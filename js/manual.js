@@ -6215,6 +6215,7 @@ function renderManualTema(cont, pie, q){
     if(h3 && h3.parentNode === cuerpo) h3.after(toc); else cuerpo.prepend(toc);
   }
   manualResaltar(cuerpo, q);
+  if(!q) manualPlegarAvisos(cuerpo);
   // ── pie: anterior / siguiente DENTRO del mismo grupo, e imprimir ──
   const hermanos = MANUAL_CHAPTERS.map((ch, i) => ({ch, i})).filter(x => x.ch.area === actual.area);
   const pos = hermanos.findIndex(m => m.i === manualChapter);
@@ -6225,6 +6226,22 @@ function renderManualTema(cont, pie, q){
       <button type="button" class="btn btn-fino mnl-imprimir" onclick="printManualChapter()"><i class="ti ti-printer"></i> ${escapeHtml(t('btn.printChapter'))}</button>
       ${sig ? `<button type="button" class="btn btn-fino mnl-nav mnl-sig" onclick="goManualChapter(${sig.i})"><span><small>${escapeHtml(gl({es:'Siguiente', ca:'Següent', en:'Next'}))}</small>${escapeHtml(manualChapterPlainTitle(sig.ch))}</span><i class="ti ti-arrow-right"></i></button>` : '<span></span>'}
     </div>`;
+}
+// Avisos y consejos largos (14/16 px, 8-10 renglones) se comían la pantalla del
+// móvil: se ven recortados a unos renglones y un toque los abre. Solo en
+// ≤640 px (lo recorta el CSS); en PC la clase y el botón no hacen nada.
+function manualPlegarAvisos(cuerpo){
+  cuerpo.querySelectorAll('.manual-warning, .manual-tip').forEach(av => {
+    if((av.textContent || '').trim().length < 170) return;
+    av.classList.add('mnl-av-largo', 'is-plegado');
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'mnl-av-mas';
+    b.setAttribute('aria-expanded', 'false');
+    const txt = ab => ab ? gl({es:'Ver menos', ca:'Veure menys', en:'Show less'}) : gl({es:'Ver más', ca:'Veure més', en:'Show more'});
+    b.textContent = txt(false);
+    b.onclick = () => { const ab = av.classList.toggle('is-plegado') === false; b.textContent = txt(ab); b.setAttribute('aria-expanded', String(ab)); };
+    av.appendChild(b);
+  });
 }
 function manualIrA(k){
   const h = document.getElementById('mnl-h-' + k);
