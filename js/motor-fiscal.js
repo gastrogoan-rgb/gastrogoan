@@ -22,29 +22,36 @@
 const FISCAL_VERIFICADO_EN = '2026-11-06';
 // estado: 'verificada' = contrastada con fuente oficial (AEAT/BOE) en la fecha indicada;
 //         'revisada'   = la dio por buena una gestoría (revisión del 5/10) pero no se ha vuelto a contrastar con la fuente;
-//         'pendiente'  = sin verificar: no se presenta como certeza.
+//         'pendiente'  = sin verificar: no se presenta como certeza;
+//         'noaplica' / 'fuera' = verificado con la AEAT que no corresponde a un restaurante / que existe pero la app no lo calcula.
 const FISCAL_REGLAS = [
   {id:'IRPF-ESC-ESTATAL', concepto:'IRPF', descripcion:'Escala estatal de la base liquidable general: 9,5 / 12 / 15 / 18,5 / 22,5 / 24,5 % hasta 12.450 / 20.200 / 35.200 / 60.000 / 300.000 € y resto.',
-    fuente:'AEAT · Manual práctico de Renta 2025, «Gravamen estatal»', referencia:'Ley 35/2006 (LIRPF) art. 63', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada'},
+    fuente:'AEAT · Manual práctico de Renta 2025, «Gravamen estatal»', referencia:'Ley 35/2006 (LIRPF) art. 63', desde:'2024-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada'},
+  {id:'IRPF-ESC-CAT-2024', concepto:'IRPF', descripcion:'Escala autonómica de Cataluña (2024): 10,5 / 12 / 14 / 15 / 18,8 / 21,5 / 23,5 / 24,5 / 25,5 % hasta 12.450 / 17.707,20 / 21.000 / 33.007,20 / 53.407,20 / 90.000 / 120.000 / 175.000 € y resto.',
+    fuente:'AEAT · Manual práctico de Renta 2024, «Gravamen autonómico» (Cataluña), verificada el 18/11/2026 con la cuota íntegra de la propia tabla', referencia:'Decreto legislativo 1/2024 (Cataluña)', desde:'2024-01-01', hasta:'2024-12-31', territorio:'cataluna', aplicaA:['autonomo','cb'], estado:'verificada'},
   {id:'IRPF-ESC-CAT', concepto:'IRPF', descripcion:'Escala autonómica de Cataluña (2025): 9,5 / 12,5 / 16 / 19 / 21,5 / 23,5 / 24,5 / 25,5 % hasta 12.500 / 22.000 / 33.000 / 53.000 / 90.000 / 120.000 / 175.000 € y resto.',
     fuente:'AEAT · Manual práctico de Renta 2025, «Comunidad Autónoma de Cataluña»', referencia:'Decreto legislativo 1/2024 (Cataluña) art. 611-1; Decreto-ley 5/2025', desde:'2025-01-01', hasta:null, territorio:'cataluna', aplicaA:['autonomo','cb'], estado:'verificada',
     nota:'Verificada para el ejercicio 2025. Para 2026 se aplica la misma hasta confirmar que no cambia.'},
   {id:'IRPF-ESC-GENERAL', concepto:'IRPF', descripcion:'Escala general combinada de referencia (estatal + autonómica supletoria): 19 / 24 / 30 / 37 / 45 / 47 %. La usa quien no tiene comunidad fijada.',
     fuente:'Suma de la escala estatal (verificada) y una escala autonómica supletoria', referencia:'Ley 35/2006 art. 63 y 74', desde:'2025-01-01', hasta:null, territorio:'general', aplicaA:['autonomo','cb'], estado:'pendiente',
     nota:'La parte estatal está verificada; la parte autonómica supletoria no se ha contrastado con el texto oficial. Cada comunidad tiene la suya: las 15 de régimen común están cargadas y verificadas; elige la tuya.'},
-  {id:'IRPF-MIN-PERSONAL', concepto:'IRPF', descripcion:'Mínimo personal del contribuyente: 5.550 €; por descendientes: 2.400 / 2.700 / 4.000 / 4.500 €.',
-    fuente:'AEAT · «Mínimo del contribuyente»', referencia:'LIRPF art. 57 y 58', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada',
-    nota:'5.550 € verificado con la AEAT; algunas comunidades fijan otros importes (no cargados). Los de descendientes los dio por buenos la gestoría.'},
-  {id:'IRPF-DIFICIL-5', concepto:'IRPF', descripcion:'Gastos de difícil justificación en estimación directa SIMPLIFICADA: 5 % del rendimiento, máximo 2.000 € al año.',
-    fuente:'Revisión de una gestoría (5/10/2026)', referencia:'RIRPF art. 30.2.4.ª', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo'], estado:'revisada'},
+  {id:'IRPF-MIN-PERSONAL', concepto:'IRPF', descripcion:'Mínimo personal y familiar estatal: 5.550 € el contribuyente y 2.400 / 2.700 / 4.000 / 4.500 € por descendiente; se descuenta de la parte ESTATAL de la cuota.',
+    fuente:'AEAT · Manual práctico de Renta 2025, «Mínimo personal y familiar» y cuadro comparativo estatal-autonómicos (verificado el 18/11/2026)', referencia:'LIRPF art. 57 y 58', desde:'2024-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada',
+    nota:'Solo se cuentan el contribuyente y los hijos que se indiquen: ascendientes, discapacidad y mayores de 65 años no se contemplan.'},
+  {id:'IRPF-MIN-AUTONOMICO', concepto:'IRPF', descripcion:'Mínimo personal y familiar AUTONÓMICO 2025 (parte autonómica de la cuota): Andalucía 5.790 €, Asturias y C. Valenciana 6.105 €, Canarias 5.606 €, Galicia 5.789 €, Madrid 5.956,65 € (con sus importes por descendiente); Baleares 5.550 € (6.105 € si es mayor de 65). Cataluña, Castilla y León, La Rioja y el resto de comunidades y Ceuta/Melilla usan los estatales.',
+    fuente:'AEAT · Manual práctico de Renta 2025, «Importes del mínimo personal y familiar aprobados por las Comunidades Autónomas» y cuadro comparativo (verificado el 18/11/2026)', referencia:'Ley 22/2009 art. 46.1 a); normativa de cada comunidad', desde:'2024-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada',
+    nota:'Verificada para 2025; para 2026 se aplica lo mismo hasta confirmar que no cambia. No se contemplan los complementos por edad (Baleares, mayores de 65 y 75 años) ni los de ascendientes y discapacidad. En régimen foral NO rige: allí el mínimo es el foral y se usa el estatal como aproximación.'},
+  {id:'IRPF-DIFICIL-5', concepto:'IRPF', descripcion:'Provisiones y gastos de difícil justificación en estimación directa SIMPLIFICADA: 5 % del rendimiento neto positivo, máximo 2.000 € al año (por socio, en una comunidad de bienes).',
+    fuente:'AEAT · Manual práctico de Renta 2025, «Provisiones y gastos de difícil justificación» y guía de novedades («se mantiene el 5 por 100»)', referencia:'RIRPF art. 30.2.4.ª', desde:'2024-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada',
+    nota:'Verificada el 18/11/2026 para el ejercicio 2025 (2026 se aplica igual hasta que la AEAT publique otra cosa). El tope de 2.000 € es global para todas las actividades del titular: la app solo conoce la de este negocio.'},
   {id:'IRPF-RED-6498', concepto:'IRPF', descripcion:'Reducción de 6.498 € (rendimiento neto ≤ 14.047,50 €; baja 1,14 € por euro hasta 0 en 19.747,50 €) si las demás rentas no pasan de 6.500 €.',
     fuente:'AEAT · Manual práctico de Renta 2025, «Reducción trabajadores autónomos»', referencia:'LIRPF art. 32 (Ley 31/2022)', desde:'2023-01-01', hasta:null, territorio:'*', aplicaA:['autonomo'], estado:'verificada'},
   {id:'IRPF-RED-1620', concepto:'IRPF', descripcion:'Reducción de 1.620 € (rentas totales ≤ 8.000 €; baja 0,405 por euro hasta 12.000 €). ALTERNATIVA a la de 6.498 €: solo si no se cumplen sus requisitos.',
     fuente:'AEAT · Manual práctico de Renta 2025, «Reducción para contribuyentes con rentas no exentas inferiores a 12.000 euros»', referencia:'LIRPF art. 32.2.3.º', desde:'2023-01-01', hasta:null, territorio:'*', aplicaA:['autonomo'], estado:'verificada'},
   {id:'IRPF-INICIO-20', concepto:'IRPF', descripcion:'Reducción del 20 % del rendimiento neto positivo (hasta 100.000 €) el primer año con beneficio y el siguiente. Solo si el titular lo marca.',
     fuente:'AEAT · «Reducción en el rendimiento neto por inicio de una actividad económica»', referencia:'LIRPF art. 32.3', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo'], estado:'verificada'},
-  {id:'IS-TIPOS', concepto:'Impuesto sobre Sociedades', descripcion:'Tipos por tramos: microempresas (INCN < 1 M€) 21/22 % en 2025, 19/21 % en 2026, 17/20 % desde 2027; reducida dimensión 24/23/22/21/20 % (2025-2029); nueva creación 15 %; general 25 %.',
-    fuente:'AEAT · Manual práctico de Sociedades 2025, «Tipos de gravamen»', referencia:'LIS art. 29 y disp. trans. 44.ª (Ley 7/2024)', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['sociedad'], estado:'verificada'},
+  {id:'IS-TIPOS', concepto:'Impuesto sobre Sociedades', descripcion:'Tipos por tramos: en 2024 microempresas (INCN < 1 M€) 23 % y resto 25 % (reducida dimensión incluida), nueva creación 15 %; microempresas 21/22 % en 2025, 19/21 % en 2026, 17/20 % desde 2027; reducida dimensión 24/23/22/21/20 % (2025-2029); nueva creación 15 %; general 25 %.',
+    fuente:'AEAT · Manual práctico de Sociedades 2025, «Tipos de gravamen», y tabla de tipos de la AEAT para 2024 (verificada el 18/11/2026)', referencia:'LIS art. 29 y disp. trans. 44.ª (Ley 7/2024)', desde:'2024-01-01', hasta:null, territorio:'*', aplicaA:['sociedad'], estado:'verificada'},
   {id:'IS-COOP', concepto:'Impuesto sobre Sociedades', descripcion:'Cooperativa fiscalmente protegida: excedente menos dotación al FEP y 50 % del FRO; tipo del art. 29.1 LIS menos 3 puntos (máx. 20 %): 18/19 % microempresa 2025, 16/18 % en 2026, 14/17 % desde 2027, 20 % general; nueva creación 12 %; y bonificación del 50 % de la cuota si es especialmente protegida.',
     fuente:'AEAT · Manual práctico de Sociedades 2025, «Tipos de gravamen» y «Cuota íntegra previa» (cooperativas); BOE · Ley 20/1990, arts. 16.5, 24 y 34.2', referencia:'Ley 20/1990 y LIS art. 29', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['cooperativa'], estado:'verificada',
     nota:'Verificada para fiscalmente protegidas, resultados cooperativos, 2025-2028 (2029 derivado de la misma regla). NO separa los resultados extracooperativos (tipo del art. 29.1), ni cubre cooperativas de crédito ni no protegidas.'},
@@ -52,19 +59,31 @@ const FISCAL_REGLAS = [
     fuente:'Revisión de una gestoría (5/10/2026)', referencia:'LIVA arts. 75-99; Orden HAC', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'revisada'},
   {id:'IVA-MODULOS', concepto:'IVA', descripcion:'En módulos (régimen simplificado) el IVA sale de la cuota del régimen, no de lo vendido.',
     fuente:'BOE · Orden HAC/1425/2025 (módulos 2026); casos de la AEAT en test/fiscal-rapido.mjs', referencia:'Orden HAC/1425/2025', desde:'2026-01-01', hasta:'2026-12-31', territorio:'*', aplicaA:['autonomo'], estado:'revisada'},
+  {id:'IVA-RECARGO-EQUIV', concepto:'IVA', descripcion:'Recargo de equivalencia: régimen «exclusivamente» de los comerciantes minoristas, que venden bienes SIN haberlos sometido a fabricación o elaboración. Un restaurante elabora lo que vende (y presta un servicio): no es minorista a estos efectos y NO lo aplica. Solo afectaría a un comercio aparte (p. ej. una tienda que revende sin transformar).',
+    fuente:'AEAT · Manual práctico de IVA 2025, «Régimen especial del recargo de equivalencia» (verificado el 18/11/2026)', referencia:'LIVA arts. 148-163', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'noaplica',
+    nota:'La conclusión sobre la hostelería se deduce de la definición oficial (la AEAT no nombra los restaurantes). No se implementa.'},
+  {id:'IVA-PRORRATA', concepto:'IVA', descripcion:'Regla de prorrata: solo cuando un mismo empresario hace operaciones con derecho a deducir y otras sin ese derecho (p. ej. alquilar viviendas, operaciones financieras o seguros exentos). Un restaurante normal no la necesita: todas sus ventas dan derecho a deducir.',
+    fuente:'BOE · Ley 37/1992 (IVA), arts. 102 y 103 (verificado el 18/11/2026)', referencia:'LIVA arts. 102-106', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'fuera',
+    nota:'No se implementa: no hay un caso real en la actividad de hostelería de la app. Si el negocio tiene además operaciones exentas sin derecho a deducir, la prorrata la calcula el gestor y se ajusta el IVA soportado a mano (Gastos: deducibilidad).'},
+  {id:'IVA-SIMPLIFICADO', concepto:'IVA', descripcion:'Régimen simplificado de IVA: va ligado al método de módulos del IRPF (renunciar a uno es renunciar al otro). Ya está cubierto por la opción «módulos» de Mi Negocio; no existe como opción independiente en estimación directa.',
+    fuente:'AEAT · Manual práctico de Renta 2025, «Renuncia a la estimación objetiva y al régimen especial simplificado del IVA» (verificado el 18/11/2026)', referencia:'LIVA arts. 122 y ss. (régimen simplificado) y su Reglamento (renuncia)', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo'], estado:'noaplica',
+    nota:'Sin módulos no hay simplificado: por eso no se ofrece como casilla aparte.'},
+  {id:'IVA-CRITERIO-CAJA', concepto:'IVA', descripcion:'Criterio de caja: el IVA se devenga al cobrar y se deduce al pagar (o el 31/12 del año siguiente). Exige volumen ≤ 2.000.000 €, no pasar de 100.000 € en cobros en efectivo a un mismo cliente, elegirlo en el modelo 036 antes de diciembre y mantenerlo 3 años; no vale con módulos/simplificado.',
+    fuente:'AEAT · «Criterio de caja» (A quién se aplica) y Manual práctico de IVA 2025 (requisitos subjetivos), verificado el 18/11/2026', referencia:'LIVA arts. 163 decies y ss.', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'fuera',
+    nota:'No se ofrece: un restaurante cobra al momento (el IVA repercutido se devenga igual) y paga después, así que el criterio solo le retrasaría la deducción del IVA soportado; además la app no registra la fecha de pago de cada factura de proveedor. Si el gestor lo aplica, hay que ajustar el 303 fuera de la app.'},
   {id:'RET-111', concepto:'Retenciones', descripcion:'IRPF retenido a empleados y profesionales (111): trimestral, hasta el día 20 del mes siguiente (20 de enero el 4.º).',
     fuente:'Revisión de una gestoría (5/10/2026); retención del trabajador: algoritmo AEAT 2026', referencia:'RIRPF arts. 80-101', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'revisada'},
   {id:'RET-115', concepto:'Retenciones', descripcion:'Retención del 19 % sobre el alquiler del local (115), si el arrendador es persona física o sociedad no exenta.',
     fuente:'Revisión de una gestoría (5/10/2026)', referencia:'LIRPF art. 101.8; RIRPF art. 75', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'revisada'},
-  {id:'PF-130', concepto:'Pagos fraccionados', descripcion:'Modelo 130 (autónomo en directa): 20 % del rendimiento acumulado del año menos lo ya pagado y la deducción por rendimientos bajos del año anterior.',
-    fuente:'Revisión de una gestoría (5/10/2026)', referencia:'RIRPF art. 110', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo'], estado:'revisada',
-    nota:'Pendiente de contrastar el tratamiento del 5 % de difícil justificación dentro del propio 130 (hoy no se aplica en el pago fraccionado).'},
+  {id:'PF-130', concepto:'Pagos fraccionados', descripcion:'Modelo 130 (autónomo en directa): 20 % del rendimiento acumulado del año (en simplificada, ya descontado el 5 % de difícil justificación, máx. 2.000 €) menos lo ya pagado y la minoración por rendimientos bajos del año anterior (100/75/50/25 €).',
+    fuente:'AEAT · Instrucciones del modelo 130 (casillas 02, 04, 13), verificadas el 18/11/2026; revisión de una gestoría (5/10/2026)', referencia:'RIRPF art. 110 y art. 30.2.4.ª', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb'], estado:'verificada',
+    nota:'El 5 % de difícil justificación va dentro de la casilla 02 en la modalidad simplificada (instrucciones oficiales del 130). La app lo calcula sobre el acumulado con el tope anual de 2.000 €. Límite: no se contemplan otras actividades del titular ni el reparto proporcional del tope entre ellas.'},
   {id:'PF-202', concepto:'Pagos fraccionados', descripcion:'Modelo 202 (sociedad): 18 % de la cuota del último Impuesto de Sociedades, en abril, octubre y diciembre.',
     fuente:'Revisión de una gestoría (5/10/2026)', referencia:'LIS art. 40.2', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['sociedad'], estado:'revisada'},
   {id:'DEDUC-USUARIO', concepto:'Deducibilidad', descripcion:'La deducibilidad de cada gasto (total, parcial, no deducible, pendiente) la fija el usuario con su gestoría; la app no decide qué es deducible.',
     fuente:'Decisión de diseño: no se inventan porcentajes sin justificación normativa', referencia:'LIRPF art. 28; LIS art. 15; LIVA arts. 95-96', desde:'2025-01-01', hasta:null, territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'revisada'},
-  {id:'ANTES-2025', concepto:'Ejercicios anteriores', descripcion:'Las reglas cargadas empiezan en el ejercicio 2025. Un ejercicio anterior se calcula con las de 2025 y NO es fiable.',
-    fuente:'Limitación conocida', referencia:'—', desde:null, hasta:'2024-12-31', territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'pendiente'}
+  {id:'ANTES-2025', concepto:'Ejercicios anteriores', descripcion:'Las reglas verificadas cubren los ejercicios 2024 en adelante. Un ejercicio anterior (2023 y antes) se calcula con las de 2025 y NO es fiable.',
+    fuente:'Limitación conocida: no se cargaron las escalas autonómicas de 2023 y anteriores (una por comunidad y año)', referencia:'—', desde:null, hasta:'2023-12-31', territorio:'*', aplicaA:['autonomo','cb','sociedad','cooperativa'], estado:'pendiente'}
 ];
 function fiscalRegla(id){ return FISCAL_REGLAS.find(r => r.id === id) || null; }
 function fiscalReglasVigentes(fecha, forma, territorio){
@@ -76,7 +95,10 @@ function fiscalReglasVigentes(fecha, forma, territorio){
 const FISCAL_ESTADO_TXT = {
   verificada: () => gl({es:'Verificada con fuente oficial', ca:'Verificada amb font oficial', en:'Verified against an official source'}),
   revisada:   () => gl({es:'Revisada por una gestoría', ca:'Revisada per una gestoria', en:'Reviewed by an accountant'}),
-  pendiente:  () => gl({es:'Pendiente de verificar', ca:'Pendent de verificar', en:'Pending verification'})
+  pendiente:  () => gl({es:'Pendiente de verificar', ca:'Pendent de verificar', en:'Pending verification'}),
+  // 'noaplica' = verificado que NO corresponde a un restaurante; 'fuera' = verificado que existe pero la app no lo calcula (ni lo ofrece).
+  noaplica:   () => gl({es:'No aplica a hostelería', ca:'No s\'aplica a hostaleria', en:'Does not apply to hospitality'}),
+  fuera:      () => gl({es:'Fuera del alcance de la app', ca:'Fora de l\'abast de l\'app', en:'Outside the app\'s scope'})
 };
 
 /* ---------- Territorio y escalas del IRPF ---------- */
@@ -152,14 +174,75 @@ function irpfCuotaTramos(base, tramos){
   }
   return cuota;
 }
+/* ---------- Ejercicio 2024 (verificado el 18/11/2026) ----------
+   Manual práctico de Renta 2024 de la AEAT («Gravamen estatal» y «Gravamen autonómico», una página por comunidad; cuadro de
+   mínimos 2024). Comparadas una a una con las de 2025: la estatal, la de Ceuta y Melilla y las de Andalucía, Aragón, Baleares,
+   Cantabria, Castilla-La Mancha, Castilla y León, Extremadura, Galicia, Madrid, Murcia, La Rioja y Valencia son IGUALES; cambian
+   solo Asturias, Canarias y Cataluña, que van aquí con la de 2024. Los mínimos 2024 son los de 2025 salvo Asturias (en 2024 aplicaba
+   los estatales: «es la primera vez que fija en 2025 sus propias cuantías»). Cada fila: [desde, tipo %]. */
+const IRPF_ESCALAS_AUTONOMICAS_2024 = {
+  asturias: [[0,10],[12450,12],[17707.2,14],[33007.2,18.5],[53407.2,21.5],[70000,22.5],[90000,25],[175000,25.5]],
+  canarias: [[0,9],[13465,11.5],[19022,14],[35185,18.5],[56382,23.5],[91350,25],[121200,26]]
+};
+const IRPF_ESCALAS_AUTONOMICAS_2024_TRAMOS = {};
+Object.keys(IRPF_ESCALAS_AUTONOMICAS_2024).forEach(k => { IRPF_ESCALAS_AUTONOMICAS_2024_TRAMOS[k] = irpfTramosDesdeInicios(IRPF_ESCALAS_AUTONOMICAS_2024[k]); });
+const IRPF_ESCALA_CATALUNA_2024 = [[12450,10.5],[17707.2,12],[21000,14],[33007.2,15],[53407.2,18.8],[90000,21.5],[120000,23.5],[175000,24.5],[Infinity,25.5]];
+// Años con escala verificada: 2025 en adelante (se aplica la de 2025 hasta que cambie) y 2024. Antes de 2024 no hay nada cargado.
+function irpfAnioVerificado(año){ return año == null || año >= 2024; }
+function irpfEs2024(año){ return año != null && año === 2024; }
+// El territorio cambia de escala entre 2024 y 2025 (para el id de la regla y para avisar).
+function irpfEscalaDistintaEn2024(territorio){ return territorio === 'cataluna' || !!IRPF_ESCALAS_AUTONOMICAS_2024[territorio]; }
+// Las dos mitades de la escala (estatal / autonómica) de un territorio en un año: [escala, 'E'|'A'].
+function irpfPartesEscala(territorio, año){
+  const a24 = irpfEs2024(año);
+  if(territorio === 'cataluna') return [[IRPF_ESCALA_ESTATAL, 'E'], [a24 ? IRPF_ESCALA_CATALUNA_2024 : IRPF_ESCALA_CATALUNA, 'A']];
+  if(territorio === 'ceuta_melilla') return [[IRPF_ESCALA_ESTATAL, 'E'], [IRPF_ESCALA_SUPLETORIA, 'A']];
+  if(IRPF_ESCALAS_FORALES[territorio]) return [[IRPF_ESCALAS_FORALES[territorio], 'E']];
+  if(IRPF_ESCALAS_AUTONOMICAS_TRAMOS[territorio]) return [[IRPF_ESCALA_ESTATAL, 'E'], [(a24 && IRPF_ESCALAS_AUTONOMICAS_2024_TRAMOS[territorio]) || IRPF_ESCALAS_AUTONOMICAS_TRAMOS[territorio], 'A']];
+  return [[IRPF_ESCALA_GENERAL, 'E']];
+}
 // Cuota íntegra por la escala del territorio: la estatal MÁS la autonómica de la comunidad (cada una con sus propios tramos).
-function motorIrpfCuotaEscala(base, territorio){
+function motorIrpfCuotaEscala(base, territorio, año){
   if(!(base > 0)) return 0;
-  if(territorio === 'cataluna') return irpfCuotaTramos(base, IRPF_ESCALA_ESTATAL) + irpfCuotaTramos(base, IRPF_ESCALA_CATALUNA);
-  if(territorio === 'ceuta_melilla') return irpfCuotaTramos(base, IRPF_ESCALA_ESTATAL) + irpfCuotaTramos(base, IRPF_ESCALA_SUPLETORIA);
-  if(IRPF_ESCALAS_FORALES[territorio]) return irpfCuotaTramos(base, IRPF_ESCALAS_FORALES[territorio]);
-  if(IRPF_ESCALAS_AUTONOMICAS_TRAMOS[territorio]) return irpfCuotaTramos(base, IRPF_ESCALA_ESTATAL) + irpfCuotaTramos(base, IRPF_ESCALAS_AUTONOMICAS_TRAMOS[territorio]);
-  return irpfCuotaTramos(base, IRPF_ESCALA_GENERAL);
+  return irpfPartesEscala(territorio, año).reduce((s, [esc]) => s + irpfCuotaTramos(base, esc), 0);
+}
+/* ---------- Mínimo personal y familiar: estatal y autonómico (verificado el 18/11/2026) ----------
+   AEAT, Manual práctico de Renta 2025: «Importes del mínimo personal y familiar aprobados por las Comunidades Autónomas»
+   y su cuadro comparativo (art. 46.1 a) Ley 22/2009: cada comunidad puede variar hasta un 10 %). El mínimo ESTATAL (5.550 €;
+   2.400 / 2.700 / 4.000 / 4.500 € por descendiente) se descuenta de la parte ESTATAL de la cuota; el AUTONÓMICO, solo de la
+   parte autonómica («para el cálculo del gravamen autonómico»). Castilla y León, Cataluña y La Rioja aplican los de la Ley, y
+   la AEAT dice que «el resto de Comunidades también usa los de la Ley, al no haber ejercido esa competencia» (Aragón, Cantabria,
+   Castilla-La Mancha, Extremadura, Murcia, Ceuta y Melilla). Cada fila: [contribuyente, [1.º, 2.º, 3.º, 4.º y siguientes]].
+   Illes Balears: 5.550 € y 6.105 € SOLO si el contribuyente tiene más de 65 años (la app no sabe la edad: se usa 5.550 €). */
+const IRPF_MINIMO_ESTATAL = [5550, [2400, 2700, 4000, 4500]];
+const IRPF_MINIMOS_AUTONOMICOS = {
+  andalucia: [5790,    [2510, 2820, 4170, 4700]],
+  asturias:  [6105,    [2640, 2970, 4400, 4950]],
+  baleares:  [5550,    [2400, 2970, 4400, 4950]],
+  canarias:  [5606,    [2424, 2727, 4040, 4545]],
+  galicia:   [5789,    [2503, 2816, 4172, 4694]],
+  madrid:    [5956.65, [2575.85, 2897.83, 4400, 4950]],
+  valencia:  [6105,    [2640, 2970, 4400, 4950]]
+};
+// Mínimo del contribuyente + descendientes (art. 57 y 58 LIRPF; el cuarto y siguientes llevan el mismo importe).
+function irpfMinimoFamiliar(tabla, hijos){
+  const n = Math.max(0, Math.floor(hijos) || 0), d = tabla[1];
+  let m = tabla[0];
+  for(let i = 0; i < n; i++) m += d[Math.min(i, 3)];
+  return m;
+}
+// {estatal, auton}: los dos mínimos que corresponden al territorio y a los hijos. Sin comunidad propia, el autonómico es el estatal.
+function irpfMinimosTerritorio(territorio, hijos, año){
+  const e = irpfMinimoFamiliar(IRPF_MINIMO_ESTATAL, hijos);
+  // Asturias fija los suyos desde 2025: en 2024 rigen los estatales.
+  const t = (territorio === 'asturias' && irpfEs2024(año)) ? null : IRPF_MINIMOS_AUTONOMICOS[territorio];
+  return {estatal: e, auton: t ? irpfMinimoFamiliar(t, hijos) : e};
+}
+// Cuota íntegra por la escala del territorio MENOS la del mínimo, cada mitad con su propio mínimo y sin bajar de cero
+// (el mínimo «forma parte de la base liquidable hasta el importe de esta última»).
+function motorIrpfCuotaNeta(base, territorio, minE, minA, año){
+  if(!(base > 0)) return 0;
+  return irpfPartesEscala(territorio, año).reduce((s, [esc, k]) => s + Math.max(0, irpfCuotaTramos(base, esc) - irpfCuotaTramos(k === 'E' ? minE : minA, esc)), 0);
 }
 // Orden para los desplegables: «sin comunidad» primero y el resto por nombre.
 function fiscalTerritoriosLista(){
@@ -168,11 +251,12 @@ function fiscalTerritoriosLista(){
   return ['general', ...ks];
 }
 function territorioFiscal(){ const t = (DB && DB.business && DB.business.territorio) || 'general'; return FISCAL_TERRITORIOS[t] ? t : 'general'; }
-function fiscalReglaEscalaId(){
+function fiscalReglaEscalaId(año){
   const t = territorioFiscal();
-  if(t === 'cataluna') return 'IRPF-ESC-CAT';
+  const sufijo = irpfEs2024(año) && irpfEscalaDistintaEn2024(t) ? '-2024' : '';
+  if(t === 'cataluna') return 'IRPF-ESC-CAT' + sufijo;
   if(t === 'ceuta_melilla') return 'IRPF-ESC-CEUTA-MELILLA';
-  if(IRPF_ESCALAS_AUTONOMICAS[t]) return 'IRPF-ESC-' + t.toUpperCase();
+  if(IRPF_ESCALAS_AUTONOMICAS[t]) return 'IRPF-ESC-' + t.toUpperCase() + sufijo;
   if(IRPF_ESCALAS_FORALES[t]) return 'IRPF-ESC-' + t.toUpperCase();
   return 'IRPF-ESC-GENERAL';
 }
@@ -183,11 +267,18 @@ function fiscalReglaEscalaId(){
     const e = IRPF_ESCALAS_AUTONOMICAS[k];
     FISCAL_REGLAS.push({id:'IRPF-ESC-' + k.toUpperCase(), concepto:'IRPF',
       descripcion:'Escala autonómica 2025 (' + e.nombre() + '): ' + e.filas.map(f => num(f[1])).join(' / ') + ' % desde ' + e.filas.map(f => num(f[0])).join(' / ') + ' € de base liquidable.',
-      fuente:'AEAT · Manual práctico de Renta 2025, «Gravamen autonómico» (' + e.nombre() + ')', referencia:e.ref, desde:'2025-01-01', hasta:null, territorio:k, aplicaA:['autonomo','cb'], estado:'verificada',
-      nota:'Verificada para el ejercicio 2025 contra la cuota íntegra de la propia tabla de la AEAT. Para 2026 se aplica la misma hasta confirmar que no cambia. Usa el mínimo personal estatal.'});
+      fuente:'AEAT · Manual práctico de Renta 2025, «Gravamen autonómico» (' + e.nombre() + ')', referencia:e.ref, desde: irpfEscalaDistintaEn2024(k) ? '2025-01-01' : '2024-01-01', hasta:null, territorio:k, aplicaA:['autonomo','cb'], estado:'verificada',
+      nota:'Verificada para el ejercicio 2025 contra la cuota íntegra de la propia tabla de la AEAT. Para 2026 se aplica la misma hasta confirmar que no cambia. El mínimo personal y familiar (estatal y autonómico) va aparte: ver IRPF-MIN-PERSONAL e IRPF-MIN-AUTONOMICO.'});
+  });
+  Object.keys(IRPF_ESCALAS_AUTONOMICAS_2024).forEach(k => {
+    const f = IRPF_ESCALAS_AUTONOMICAS_2024[k];
+    FISCAL_REGLAS.push({id:'IRPF-ESC-' + k.toUpperCase() + '-2024', concepto:'IRPF',
+      descripcion:'Escala autonómica 2024 (' + IRPF_ESCALAS_AUTONOMICAS[k].nombre() + '): ' + f.map(x => num(x[1])).join(' / ') + ' % desde ' + f.map(x => num(x[0])).join(' / ') + ' € de base liquidable.',
+      fuente:'AEAT · Manual práctico de Renta 2024, «Gravamen autonómico» (' + IRPF_ESCALAS_AUTONOMICAS[k].nombre() + '), verificada el 18/11/2026', referencia:IRPF_ESCALAS_AUTONOMICAS[k].ref, desde:'2024-01-01', hasta:'2024-12-31', territorio:k, aplicaA:['autonomo','cb'], estado:'verificada',
+      nota:'Verificada contra la cuota íntegra de la propia tabla de la AEAT. Distinta de la de 2025.'});
   });
   FISCAL_REGLAS.push({id:'IRPF-ESC-CEUTA-MELILLA', concepto:'IRPF', descripcion:'Ceuta y Melilla: sin escala autonómica propia, rige la supletoria del art. 65 LIRPF (9,5 / 12 / 15 / 18,5 / 22,5 %) sumada a la estatal.',
-    fuente:'AEAT · Manual práctico de Renta 2025, «Especialidad de la escala autonómica»', referencia:'LIRPF disp. adic. 32.ª y art. 65', desde:'2025-01-01', hasta:null, territorio:'ceuta_melilla', aplicaA:['autonomo','cb'], estado:'verificada',
+    fuente:'AEAT · Manual práctico de Renta 2025, «Especialidad de la escala autonómica»', referencia:'LIRPF disp. adic. 32.ª y art. 65', desde:'2024-01-01', hasta:null, territorio:'ceuta_melilla', aplicaA:['autonomo','cb'], estado:'verificada',
     nota:'La escala está verificada, pero NO se aplica la deducción por rentas obtenidas en Ceuta y Melilla (LIRPF art. 68.4), que puede reducir mucho la cuota: consúltala con tu gestoría.'});
   [['navarra', 'Navarra', 'Ley Foral 22/1998 (Texto Refundido de la LFIRPF), art. 59', 'Taxdown (resumen de Navarra, escala 2025-2026)', '13 / 22 / 25 / 28 / 36,5 / 41,5 / 44 / 47 / 49 / 50,5 / 52 % hasta 4.458 / 10.030 / 21.175 / 35.663 / 51.266 / 66.869 / 89.159 / 139.310 / 195.034 / 334.344 € y resto.'],
    ['pais_vasco', 'País Vasco', 'Normas Forales del IRPF de Álava, Bizkaia (NF 13/2013 art. 75) y Gipuzkoa (NF 3/2014)', 'Billeo (escala 2025 de Gipuzkoa); Guiafiscal para Bizkaia', '23 / 28 / 35 / 40 / 45 / 46 / 47 / 49 % hasta 17.720 / 35.440 / 53.160 / 75.910 / 105.130 / 140.130 / 204.270 € y resto (la de Gipuzkoa; Bizkaia y Álava pueden diferir en pocos euros).']].forEach(([k, nom, ref, fuente, desc]) => {
@@ -246,12 +337,12 @@ function fiscalTrazaAnual(año){
     T.impuestoAnual = r ? irpfActividad(r.rendimientoAnual, {sinDificilJustificacion:true}) : 0;
     paso(L({es:'IRPF por módulos (sobre el rendimiento de los módulos, no sobre lo ganado)', ca:'IRPF per mòduls (sobre el rendiment dels mòduls, no sobre el guanyat)', en:'Income tax under modules (on the module yield, not on profit)'}), T.impuestoAnual, 'IVA-MODULOS');
   } else if(p.forma === 'autonomo'){
-    const d = irpfActividadDetalle(baseImp);
+    const d = irpfActividadDetalle(baseImp, {año});
     d.pasos.slice(1).forEach(x => paso(x.et, x.v, x.regla));
     T.impuestoAnual = d.cuota;
   } else if(p.forma === 'cb'){
     T.impuestoAnual = impuestoAnual(baseImp, opts);
-    paso(L({es:'IRPF de cada comunero por su parte (suma)', ca:'IRPF de cada comuner per la seva part (suma)', en:'Each member\'s income tax on their share (sum)'}), T.impuestoAnual, fiscalReglaEscalaId());
+    paso(L({es:'IRPF de cada comunero por su parte (suma)', ca:'IRPF de cada comuner per la seva part (suma)', en:'Each member\'s income tax on their share (sum)'}), T.impuestoAnual, fiscalReglaEscalaId(año));
   } else if(p.forma === 'sociedad'){
     const cfg = (DB.ge.config || {}).pctImpuestoBeneficio;
     T.impuestoAnual = impuestoAnual(baseImp, opts);
@@ -269,7 +360,8 @@ function fiscalTrazaAnual(año){
   const M = (nivel, txt) => T.motivos.push({nivel, txt});
   if(!p.forma) M('baja', L({es:'Falta la forma jurídica del negocio: el impuesto no se puede calcular con fiabilidad.', ca:'Falta la forma jurídica del negoci: l\'impost no es pot calcular amb fiabilitat.', en:'The legal form is missing: tax cannot be reliably computed.'}));
   if(p.forma === 'cooperativa') M('media', L({es:'Cooperativa: se supone fiscalmente protegida y todo el excedente como cooperativo. Los resultados extracooperativos (al tipo general) y las cooperativas de crédito o no protegidas los ajusta tu gestoría.', ca:'Cooperativa: se suposa fiscalment protegida i tot l\'excedent com a cooperatiu. Els resultats extracooperatius (al tipus general) i les cooperatives de crèdit o no protegides els ajusta la teva gestoria.', en:'Cooperative: assumed tax-protected with the whole surplus as cooperative. Extra-cooperative results (at the general rate) and credit or non-protected cooperatives are adjusted by your accountant.'}));
-  if(año < 2025) M('baja', L({es:'Las reglas cargadas empiezan en 2025: un ejercicio anterior no es fiable.', ca:'Les regles carregades comencen el 2025: un exercici anterior no és fiable.', en:'Loaded rules start in 2025: an earlier year is not reliable.'}));
+  if(año < 2024) M('baja', L({es:'Las reglas verificadas empiezan en 2024: un ejercicio anterior no es fiable.', ca:'Les regles verificades comencen el 2024: un exercici anterior no és fiable.', en:'Verified rules start in 2024: an earlier year is not reliable.'}));
+  if(año === 2024 && p.forma === 'cooperativa') M('media', L({es:'Cooperativa en 2024: se aplica el 20 % de la tabla de la AEAT para todos los casos (también la nueva creación), sin contrastar con la ley; tu gestoría lo confirma.', ca:'Cooperativa el 2024: s\'aplica el 20 % de la taula de l\'AEAT per a tots els casos (també la nova creació), sense contrastar amb la llei; la teva gestoria ho confirma.', en:'Cooperative in 2024: the AEAT table\'s 20 % is applied to every case (new-company too), not checked against the law; your accountant confirms it.'}));
   if(mesesConDatos === 0) M('baja', L({es:'Todavía no hay ventas ni compras en este ejercicio.', ca:'Encara no hi ha vendes ni compres en aquest exercici.', en:'There are no sales or purchases in this year yet.'}));
   else if(enCurso && mesesConDatos < 3) M('media', L({es:`Solo hay ${mesesConDatos} mes(es) con datos: la proyección a 12 meses es muy poco precisa.`, ca:`Només hi ha ${mesesConDatos} mes(os) amb dades: la projecció a 12 mesos és molt poc precisa.`, en:`Only ${mesesConDatos} month(s) of data: the 12-month projection is very rough.`}));
   if(enCurso && mesesConDatos > 0) M('media', L({es:'El ejercicio sigue abierto: es una estimación y el mes en curso está incompleto.', ca:'L\'exercici continua obert: és una estimació i el mes en curs està incomplet.', en:'The year is still open: this is an estimate and the current month is incomplete.'}));
@@ -277,7 +369,9 @@ function fiscalTrazaAnual(año){
   if((p.forma === 'autonomo' || p.forma === 'cb') && !p.modulos){
     if(T.territorio === 'general') M('media', L({es:'No hay comunidad autónoma elegida: se usa una escala general de referencia. Pídele a GastroGoan que fije tu comunidad en el alta.', ca:'No hi ha comunitat autònoma triada: es fa servir una escala general de referència. Demana a GastroGoan que fixi la teva comunitat a l\'alta.', en:'No region is set: a reference general scale is used. Ask GastroGoan to set your region at sign-up.'}));
     else if(IRPF_ESCALAS_FORALES[T.territorio]) M('media', L({es:'Régimen foral: la escala foral no está contrastada con el texto oficial y el mínimo, las reducciones y las deducciones son las forales; aquí se usan las estatales como aproximación. Confírmalo con tu gestoría.', ca:'Règim foral: l\'escala foral no està contrastada amb el text oficial i el mínim, les reduccions i les deduccions són les forals; aquí es fan servir les estatals com a aproximació. Confirma-ho amb la teva gestoria.', en:'Foral regime: the foral scale is not checked against the official text and the allowance, reductions and deductions are the foral ones; the state ones are used here as an approximation. Confirm with your accountant.'}));
-    else M('media', L({es:'Se usa el mínimo personal estatal (5.550 €): algunas comunidades fijan otro importe, lo que mueve la cuota unos pocos euros.', ca:'Es fa servir el mínim personal estatal (5.550 €): algunes comunitats en fixen un altre, cosa que mou la quota uns pocs euros.', en:'The state personal allowance (€5,550) is used: some regions set another amount, which moves the tax by a few euros.'}));
+    // Régimen común y Ceuta/Melilla: el mínimo estatal y el autonómico de cada comunidad están verificados (AEAT, 18/11/2026), así que ya no
+    // hay motivo de fiabilidad por el mínimo. Baleares usa 5.550 € (6.105 € si el titular tiene más de 65 años: la app no sabe la edad).
+    else if(T.territorio === 'baleares') M('media', L({es:'Illes Balears: el mínimo autonómico es 6.105 € si el titular tiene más de 65 años; aquí se usa 5.550 €.', ca:'Illes Balears: el mínim autonòmic és 6.105 € si el titular té més de 65 anys; aquí es fa servir 5.550 €.', en:'Balearic Islands: the regional allowance is €6,105 if the owner is over 65; €5,550 is used here.'}));
     if(T.territorio === 'ceuta_melilla') M('media', L({es:'No se aplica la deducción por rentas obtenidas en Ceuta y Melilla (art. 68.4 LIRPF): puede bajar mucho la cuota.', ca:'No s\'aplica la deducció per rendes obtingudes a Ceuta i Melilla (art. 68.4 LIRPF): pot baixar molt la quota.', en:'The deduction for income earned in Ceuta and Melilla (art. 68.4 LIRPF) is not applied: it can lower the tax a lot.'}));
   }
   if((p.forma === 'autonomo' || p.forma === 'cb') && !p.modulos) M('media', L({es:'El IRPF real depende de TODAS tus rentas y circunstancias personales: esta cifra solo mira la actividad (más las otras rentas e hijos que hayas indicado).', ca:'L\'IRPF real depèn de TOTES les teves rendes i circumstàncies personals: aquesta xifra només mira l\'activitat (més les altres rendes i fills que hagis indicat).', en:'Real income tax depends on ALL your income and circumstances: this figure only covers the activity (plus other income and children you entered).'}));
@@ -320,7 +414,7 @@ function fiscalPrevision(año, q){
   const r115 = suma(m => geRetencionForMonth(año, m, '115')); if(r115 > 0.005) add('115', gl({es:'Retención del alquiler', ca:'Retenció del lloguer', en:'Rent withholding'}), r115, gl({es:'Retención practicada en los gastos fijos marcados como alquiler', ca:'Retenció practicada a les despeses fixes marcades com a lloguer', en:'Withholding on fixed costs marked as rent'}));
   const r123 = suma(m => GE.retDividendosMes(m, año)); if(r123 > 0.005) add('123', gl({es:'Retención de dividendos', ca:'Retenció de dividends', en:'Dividend withholding'}), r123, gl({es:'19 % retenido en los dividendos anotados', ca:'19 % retingut als dividends anotats', en:'19 % withheld on recorded dividends'}));
   const pc = GE.pagoACuentaTrimestre(q*3 + 2, año);
-  if(pc && pc.importe > 0.005) add(pc.modelo, gl({es:'Pago fraccionado a cuenta', ca:'Pagament fraccionat a compte', en:'Instalment payment on account'}), pc.importe, pc.modelo === '202' ? gl({es:'18 % de la cuota del último Impuesto de Sociedades', ca:'18 % de la quota de l\'últim Impost de Societats', en:'18 % of the last Corporate Tax bill'}) : gl({es:'Rendimiento acumulado del año (20 %) menos lo ya pagado', ca:'Rendiment acumulat de l\'any (20 %) menys el ja pagat', en:'Year-to-date income (20 %) minus what was already paid'}));
+  if(pc && pc.importe > 0.005) add(pc.modelo, gl({es:'Pago fraccionado a cuenta', ca:'Pagament fraccionat a compte', en:'Instalment payment on account'}), pc.importe, pc.modelo === '202' ? gl({es:'18 % de la cuota del último Impuesto de Sociedades', ca:'18 % de la quota de l\'últim Impost de Societats', en:'18 % of the last Corporate Tax bill'}) : gl({es:'Rendimiento acumulado del año (20 %, tras el 5 % de difícil justificación en simplificada) menos lo ya pagado', ca:'Rendiment acumulat de l\'any (20 %, després del 5 % de difícil justificació en simplificada) menys el ja pagat', en:'Year-to-date income (20 %, after the 5 % hard-to-document expenses in simplified) minus what was already paid'}));
   return {año, q, filas, traza, nivel: traza.nivel, actualizado: new Date().toISOString()};
 }
 // Pasar el modelo a otro estado lo hace el usuario: la app no sabe qué ha presentado su gestor.
@@ -363,7 +457,7 @@ function fiscalTrazaModal(año){
       <p>${L({es:`Ventas, compras, gastos fijos, personal, inversiones e intereses de ${T.mesesConDatos} mes(es) con datos de ${año}. Forma jurídica: ${T.forma || '—'}${T.regimen ? ' · ' + T.regimen : ''}. Territorio: ${FISCAL_TERRITORIOS[T.territorio]()}.`, ca:`Vendes, compres, despeses fixes, personal, inversions i interessos de ${T.mesesConDatos} mes(os) amb dades del ${año}. Forma jurídica: ${T.forma || '—'}${T.regimen ? ' · ' + T.regimen : ''}. Territori: ${FISCAL_TERRITORIOS[T.territorio]()}.`, en:`Sales, purchases, fixed costs, staff, investments and interest from ${T.mesesConDatos} month(s) of ${año} data. Legal form: ${T.forma || '—'}${T.regimen ? ' · ' + T.regimen : ''}. Territory: ${FISCAL_TERRITORIOS[T.territorio]()}.`})}</p>
       ${T.avisos.length ? `<h4>${L({es:'Condiciones que pueden cambiar el resultado', ca:'Condicions que poden canviar el resultat', en:'Conditions that may change the result'})}</h4><ul class="mf-avisos">${T.avisos.map(a => `<li>${escapeHtml(a)}</li>`).join('')}</ul>` : ''}
       <h4>${L({es:'Reglas aplicadas', ca:'Regles aplicades', en:'Rules applied'})}</h4>
-      <ul class="mf-reglas">${reglas.map(r => `<li><b>${escapeHtml(r.id)}</b> <span class="gf-chip ${r.estado === 'verificada' ? 'is-ok' : r.estado === 'revisada' ? 'is-auto' : 'is-aviso'}">${FISCAL_ESTADO_TXT[r.estado]()}</span><br>${escapeHtml(r.descripcion)}<br><small>${escapeHtml(r.fuente)} · ${escapeHtml(r.referencia)}${r.nota ? ' · ' + escapeHtml(r.nota) : ''}</small></li>`).join('') || `<li>—</li>`}</ul>
+      <ul class="mf-reglas">${reglas.map(r => `<li><b>${escapeHtml(r.id)}</b> <span class="gf-chip ${r.estado === 'verificada' ? 'is-ok' : r.estado === 'revisada' ? 'is-auto' : (r.estado === 'noaplica' || r.estado === 'fuera') ? '' : 'is-aviso'}">${FISCAL_ESTADO_TXT[r.estado]()}</span><br>${escapeHtml(r.descripcion)}<br><small>${escapeHtml(r.fuente)} · ${escapeHtml(r.referencia)}${r.nota ? ' · ' + escapeHtml(r.nota) : ''}</small></li>`).join('') || `<li>—</li>`}</ul>
     </div>
     <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">${L({es:'Entendido', ca:'Entès', en:'Got it'})}</button></div>`);
 }
