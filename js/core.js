@@ -8179,6 +8179,47 @@ function cerrarMesaPagadaQr(order){
   return sale || null;
 }
 
+/* Solicitudes públicas con los datos personales CIFRADOS (18/11). El buzón `requests` se podía LEER con solo conocer el publicId
+   (va en el QR): mientras la app del negocio estaba cerrada, las reservas y pedidos esperaban ahí con nombre, teléfono, email y
+   notas (alergias) a la vista. Ahora la web cifra esos campos con la clave PÚBLICA del negocio (RSA-OAEP + AES-GCM, WebCrypto) y
+   solo la app, que guarda la privada, puede abrirlos. No cambia ninguna regla de Firebase, así que sirve también a los negocios
+   que aún tienen las reglas viejas. Sin clave publicada (app antigua) o sin WebCrypto, la web envía en claro como siempre. */
+const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas'];
+function b64aBytes(b64){ const bin = atob(b64), u = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+// Devuelve true si ACABA de crear la clave (para republicar el espejo con ella).
+async function asegurarClaveSolicitudes(){
+  const b = DB.business;
+  if(!b || (b.reqPub && b.reqPriv)) return false;
+  if(typeof crypto === 'undefined' || !crypto.subtle) return false;
+  const par = await crypto.subtle.generateKey({name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['encrypt', 'decrypt']);
+  b.reqPub = await crypto.subtle.exportKey('jwk', par.publicKey);
+  b.reqPriv = await crypto.subtle.exportKey('jwk', par.privateKey);
+  saveDB();
+  return true;
+}
+async function descifrarSolicitud(req){
+  if(!req || !req.enc) return req;
+  if(!DB.business || !DB.business.reqPriv) throw new Error('sin clave privada');
+  const priv = await crypto.subtle.importKey('jwk', DB.business.reqPriv, {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['decrypt']);
+  const raw = await crypto.subtle.decrypt({name: 'RSA-OAEP'}, priv, b64aBytes(req.enc.k));
+  const aes = await crypto.subtle.importKey('raw', raw, {name: 'AES-GCM'}, false, ['decrypt']);
+  const claro = await crypto.subtle.decrypt({name: 'AES-GCM', iv: b64aBytes(req.enc.iv)}, aes, b64aBytes(req.enc.d));
+  const datos = JSON.parse(new TextDecoder().decode(claro));
+  const out = Object.assign({}, req); delete out.enc;
+  // Solo se aceptan los campos privados conocidos: lo que traiga el bloque cifrado no puede pisar el resto de la solicitud.
+  CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { if(datos[k] !== undefined) out[k] = datos[k]; });
+  return out;
+}
+// Envuelve la función que procesa una solicitud: si viene cifrada la abre primero. Si no se puede abrir (clave de otro aparato
+// que aún no ha sincronizado) se deja en el buzón sin tocarla: se reintenta al volver a conectar.
+function ggDescifrando(cb){
+  return snap => {
+    const v = snap.val();
+    if(!v || !v.enc) return cb(snap);
+    descifrarSolicitud(v).then(plano => cb({val: () => plano, ref: snap.ref, key: snap.key}))
+      .catch(e => console.error('No se pudo abrir una solicitud cifrada', e));
+  };
+}
 let publicRequestsListenerAttached = false;
 /* ⚠️ EL OYENTE NO SE ENGANCHA HASTA SABER DÓNDE VIVE EL ESPEJO.
 
@@ -8224,7 +8265,8 @@ function initPublicRequestsListener(){
     // lectura de "última hora" para un aviso, no algo de lo que dependa el
     // oyente de reservas/pedidos que sigue justo debajo.
     if(saturacionPublicaReciente === null) comprobarSaturacionPublica().catch(() => {});
-    app.database().ref('gastrogoan/public/' + publicId + '/requests').on('child_added', snap => {
+    asegurarClaveSolicitudes().then(creada => { if(creada && typeof syncPublicMirror === 'function') syncPublicMirror(); }).catch(() => {});
+    app.database().ref('gastrogoan/public/' + publicId + '/requests').on('child_added', ggDescifrando(snap => {
       const req = snap.val();
       const reqRef = snap.ref;
       if(!req || !req.type){ reqRef.remove(); return; }
@@ -8617,7 +8659,7 @@ function initPublicRequestsListener(){
       if(notifyNewRequest) playNewRequestAlert();
       reqRef.remove();
       }).catch(e => console.error('Error reclamando solicitud pública', e));
-    }, err => console.error('Error escuchando pedidos públicos', err));
+    }), err => console.error('Error escuchando pedidos públicos', err));
   }).catch(e => console.error('Error escuchando pedidos públicos', e));
 }
 
@@ -9040,6 +9082,7 @@ function negocioParaElEspejoPublico(){
   const b = DB.business || {};
   const out = {};
   CAMPOS_PUBLICOS_DEL_NEGOCIO.forEach(k => { if(b[k] !== undefined) out[k] = b[k]; });
+  if(b.reqPub) out.reqPub = b.reqPub;   // la PÚBLICA, para que la web cifre; la privada (reqPriv) nunca sale
   return out;
 }
 
