@@ -149,8 +149,11 @@ await caso('Cada comunidad tiene su regla verificada y la traza la cita; Ceuta/M
   await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'ceuta_melilla'});
   const c = await page.evaluate(() => fiscalTrazaAnual(new Date().getFullYear() - 1).avisos.join(' | ')); assert.match(c, /Ceuta y Melilla \(art\. 68\.4/);
   await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'navarra'});
-  const f = await page.evaluate(() => { const T = fiscalTrazaAnual(new Date().getFullYear() - 1); return {n: T.nivel, a: T.avisos.join(' | ')}; }); assert.equal(f.n, 'media'); assert.match(f.a, /Régimen foral/);
-  assert.ok((await page.evaluate(() => fiscalRegla('IRPF-ESC-NAVARRA').estado)) === 'pendiente');
+  const f = await page.evaluate(() => { const T = fiscalTrazaAnual(new Date().getFullYear() - 1); return {n: T.nivel, a: T.avisos.join(' | ')}; }); assert.equal(f.n, 'media'); assert.match(f.a, /Navarra: la escala/);
+  // Navarra: escala y mínimo VERIFICADOS el 18/11/2026 con Hacienda Foral de Navarra; País Vasco sigue pendiente (sin fuente oficial de Gipuzkoa/Bizkaia).
+  assert.deepEqual(await page.evaluate(() => ['IRPF-ESC-NAVARRA', 'IRPF-MIN-NAVARRA', 'IRPF-ESC-PAIS_VASCO'].map(id => fiscalRegla(id).estado)), ['verificada', 'verificada', 'pendiente']);
+  await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'pais_vasco'});
+  const pv = await page.evaluate(() => { const T = fiscalTrazaAnual(new Date().getFullYear() - 1); return {n: T.nivel, a: T.avisos.join(' | ')}; }); assert.equal(pv.n, 'media'); assert.match(pv.a, /Régimen foral/);
 });
 await caso('Cooperativa fiscalmente protegida (tabla de la AEAT 2025-2028), cuentas a mano: excedente 100.000 − FEP 5 % − 50 % del FRO al 20 % = base 85.000', async () => {
   const r = await page.evaluate(() => { const b = DB.business, g = {...b}; Object.assign(b, {formaJuridica:'cooperativa', coopTipo:'protegida', coopFep:5, coopFro:20});
