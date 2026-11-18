@@ -11040,7 +11040,8 @@ function renderPedidosConfigCard(){
       ${deliveryEnabled ? `
       <div class="field">
         <label>${escapeHtml(gl({es:'Zonas con tarifa propia (opcional)', ca:'Zones amb tarifa pròpia (opcional)', en:'Zones with their own fee (optional)'}))}</label>
-        <textarea id="mn-zonas" rows="3" placeholder="Centro | 08001,08002 | 2 | 12 | 25">${escapeHtml(entZonasATexto(p.zonas))}</textarea>
+        <textarea id="mn-zonas" rows="3" placeholder="Centro | 08001,08002 | 2 | 12 | 25" oninput="entPreviewActualiza('zonas')" onchange="savePedidosConfig()">${escapeHtml(entZonasATexto(p.zonas))}</textarea>
+        <div id="mn-zonas-prev" class="mn-prev" aria-live="polite">${entPreviewHtml('zonas', entZonasATexto(p.zonas))}</div>
         <small style="color:var(--muted)">${escapeHtml(gl({es:'Una por línea: nombre | códigos postales | tarifa | mínimo | envío gratis desde. Lo que dejes vacío usa el valor general. La web y la app calculan el envío con estas mismas reglas.', ca:'Una per línia: nom | codis postals | tarifa | mínim | enviament gratuït des de. El que deixis buit fa servir el valor general. El web i l\'app calculen l\'enviament amb aquestes mateixes regles.', en:'One per line: name | postal codes | fee | minimum | free delivery from. Anything left empty uses the general value. The web and the app compute delivery with these same rules.'}))}</small>
       </div>` : ''}
       <div class="field">
@@ -11065,7 +11066,8 @@ function renderPedidosConfigCard(){
       </div>
       <div class="field">
         <label>${escapeHtml(gl({es:'Códigos promocionales', ca:'Codis promocionals', en:'Promo codes'}))}</label>
-        <textarea id="mn-codigos" rows="3" placeholder="BIENVENIDA | 10% | 15 | 2026-12-31 | 100">${escapeHtml(entCodigosATexto(p.codigos))}</textarea>
+        <textarea id="mn-codigos" rows="3" placeholder="BIENVENIDA | 10% | 15 | 2026-12-31 | 100" oninput="entPreviewActualiza('codigos')" onchange="savePedidosConfig()">${escapeHtml(entCodigosATexto(p.codigos))}</textarea>
+        <div id="mn-codigos-prev" class="mn-prev" aria-live="polite">${entPreviewHtml('codigos', entCodigosATexto(p.codigos))}</div>
         <small style="color:var(--muted)">${escapeHtml(gl({es:'Una por línea: CÓDIGO | descuento (10% o 5€) | pedido mínimo | válido hasta (AAAA-MM-DD) | usos máximos. Son públicos (viajan con la carta): úsalos para campañas, no como secreto. Se calculan en la app con tus reglas.', ca:'Una per línia: CODI | descompte (10% o 5€) | comanda mínima | vàlid fins (AAAA-MM-DD) | usos màxims. Són públics (viatgen amb la carta): fes-los servir per a campanyes, no com a secret. Es calculen a l\'app amb les teves regles.', en:'One per line: CODE | discount (10% or 5€) | minimum order | valid until (YYYY-MM-DD) | max uses. They are public (they travel with the menu): use them for campaigns, not as a secret. They are computed in the app with your rules.'}))}</small>
       </div>
       <div class="field">

@@ -16,8 +16,8 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [x] S2 (filas plegables, barra en una fila, semana con + pequeño; test/reservas.mjs adaptado) Reservas: filas desplegables (hora · nombre · personas; resto al desplegar); título de fecha sin cortar; «Hoy»/«Imprimir»/«Nueva» sin filas sueltas; semana compacta.
 - [x] S3 (botón «Más» quitado en toda la app: pestañas envuelven) Promoción: quitar botón «más», ver todo directamente.
 ## Gestión
-- [ ] G1 Mi Negocio horario: turnos en una línea, selects pequeños; «Por turnos» limpio.
-- [ ] G2 Mi Negocio: «Zonas con tarifa propia» y «Códigos promocionales» no hacen nada al escribir → revisar que guardan y se usan; auditar el resto de campos sin efecto.
+- [x] G1 Mi Negocio horario: turnos en una línea, selects pequeños; «Por turnos» limpio.
+- [x] G2 zonas y códigos: vista previa + guardado al salir; TODA la tarjeta Pedidos guarda al salir del campo (test/mi-negocio-zonas-codigos.mjs). Falta auditar otras tarjetas de Mi Negocio con campos sin efecto.
 - [x] G3 Panel: Semana/Mes al lado del título de cada bloque; textos superpuestos (gráfico equilibrio); avisos alineados.
 - [x] G4 (rejilla de 2 columnas permanente; test/economia-movil.mjs) Gestión Económica: quitar el botón «más» de las secciones.
 - [ ] G5 Existencias a fin de mes: revisar cálculo y lógica.

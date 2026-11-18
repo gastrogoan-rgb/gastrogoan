@@ -7606,6 +7606,19 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
   .pm-fecha-txt{white-space:normal !important;line-height:1.15;font-size:15px !important}
   .pm-fecha{min-width:0;flex:1 1 auto}
 }
+/* Vista previa de zonas y códigos en Mi Negocio */
+.mn-prev{margin-top:6px}
+.mn-prev-lista{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-direction:column;gap:4px}
+.mn-prev-lista li{font-size:13px;line-height:1.3;overflow-wrap:break-word}
+.mn-prev-ok i{color:var(--olive)} .mn-prev-mal{color:var(--red)} .mn-prev-mal i{color:var(--red)}
+.mn-prev-pie,.mn-prev-vacio{color:var(--muted);font-size:12px}
+/* Mi Negocio · horario: «Turno 1  13:00 a 16:30» en UNA línea y el selector «Por turnos» sin pisar su flecha (18/11) */
+@media (max-width:520px){
+  .mn-tramo-row{flex-wrap:nowrap !important;gap:4px !important}
+  .mn-tramo-row > span:first-child{min-width:0 !important;flex:0 0 auto;font-size:11.5px}
+  .mn-tramo-row select,.mn-tramo-row input.mn-horario-time{width:88px !important;min-width:0 !important;flex:0 0 auto;padding:4px 4px !important}
+  select[id^="mn-hor-"][id$="-modo"]{padding-right:26px !important;min-width:92px}
+}
 /* «Hoy — Atención»: todas las filas alineadas a la izquierda (las de dos líneas salían centradas) */
 .att-chip{text-align:left;justify-content:flex-start}
 .att-chip span{text-align:left}
