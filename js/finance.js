@@ -815,13 +815,17 @@ function irpfActividad(rendimiento, opts={}){ return irpfActividadDetalle(rendim
 // tope de 2.000 € es anual (no por trimestre). Antes el 130 aplicaba el 20 % al rendimiento entero y pagaba de más (el exceso
 // se recuperaba en la renta anual: el dinero estaba prestado a Hacienda). Solo en estimación directa SIMPLIFICADA.
 // Límite: el tope de 2.000 € no sabe de otras actividades del titular; con varias, el exceso se reparte (lo ajusta el gestor).
-function pfDificilJustificacion(acumulado){
+// ⚠️ Porcentaje: 7 % SOLO en el ejercicio 2023 (Manual práctico de Renta 2023, «Modalidad simplificada», verificado el 18/11/2026);
+// 5 % en los demás. El tope de 2.000 € es el mismo.
+function irpfDificilPct(año){ return año === 2023 ? 0.07 : 0.05; }
+function pfDificilJustificacion(acumulado, año){
   const b = DB.business || {};
   if(b.modalidadDirecta === 'normal' || !(acumulado > 0)) return 0;
+  const pct = irpfDificilPct(año);
   const com = fiscalPerfil().forma === 'cb' && Array.isArray(b.comuneros) ? b.comuneros : [];
   const suma = com.reduce((s, c) => s + (parseFloat(c.pct) || 0), 0);
-  if(suma > 0) return com.reduce((s, c) => s + Math.min(2000, acumulado * (parseFloat(c.pct) || 0) / suma * 0.05), 0);
-  return Math.min(2000, acumulado * 0.05);
+  if(suma > 0) return com.reduce((s, c) => s + Math.min(2000, acumulado * (parseFloat(c.pct) || 0) / suma * pct), 0);
+  return Math.min(2000, acumulado * pct);
 }
 // Lo mismo, pero explicando cada paso (trazabilidad: js/motor-fiscal.js → fiscalTrazaAnual). Una sola implementación:
 // irpfActividad() solo se queda con la cuota.
@@ -830,11 +834,13 @@ function irpfActividadDetalle(rendimiento, opts={}){
   if(!(rendimiento > 0)) return d;
   const paso = (et, v, regla) => { d.pasos.push({et, v, regla: regla || null}); if(regla && !d.reglas.includes(regla)) d.reglas.push(regla); };
   const simplificada = !opts.sinDificilJustificacion && (DB.business||{}).modalidadDirecta !== 'normal';
+  const año = parseInt(opts.año) || new Date().getFullYear();
   let neto = rendimiento;
   paso(gl({es:'Rendimiento neto previo de la actividad', ca:'Rendiment net previ de l\'activitat', en:'Net activity income before reductions'}), rendimiento);
   if(simplificada){
-    const dif = Math.min(2000, rendimiento*0.05); neto = rendimiento - dif;
-    paso(gl({es:'Gastos de difícil justificación (5 %, máx. 2.000 €)', ca:'Despeses de difícil justificació (5 %, màx. 2.000 €)', en:'Hard-to-document expenses (5 %, max 2,000 €)'}), -dif, 'IRPF-DIFICIL-5');
+    const dif = Math.min(2000, rendimiento*irpfDificilPct(año)); neto = rendimiento - dif;
+    if(año === 2023) paso(gl({es:'Gastos de difícil justificación (7 % en 2023, máx. 2.000 €)', ca:'Despeses de difícil justificació (7 % el 2023, màx. 2.000 €)', en:'Hard-to-document expenses (7 % in 2023, max 2,000 €)'}), -dif, 'IRPF-DIFICIL-7');
+    else paso(gl({es:'Gastos de difícil justificación (5 %, máx. 2.000 €)', ca:'Despeses de difícil justificació (5 %, màx. 2.000 €)', en:'Hard-to-document expenses (5 %, max 2,000 €)'}), -dif, 'IRPF-DIFICIL-5');
   }
   // ⚠️ Las reducciones de 6.498 € y de 1.620 € son ALTERNATIVAS (AEAT, Manual práctico de Renta 2025, «Reducción para
   // contribuyentes con rentas no exentas inferiores a 12.000 euros»: solo se aplica si NO se cumplen los requisitos de la de
@@ -857,7 +863,6 @@ function irpfActividadDetalle(rendimiento, opts={}){
   const hijos = Math.max(0, parseInt(opts.hijos != null ? opts.hijos : bz.hijosTitular) || 0);
   // Mínimo ESTATAL y AUTONÓMICO por separado: cada uno se descuenta de su mitad de la cuota (js/motor-fiscal.js, verificado con la AEAT).
   const terr = territorioFiscal();
-  const año = parseInt(opts.año) || new Date().getFullYear();
   const mins = irpfMinimosTerritorio(terr, hijos, año);
   const minimo = mins.estatal;
   const cuotaEsc = x => cuotaIrpfEscala(x, año);
@@ -868,7 +873,7 @@ function irpfActividadDetalle(rendimiento, opts={}){
   d.cuota = cuotaNeta(otras + neto) - cuotaNeta(otras);
   paso(gl({es:'Cuota por la escala del IRPF', ca:'Quota per l\'escala de l\'IRPF', en:'Tax by the income-tax scale'}), porEscala, fiscalReglaEscalaId(año));
   // El mínimo se descuenta de cada mitad (estatal y autonómica) con su importe: la resta es lo que falta para llegar a la cuota.
-  paso(gl({es:'Menos la cuota del mínimo personal y familiar', ca:'Menys la quota del mínim personal i familiar', en:'Less the tax on the personal and family allowance'}), d.cuota - porEscala, (IRPF_MINIMOS_AUTONOMICOS[terr] && !(terr === 'asturias' && año === 2024)) ? 'IRPF-MIN-AUTONOMICO' : 'IRPF-MIN-PERSONAL');
+  paso(gl({es:'Menos la cuota del mínimo personal y familiar', ca:'Menys la quota del mínim personal i familiar', en:'Less the tax on the personal and family allowance'}), d.cuota - porEscala, terr === 'navarra' ? 'IRPF-MIN-NAVARRA' : irpfMinimoPropio(terr, año) ? 'IRPF-MIN-AUTONOMICO' : 'IRPF-MIN-PERSONAL');
   return d;
 }
 // Impuesto ANUAL según la forma del negocio, sobre una base anual.
@@ -884,6 +889,10 @@ function irpfActividadDetalle(rendimiento, opts={}){
 //   «Cuota íntegra previa») para 2025-2028: es el tipo del art. 29.1 LIS menos 3 puntos, con tope del 20 %. 2029 se DERIVA de esa misma
 //   regla (ERD 20 − 3 = 17; micro igual que 2027); la AEAT aún no publica el cuadro de ese año. Antes la app llevaba 16/18 en 2025, que era erróneo.
 const TIPOS_IS = {
+  // 2023 (verificado el 18/11/2026 en el Manual práctico de Sociedades 2023, «Tipos de gravamen vigentes»): general 25 % (incluye la reducida
+  // dimensión), nueva creación 15 %, INCN < 1 M€ en el periodo anterior 23 % plano (Ley 31/2022), cooperativas fiscalmente protegidas 20 % en
+  // resultados cooperativos (los extracooperativos al 25 % no se separan en la app). Mismos números que 2024.
+  2023: {micro:[23,23], erd:25, coopMicro:[20,20], coopErd:20, nueva:15, coopNueva:20},
   // 2024 (verificado el 18/11/2026 con la tabla de tipos de la AEAT, periodos iniciados en 2024): microempresas (INCN < 1 M€) 23 % en todo el
   // tramo, reducida dimensión 25 % (todavía sin tipo propio), nueva creación 15 %; cooperativas fiscalmente protegidas 20 % en todos los casos
   // según esa tabla (incluida la nueva creación: no contrastado con la ley, la traza avisa).

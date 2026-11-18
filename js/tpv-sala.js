@@ -507,7 +507,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
         ${(nombreMenuUnico && !ocultarNombreMenuEnCabecera) ? `<span class="badge badge-blue txt-xs"><i class="ti ti-list-details"></i> ${escapeHtml(nombreMenuUnico)}</span>` : ''}</div>
       <div class="tp-tanda-bts">
         ${statusBadge}
-        ${pendingCount && !soloLectura ? `<button type="button" class="btn btn-sm btn-primary tp-tanda-bt" onclick="marcharComanda(${order.id}, '${esq}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${escapeHtml(t('btn.sendToKitchen'))}</button>` : ''}
+        ${pendingCount && !soloLectura ? `<button type="button" class="btn btn-sm btn-primary tp-tanda-bt" onclick="marcharComanda(${order.id}, '${esq}', ${isMenu})"><i class="ti ti-chef-hat"></i><span class="tp-largo"> ${escapeHtml(t('btn.sendToKitchen'))}</span><span class="tp-corto"> ${escapeHtml(gl({es:'Marchar', ca:'Marxar', en:'Fire'}))}</span></button>` : ''}
       </div>
     </header>
     ${filas}
@@ -571,24 +571,13 @@ function comandaRondas(order){
 function renderOrderComandaPanel(order){
   const unidades = (order.items || []).reduce((s, l) => s + l.qty, 0);
   const total = orderTotal(order);
-  const cab = `<div class="tp-com-cab"><span class="tp-com-tit"><i class="ti ti-clipboard-list"></i> ${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}${unidades ? ` <button type="button" class="btn btn-sm btn-fino tp-com-cuenta" onclick="printCuenta(${order.id})" data-tip="${escapeHtml(gl({es:'Imprimir la cuenta (sin cobrar)', ca:'Imprimir el compte (sense cobrar)', en:'Print the bill (without charging)'}))}" aria-label="${escapeHtml(gl({es:'Imprimir la cuenta', ca:'Imprimir el compte', en:'Print the bill'}))}"><i class="ti ti-printer"></i><span class="tp-largo"> ${escapeHtml(gl({es:'Cuenta', ca:'Compte', en:'Bill'}))}</span></button>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
+  const cab = `<div class="tp-com-cab"><span class="tp-com-tit">${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}${unidades ? ` <button type="button" class="btn btn-sm btn-fino tp-com-cuenta" onclick="printCuenta(${order.id})" data-tip="${escapeHtml(gl({es:'Imprimir la cuenta (sin cobrar)', ca:'Imprimir el compte (sense cobrar)', en:'Print the bill (without charging)'}))}" aria-label="${escapeHtml(gl({es:'Imprimir la cuenta', ca:'Imprimir el compte', en:'Print the bill'}))}"><i class="ti ti-printer"></i><span class="tp-largo"> ${escapeHtml(gl({es:'Cuenta', ca:'Compte', en:'Bill'}))}</span></button>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
   if(!(order.items || []).length){
     return `${cab}<div class="empty es-vacio tp-com-vacia"><i class="ti ti-clipboard-list"></i>${escapeHtml(t('empty.orderEmpty'))}<small>${escapeHtml(t('label.selectFromMenu'))}</small></div>`;
   }
-  const rondas = comandaRondas(order);
-  if(rondas.length === 1) return cab + renderComandaItemsHtml(order, rondas[0].items);
-  return cab + rondas.map(r => {
-    const uds = r.items.reduce((s, {line}) => s + line.qty, 0);
-    const sub = r.items.reduce((s, {line}) => s + line.price * line.qty, 0);
-    const titulo = r.esNuevo
-      ? gl({es:'Añadido ahora · por marchar', ca:'Afegit ara · per marxar', en:'Just added · not sent yet'})
-      : `${gl({es:'Pedido', ca:'Comanda', en:'Order'})} ${r.n}${r.hora ? ` · ${r.hora}` : ''}`;
-    return `
-    <section class="tp-ronda${r.esNuevo ? ' es-nueva' : ''}">
-      <header class="tp-ronda-cab"><span class="tp-ronda-tit"><i class="ti ${r.esNuevo ? 'ti-plus' : 'ti-receipt'}"></i> ${escapeHtml(titulo)}</span><span class="tp-ronda-cuenta">${uds} · ${fmtMoney(sub)}</span></header>
-      ${renderComandaItemsHtml(order, r.items)}
-    </section>`;
-  }).join('');
+  // 18/11 (dueño): TODA la carta arriba y TODOS los menús debajo, aunque se hayan pedido intercalados («no puede ser carta, menú, carta…»).
+  // Ya no hay bloques «Pedido 1 / Añadido ahora»: cada tanda lleva su propio «Marchar» y las líneas ya marchadas se ven apagadas.
+  return cab + renderComandaItemsHtml(order, (order.items || []).map((line, idx) => ({line, idx})));
 }
 
 

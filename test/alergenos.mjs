@@ -63,10 +63,16 @@ const listado = (area) => page.evaluate((a)=>{
   currentArea = () => a;
   navigate('limpieza');
   setLimpiezaTab('alergenos');
-  const filas = [...document.querySelectorAll('#limpieza-tab-content tbody tr')].map(tr => ({
-    plato: tr.cells[0].textContent.trim(),
-    alergenos: [...tr.cells[1].querySelectorAll('.badge')].map(b=>b.textContent.trim()),
-  }));
+  // 18/11: la pantalla enseña SECCIONES; se entra en cada una y se juntan las filas (solo las que declaran alérgenos).
+  const filas = [];
+  lpAlergSecciones().forEach(sec => {
+    lpAlergEntrar(sec.key);
+    document.querySelectorAll('#limpieza-tab-content tbody tr').forEach(tr => {
+      const al = [...tr.cells[1].querySelectorAll('.badge')].map(b=>b.textContent.trim());
+      if(al.length) filas.push({plato: tr.cells[0].textContent.trim(), alergenos: al});
+    });
+  });
+  lpAlergEntrar(null);
   return {filas, datos: getAllDishAllergens()};
 }, area);
 
