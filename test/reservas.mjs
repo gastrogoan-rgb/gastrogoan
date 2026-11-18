@@ -64,9 +64,9 @@ await caso('Día: cuatro cifras que cuadran (ocupan sitio solo pendientes, confi
   assert.ok(/sin mesa/i.test(r[0][2]), 'avisa de la reserva sin mesa: ' + r[0][2]);
 });
 
-await caso('Cada reserva lleva su acción principal a la vista y el resto en el menú ⋯', async () => {
+await caso('Cada reserva (plegada: hora · nombre · personas; al desplegar, su acción principal y el resto en el menú ⋯)', async () => {
   const r = await q(() => [...document.querySelectorAll('#reservas-tab-content .rv-fila')].map(f => ({
-    hora: f.querySelector('.rv-hora').textContent, principal: [...f.querySelectorAll('.rv-acc > .btn:not(.mn-btn)')].map(b => b.innerText.trim()).join('|'),
+    hora: f.querySelector('.rv-hora').textContent, principal: [...f.querySelectorAll('.rv-acc > .btn:not(.mn-btn)')].map(b => b.textContent.trim()).join('|'),
     menu: f.querySelector('[aria-haspopup="menu"]') ? JSON.parse(f.querySelector('[aria-haspopup="menu"]').dataset.acc).map(a => a.texto) : [], tel: !!f.querySelector('a[href^="https://wa.me/"]'), href: (f.querySelector('a[href^="https://wa.me/"]') || {}).href || '' })));
   assert.equal(r.length, 4);
   assert.match(r[0].principal, /llegado/i); assert.equal(r[0].hora, '13:30'); assert.ok(r[0].menu.length >= 3, r[0].menu.join(','));
