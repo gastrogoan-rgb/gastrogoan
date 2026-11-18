@@ -502,10 +502,11 @@ const GE = (function(){
       let pagado = 0;
       for(let k=0;k<q;k++){
         const acum = meses.slice(0, k*3+3).reduce((s,v)=>s+v,0);
-        pagado += Math.max(0, acum*0.20 - dedTrim*(k+1) - pagado);
+        pagado += Math.max(0, (acum - pfDificilJustificacion(acum))*0.20 - dedTrim*(k+1) - pagado);
       }
       const acum = meses.slice(0, mes+1).reduce((s,v)=>s+v,0);
-      return {modelo:'130', importe: Math.max(0, acum*0.20 - dedTrim*(q+1) - pagado)};
+      // Casilla 02 del 130: en simplificada incluye el 5 % de difícil justificación del acumulado (ver pfDificilJustificacion).
+      return {modelo:'130', importe: Math.max(0, (acum - pfDificilJustificacion(acum))*0.20 - dedTrim*(q+1) - pagado)};
     }
     // El 202 de abril se calcula sobre el último impuesto YA presentado (el de
     // N-2, porque el de N-1 no se presenta hasta julio); octubre y diciembre,

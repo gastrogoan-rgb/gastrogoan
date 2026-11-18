@@ -48,13 +48,13 @@
 | F-5 | **Territorio**: la escala del IRPF era la general (19–47 %) para todos. | **Corregido** para las 15 comunidades de régimen común y Ceuta/Melilla (escala estatal + autonómica 2025 verificada con la AEAT, fijada desde el generador y mostrada en Mi Negocio). **Foral** (Navarra, País Vasco): escala de webs de terceros, regla «pendiente», fiabilidad media; mínimo y reducciones estatales como aproximación. **Límite**: mínimo personal estatal. |
 | F-6 | **Sin deducibilidad por gasto**: todo gasto cuenta al 100 % en la base fiscal y su IVA se deduce entero. No hay gastos no deducibles / parcialmente deducibles (atenciones a clientes, vehículo al 50 %, multas…) ni prorrata. El resultado contable y el fiscal son el mismo número. | **Pendiente** (diseño en motor fiscal) |
 | F-7 | Tipos de **cooperativa** (`coopMicro`, `coopErd`, `coopNueva`) no contrastados con fuente oficial. | **Verificado el 6/11** con la AEAT (2025-2028; error corregido: 2025 eran 18/19 %, no 16/18 %). Quedan fuera los extracooperativos. (antes: pendiente; la app avisaba de que la cooperativa necesita revisión de la gestoría) |
-| F-8 | Años anteriores a 2025: `tiposIsAño` usa los de 2025. | **Documentado**: el motor lo declara (`ANTES-2025`) y la previsión baja a fiabilidad BAJA. Cargar reglas históricas queda pendiente. |
+| F-8 | Años anteriores a 2025: `tiposIsAño` usa los de 2025. | **Parcial (18/11)**: 2024 cargado y verificado (escalas de Asturias, Canarias y Cataluña, IS 2024, 5 %/2.000 €). 2023 y anteriores siguen como `ANTES-2025` con fiabilidad BAJA. |
 
 ## Pendiente de verificar con fuente oficial (no se presenta como certeza)
-- Modelo 130: tratamiento del 5 % de difícil justificación en los pagos fraccionados (hoy no se aplica en el 130; se aplica en el IRPF anual).
+- ~~Modelo 130: 5 % de difícil justificación~~ **Cerrado el 18/11**: instrucciones oficiales del 130, casilla 02 (modalidad simplificada); se aplica sobre el acumulado, tope 2.000 € anuales.
 - Retención 115 (19 %) y su aplicación sobre alquiler con IVA / comunidades.
 - Módulos: índices y límites de la Orden HAC/1425/2025 (ya hay prueba `fiscal-rapido` con casos de la AEAT; falta la pasada completa).
-- Régimen simplificado de IVA, recargo de equivalencia y criterio de caja: no implementados, y no se ofrecen.
+- Régimen simplificado de IVA, recargo de equivalencia, prorrata y criterio de caja: **verificados el 18/11 como «no aplica» / «fuera de alcance»** (ver CLAUDE.md, reglas `IVA-*`); no se implementan ni se ofrecen.
 
 ## Fase 1 — Reconocimiento
 (pendiente)
@@ -85,3 +85,12 @@ Se dejan sin tocar a propósito; la app avisa de lo que no cubre. Orden sugerido
 - **Mínimos personales autonómicos**: la página del cuadro comparativo de la AEAT no se pudo abrir (404 con la URL probada); localizarla en el Manual de Renta 2025.
 - **Foral**: contrastar con Hacienda de Navarra y las diputaciones vascas, y cargar sus mínimos, reducciones y deducciones propios.
 - **No hacer salvo petición de un cliente**: prorrata de IVA, criterio de caja, ejercicios anteriores a 2025. Recargo de equivalencia e IVA simplificado no aplican (el segundo ya es «módulos»).
+
+
+## Cierre de pendientes del motor (18/11/2026)
+Hecho, con fuente oficial consultada ese día y `test/fiscal-pendientes.mjs` (cuentas a mano):
+1. **130 con el 5 %**: casilla 02 de las instrucciones oficiales (simplificada); sobre el acumulado, tope 2.000 €/año; CB por comunero. Cambia el importe del 130 (antes se pagaba de más y se recuperaba en la renta).
+2. **Mínimos autonómicos** (cuadro de la AEAT, Manual de Renta 2025 y 2024): Andalucía, Asturias (2025), Baleares, Canarias, Galicia, Madrid, C. Valenciana; resto = estatal. Cada mínimo en su mitad de la cuota.
+3. **Recargo de equivalencia**: no aplica (solo minoristas que no transforman). **Prorrata**: solo con operaciones sin derecho a deducir; sin caso real, no se implementa.
+4. **IVA simplificado**: ligado a módulos (ya implementado como «módulos»). **Criterio de caja**: viable por ley (≤ 2 M€, opción en el 036 antes de diciembre, 3 años) pero perjudica a quien cobra al momento y la app no registra la fecha de pago de cada factura: no se ofrece.
+5. **2024**: escalas y mínimos verificados comunidad a comunidad (solo cambian Asturias, Canarias, Cataluña); IS 2024. **2023 y anteriores: pendiente** (una escala por comunidad y año; fiabilidad baja).

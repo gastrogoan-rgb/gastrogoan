@@ -42,7 +42,7 @@ const año = () => new Date().getFullYear() - 1;
 await caso('Catálogo de reglas: cada una con fuente, referencia y estado válido; las verificadas dicen cuándo; ninguna regla usada por el cálculo falta', async () => {
   const r = await page.evaluate(() => ({reglas: FISCAL_REGLAS.map(x => ({id:x.id, fuente:!!x.fuente, ref:!!x.referencia, estado:x.estado, desde:x.desde})), ver: FISCAL_VERIFICADO_EN,
     vigentes2026: fiscalReglasVigentes('2026-06-01', 'autonomo', 'cataluna').map(x => x.id), vigentesSoc: fiscalReglasVigentes('2026-06-01', 'sociedad').map(x => x.id)}));
-  assert.ok(r.reglas.length >= 15); r.reglas.forEach(x => { assert.ok(x.fuente && x.ref, x.id + ' sin fuente'); assert.ok(['verificada', 'revisada', 'pendiente'].includes(x.estado), x.id); });
+  assert.ok(r.reglas.length >= 15); r.reglas.forEach(x => { assert.ok(x.fuente && x.ref, x.id + ' sin fuente'); assert.ok(['verificada', 'revisada', 'pendiente', 'noaplica', 'fuera'].includes(x.estado), x.id); });
   assert.ok(r.reglas.filter(x => x.estado === 'verificada').length >= 6); assert.match(r.ver, /^2026-/);
   assert.ok(r.vigentes2026.includes('IRPF-ESC-CAT') && r.vigentes2026.includes('IRPF-RED-6498') && !r.vigentes2026.includes('IS-TIPOS'));
   assert.ok(r.vigentesSoc.includes('IS-TIPOS') && !r.vigentesSoc.includes('IRPF-DIFICIL-5'));
@@ -145,7 +145,7 @@ await caso('Cada comunidad tiene su regla verificada y la traza la cita; Ceuta/M
   assert.equal(lista[0], 'general'); assert.equal(lista.length, 19);
   await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'madrid'});
   const m = await page.evaluate(() => { const T = fiscalTrazaAnual(new Date().getFullYear() - 1); return {reglas: T.reglas, avisos: T.avisos.join(' | ')}; });
-  assert.ok(m.reglas.includes('IRPF-ESC-MADRID') && !m.reglas.includes('IRPF-ESC-GENERAL'), JSON.stringify(m.reglas)); assert.doesNotMatch(m.avisos, /escala general de referencia/i); assert.match(m.avisos, /mínimo personal estatal/);
+  assert.ok(m.reglas.includes('IRPF-ESC-MADRID') && !m.reglas.includes('IRPF-ESC-GENERAL'), JSON.stringify(m.reglas)); assert.doesNotMatch(m.avisos, /escala general de referencia/i); assert.doesNotMatch(m.avisos, /mínimo personal estatal/);   // Madrid ya tiene su mínimo autonómico verificado (18/11): sin aviso por el mínimo
   await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'ceuta_melilla'});
   const c = await page.evaluate(() => fiscalTrazaAnual(new Date().getFullYear() - 1).avisos.join(' | ')); assert.match(c, /Ceuta y Melilla \(art\. 68\.4/);
   await escenario('autonomo', {}, {formaJuridica:'autonomo', regimenFiscal:'directa', modalidadDirecta:'simplificada', territorio:'navarra'});
