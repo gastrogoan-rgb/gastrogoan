@@ -3,11 +3,11 @@
 Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y al acabar haber hecho ABSOLUTAMENTE todo.
 
 ## TPV · comanda (prioridad máxima; PDA clásica; vale para mesa, take away y delivery)
-- [ ] T1 Cabecera de la ventana: «Mesa N · X pers.» centrado; debajo, pequeños y juntos, «Cambiar de mesa» y «Alérgenos»; quitar chip «Propietario» (solo se ve en la vista general de mesas).
-- [ ] T2 Alérgenos: quitar el recuadro repetido «Alérgenos presentes»; en cocina, aviso discreto con botón que despliega.
-- [ ] T3 Pestañas Tomar nota / Pedido: «Tomar nota» pequeña, «Pedido N total» grande y sin desbordar.
-- [ ] T4 Pedido: cada plato en UNA línea (cantidad · nombre · precio), botones más pequeños; apartados de menú y carta bien separados; título Menú/Carta más visible; «Marchar» sin recolocar nada.
-- [ ] T5 Marchar plato NO sube la pantalla arriba (revisar toda la app: scroll preservado al repintar).
+- [x] T1 Cabecera de la ventana: «Mesa N · X pers.» centrado; debajo, pequeños y juntos, «Cambiar de mesa» y «Alérgenos»; quitar chip «Propietario» (solo se ve en la vista general de mesas).
+- [~] T2 (hecho en comanda; falta ver el aviso de cocina en captura) Alérgenos: quitar el recuadro repetido «Alérgenos presentes»; en cocina, aviso discreto con botón que despliega.
+- [x] T3 Pestañas Tomar nota / Pedido: «Tomar nota» pequeña, «Pedido N total» grande y sin desbordar.
+- [~] T4 (líneas en una fila y título Carta/Menú hechos; falta revisar en captura y ancho 320) Pedido: cada plato en UNA línea (cantidad · nombre · precio), botones más pequeños; apartados de menú y carta bien separados; título Menú/Carta más visible; «Marchar» sin recolocar nada.
+- [x] T5 (test/tpv-scroll.mjs; falta registrar en todo.sh y revisar otras pantallas) Marchar plato NO sube la pantalla arriba (revisar toda la app: scroll preservado al repintar).
 - [ ] T6 Tomar nota: cartas en desplegable; secciones/platos compactos; selección elegida visible en un desplegable inferior (estilo Take Away/Delivery de la web).
 - [ ] T7 Delivery/Take away del TPV: mismo trato (pestañas sin desbordar, nombre de menú no repetido).
 - [ ] T8 Vale/tique: revisar (captura del dueño).
@@ -29,3 +29,6 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [ ] W3 Carta: quitar «evitar alérgenos».
 ## Respuestas
 - Copo de nieve = «mesa fría» (servida hace rato sin cobrar).
+
+## Verificación final
+Al terminar: releer el mensaje del dueño frase a frase, mapear cada petición a un punto de este plan y a una prueba o captura a 360 px, y marcar solo lo comprobado. Lo no comprobado se dice.

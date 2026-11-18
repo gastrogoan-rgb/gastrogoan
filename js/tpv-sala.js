@@ -666,6 +666,12 @@ function renderTableOrderModal(orderId){
 
   const unidades = order.items.reduce((s, l) => s + l.qty, 0);
   const panel = tpvOrderMobilePane;
+  // 18/11 (dueño): «cada vez que le doy a marchar plato la pantalla sube hasta arriba». Repintar la comanda sustituía todo el modal y
+  // todos los scrolls volvían a 0: se anotan antes y se devuelven después (solo si es la MISMA mesa abierta, no al abrir otra).
+  const SEL_SCROLL = '.modal-body, .tp-or-cuerpo, .tp-or-col, #tp-selector-zona, .tp-secciones, .tp-platos';
+  const marcaPrev = document.getElementById('table-order-modal-marker');
+  const scrollPrevio = (marcaPrev && String(marcaPrev.dataset.orderId) === String(order.id))
+    ? [...(marcaPrev.closest('.modal') || document).querySelectorAll(SEL_SCROLL)].map(el => el.scrollTop) : null;
   openModal(`
     <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
     <div class="modal-header tp-or-cab">
@@ -702,6 +708,11 @@ function renderTableOrderModal(orderId){
     </div>
     <div class="modal-footer tp-or-pie">${actionButtons}</div>
   `, {order: true});
+  if(scrollPrevio && scrollPrevio.some(y => y > 0)){
+    const m = document.getElementById('table-order-modal-marker');
+    const poner = () => [...((m && m.closest('.modal')) || document).querySelectorAll(SEL_SCROLL)].forEach((el, i) => { if(scrollPrevio[i]) el.scrollTop = scrollPrevio[i]; });
+    poner(); requestAnimationFrame(poner);
+  }
 }
 
 /* ============================================================
