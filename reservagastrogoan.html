@@ -419,7 +419,19 @@
   .mn-side{flex:none;display:flex;align-items:center;gap:10px}
   .mn-p{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;color:var(--ink)}
   .mn-badge{min-width:24px;height:24px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;background:var(--olive);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600}
-  .mn-go{color:var(--muted);font-size:20px;line-height:1}
+  .mn-wrap{display:flex;align-items:stretch;gap:6px}
+  .mn-wrap > .mn-card{flex:1;min-width:0}
+  .mn-n{overflow-wrap:normal !important;word-break:normal !important;hyphens:none}
+  .mn-wrap > .mn-card .mn-body{flex:1 1 0;min-width:0}
+  .mn-wrap > .mn-card .mn-side{gap:6px;flex:none}
+  .mn-wrap > .mn-card .mn-p{font-size:15px}
+  .mn-wrap > .mn-card .mn-go{width:16px}
+  .mn-info{flex:none;width:42px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;border-radius:3px}
+  .mn-info:hover{color:var(--olive);border-color:var(--olive)}
+  .mn-info:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+  .mn-go{color:var(--muted);display:inline-grid;place-items:center;width:24px;height:24px;line-height:1}
+  .svc-go{display:inline-grid;place-items:center;width:28px;height:28px}
+  .svc-cta b svg{display:block}
 
   /* Carta: carpetas grandes con su número de platos; dentro, cabecera fija para volver */
   .cs-tit{margin:20px 0 10px !important;font-family:'IBM Plex Mono',monospace;font-size:11.5px !important;font-weight:600 !important;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -2291,7 +2303,7 @@ function renderBranchSelector(business, sucursales){
           <a href="${escapeHtml(base)}?neg=${escapeHtml(s.publicId)}&local=1" class="svc-card" style="text-decoration:none">
             <span class="svc-ic tab-local" aria-hidden="true"></span>
             <span class="svc-tx"><span class="svc-t">${escapeHtml(s.name)}</span>${s.address ? `<span class="svc-d">${escapeHtml(s.address)}</span>` : ''}</span>
-            <span class="svc-go" aria-hidden="true">›</span>
+            <span class="svc-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           </a>`).join('')}
       </div>
     </section>
@@ -2498,7 +2510,7 @@ function renderServicios(tabs){
           <span class="svc-disc"><span class="svc-ic ${tabIcono(x.id)}" aria-hidden="true"></span></span>
           <span class="svc-tx"><span class="svc-t">${escapeHtml(tabLabel(x))}</span><span class="svc-d">${escapeHtml(t('svc.' + x.id))}</span></span>
           ${metaServicio(x.id).length ? `<span class="svc-meta">${metaServicio(x.id).map(m => `<span>${escapeHtml(m)}</span>`).join('')}</span>` : ''}
-          <span class="svc-cta" aria-hidden="true"><span>${escapeHtml(t('svc.cta'))}</span><b>→</b></span>
+          <span class="svc-cta" aria-hidden="true"><span>${escapeHtml(t('svc.cta'))}</span><b><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></b></span>
         </button>`).join('')}
       </div>
     </section>`;
@@ -4736,7 +4748,6 @@ function menuInnerHtml(cartas){
     if(!hayC) h += `<h3 class="cs-tit">${escapeHtml(t('menus.title'))}</h3>`;
     h += buildMenusHtml();
   } else {
-    h += entFiltroAlergenosHtml();
     h += `<div class="srch"><input type="search" id="menu-search" value="${escapeHtml(menuQuery)}" placeholder="${escapeHtml(t('wz.o.search'))}" aria-label="${escapeHtml(t('wz.o.search'))}" oninput="menuBuscar(this.value)" autocomplete="off"></div>
       <div id="menu-results">${menuResultadosHtml(cartas)}</div>`;
   }
@@ -4891,18 +4902,33 @@ function optInfo(btn, id){
   box.hidden = !abre; btn.setAttribute('aria-expanded', String(abre));
   if(abre && !box.innerHTML) box.innerHTML = infoPlatoHtml(id).html;
 }
-// Una tarjeta por menú: nombre, de qué apartados consta y precio. Al tocarla se abre el menú entero.
+// «Qué lleva» un menú: sus apartados con las opciones de cada uno (la «i» de la tarjeta).
+function menuInfo(id){
+  const m = getActiveMenusPublic().find(x => x.id === id); if(!m) return;
+  const grupos = (m.grupos || []).map(g => `<div class="inf-t">${escapeHtml(trItem(g))}</div><ul>${(g.opciones || []).filter(o => o.disponible !== false).map(o => `<li>${escapeHtml(trItem(o))}${o.suplemento ? ` <small>(+${fmtMoney(o.suplemento)})</small>` : ''}</li>`).join('')}</ul>`).join('');
+  const desc = m.descripcion ? `<p>${escapeHtml(m.descripcion)}</p>` : '';
+  abrirHoja(`
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close') || 'Cerrar')}">&times;</button>
+    <div class="sh-h"><div class="sh-eye">${escapeHtml(fmtMoney(m.precio))}</div><h2>${escapeHtml(trItem(m))}</h2></div>
+    <div class="sh-b">${desc}${grupos || ''}</div>
+    <div class="sh-f"><button type="button" class="btn" onclick="closeInfoModal()">${escapeHtml(t('common.close') || 'Cerrar')}</button></div>`);
+}
+// Una tarjeta por menú: nombre y precio (y una «i» que cuenta qué lleva). Al tocarla se abre el menú entero.
 function buildMenusHtml(){
   const menus = getActiveMenusPublic();
   if(!menus.length) return '';
   return `<div class="mn-list">${menus.map(m => {
     const total = cart.filter(l => l.key.startsWith('menu:' + m.id + ':')).reduce((s, l) => s + l.qty, 0);
     const comp = (m.grupos || []).map(g => trItem(g)).filter(Boolean).join(' · ');
+    const infoTxt = t('wz.menu.info') !== 'wz.menu.info' ? t('wz.menu.info') : 'Qué lleva';
     return `
+    <div class="mn-wrap">
     <button type="button" class="menu-item mn-card" onclick="openMenuModal(${m.id})" aria-label="${escapeHtml(trItem(m) + ' · ' + fmtMoney(m.precio) + ' · ' + t('wz.o.view'))}">
-      <span class="mn-body"><span class="mn-n">${escapeHtml(trItem(m))}</span>${comp ? `<span class="mn-c">${escapeHtml(comp)}</span>` : ''}</span>
-      <span class="mn-side">${total ? `<span class="mn-badge">${total}</span>` : ''}<span class="mn-p">${fmtMoney(m.precio)}</span><span class="mn-go" aria-hidden="true">›</span></span>
-    </button>`;
+      <span class="mn-body"><span class="mn-n">${escapeHtml(trItem(m))}</span></span>
+      <span class="mn-side">${total ? `<span class="mn-badge">${total}</span>` : ''}<span class="mn-p">${fmtMoney(m.precio)}</span><span class="mn-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></span>
+    </button>
+    <button type="button" class="mn-info" onclick="menuInfo(${m.id})" aria-label="${escapeHtml(infoTxt + ': ' + trItem(m))}" title="${escapeHtml(infoTxt)}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>
+    </div>`;
   }).join('')}</div>`;
 }
 let menuModalContext = null;

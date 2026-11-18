@@ -3782,7 +3782,7 @@ function iaNumContexto(){
     const trim = [[y, q]]; if(q > 0) trim.unshift([y, q-1]); else trim.unshift([y-1, 3]);
     const modelos = trim.flatMap(([yy, qq]) => fiscalPrevision(yy, qq).filas.map(f => ({periodo: f.periodo, modelo: f.modelo, concepto: f.concepto, importe: r2(f.importe), estado: f.estado, vence: f.vence})));
     const T = fiscalTrazaAnual(y);
-    return {modelosDeLosDosUltimosTrimestres: modelos, impuestoSobreElBeneficioDelAnoEstimado: r2(T.impuestoAnual), tipoEfectivo: r1((T.tipoEfectivo||0)*100), formaJuridica: (DB.business||{}).formaJuridica||null, fiabilidad: T.nivel};
+    return {modelosDeLosDosUltimosTrimestres: modelos, impuestoSobreElBeneficioDelAnoEstimado: r2(T.impuestoAnual), tipoEfectivo: r1((T.tipoEfectivo||0)*100), formaJuridica: (DB.business||{}).formaJuridica||null};
   }, null);
   out.inversiones = intenta(() => (DB.ge.capex||[]).map(c => ({descripcion: c.descripcion, fecha: c.fecha, base: r2(c.importe), iva: c.iva, financiada: !!c.financiada})), []);
   out.gastosFijosMensuales = intenta(() => (DB.ge.fijos||[]).filter(g => !g.titular).map(g => ({concepto: g.nombre, categoria: g.categoria, importeMensualEquivalenteSinIva: r2(gfMonthlyImporte(g))})), []);

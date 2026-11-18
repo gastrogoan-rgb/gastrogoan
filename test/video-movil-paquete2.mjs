@@ -62,13 +62,13 @@ for(const w of [320, 360, 390, 412, 430]){
         const a = hijos[i], c = hijos[j];
         if(a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1) solapes.push(a.n + ' x ' + c.n);
       }
-      return {mesaW: cab.querySelector('.tp-or-mesa').getBoundingClientRect().width, alto: cab.getBoundingClientRect().height, solapes, liberar: !!cab.querySelector('.tp-or-acc')};
+      return {mesaW: cab.querySelector('.tp-or-mesa').getBoundingClientRect().width, alto: cab.getBoundingClientRect().height, solapes, liberar: !!document.querySelector('.tp-or-acciones-cab .tp-or-acc'), filaAlto: document.querySelector('.tp-or-acciones-cab').getBoundingClientRect().height};
     });
     await page.close();
     assert.ok(r.liberar, 'la mesa vacía debe llevar «Liberar mesa»');
     assert.ok(r.mesaW > w * 0.5, 'el nombre se aplasta (' + r.mesaW + ' px): ' + JSON.stringify(r));
     assert.deepEqual(r.solapes, [], 'se solapan: ' + r.solapes.join(', '));
-    assert.ok(r.alto < 150, 'la cabecera ocupa ' + r.alto + ' px');
+    assert.ok(r.alto + r.filaAlto < 190, 'la cabecera (título + fila de botones) ocupa ' + (r.alto + r.filaAlto) + ' px');
   });
 }
 
@@ -145,14 +145,14 @@ for(const w of [320, 360, 430]){
   });
 }
 
-await caso('Promoción 360: las seis pestañas en ≤ 2 filas', async () => {
+await caso('Promoción 360: las seis pestañas en ≤ 3 filas (se ven todas; sin «Más», 18/11)', async () => {
   const page = await abrir(360, sembrarRes);
   const filas = await page.evaluate(() => { currentFolder = 'sala'; navigate('promocion'); return new Set([...document.querySelectorAll('#promo-tabs-row .btn')].map(b => Math.round(b.getBoundingClientRect().top / 20))).size; });
   await page.close();
-  assert.ok(filas <= 2, 'pestañas en ' + filas + ' filas');
+  assert.ok(filas <= 3, 'pestañas en ' + filas + ' filas');
 });
 
-await caso('Clientes 360: filtros en ≤ 4 filas, buscador y orden en una fila, sin desborde, fechas y plurales legibles', async () => {
+await caso('Clientes 360: filtros en ≤ 5 filas (todos a la vista, sin «Más»), buscador y orden en una fila, sin desborde, fechas y plurales legibles', async () => {
   const page = await abrir(360, sembrarRes);
   const r = await page.evaluate(() => {
     currentFolder = 'sala'; navigate('clientes');
@@ -162,7 +162,7 @@ await caso('Clientes 360: filtros en ≤ 4 filas, buscador y orden en una fila, 
       f: [fechaLegibleCorta('2026-11-10'), fechaLegibleCorta('texto')]};
   });
   await page.close();
-  assert.ok(r.filas <= 4, 'filtros en ' + r.filas + ' filas');
+  assert.ok(r.filas <= 5, 'filtros en ' + r.filas + ' filas');
   assert.ok(r.mismaFila, 'buscador y orden en filas distintas');
   assert.ok(r.doc <= 360);
   assert.ok(!/2026-11-10/.test(r.f[0]) && /10/.test(r.f[0]) && r.f[1] === 'texto', JSON.stringify(r.f));

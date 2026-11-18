@@ -335,7 +335,7 @@ function renderLimpieza(){
   const box = document.getElementById('limpieza-content'); box.dataset.tab = limpiezaTab;
   box.innerHTML = `
     ${lpResumenHtml()}
-    <div class="toolbar es-tabs lp-tabs" id="limpieza-tabs-row"><div class="left gg-pest-col">
+    <div class="toolbar es-tabs lp-tabs" id="limpieza-tabs-row"><div class="left lp-tabs-todas">
       ${LIMPIEZA_TABS.map(tb => `<button type="button" class="btn btn-sm btn-fino ge-tab${limpiezaTab===tb?' is-on active':''}" aria-pressed="${limpiezaTab===tb}" onclick="setLimpiezaTab('${tb}')">${limpiezaTabLabel(tb)}</button>`).join('')}
     </div></div>
     <div id="limpieza-tab-content"></div>
@@ -366,17 +366,37 @@ function lpRefrescarResumen(){
    se podía leer entero. Todas las cajas de texto libre de Limpieza son así (lpAuto las ajusta al escribir y al pintar). */
 function lpAuto(el){ el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight + 2, 44) + 'px'; }
 function lpAutoTodos(){ document.querySelectorAll('#limpieza-content textarea.lp-auto-alto').forEach(lpAuto); }
-// Un paso numerado de un protocolo: el texto se edita en su sitio (si hay permiso) y subir / bajar / quitar viven en el ⋯.
-function lpPasoHtml(i, total, texto, fnCambiar, fnMover, fnQuitar){
+// Un paso numerado de un protocolo: texto FIJO (como en las fichas técnicas); «Editar», subir, bajar y quitar viven en el ⋯. Al pulsar
+// «Editar» ese paso se abre en un campo y un ✓ lo cierra. `clave` distingue la lista ('manos', 'apertura', 'cierre').
+let lpPasosEdit = new Set();
+function lpPasoClave(clave, i){ return clave + ':' + i; }
+function lpPasosEditLimpiar(){ lpPasosEdit.clear(); }
+function lpRepintarPasos(clave){ if(clave === 'manos') renderLimpiezaManos(); else renderLimpiezaProtocolo(); }
+function lpPasoEditar(clave, i){ lpPasosEdit.add(lpPasoClave(clave, i)); withScrollPreserved(() => lpRepintarPasos(clave)); }
+function lpPasoListo(clave, i){
+  lpPasosEdit.delete(lpPasoClave(clave, i));
+  withScrollPreserved(() => lpRepintarPasos(clave));
+}
+function lpPasoHtml(i, total, texto, fnCambiar, fnMover, fnQuitar, clave){
+  clave = clave || 'manos';
+  const editando = editUnlocked && (lpPasosEdit.has(lpPasoClave(clave, i)) || !String(texto || '').trim());
+  const menu = ggMenuAcciones([
+    editando ? null : {icono:'ti-pencil', texto:t('common.edit'), fn:`lpPasoEditar('${clave}',${i})`, estricto:true},
+    i > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:fnMover(-1), estricto:true} : null,
+    i < total - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:fnMover(1), estricto:true} : null,
+    total > 1 ? {icono:'ti-trash', texto:t('common.delete'), fn:fnQuitar, peligro:true, estricto:true} : null
+  ], {clase:'btn btn-fino mn-btn lp-mas', tip:true});
+  const cuerpo = editando
+    ? `<textarea class="lp-paso-txt lp-auto-alto" rows="1" oninput="lpAuto(this);${fnCambiar}" aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">${escapeHtml(texto)}</textarea>`
+    : `<p class="lp-paso-leer">${escapeHtml(texto)}</p>`;
+  const txtHecho = escapeHtml(gl({es:'Terminar de editar', ca:"Acabar d'editar", en:'Done editing'}));
+  const hecho = editando
+    ? `<button type="button" class="btn btn-fino is-on lp-mas" data-tip="${txtHecho}" aria-label="${txtHecho}" onclick="lpPasoListo('${clave}',${i})"><i class="ti ti-check"></i></button>` : '';
   return `
-    <div class="lp-paso">
+    <div class="lp-paso${editando ? ' editando' : ''}">
       <span class="lp-num">${i+1}</span>
-      <textarea class="lp-paso-txt lp-auto-alto" rows="1" oninput="lpAuto(this);${fnCambiar}" ${editUnlocked?'':'readonly'} aria-label="${escapeHtml(t('label.newStep') + ' ' + (i+1))}">${escapeHtml(texto)}</textarea>
-      ${ggMenuAcciones([
-        i > 0 ? {icono:'ti-arrow-up', texto:gl({es:'Subir', ca:'Pujar', en:'Move up'}), fn:fnMover(-1), estricto:true} : null,
-        i < total - 1 ? {icono:'ti-arrow-down', texto:gl({es:'Bajar', ca:'Baixar', en:'Move down'}), fn:fnMover(1), estricto:true} : null,
-        total > 1 ? {icono:'ti-trash', texto:t('common.delete'), fn:fnQuitar, peligro:true, estricto:true} : null
-      ], {clase:'btn btn-fino mn-btn lp-mas', tip:true})}
+      ${cuerpo}
+      ${hecho}${menu}
     </div>`;
 }
 function renderLimpiezaManos(){
@@ -392,7 +412,7 @@ function renderLimpiezaManos(){
             ${ggMenuAcciones([{icono:'ti-restore', texto:t('btn.resetToDefault'), fn:'resetManosPasos()', estricto:true}], {clase:'btn btn-fino mn-btn pr-ico', tip:true, etiqueta:gl({es:'Más opciones', ca:'Més opcions', en:'More options'})})}
           </div>
         </div>
-        ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateManosPaso(${i}, this.value)`, d => `moveManosPaso(${i},${d})`, `removeManosPaso(${i})`)).join('')}
+        ${pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateManosPaso(${i}, this.value)`, d => `moveManosPaso(${i},${d})`, `removeManosPaso(${i})`, 'manos')).join('')}
         <button type="button" class="owner-strict btn btn-fino lp-anadir" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
       </section>
       <div class="lp-lado">
@@ -418,12 +438,13 @@ function renderLimpiezaManos(){
 }
 function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
 function moveManosPaso(i,dir){
+  lpPasosEditLimpiar();
   moveArrayItem(limpiezaManosPasos(), i, dir);
   saveDB();
   renderLimpiezaManos();
 }
 function updateManosPaso(i, val){ if(!editUnlocked) return; limpiezaManosPasos()[i] = val; saveDB(); }
-function addManosPaso(){ limpiezaManosPasos().push(t('label.newStep')); saveDB(); renderLimpiezaManos(); }
+function addManosPaso(){ lpPasosEdit.add(lpPasoClave('manos', limpiezaManosPasos().length)); limpiezaManosPasos().push(t('label.newStep')); saveDB(); renderLimpiezaManos(); }
 async function removeManosPaso(i){
   const pasos = limpiezaManosPasos();
   if(pasos.length<=1) return;
@@ -476,7 +497,7 @@ function renderLimpiezaProtocolo(){
     const resumenEntrada = e => (e.respuestas && e.respuestas.length) ? `${e.si} ${gl({es:'Sí', ca:'Sí', en:'Yes'})} · ${e.no} No` : '';
     let lista;
     if(editando){
-      lista = pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateProtocoloPaso('${type}',${i},this.value)`, d => `moveProtocoloPaso('${type}',${i},${d})`, `removeProtocoloPaso('${type}',${i})`)).join('')
+      lista = pasos.map((p,i) => lpPasoHtml(i, pasos.length, p, `updateProtocoloPaso('${type}',${i},this.value)`, d => `moveProtocoloPaso('${type}',${i},${d})`, `removeProtocoloPaso('${type}',${i})`, type)).join('')
         + `<div class="lp-edicion-bt"><button type="button" class="owner-strict btn btn-fino" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button><button type="button" class="btn btn-fino is-on" onclick="lpEditarPasos('${type}', false)"><i class="ti ti-check"></i> ${gl({es:'Listo', ca:'Llest', en:'Done'})}</button></div>`;
     } else if(deHoy){
       // Ya registrado hoy: se ve lo que se contestó, sin posibilidad de repetirlo.
@@ -534,6 +555,7 @@ function renderLimpiezaProtocolo(){
 function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
 function updateProtocoloPaso(type,i,val){ if(!editUnlocked) return; limpiezaProtocoloPasos(type)[i] = val; saveDB(); }
 function moveProtocoloPaso(type,i,dir){
+  lpPasosEditLimpiar();
   moveArrayItem(limpiezaProtocoloPasos(type), i, dir);
   lpBorradorReset(type);
   saveDB();
@@ -588,7 +610,7 @@ function deleteProtocoloComplianceEntry(type, id){
     renderLimpiezaProtocolo();
   });
 }
-function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push(t('label.newStep')); lpBorradorReset(type); saveDB(); renderLimpiezaProtocolo(); }
+function addProtocoloPaso(type){ lpPasosEdit.add(lpPasoClave(type, limpiezaProtocoloPasos(type).length)); limpiezaProtocoloPasos(type).push(t('label.newStep')); lpBorradorReset(type); saveDB(); renderLimpiezaProtocolo(); }
 async function removeProtocoloPaso(type,i){
   const pasos = limpiezaProtocoloPasos(type);
   if(pasos.length<=1) return;

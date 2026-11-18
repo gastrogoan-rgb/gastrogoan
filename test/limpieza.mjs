@@ -94,23 +94,32 @@ for(const ancho of [1280, 360]){
     assert.ok(r.celda && r.ok === 2 && r.puntos >= 2 && r.cerrado >= n, JSON.stringify(r));
   });
 
-  await caso(`Los pasos se editan con el lápiz, en cajas que crecen hacia abajo, y subir, bajar y quitar están en el ⋯ (${ancho}px)`, async () => {
+  await caso(`Los pasos se LEEN como texto fijo; «Editar», subir, bajar y quitar viven en el ⋯ de cada paso, y al editar la caja crece hacia abajo (${ancho}px)`, async () => {
     await q(() => setLimpiezaTab('protocolo')); await esperar(200);
-    assert.ok(await q(() => !!document.querySelector('#limpieza-tab-content .lp-card .pr-ico[data-tip] .ti-pencil')), 'hay lápiz para editar los pasos');
+    assert.ok(await q(() => !!document.querySelector('#limpieza-tab-content .lp-card .pr-ico[data-tip] .ti-pencil')), 'hay lápiz para entrar a editar la lista de pasos');
     await q(() => lpEditarPasos('cierre', true)); await esperar(200);
-    const r = await q(() => { const p = document.querySelectorAll('#limpieza-tab-content .lp-card')[1].querySelector('.lp-paso'); const acc = JSON.parse(p.querySelector('.mn-btn').dataset.acc).map(a => a.texto);
+    const fijo = await q(() => { const p = document.querySelectorAll('#limpieza-tab-content .lp-card')[1].querySelector('.lp-paso'); return {leer: !!p.querySelector('.lp-paso-leer'), cajas: p.querySelectorAll('textarea').length, acc: JSON.parse(p.querySelector('.mn-btn').dataset.acc).map(a => a.texto), sueltos: document.querySelectorAll('.lp-paso .btn-icon').length}; });
+    assert.ok(fijo.leer && fijo.cajas === 0 && fijo.sueltos === 0, 'el paso es texto fijo, sin caja: ' + JSON.stringify(fijo));
+    assert.ok(fijo.acc.length >= 2 && fijo.acc.some(x => /edit/i.test(x)), '«Editar» está en el ⋯: ' + JSON.stringify(fijo.acc));
+    await q(() => lpPasoEditar('cierre', 0)); await esperar(200);
+    const r = await q(() => { const p = document.querySelectorAll('#limpieza-tab-content .lp-card')[1].querySelector('.lp-paso');
       const i = p.querySelector('textarea'); i.value = 'Un paso larguísimo '.repeat(20); i.dispatchEvent(new Event('input', {bubbles:true}));
-      return {acc, guardado: limpiezaProtocoloPasos('cierre')[0].length, alto: i.getBoundingClientRect().height, ancho: i.getBoundingClientRect().width, desbordaX: i.scrollWidth > i.clientWidth + 1, sueltos: document.querySelectorAll('.lp-paso .btn-icon').length}; });
-    assert.ok(r.guardado > 200 && r.alto > 80 && !r.desbordaX && r.sueltos === 0 && r.acc.length >= 1, JSON.stringify(r));
+      return {guardado: limpiezaProtocoloPasos('cierre')[0].length, alto: i.getBoundingClientRect().height, desbordaX: i.scrollWidth > i.clientWidth + 1, resize: getComputedStyle(i).resize}; });
+    assert.ok(r.guardado > 200 && r.alto > 80 && !r.desbordaX && r.resize === 'none', JSON.stringify(r));
+    await q(() => lpPasoListo('cierre', 0)); await esperar(200);
+    assert.equal(await q(() => document.querySelectorAll('#limpieza-tab-content .lp-paso textarea').length), 0, 'el ✓ vuelve el paso a texto fijo');
     const n = await q(() => { const antes = limpiezaProtocoloPasos('cierre').length; addProtocoloPaso('cierre'); return [antes, limpiezaProtocoloPasos('cierre').length]; });
     assert.equal(n[1], n[0] + 1);
     await q(() => lpEditarPasos('cierre', false));
   });
 
-  await caso(`Lavado de manos: pasos largos en cajas de texto, con «cuándo» y los 20 segundos (${ancho}px)`, async () => {
+  await caso(`Lavado de manos: pasos como texto fijo con «Editar» en el ⋯, «cuándo» y los 20 segundos (${ancho}px)`, async () => {
     await q(() => setLimpiezaTab('manos')); await esperar(200);
-    const r = await q(() => ({cajas: document.querySelectorAll('.lp-paso textarea').length, listas: document.querySelectorAll('.lp-lista-puntos li').length, grande: document.querySelector('.lp-grande')?.textContent.trim()}));
-    assert.ok(r.cajas >= 3 && r.listas === 6 && /20/.test(r.grande), JSON.stringify(r));
+    const r = await q(() => ({fijos: document.querySelectorAll('.lp-paso .lp-paso-leer').length, cajas: document.querySelectorAll('.lp-paso textarea').length, menus: [...document.querySelectorAll('.lp-paso .mn-btn')].filter(b => /edit/i.test(b.dataset.acc || '')).length, listas: document.querySelectorAll('.lp-lista-puntos li').length, grande: document.querySelector('.lp-grande')?.textContent.trim()}));
+    assert.ok(r.fijos >= 3 && r.cajas === 0 && r.menus === r.fijos && r.listas === 6 && /20/.test(r.grande), JSON.stringify(r));
+    await q(() => lpPasoEditar('manos', 0)); await esperar(200);
+    assert.equal(await q(() => document.querySelectorAll('.lp-paso textarea').length), 1, 'Editar abre solo ese paso');
+    await q(() => lpPasoListo('manos', 0));
   });
 
   await caso(`Tareas de limpieza: día, semana y mes; marcar una hecha sube el contador de arriba (${ancho}px)`, async () => {

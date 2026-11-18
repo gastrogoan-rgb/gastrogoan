@@ -223,6 +223,12 @@ lanzar; node test/fotos-platos.mjs > "$SALIDA/fotopl.txt" 2>&1 & PFOTOPL=$!
 lanzar; node test/tpv-nota-movil.mjs > "$SALIDA/tpvnm.txt" 2>&1 & PTPVNM=$!
 lanzar; node test/inicio-acceso.mjs > "$SALIDA/inicac.txt" 2>&1 & PINICAC=$!
 lanzar; node test/solicitudes-cifradas.mjs > "$SALIDA/solcif.txt" 2>&1 & PSOLCIF=$!
+lanzar; node test/fiscal-pendientes.mjs > "$SALIDA/fiscalpend.txt" 2>&1 & PFISPEN=$!
+lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
+lanzar; node test/tpv-scroll.mjs > "$SALIDA/tpvscroll.txt" 2>&1 & PTPVSC=$!
+lanzar; node test/tpv-tomar-nota-pda.mjs > "$SALIDA/tpvpda.txt" 2>&1 & PTPVPDA=$!
+lanzar; node test/tpv-historiales-mes.mjs > "$SALIDA/tpvhist.txt" 2>&1 & PTPVHIST=$!
+lanzar; node test/mi-negocio-zonas-codigos.mjs > "$SALIDA/mnzonas.txt" 2>&1 & PMNZON=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -234,6 +240,9 @@ lanzar; node test/entregas-veracidad.mjs > "$SALIDA/entregasver.txt" 2>&1 & P199
 lanzar; node test/sw-reservas.mjs > "$SALIDA/swreservas.txt" 2>&1 & P200=$!
 lanzar; node test/sw-app-offline.mjs > "$SALIDA/swappoff.txt" 2>&1 & P201=$!
 lanzar; node test/economia-movil.mjs > "$SALIDA/economiamovil.txt" 2>&1 & P202=$!
+lanzar; node test/cocina-movil-1811.mjs > "$SALIDA/cocinamovil1811.txt" 2>&1 & P203=$!
+lanzar; node test/cocina-movil-1811b.mjs > "$SALIDA/cocinamovil1811b.txt" 2>&1 & P204=$!
+lanzar; node test/buscadores-lupa.mjs > "$SALIDA/buscadoreslupa.txt" 2>&1 & P205=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -476,6 +485,9 @@ espera $P199 "Veracidad del seguimiento: estados, ventana, llegada estimada y la
 espera $P200 "La web de reservas abre sin red tras la primera visita (bloqueos de LaLiga)" "$SALIDA/swreservas.txt" "abre sin red tras la primera visita"
 espera $P201 "La app abre sin red una vez instalada (bloqueos de LaLiga)" "$SALIDA/swappoff.txt" "abre sin red una vez instalada"
 espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería sin cifras montadas, pestañas, nombres enteros, tablas sin cortar, deducible con botones" "$SALIDA/economiamovil.txt" "Panel en móvil: 5 anchos"
+espera $P203 "Cocina en móvil (vídeo 18/11): «?» de ayuda junto a su rótulo, texto fuera de la lupa, lápiz y ⋯ de cada paso en la fila del número, textarea sin tirador que crece, paso largo sin desbordar" "$SALIDA/cocinamovil1811.txt" "Todo en orden"
+espera $P204 "Cocina en móvil (18/11, datos reales): ningún botón con el texto fuera de su caja, iconos de Personal dentro de la tarjeta, Higiene con las siete secciones a la vista, Proveedores con índice A–Z e historial sin solapes, ningún paso con un lápiz o ⋯ solo en su fila" "$SALIDA/cocinamovil1811b.txt" "Todo en orden"
+espera $P205 "Buscadores con lupa: el texto empieza a la derecha del icono en 7 anchos y 11 pantallas" "$SALIDA/buscadoreslupa.txt" "buscadores con lupa"
 
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
@@ -501,6 +513,12 @@ espera $P360L "Plan 360º · plantilla del programa (guardar y aplicar sin pisar
 espera $P360IC "Plan 360º · informe semanal del coach: hechas/sin hacer, área y objetivos" "$SALIDA/p360ic.txt" "en orden"
 espera $PFOTOPL "Fotos de platos en la web de pedidos: miniatura pequeña, solo con el interruptor encendido" "$SALIDA/fotopl.txt" "en orden"
 espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm.txt" "en orden"
+espera $PTPVSC "TPV: marchar un plato no devuelve el scroll de la comanda arriba" "$SALIDA/tpvscroll.txt" "Sin errores"
+espera $PTPVPDA "TPV Tomar nota estilo PDA: cartas en desplegable, Tu selección, una línea por plato" "$SALIDA/tpvpda.txt" "Sin errores"
+espera $PTPVHIST "TPV: anulaciones y arqueos por mes (mes en curso + selector)" "$SALIDA/tpvhist.txt" "Sin errores"
+espera $PMNZON "Mi Negocio: zonas con tarifa y códigos promocionales enseñan cómo se entienden y se guardan al salir del campo" "$SALIDA/mnzonas.txt" "Sin errores"
 espera $PINICAC "Entrada: frase sin comillas dobles y título de Puesta a punto sin cortar" "$SALIDA/inicac.txt" "en orden"
 espera $PSOLCIF "Solicitudes públicas cifradas: la web cifra los datos personales y solo la app los abre" "$SALIDA/solcif.txt" "en orden"
+espera $PFISPEN "Motor fiscal, pendientes cerrados: 5 % en el 130, mínimos autonómicos, IVA que no aplica y ejercicio 2024, con cuentas a mano" "$SALIDA/fiscalpend.txt" "todos los casos pasaron"
+espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 exit $FALLOS

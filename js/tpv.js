@@ -1612,6 +1612,7 @@ function confirmAddMenuToOrder(orderId, menuId){
   const menuInstanceId = genId();
   const vale = valeParaNuevaLinea(order);
   order.tandas = order.tandas || [];
+  const indicePrimerApartadoComida = selections.findIndex(sel => { const gr = m.grupos.find(g => g.nombre === sel.grupoNombre); return !(gr && gr.bebida) && sel.opcionNombre; });
   selections.forEach((s, i) => {
     if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
     const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
@@ -1655,9 +1656,25 @@ function confirmAddMenuToOrder(orderId, menuId){
       autoSendTakeawayLine(order, line);
     }
     syncBebidaLineEstado(line, order);
+    // NORMA (18/11): el PRIMER apartado de comida de un menú (los «primeros») se marcha solo al pedirlo; el resto
+    // (segundos, postres…) espera a que la sala lo marche. Se mira la posición, no el nombre: cada negocio llama a sus apartados como quiere.
+    if(i === indicePrimerApartadoComida) autoSendMenuFirstGroup(order, line);
   });
   saveDB();
   renderTableOrderModal(orderId);
+}
+// Marcha la línea de un primer apartado de menú sin pulsar nada (en para llevar ya la marcha autoSendTakeawayLine).
+function autoSendMenuFirstGroup(order, line){
+  if(!line || line.bebida || order.tipo === 'takeaway') return;
+  const qtyFired = line.qty - (line.marchada||0);
+  if(qtyFired <= 0) return;
+  line.estado = 'cocina';
+  delete line.recogidoAt;
+  line.enviadoAt = line.enviadoAt || new Date().toISOString();
+  line.marchada = line.qty;
+  decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
+  order.cerrada = false;
+  encolarImpresionMarchada(order, {qty: qtyFired, name: line.name, notas: line.notas, bebida: false, platoId: line.platoId, recipeId: line.recipeId});
 }
 
 // Si se borra la línea que llevaba el precio base de un menú, ese importe pasa
@@ -1788,14 +1805,13 @@ function renderOrderClientNotesHtml(order){
   if(order.clientId){
     const c = DB.clients.find(x => x.id === order.clientId);
     if(c){
-      if(c.allergies) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${c.allergies}`});
+      // Las alergias del cliente NO se repiten aquí: ya las enseña el botón «Alérgenos» de la cabecera (18/11, el dueño: «está repetido»).
       if(c.notes) parts.push({icon:'ti-note', text: c.notes});
     }
   }
   // Alérgenos anotados a mano para esta mesa (independiente de si hay algún
   // cliente vinculado) — para comensales sueltos que no están dados de alta
   // como cliente pero sí han avisado de una alergia al sentarse.
-  if(tableAllergensTexto(order)) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${tableAllergensTexto(order)}`});
   if(!parts.length) return '';
   return `<div class="card" style="border:2px solid var(--ink);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
     ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--ink);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
@@ -1822,7 +1838,20 @@ function orderAllergyWarningHtml(order){
   (order.items||[]).forEach(l => lineAllergens(l).forEach(a => dishAllergenSet.add(allergenLabel(a))));
   if(dishAllergenSet.size) texts.push(Array.from(dishAllergenSet).join(', '));
   if(!texts.length) return '';
-  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:var(--red,#8A4A3B);background:var(--red-l,#F5EBE7);border:1px solid #E3C8BF;border-left:3px solid var(--red,#8A4A3B);border-radius:3px;padding:7px 9px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
+  // Discreto (18/11): un botón pequeño que despliega el texto, no un bloque rojo gigante en cada ticket.
+  return `<details class="tp-alg-det"><summary><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.allergensPresent'))}</summary><span>${escapeHtml(texts.join(' / '))}</span></details>`;
+}
+
+// Alergias de la mesa + las del cliente enlazado, para el botón «Alérgenos» de la cabecera.
+function mesaAlergiasTexto(order){
+  const out = [];
+  if(order.clientId){
+    const c = (DB.clients || []).find(x => x.id === order.clientId);
+    if(c && c.allergies) out.push(c.allergies);
+  }
+  const m = tableAllergensTexto(order);
+  if(m) out.push(m);
+  return out.join(' / ');
 }
 
 
@@ -2934,11 +2963,11 @@ function renderComandasCocina(){
     <div class="kds-toolbar">
       <button class="btn btn-sm btn-fino kds-tab ${comandasCocinaTab==='activas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm btn-fino kds-tab ${comandasCocinaTab==='cerradas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
+      <button class="btn btn-sm btn-fino kds-undo" onclick="undoLastKitchenAction()" data-tip="${t('kitchen.undo')}" aria-label="${t('kitchen.undo')}"><i class="ti ti-arrow-back-up"></i><span class="kds-undo-txt"> ${t('kitchen.undo')}</span></button>
       <button class="btn btn-sm btn-fino" onclick="openAvisoSalaModal()"><i class="ti ti-bell-ringing"></i> ${gl({es:'Avisar a sala', ca:'Avisar la sala', en:'Alert dining room'})}</button>
       <span class="kds-sep" aria-hidden="true"></span>
       <button class="btn btn-sm btn-fino kds-toolbar-caos ${chaosCocina?'is-on':''}" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
       <button class="btn btn-sm btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
-      <button class="btn btn-sm btn-fino" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
     </div>
   `;
 
@@ -4061,13 +4090,17 @@ function reallyCancelSale(saleId, pin){
   showToast(t('msg.saleVoided'));
 }
 
-function openVoidLogModal(){
-  const log = [...(DB.voidLog||[])].reverse().slice(0, 100);
+function openVoidLogModal(keep){
+  if(keep !== true) tpvHistReset();
+  const todas = [...(DB.voidLog||[])].reverse();
+  const log = tpvHistFiltra(todas, e => e.fecha);
+  const selectorPeriodo = ggPeriodoHtml({anio: tpvHistPeriodo.anio, mes: tpvHistPeriodo.mes, cb: 'tpvHistCbVoids', datos: tpvHistDatos(todas, e => e.fecha), anual: true});
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    <div class="tp-hist-per">${selectorPeriodo}</div>
     <div class="table-wrap">
       <table class="table-cards">
         <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>

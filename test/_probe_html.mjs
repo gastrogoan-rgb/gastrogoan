@@ -1,0 +1,11 @@
+import puppeteer from 'puppeteer-core';
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', args:['--no-sandbox']});
+const page = await browser.newPage(); await page.setViewport({width:360,height:900});
+await page.setRequestInterception(true); page.on('request', r => /firebase|gstatic|googleapis|qrserver/.test(r.url()) ? r.abort() : r.continue());
+await page.goto('http://localhost:8950/dist/index.html', {waitUntil:'domcontentloaded'});
+await page.evaluate(code => { localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)})); localStorage.setItem('gastrogoan_owner_login','1'); localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()})); localStorage.setItem('gastrogoan_owner_pass_prompted','1'); localStorage.setItem('gastrogoan_backup_reminder_day', new Date().toISOString().slice(0,10)); }, 'PROBEHTML01');
+await page.reload({waitUntil:'domcontentloaded'}); await new Promise(r=>setTimeout(r,2200));
+console.log(await page.evaluate(()=>{ ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate','app-splash'].forEach(id=>document.getElementById(id)?.remove()); Object.assign(DB.business,{netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true}); DB.business.ownFirebase={apiKey:'fake',databaseURL:'https://fake-default-rtdb.firebaseio.com'}; DB.reservations.push({id:1,date:todayStr(),time:'13:00',clientName:'A',people:2,status:'pendiente'}); saveDB(); navigate('dashboard'); return ''; }));
+await new Promise(r=>setTimeout(r,1500));
+console.log(await page.evaluate(()=>{ const t=[...document.querySelectorAll('#view-dashboard h3')].find(h=>/Atenci/.test(h.textContent)); const c=t&&t.parentElement; const row=c&&c.querySelector('[onclick], a, button, .dash-att-row'); return c? (row?row.outerHTML.slice(0,500):c.innerHTML.slice(0,600)):'none'; }));
+await browser.close();

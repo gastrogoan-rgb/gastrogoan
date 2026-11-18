@@ -2672,7 +2672,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .oc-precio-m{color:var(--ink);font-weight:600}
 .oc-acc{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:2px 6px}
 @media (max-width:1100px){.oc-item{grid-template-columns:minmax(0,1fr) auto}.oc-item .horsem,.oc-item .horsem-vacio{grid-column:1/-1;order:3}.oc-acc{grid-column:2;grid-row:1}}
-@media (max-width:600px){.oc-item{grid-template-columns:1fr}.oc-acc{grid-column:1;grid-row:auto;justify-content:flex-start;order:4}.oc-nombre{font-size:17px}.horsem{gap:3px}.horsem-d{padding:5px 1px}.horsem-d b{font-size:11px}.horsem-d span{font-size:11px}}
+@media (max-width:600px){.oc-item{gap:10px 8px;padding:12px}.oc-nombre{font-size:17px}.horsem{gap:3px}.horsem-d{padding:5px 1px}.horsem-d b{font-size:11px}.horsem-d span{font-size:11px}}
 /* editor: cabecera, aviso de cambios y buscador */
 .oc-nombre-in{font-size:16px;font-weight:600;min-width:240px;letter-spacing:-.01em}
 /* el nombre ocupa el hueco de la cabecera en vez de dejar un vacío entre él y «Guardar» (7/11) */
@@ -2711,6 +2711,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .oc-sec{background:#fff;border:1px solid var(--hair);border-radius:3px;margin-bottom:14px;overflow:hidden}
 .oc-sec-cab{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:12px 14px;background:var(--brand-cream);border-bottom:1px solid var(--hair)}
 .oc-sec-tit{display:flex;align-items:center;gap:8px;min-width:0}
+.oc-sec-mover{display:contents}
 .oc-sec-tit h4{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em;overflow-wrap:break-word}
 .oc-sec-n{font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;color:var(--muted)}
 .oc-icono{width:40px;height:40px;border:1px solid var(--hair);background:#fff;border-radius:3px;font-size:20px;line-height:1;cursor:pointer;flex:0 0 auto}
@@ -2748,9 +2749,9 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
   .oc-plato.is-abierta .oc-estado{display:none}
 }
 /* Flechas de ordenar de Oferta: del mismo trazo fino que el resto, sin perder el tamaño de toque */
-.oc-mover .btn-icon,.oc-sec-tit > .btn-icon{width:36px;height:36px;min-width:36px;min-height:36px;padding:0;background:#fff;border:1px solid var(--hair);border-radius:3px;font-size:15px;color:var(--ink)}
-.oc-mover .btn-icon:hover:not(:disabled),.oc-sec-tit > .btn-icon:hover:not(:disabled){border-color:var(--olive);color:var(--olive)}
-.oc-mover .btn-icon:disabled,.oc-sec-tit > .btn-icon:disabled{opacity:.3;background:transparent}
+.oc-mover .btn-icon,.oc-sec-mover .btn-icon{width:36px;height:36px;min-width:36px;min-height:36px;padding:0;background:#fff;border:1px solid var(--hair);border-radius:3px;font-size:15px;color:var(--ink)}
+.oc-mover .btn-icon:hover:not(:disabled),.oc-sec-mover .btn-icon:hover:not(:disabled){border-color:var(--olive);color:var(--olive)}
+.oc-mover .btn-icon:disabled,.oc-sec-mover .btn-icon:disabled{opacity:.3;background:transparent}
 .oc-mover{gap:4px}
 /* los botones de solo icono de Oferta (borrar, renombrar, alérgenos) nunca por debajo del mínimo de toque */
 .oc-sec-acc .btn-fino[aria-label],.oc-ctrl .btn-fino[aria-label],.oc-acc .btn-fino[aria-label]{min-width:40px;justify-content:center;padding-left:8px;padding-right:8px}
@@ -2827,22 +2828,15 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .pv-ped-resumen{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--muted);margin:0 0 10px}
 .pv-peds{max-height:58vh;overflow-y:auto;border-top:1px solid var(--hair)}
 .pv-ped{border-bottom:1px solid var(--hair)}
-.pv-ped summary{display:flex;align-items:center;gap:10px;min-height:48px;cursor:pointer;list-style:none;padding:0 2px}
-.pv-ped summary::-webkit-details-marker{display:none}
-.pv-ped summary:hover{background:var(--brand-cream)}
-.pv-ped summary:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
-.pv-ped-f{font-family:var(--mono);font-size:13px;font-weight:600;flex:none}
-.pv-ped-n{flex:1;min-width:0;font-size:13px;color:var(--muted);text-align:right}
-.pv-ped-t{font-family:var(--mono);font-size:13px;font-weight:600;min-width:78px;text-align:right}
-.pv-ped-flecha{font-size:16px;color:var(--muted);transition:transform .18s;flex:none}
-.pv-ped[open] .pv-ped-flecha{transform:rotate(180deg)}
-.pv-ped[open] summary{background:var(--brand-cream)}
-.pv-ped-lineas{padding:4px 4px 10px 12px;background:var(--brand-cream)}
+.pv-ped{padding:6px 2px}
+.pv-ped-f{font-family:var(--mono);font-size:13px;font-weight:600}
+.pv-ped-n{font-size:13px;white-space:nowrap}
+.pv-ped-t{font-family:var(--mono);font-size:13px;font-weight:600;min-width:72px;text-align:right}
+.pv-ped-lineas{padding:4px 4px 10px 12px;background:var(--brand-cream);max-height:58vh;overflow-y:auto}
 .pv-ped-linea{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--hair)}
 .pv-ped-linea:last-child{border-bottom:0}
 .pv-ped-q{font-family:var(--mono);font-size:12px;white-space:nowrap}
 .pv-ped-rec{color:#8A5A0F}
-@media (max-width:600px){.pv-ped summary{flex-wrap:wrap;row-gap:0;padding:6px 2px}.pv-ped-n{flex:1 1 0;text-align:left}.pv-ped-flecha{margin-left:auto}}
 .pv-dias{display:flex;flex-wrap:wrap;gap:6px}
 /* Selector de periodo (30/10): ver ggPeriodoHtml en js/ui.js */
 .pe-sel{display:inline-flex;align-items:center;gap:4px}
@@ -4780,7 +4774,7 @@ span.dt-punto{position:absolute;border-radius:50%}
 .ve-curva .dt-wrap{padding:6px 18px 0}
 @media (max-width:720px){
   #ge-checklist > .card > div{flex-wrap:wrap}
-  #view-economia .ge-tab{flex:1 1 auto;justify-content:center}
+  #view-economia .ge-tab{flex:1 1 calc(50% - 6px);justify-content:center;white-space:normal;text-align:center;line-height:1.15;padding:6px 8px;min-width:0}
   #view-economia .ge-kpi{border-right:0;border-bottom:1px solid var(--hair)}
   #view-economia .ge-kpi:last-child{border-bottom:0}
   .ve-curva .dt-wrap{padding:6px 8px 0}
@@ -5822,7 +5816,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-g-proy{stroke:var(--olive);stroke-width:2;stroke-dasharray:2 5;fill:none;opacity:.7}
 .dp-eq-g-real{stroke:var(--olive);stroke-width:3;fill:none}
 .dp-eq-mal .dp-eq-g-real,.dp-eq-mal .dp-eq-g-proy{stroke:#B4432F}
-.dp-eq-g-leyenda{position:absolute;right:0;top:-22px;display:flex;gap:14px;font-size:11px;color:var(--muted)}
+.dp-eq-g-leyenda{position:static;display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:11px;color:var(--muted)}
+.dp-eq-graf{height:auto !important;border-bottom:0 !important}
+.dp-eq-graf svg{height:120px !important;border-bottom:1px solid var(--hair)}
 .dp-eq-g-leyenda i{display:inline-block;width:16px;height:0;border-top:3px solid var(--olive);margin-right:5px;vertical-align:middle}
 .dp-eq-g-leyenda .i i{border-top:2px dashed var(--muted)} .dp-eq-g-leyenda .p i{border-top:2px dotted var(--olive)}
 /* Análisis y clientela */
@@ -7004,9 +7000,9 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
 .att-zero-lista{display:flex;flex-wrap:wrap;gap:0 4px}
 @media (max-width:760px){
   /* Pestañas: rejilla de dos columnas del mismo ancho, siempre en el mismo orden (la activa no cambia de forma ni de sitio) */
-  #view-economia .ge-tab-row.gg-pest-abierta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #view-economia .ge-tab-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
   #view-economia .ge-tab{flex:none;width:100%;min-width:0;justify-content:flex-start;padding:0 10px;white-space:normal;line-height:1.15;font-size:11.5px;letter-spacing:.02em}
-  #view-economia .ge-tab-row.gg-pest-abierta > .ge-tab:last-child:nth-child(odd){grid-column:1 / -1}   /* con «Módulos» visible son 9: la impar ocupa la fila */
+  #view-economia .ge-tab-row > .ge-tab:last-child:nth-child(odd){grid-column:1 / -1}   /* con «Módulos» visible son 9: la impar ocupa la fila */
   /* Tesorería: Objetivo, Real y Diferencia cada una en su renglón con su rótulo (en tres columnas de 100 px se pisaban) */
   #ge-tesoreria .te-row.te-dist{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"con pct" "obj obj" "real real" "dif dif";row-gap:0;padding:12px 14px 14px}
   #ge-tesoreria .te-row.te-dist .te-c-con{padding-bottom:8px}
@@ -7201,8 +7197,8 @@ body.ent-alarma .tp-togo-tit i,body.ent-alarma .tp-togo-tabs .btn:first-child i{
 .gg-pest-mas{display:none}
 @media (max-width:640px){
   .gg-pest-col{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-  .gg-pest-col:not(.gg-pest-abierta) > *:not(.gg-pest-mas):not(.active):not(.is-on):not(.is-sel):not([aria-pressed="true"]):not([aria-selected="true"]){display:none}
-  .gg-pest-col > .gg-pest-mas{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 12px;border:1px solid var(--hair);border-radius:var(--r-s,3px);background:#fff;color:var(--ink);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  /* 18/11: ya no se esconden las pestañas no marcadas ni hay «Más»: se ven todas, envolviendo. */
+  .gg-pest-col > .gg-pest-mas{display:none;align-items:center;gap:4px;min-height:44px;padding:0 12px;border:1px solid var(--hair);border-radius:var(--r-s,3px);background:#fff;color:var(--ink);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   .gg-pest-col > .gg-pest-mas:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
 }
 
@@ -7358,10 +7354,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
   .mnl-toc-et{margin-bottom:4px}
 }
 /* Gestión Económica: el id de la vista vence al «display:none» genérico de .gg-pest-col, así que se repite aquí (plegada = solo la marcada + «Más») */
-@media (max-width:640px){
-  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab:not(.active){display:none}
-  #view-economia .ge-tab-row.gg-pest-col:not(.gg-pest-abierta) > .ge-tab.active{flex:1 1 auto}
-}
 @media (max-width:760px){ #ge-ventas .table-wrap.tbl-scroll > #ventas-dia-table,.dp-tabla-w .dp-tabla{min-width:0;width:100%} }
 
 /* VIDEO-MÓVIL · PAQUETE 2 · TPV: el «×N» de la ficha del plato iba encima del nombre («Patatas GG con salsa de [×1] casa»): el nombre
@@ -7386,10 +7378,10 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
    Ahora el paso se lee a todo el ancho y los mandos van en su propia fila, a la derecha. */
 .fi-paso-leer,.fi-paso-txt{text-transform:none;letter-spacing:normal;hyphens:manual;word-break:normal;overflow-wrap:break-word}
 @media (max-width:760px){
-  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c" ". acc"}
+  /* (18/11: los mandos ya NO van en fila propia bajo el texto; ver «COCINA · AJUSTES DE MÓVIL» al final del fichero) */
+  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c"}
   .fi-paso > .fi-paso-n{grid-area:n}
   .fi-paso > .fi-paso-c{grid-area:c}
-  .fi-paso > .fi-paso-acc{grid-area:acc;justify-self:end;margin-top:6px}
 }
 /* Mi puesto: el aviso de atrasadas se lee de un vistazo y «Verlas» es un botón de 44 px */
 .dp-aviso .dp-aviso-ver{flex:0 0 auto;min-height:44px}
@@ -7493,4 +7485,303 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .dt-delta{flex-wrap:wrap;row-gap:2px}
 @media (max-width:760px){
   .dp-k-s .badge{white-space:normal;overflow-wrap:break-word;max-width:100%}
+}
+
+/* ══ COMANDA DEL TPV · cabecera de PDA (18/11, pedido del dueño) ══
+   «Mesa 1 · 2 pers.» centrado; debajo, pequeños y juntos, Cambiar de mesa y Alérgenos. Nada de una fila por botón.
+   El camarero ya no se pinta aquí (se ve en la vista general de mesas). */
+.tp-or-cab{position:relative;justify-content:center !important}
+.modal.modal-order > .modal-header.tp-or-cab{padding-left:58px;padding-right:58px}
+.tp-or-cab .tp-or-mesa{flex:1 1 auto !important;justify-content:center;text-align:center;font-size:22px}
+.tp-or-cab .modal-close{position:absolute;right:10px;top:50%;transform:translateY(-50%);margin:0 !important;order:0 !important}
+.tp-or-acciones-cab{justify-content:center;margin:2px 0 8px !important;gap:6px !important}
+.tp-or-peq{min-height:34px !important;padding:0 10px !important;font-size:12px !important;flex:0 0 auto !important;width:auto !important;white-space:nowrap}
+.tp-or-peq i{font-size:14px}
+/* La pestaña «Tomar nota» pequeña y «Pedido» grande: con muchos platos el botón de Pedido no se comprime */
+.tp-or-pest .tp-or-pestana.tp-or-pest-nota{flex:0 1 30%}
+.tp-or-pest .tp-or-pestana:not(.tp-or-pest-nota):not(.tp-or-pest-reparto){flex:1 1 0}
+.tp-or-pestana{min-width:0}
+.tp-or-pestana .tp-or-barra-n{flex:none}
+.tp-or-pest-tot{white-space:nowrap}
+@media (max-width:380px){
+  .tp-or-acciones-cab{gap:4px !important;flex-wrap:nowrap}
+  .tp-or-acciones-cab .tp-or-peq{padding:0 6px !important;font-size:11px !important;gap:3px;min-width:0}
+  .tp-or-acciones-cab .tp-or-peq i{font-size:13px}
+  .tp-or-acciones-cab:has(> :nth-child(3)){flex-wrap:wrap}
+}
+@media (max-width:420px){
+  .tp-or-cab .tp-or-mesa{font-size:20px}
+  .tp-or-pest .tp-or-pestana.tp-or-pest-nota{font-size:13px;flex:0 1 28%}
+  .tp-or-pest .tp-or-pestana:not(.tp-or-pest-nota):not(.tp-or-pest-reparto){font-size:14px;gap:4px}
+}
+/* Cada plato de la comanda en UNA línea: [− n +] nombre … precio ⋯ (18/11). Botones más pequeños en móvil. */
+.tp-linea{grid-template-columns:auto minmax(0,1fr) auto auto !important}
+.tp-linea > .tp-linea-cant,.tp-linea > .tp-linea-txt,.tp-linea > .tp-linea-pre,.tp-linea > .tp-linea-acc{grid-row:auto !important;grid-column:auto !important;justify-self:auto !important}
+.tp-linea-pre{text-align:right}
+.tp-linea-nom{font-size:14.5px}
+/* «Carta» y «Menú»: título que se ve (antes un gris suave que no se percibía) */
+.tp-com-seccion{margin:14px 0 6px;padding:5px 8px;background:var(--ink);color:#fff !important;font-size:12px !important;font-weight:700;border-radius:2px}
+.tp-com-seccion i{color:#fff}
+@media (max-width:760px){
+  .tp-q{width:30px !important;height:30px !important;font-size:14px}
+  .tp-q-n{min-width:20px !important;font-size:15px !important}
+  .tp-linea{gap:4px 6px !important;padding:5px 0}
+  .tp-linea-acc button,.tp-linea-acc .tp-ac{min-width:30px !important;width:30px !important;min-height:30px !important;height:30px !important;padding:0 !important}
+  .tp-linea-pre{font-size:13px}
+  .tp-tanda-bt{min-height:34px !important;padding:0 10px !important}
+  .tp-tanda-cab{flex-wrap:nowrap}
+  .tp-tanda-nom{min-width:0;font-size:13px}
+}
+/* Ack de cocina (✓ / reloj): pegado a la esquina izquierda de la cabecera, no suelto en la fila de botones */
+.tp-or-ack{position:absolute;left:10px;top:50%;transform:translateY(-50%)}
+.tp-or-ack .tp-ack-t{display:none}
+@media (max-width:520px){.tp-or-pest{flex-wrap:wrap}.tp-or-pest .tp-or-pestana.tp-or-pest-reparto{flex:1 1 100%;justify-content:center}.tp-or-pest-reparto .badge{white-space:normal}}
+/* Tomar nota estilo PDA (18/11): cartas en un desplegable, carpetas y platos compactos, «Tu selección» pegada abajo */
+.tp-or-selcarta{position:relative;display:flex;align-items:center;margin:0 0 8px;width:100%}
+.tp-or-selcarta select{flex:1 1 auto;min-width:0}
+.tp-or-carta.tpv-pane-active{display:flex !important;flex-direction:column}
+.tp-or-carta .tp-bandeja{margin-top:auto}
+.tp-or-selcarta > i{position:absolute;left:12px;color:var(--olive);pointer-events:none}
+.tp-or-selcarta select{width:100%;height:44px;padding:0 36px 0 40px !important;border:1px solid var(--hair);border-radius:3px;background:#fff;font:inherit;font-size:16px;font-weight:600;color:var(--ink);appearance:auto}
+.tp-secciones{grid-template-columns:repeat(auto-fill,minmax(130px,1fr)) !important;gap:8px !important}
+.tp-seccion{min-height:68px !important;padding:8px 6px !important;gap:2px !important}
+.tp-seccion-ico{font-size:22px !important}
+.tp-seccion-nom{font-size:14px !important}
+.tp-plato-main{flex-direction:row !important;align-items:center !important;justify-content:space-between !important;gap:10px !important;min-height:48px !important;padding:6px 10px !important}
+.tp-plato-nom{flex:1;min-width:0;font-weight:600;overflow-wrap:break-word}
+.tp-plato-pre{flex:none;font-family:var(--mono);font-weight:600}
+.tp-linea-mods{display:flex;flex-direction:column;gap:1px;margin-top:2px;font-size:12px;color:var(--muted);font-weight:400}
+.tp-plato-sec{display:none}
+.tp-plato-acc{flex-direction:row !important;align-items:stretch}
+.tp-plato-acc button + button{border-top:0 !important;border-left:1px solid var(--hair)}
+.tp-plato-n{position:static !important;flex:none;order:-1;margin-right:2px}
+.tp-plato-main{position:relative}
+@media (max-width:760px){
+  .tp-platos{grid-template-columns:1fr !important;gap:6px !important}
+  .tp-plato-acc button{min-width:36px;min-height:36px}
+}
+.tp-bandeja{position:sticky;bottom:0;margin:10px -2px 0;background:#fff;border:1px solid var(--ink);border-radius:3px;z-index:3;box-shadow:0 -6px 12px rgba(28,26,23,.08)}
+.tp-bj-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:46px;padding:0 12px;border:0;background:#fff;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.tp-bj-cab b{font-family:var(--mono);background:var(--ink);color:#fff;border-radius:10px;padding:0 7px;font-size:12px;margin-left:4px}
+.tp-bj-tot{font-family:var(--mono);white-space:nowrap}
+.tp-bj-lista{max-height:38vh;overflow-y:auto;border-top:1px solid var(--hair);padding:4px 8px 8px}
+.tp-bj-l{display:flex;align-items:center;gap:4px;padding:4px 0;border-bottom:1px solid var(--hair)}
+.tp-bj-l:last-child{border-bottom:0}
+.tp-bj-nom{flex:1;min-width:0;font-size:14px;font-weight:600;overflow-wrap:break-word;margin-left:4px}
+.tp-bj-pre{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.tp-bj-l .tp-q{width:30px;height:30px}
+/* Selector de periodo dentro de los historiales del TPV */
+.tp-hist-per{margin:0 0 10px;display:flex}
+/* Reservas del día: filas plegables (hora · nombre · personas) y barra de acciones en una sola fila (18/11) */
+.rv-fila{display:block !important;padding:0 !important}
+.rv-resumen{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;align-items:center;gap:6px 10px;padding:10px 12px;cursor:pointer;list-style:none;min-height:48px}
+.rv-resumen::-webkit-details-marker{display:none}
+.rv-resumen .rv-hora{font-family:var(--mono);font-weight:600;font-size:15px}
+.rv-resumen .rv-nombre{min-width:0;overflow-wrap:break-word;line-height:1.2}
+.rv-resumen .rv-pers{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.rv-chev{transition:transform .15s;color:var(--muted)}
+.rv-fila[open] .rv-chev{transform:rotate(180deg)}
+.rv-detalle{padding:0 12px 12px;border-top:1px solid var(--hair)}
+.rv-detalle .pm-ets{margin-top:10px}
+.rv-detalle .rv-acc{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pm-acciones{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pm-acciones .btn{flex:0 0 auto}
+@media (max-width:520px){
+  .rv-txt-largo{display:none}
+  .rv-resumen{grid-template-columns:auto minmax(0,1fr) auto auto;}
+  .rv-resumen .rv-estado-ok{display:none}
+  .rv-resumen{grid-template-columns:auto minmax(0,1fr) auto auto auto}
+  .pm-barra{flex-direction:column;align-items:stretch}
+  .pm-barra .pm-acciones{justify-content:space-between}
+  .pm-barra .pm-acciones .is-on{flex:1 1 auto}
+  .pm-mas{width:auto !important;min-width:44px;min-height:36px !important;padding:0 10px !important;justify-self:start}
+  .pm-mas .pm-mas-t{display:none}
+  .pm-fecha-txt{white-space:normal !important;line-height:1.15;font-size:15px !important}
+  .pm-fecha{min-width:0;flex:1 1 auto}
+}
+/* Punto de equilibrio en móvil: las cuatro cifras en UNA columna, con la cifra a su tamaño y sin salirse (18/11) */
+@media (max-width:520px){
+  #ge-pe .pe-kpis{grid-template-columns:1fr !important}
+  #ge-pe .pe-kpis .ge-kpi{border-right:0;border-bottom:1px solid var(--hair);padding:14px 16px}
+  #ge-pe .pe-kpis .ge-kpi:last-child{border-bottom:0}
+  #ge-pe .pe-kpis .ge-kpi .val{font-size:clamp(22px,7vw,28px) !important;overflow-wrap:break-word;white-space:normal;line-height:1.1}
+  #ge-pe .pe-kpis .ge-kpi .lbl{white-space:normal}
+}
+/* Vista previa de zonas y códigos en Mi Negocio */
+.mn-prev{margin-top:6px}
+.mn-prev-lista{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-direction:column;gap:4px}
+.mn-prev-lista li{font-size:13px;line-height:1.3;overflow-wrap:break-word}
+.mn-prev-ok i{color:var(--olive)} .mn-prev-mal{color:var(--red)} .mn-prev-mal i{color:var(--red)}
+.mn-prev-pie,.mn-prev-vacio{color:var(--muted);font-size:12px}
+/* Mi Negocio · horario: «Turno 1  13:00 a 16:30» en UNA línea y el selector «Por turnos» sin pisar su flecha (18/11) */
+@media (max-width:520px){
+  .mn-tramo-row{flex-wrap:nowrap !important;gap:4px !important}
+  .mn-tramo-row > span:first-child{min-width:0 !important;flex:0 0 auto;font-size:11.5px}
+  .mn-tramo-row select,.mn-tramo-row input.mn-horario-time{width:88px !important;min-width:0 !important;flex:0 0 auto;padding:4px 4px !important}
+  select[id^="mn-hor-"][id$="-modo"]{padding-right:26px !important;min-width:92px}
+}
+/* «Hoy — Atención»: todas las filas alineadas a la izquierda (las de dos líneas salían centradas) */
+.att-chip{text-align:left;justify-content:flex-start}
+.att-chip span{text-align:left}
+/* Panel de Control: «Semana | Mes» en la MISMA línea que el título del bloque (18/11) */
+.dp-card{position:relative}
+.dp-card > h3{padding-right:132px;min-height:44px;display:flex;align-items:center}
+.dp-card .dp-cab .dp-modo{position:absolute;top:12px;right:14px;z-index:2;display:flex;gap:4px}
+.dp-card .dp-cab .dp-modo .btn{min-height:32px;padding:0 10px}
+.dp-card .dp-cab .dp-ctl{padding-top:0}
+/* Aviso de alérgenos en cocina: discreto, se despliega con un toque */
+.tp-alg-det{margin:0 0 8px;font-size:12px;color:var(--red)}
+.tp-alg-det summary{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid #E3C8BF;border-radius:3px;background:var(--red-l,#F5EBE7);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;list-style:none}
+.tp-alg-det summary::-webkit-details-marker{display:none}
+.tp-alg-det[open] summary{margin-bottom:6px}
+.tp-alg-det > span{display:block;font-weight:600;line-height:1.35;overflow-wrap:break-word}
+/* Vista móvil revisada con el Android del dueño (18/11) */
+/* 1) Campana de avisos: su globito rojo quedaba DETRÁS del botón del chat (el siguiente en el DOM pinta encima). */
+.app-header #avisos-fab{position:relative;z-index:3}
+.app-header #avisos-fab .chat-badge{z-index:4}
+/* 2) Comandas Cocina en móvil: pestañas + «Deshacer» (solo icono) en la primera fila y las tres acciones en la segunda.
+   Rejilla de 12: pestañas 5+5, deshacer 2, acciones 4+4+4. Los rótulos envuelven entre palabras (nunca partidos) y no bajan de 11 px. */
+@media (max-width:600px){
+  .kds-toolbar{grid-template-columns:repeat(12,minmax(0,1fr))}
+  .kds-toolbar .btn.btn-fino{min-height:44px !important}   /* la regla de móvil general fija .btn a 36,5 px con !important */
+  .kds-toolbar .btn.btn-fino.kds-tab{grid-column:span 5}
+  .kds-toolbar .btn.btn-fino.kds-undo{grid-column:span 2;min-width:44px}
+  .kds-toolbar .btn.btn-fino.kds-undo .ti{display:inline-block;font-size:18px}
+  .kds-toolbar .kds-undo-txt{display:none}
+  .kds-toolbar .btn.btn-fino:not(.kds-tab):not(.kds-undo){grid-column:span 4;flex-direction:row;white-space:normal;overflow-wrap:normal;word-break:normal;hyphens:none;text-align:center;line-height:1.2;font-size:11px;padding:4px 6px;min-height:44px}
+  .kds-toolbar .btn.btn-fino:not(.kds-tab):not(.kds-undo) .ti{display:none}
+}
+
+/* Oferta · lista de cartas y menús, y cabeceras de sección del editor, en móvil (18/11).
+   a) Las horas de cada día: desde / hasta APILADAS (y una rayita entre ellas) en vez de «12–16» en una línea que no cabía en una casilla de 36 px y se montaba con la vecina. */
+.horsem-d .hs{display:inline}
+.horsem-d .hs > span+span::before{content:"–"}
+@media (max-width:600px){
+  .horsem-d{padding:5px 0}
+  .horsem-d span{white-space:normal}
+  .horsem-d .hs{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2}
+  .horsem-d .hs > span+span::before{content:"";display:block;width:8px;height:1px;background:var(--muted);margin:2px auto}
+  /* b) Cabecera de sección: fila 1 = icono + nombre + «⋯»; fila 2 = flechas y acciones, que envuelven entre sí. */
+  .oc-sec-cab{justify-content:flex-start;align-items:center;gap:6px 8px;padding:10px 12px}
+  .oc-sec-tit,.oc-sec-acc{display:contents}
+  .oc-sec-cab::after{content:"";order:4;flex:1 0 100%;height:0}
+  .oc-sec-cab .oc-icono{order:1}
+  .oc-sec-tit > div{order:2;flex:1 1 0;min-width:0}
+  .oc-sec-acc > .mn-btn{order:3;margin-left:auto}
+  .oc-sec-mover{display:flex;flex-direction:column;gap:2px;order:0;flex:0 0 auto}
+  .oc-sec-mover .btn-icon,.oc-sec-mover .btn-icon.btn-sm{width:36px;min-width:36px;height:30px;min-height:30px !important;font-size:14px}
+  .oc-sec-acc > :not(.mn-btn){order:6}
+  .oc-sec-acc > .btn-fino:not(.mn-btn){flex:0 1 auto;min-width:0;white-space:normal;overflow-wrap:normal;line-height:1.2}
+}
+/* Editor de carta y de menú en móvil: «← Cartas» y «Guardar» en la misma fila y el nombre debajo, a todo el ancho (Guardar iba solo en una fila). */
+@media (max-width:600px){
+  #carta-editor-view > .toolbar,#menu-editor-view > .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  #carta-editor-view > .toolbar > .left,#menu-editor-view > .toolbar > .left{display:contents}
+  #carta-editor-view > .toolbar .left > .btn,#menu-editor-view > .toolbar .left > .btn{order:1}
+  #carta-editor-view > .toolbar > .btn.is-on,#menu-editor-view > .toolbar > .btn.is-on{order:2;margin-left:auto}
+  #carta-editor-view > .toolbar > .oc-sucio,#menu-editor-view > .toolbar > .oc-sucio{order:3;flex:1 0 100%}
+  #carta-editor-view .oc-nombre-in,#menu-editor-view .oc-nombre-in{order:4;flex:1 0 100%;min-width:0;max-width:none}
+}
+/* ═══ COCINA · AJUSTES DE MÓVIL DEL 18/11 (vídeo en un Android real, ~360 px) ═══════════════════════════════════════
+   Cuatro causas comunes, no cuatro parches: (1) el «?» de ayuda ocupaba una fila entera, (2) el texto escrito en un buscador
+   con lupa caía ENCIMA de la lupa, (3) una fila con SOLO un lápiz/«⋯» ocupaba una línea completa, (4) los textarea enseñaban el
+   tirador de redimensionar. Bloque separado a propósito: cada punto lleva su explicación. */
+
+/* (1) «?» DE AYUDA PEQUEÑO, JUNTO A SU RÓTULO. Antes era un círculo de 44 px dentro de un bloque con margen: una línea para él solo.
+   Ahora es un botón de 28 px que se queda en línea con lo que tiene delante (el título de la tarjeta o el rótulo del campo); la zona
+   de toque sigue siendo de 44 px (la pone el ::after, que no ocupa sitio). Abierto, el texto sí ocupa el ancho entero, debajo. */
+.gg-ayuda{display:inline-block;vertical-align:middle;margin:0 0 0 8px;max-width:100%}
+.gg-ayuda > summary{width:28px;height:28px;min-width:28px;min-height:28px;font-size:13px;line-height:1;position:relative}
+.gg-ayuda > summary::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+.gg-ayuda[open]{display:block;margin:6px 0 0}
+.gg-ayuda[open] > summary{margin-bottom:2px}
+/* El título de una tarjeta y su «?» comparten línea (el título pasa a ser en línea sin perder su margen inferior). */
+.es-tit:has(+ .gg-ayuda:not([open])){display:inline-block;vertical-align:middle;margin-right:0}
+.es-tit + .gg-ayuda:not([open]){margin-bottom:12px}
+/* Rótulo + «?» de un campo: `<div class="gg-lbl-ayuda"><label>…</label>${ggNota(…)}</div>`; en PC la nota va a la vista, debajo. */
+.gg-lbl-ayuda{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;margin-bottom:6px}
+.gg-lbl-ayuda > label{margin:0;flex:0 1 auto;min-width:0}
+.gg-lbl-ayuda > .gg-ayuda{margin:0 0 0 4px}
+.gg-lbl-ayuda > .gg-ayuda[open],.gg-lbl-ayuda > .gg-nota{flex:1 1 100%;margin:4px 0 0}
+
+/* Índice A–Z de «Artículos de este proveedor»: cada letra lleva debajo cuántos hay; las vacías se apagan. Casillas de 44 px. */
+.pv-az{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;margin:0 0 10px}
+.pv-az-l{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;padding:2px 0;border:1px solid var(--hair);background:#fff;color:var(--ink);cursor:pointer;border-radius:3px;line-height:1.1}
+.pv-az-l b{font-family:var(--mono);font-size:14px;font-weight:600}
+.pv-az-l small{font-family:var(--mono);font-size:11px;color:var(--muted);min-height:12px}
+.pv-az-l:hover:not(:disabled){border-color:var(--olive);background:var(--brand-cream)}
+.pv-az-l.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.pv-az-l.is-on small{color:#fff}
+.pv-az-l:disabled{color:#B9B6AD;background:transparent;border-color:transparent;cursor:default}
+.pv-az-l:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* Pasos de protocolo: el texto es fijo y el ⋯ va en la misma fila. Al editar un paso entran el ✓ y el ⋯ a la vez: cuatro columnas, nunca el ⋯ solo
+   en una fila de debajo. */
+.lp-paso.editando{grid-template-columns:30px minmax(0,1fr) auto auto}
+.lp-paso-leer{margin:6px 0 0;font-size:15px;line-height:1.45;min-width:0;overflow-wrap:break-word;text-transform:none}
+
+/* Aviso con atajo («Tienes N pedidos pendientes… [Ver todos]»): el botón no se encoge (se salía por la derecha a 320 px); el texto cede. */
+.pe-aviso > .btn{flex:0 0 auto;white-space:nowrap;margin-left:auto}
+.pe-aviso > .ti{flex:0 0 auto;margin-top:2px}
+
+/* APPCC: la franja de cinco cifras es 3 + 2. La regla genérica «la última impar ocupa la fila» la dejaba en 3 + 1 (media celda) + 1. */
+@media (max-width:760px){
+  .st-resumen.lp-resumen > .st-cel:nth-child(n+4){grid-column:span 3}
+}
+
+/* BOTÓN FINO CUYO TEXTO ENVUELVE (ggBotonesMulti, js/ui.js): la caja de 28 px se quedaba corta y el texto salía por arriba y abajo
+   («Ver todos», «Historial de Pedidos»). Con `btn-multi` la caja ocupa el botón entero y el botón lleva aire arriba y abajo. */
+.btn.btn-fino.btn-multi{padding-top:9px !important;padding-bottom:9px !important;line-height:1.25;text-align:center;justify-content:center}
+.btn.btn-fino.btn-multi::before{top:0;bottom:0;height:auto;margin-top:0}
+/* Un botón más ancho que la pantalla envuelve su texto en vez de salirse por el borde (ggBotonesMulti le pone `btn-ajusta`). */
+.btn.btn-fino.btn-ajusta{max-width:100%;white-space:normal;text-align:center;justify-content:center}
+
+/* (2) BUSCADOR CON LUPA. La regla de móvil de la app pone `padding:… !important` a todo input y se comía el hueco de la lupa:
+   el texto (y el placeholder) quedaban encima del icono. Contrato: el icono es el hijo anterior del campo y va en posición
+   absoluta; el campo reserva 38 px a su izquierda en TODOS los anchos. Vale para Escandallo, Fichas, I+D, Oferta, el TPV y
+   cualquier buscador del área Cocina que use estas cajas. */
+:where(.es-anadir-buscar,.oc-buscar,.gg-buscar) > input:not([type=checkbox]):not([type=radio]):not([type=hidden]){padding-left:38px !important;text-overflow:ellipsis}
+:where(.es-anadir-buscar,.oc-buscar,.gg-buscar) > .ti:first-child{left:12px;z-index:1}
+.gg-buscar{position:relative}
+.gg-buscar > .ti:first-child{position:absolute;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+
+/* (3) UNA LÍNEA NUNCA LLEVA SOLO UN LÁPIZ / «⋯». En la ficha técnica los mandos de cada paso caían en una fila propia bajo el texto.
+   Ahora van en la fila del NÚMERO del paso (a la derecha, ya vacía) y el texto se lee debajo, sangrado bajo la línea de tiempo. */
+@media (max-width:760px){
+  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c";gap:0 10px}
+  .fi-paso:has(> .fi-paso-acc){grid-template-areas:"n acc" ". c"}
+  .fi-paso > .fi-paso-acc{grid-area:acc;justify-self:end;align-self:center;margin:0;gap:2px}
+  .fi-paso:has(> .fi-paso-acc) > .fi-paso-n{align-self:center}
+  .fi-paso:has(> .fi-paso-acc) > .fi-paso-c{padding-top:0}
+  .fi-paso:has(> .fi-paso-acc) > .fi-paso-c > .fi-paso-leer{margin-top:0}
+  .fi-paso:has(> .fi-paso-acc)::before{top:36px}
+  /* El lápiz y el ⋯ comparten caja (28 px de alto) y zona de toque de 44 px: antes el lápiz era un cuadrado de 44 y el ⋯ una caja baja. */
+  .fi-paso > .fi-paso-acc .fi-lapiz{position:relative;background:transparent;border:0;isolation:isolate}
+  .fi-paso > .fi-paso-acc .fi-lapiz::before{content:"";position:absolute;left:2px;right:2px;top:50%;height:28px;margin-top:-14px;z-index:-1;background:#fff;border:1px solid var(--hair);border-radius:3px}
+  .fi-paso > .fi-paso-acc .fi-lapiz:hover::before,.fi-paso > .fi-paso-acc .fi-lapiz:focus-visible::before{border-color:var(--olive)}
+  .fi-paso > .fi-paso-acc .fi-lapiz.is-on::before{background:var(--olive);border-color:var(--olive)}
+  /* Un texto largo, aunque venga en MAYÚSCULAS y sin espacios, se lee con letra normal y nunca desborda. */
+  .fi-paso-leer{font-size:15px;line-height:1.5;min-width:0;overflow-wrap:break-word}
+  .fi-paso-c{min-width:0}
+}
+.fi-paso-leer,.fi-paso-txt{overflow-wrap:break-word;text-transform:none}
+
+/* (4) TEXTAREA SIN TIRADOR, QUE CRECE CON LO ESCRITO. El alto lo ajusta `ggAutoAltoTextarea` (js/ui.js, delegado en toda la app);
+   aquí solo se quita el tirador y se impide que el campo se salga por la derecha. */
+textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:hidden}
+
+/* (3 bis) MISMA NORMA EN EL EDITOR DE OFERTA. Antes caían a una línea para ellos solos: el «⋯» de cada carta (la lista pasaba a una
+   columna a ≤600 px), el «⋯» de cada sección o grupo («Plato manual» + «Escandallo» + «⋯» no caben en 360), «Guardar» (el nombre
+   de la carta se quedaba una fila entera y Guardar otra) y «Nueva sección» bajo el buscador. Ahora cada acción sube a una fila que ya
+   existía: la carta y su «⋯» en la primera, el título de la sección y su «⋯» en la suya, «Atrás … Guardar» arriba y el nombre debajo. */
+@media (max-width:760px){
+  /* (la cabecera de sección y la barra «Atrás … Guardar» de arriba ya las resuelve el bloque del 18/11 de Oferta, más arriba) */
+  /* buscador + «Nueva sección / Nuevo grupo» en UNA fila; en pantallas muy estrechas el botón se queda en «+» (su nombre va en el aria-label) */
+  .oc-barra{flex-wrap:nowrap;align-items:center;gap:8px}
+  .oc-barra .oc-buscar{flex:1 1 0;min-width:0;max-width:none}
+  .oc-barra .oc-barra-nuevo{flex:0 0 auto}
+}
+@media (max-width:480px){
+  .oc-barra .oc-barra-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .oc-barra .oc-barra-nuevo{min-width:44px;justify-content:center;padding-left:8px;padding-right:8px}
 }

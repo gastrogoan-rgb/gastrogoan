@@ -164,6 +164,8 @@ function rvFiltrosDef(){
     ['baja', gl({es:'Canceladas / no-show', ca:'Cancel·lades / no-show', en:'Cancelled / no-show'}), r => r.status === 'cancelada' || r.status === 'no_show'],
   ];
 }
+const rvAbiertas = new Set();
+function rvToggle(id, abierta){ if(abierta) rvAbiertas.add(id); else rvAbiertas.delete(id); }
 function rvFilaHtml(r){
   const table = DB.tables.find(x => x.id === r.tableId);
   const tel = whatsappDeTelefono(rvTelefono(r));
@@ -192,16 +194,23 @@ function rvFilaHtml(r){
     r.depositRequired ? (r.depositConfirmed ? `<span class="pm-et is-ok"><i class="ti ti-cash"></i> ${r.depositAmount}€</span>` : `<span class="pm-et cl-et-alergia"><i class="ti ti-cash-banknote"></i> ${escapeHtml(t('deposit.pending'))}</span>`) : '',
     r.clientId && (DB.clients.find(c => c.id === r.clientId) || {}).allergies ? `<span class="pm-et cl-et-alergia"><i class="ti ti-alert-triangle"></i> ${escapeHtml((DB.clients.find(c => c.id === r.clientId) || {}).allergies)}</span>` : '',
   ].filter(Boolean).join('');
+  // 18/11 (dueño): cada reserva es una fila plegada con hora · nombre · personas; al desplegar sale el resto (mesa, código, alergias, notas, acciones).
+  const abierta = rvAbiertas.has(r.id);
   return `
-  <article class="rv-fila${inactiva ? ' es-inactiva' : ''}${llegada ? ' es-llegada' : ''}">
-    <div class="rv-hora">${escapeHtml(r.time || '—')}</div>
-    <div class="rv-main">
-      <div class="rv-nombre"><b>${escapeHtml(rvNombre(r))}</b> ${reservationStatusBadge(r.status, r.llegada)}</div>
+  <details class="rv-fila${inactiva ? ' es-inactiva' : ''}${llegada ? ' es-llegada' : ''}"${abierta ? ' open' : ''} ontoggle="rvToggle(${r.id}, this.open)">
+    <summary class="rv-resumen">
+      <span class="rv-hora">${escapeHtml(r.time || '—')}</span>
+      <span class="rv-nombre"><b>${escapeHtml(rvNombre(r))}</b></span>
+      <span class="rv-pers" title="${escapeHtml(t('common.people'))}"><i class="ti ti-users"></i> ${r.people}</span>
+      <span class="rv-estado${r.status === 'confirmada' || r.status === 'completada' ? ' rv-estado-ok' : ''}">${reservationStatusBadge(r.status, r.llegada)}</span>
+      <i class="ti ti-chevron-down rv-chev" aria-hidden="true"></i>
+    </summary>
+    <div class="rv-detalle">
       <div class="pm-ets">${chips}</div>
       ${r.notes ? `<p class="rv-nota"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</p>` : ''}
+      <div class="rv-acc">${tel ? `<a class="btn btn-fino mn-btn" data-tip="WhatsApp" aria-label="WhatsApp ${escapeHtml(rvNombre(r))}" href="https://wa.me/${tel}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>` : ''}${principal}${sueltas}${menu}</div>
     </div>
-    <div class="rv-acc">${tel ? `<a class="btn btn-fino mn-btn" data-tip="WhatsApp" aria-label="WhatsApp ${escapeHtml(rvNombre(r))}" href="https://wa.me/${tel}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>` : ''}${principal}${sueltas}${menu}</div>
-  </article>`;
+  </details>`;
 }
 function renderReservasDia(){
   const box = document.getElementById('reservas-tab-content');
@@ -243,10 +252,10 @@ function renderReservasDia(){
         <button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(gl({es:'Día anterior', ca:'Dia anterior', en:'Previous day'}))}" onclick="reservasDate=pmSumaDias(reservasDate,-1);renderReservas()"><i class="ti ti-chevron-left"></i></button>
         <label class="pm-fecha"><span class="pm-fecha-txt">${escapeHtml(pmFechaLarga(date, true))}</span><input type="date" id="reservas-filter-date" value="${date}" aria-label="${escapeHtml(t('common.date'))}" onchange="if(this.value){reservasDate=this.value;renderReservas()}"></label>
         <button type="button" class="btn btn-fino pm-flecha" aria-label="${escapeHtml(gl({es:'Día siguiente', ca:'Dia següent', en:'Next day'}))}" onclick="reservasDate=pmSumaDias(reservasDate,1);renderReservas()"><i class="ti ti-chevron-right"></i></button>
-        ${date !== hoy ? `<button type="button" class="btn btn-sm btn-fino" onclick="reservasDate=todayStr();renderReservas()">${escapeHtml(t('common.today'))}</button>` : ''}
       </div>
       <div class="pm-acciones">
-        ${todas.length ? `<button type="button" class="btn btn-fino" onclick="rvImprimirDia('${date}')"><i class="ti ti-printer"></i> ${escapeHtml(gl({es:'Imprimir el día', ca:'Imprimir el dia', en:'Print the day'}))}</button>` : ''}
+        ${date !== hoy ? `<button type="button" class="btn btn-fino" onclick="reservasDate=todayStr();renderReservas()">${escapeHtml(t('common.today'))}</button>` : ''}
+        ${todas.length ? `<button type="button" class="btn btn-fino" onclick="rvImprimirDia('${date}')" data-tip="${escapeHtml(gl({es:'Imprimir el día', ca:'Imprimir el dia', en:'Print the day'}))}" aria-label="${escapeHtml(gl({es:'Imprimir el día', ca:'Imprimir el dia', en:'Print the day'}))}"><i class="ti ti-printer"></i><span class="rv-txt-largo"> ${escapeHtml(gl({es:'Imprimir el día', ca:'Imprimir el dia', en:'Print the day'}))}</span></button>` : ''}
         <button type="button" class="btn btn-fino is-on" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${escapeHtml(t('btn.newReservation'))}</button>
       </div>
     </div>

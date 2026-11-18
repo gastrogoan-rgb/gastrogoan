@@ -2422,15 +2422,9 @@ function ggAccPreparar(){
     if(fila && fila.children.length > 3) wrap.classList.add('tbl-scroll');
   });
   // Tiras de pestañas/filtros largas (`.gg-pest-col`): botón «Más / Menos» que despliega el resto (ver CSS, punto 9 de VIDEO-MÓVIL).
-  vista.querySelectorAll('.gg-pest-col').forEach(c => {
-    let b = c.querySelector(':scope > .gg-pest-mas');
-    if(!b){
-      b = document.createElement('button'); b.type = 'button'; b.className = 'gg-pest-mas';
-      b.addEventListener('click', () => { const ab = c.classList.toggle('gg-pest-abierta'); b.setAttribute('aria-expanded', ab ? 'true' : 'false'); b.textContent = ab ? gl({es:'Menos', ca:'Menys', en:'Less'}) : gl({es:'Más', ca:'Més', en:'More'}); });
-      b.setAttribute('aria-expanded', 'false'); b.textContent = gl({es:'Más', ca:'Més', en:'More'});
-      c.appendChild(b);
-    }
-  });
+  // 18/11 (dueño): el botón «Más» de las tiras de pestañas se QUITÓ en toda la app («deja ver las secciones tal cual»): las tiras envuelven y
+  // se ven todas. Si queda algún botón antiguo en el DOM, se retira.
+  vista.querySelectorAll('.gg-pest-col > .gg-pest-mas').forEach(b => b.remove());
   vista.querySelectorAll('.gg-plegable').forEach(el => {
     const h = el.querySelector(':scope > .ge-sec-head, :scope > h3, :scope > h4'); if(!h) return;
     if(!h.classList.contains('gg-acc-h')){ h.classList.add('gg-acc-h'); h.setAttribute('role','button'); h.tabIndex = 0; }
@@ -2496,11 +2490,39 @@ function ggAfinarBotones(raiz){
 function ggAfinarTodo(){
   GG_FINO_CONTENEDORES.forEach(sel => { const el = document.querySelector(sel); if(el) ggAfinarBotones(el); });
 }
+/* Un botón fino dibuja su caja en ::before con 28 px fijos: si su texto envuelve a dos líneas («Historial de Pedidos», «Ver todos 6» en 360 px)
+   el texto SOBRA por arriba y por abajo de la caja. Aquí se detecta (una línea de texto = un rectángulo de Range) y se marca `btn-multi`,
+   que hace que la caja ocupe el botón entero y le da aire. Se cuenta con Range, no con la altura del botón (el padding engañaría). */
+let ggMultiPend = false;
+function ggBotonesMulti(){
+  ggMultiPend = false;
+  const bs = [];
+  GG_FINO_CONTENEDORES.forEach(sel => { const el = document.querySelector(sel); if(el) el.querySelectorAll('.btn.btn-fino').forEach(b => bs.push(b)); });
+  // 1.º un botón que se sale de su contenedor (texto en una sola línea más ancho que la pantalla: «Sorpréndeme (idea rápida para hoy)»
+  //    a 320 px) pasa a envolver su texto; 2.º se cuentan las líneas con el ancho ya corregido.
+  const ancho = bs.map(b => {
+    if(!b.getClientRects().length || b.classList.contains('btn-icon')) return false;
+    const rb = b.getBoundingClientRect(), pr = b.parentElement ? b.parentElement.getBoundingClientRect() : null;
+    const limite = Math.min(window.innerWidth, pr ? pr.right : window.innerWidth);
+    return rb.right > limite + 0.5 && rb.width > 80;
+  });
+  bs.forEach((b, i) => { if(ancho[i]) b.classList.add('btn-ajusta'); });
+  const r = document.createRange();
+  const lineas = bs.map(b => {
+    if(!b.getClientRects().length || b.classList.contains('btn-icon') || b.classList.contains('btn-toque')) return 0;
+    r.selectNodeContents(b);
+    const tops = new Set(); [...r.getClientRects()].forEach(q => { if(q.width > 1) tops.add(Math.round(q.top / 4)); });
+    return tops.size;
+  });
+  bs.forEach((b, i) => b.classList.toggle('btn-multi', lineas[i] > 1));
+}
+function ggBotonesMultiProgramar(){ if(ggMultiPend) return; ggMultiPend = true; requestAnimationFrame(ggBotonesMulti); }
+if(typeof window !== 'undefined') window.addEventListener('resize', ggBotonesMultiProgramar);
 if(typeof document !== 'undefined' && typeof MutationObserver !== 'undefined'){
   const arrancar = () => {
     const vigilar = document.getElementById('content');
     const modal = document.getElementById('modal-box');
-    const obs = new MutationObserver(() => ggAfinarTodo());
+    const obs = new MutationObserver(() => { ggAfinarTodo(); ggBotonesMultiProgramar(); });
     // Solo cuelgan hijos nuevos: cambiar una clase no vuelve a disparar nada (no hay bucle).
     if(vigilar) obs.observe(vigilar, {childList:true, subtree:true});
     if(modal) obs.observe(modal, {childList:true, subtree:true});
@@ -3107,4 +3129,60 @@ document.getElementById('modal-overlay').addEventListener('click', (e)=>{
   if(typeof pendingTextPromptResolve !== 'undefined' && pendingTextPromptResolve) return cancelTextPrompt();
   closeModal();
 });
+
+/* TEXTAREA QUE CRECE CON LO ESCRITO, EN TODA LA APP (18/11, pedido del dueño tras verlo en un Android real).
+   Los campos de texto largo enseñaban el tirador de redimensionar y, con texto previo, se abrían a 2 renglones y había que
+   arrastrar. Ahora: sin tirador (CSS, `resize:none`) y el alto sigue al contenido, hacia abajo.
+   Es DELEGADO: una escucha global de `input` + un observador del DOM para los que se pintan ya con texto (fichas, notas, modales,
+   Mi Negocio…). Ninguna pantalla tiene que acordarse de nada. `data-gg-fijo` en un textarea lo excluye.
+   · Un textarea OCULTO (pestaña o acordeón cerrado) mide 0: no se toca, y el ResizeObserver lo ajusta cuando aparece o cambia de ancho.
+   · Al encoger se pasa por `height:auto`, lo que acorta la página un instante y mueve el scroll: se guarda y se restaura. */
+function ggAutoAltoTextarea(ta){
+  if(!ta || ta.tagName !== 'TEXTAREA' || ta.hasAttribute('data-gg-fijo')) return;
+  if(!ta.isConnected || (!ta.offsetParent && getComputedStyle(ta).position !== 'fixed')) return;
+  const guardados = [];
+  for(let p = ta.parentElement; p; p = p.parentElement) if(p.scrollTop > 0) guardados.push([p, p.scrollTop]);
+  const cs = getComputedStyle(ta);
+  ta.style.height = 'auto';
+  const borde = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+  const relleno = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  const alto = cs.boxSizing === 'border-box' ? ta.scrollHeight + borde : ta.scrollHeight - relleno;
+  // Tope del 70 % de la pantalla: un texto pegado enorme no puede empujar el resto fuera; a partir de ahí, scroll propio.
+  const tope = Math.max(240, Math.round(window.innerHeight * 0.7));
+  ta.style.height = Math.min(Math.max(alto, 0), tope) + 'px';
+  ta.style.overflowY = alto > tope ? 'auto' : 'hidden';
+  guardados.forEach(([p, y]) => { if(p.scrollTop !== y) p.scrollTop = y; });
+}
+(function ggAutoAltoInstalar(){
+  if(typeof document === 'undefined' || window.__ggAutoAlto) return;
+  window.__ggAutoAlto = true;
+  const vistos = new WeakSet();
+  const anchos = new WeakMap();
+  const pendientes = new Set();
+  let programado = false;
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(entradas => {
+    entradas.forEach(e => {
+      const w = Math.round(e.contentRect.width);
+      if(anchos.get(e.target) !== w){ anchos.set(e.target, w); ggAutoAltoTextarea(e.target); }
+    });
+  }) : null;
+  const vaciar = () => { programado = false; const lista = [...pendientes]; pendientes.clear(); lista.forEach(ta => { ggAutoAltoTextarea(ta); }); };
+  const apuntar = ta => {
+    if(!vistos.has(ta)){ vistos.add(ta); if(ro) ro.observe(ta); }
+    pendientes.add(ta);
+    if(!programado){ programado = true; requestAnimationFrame(vaciar); }
+  };
+  document.addEventListener('input', e => { if(e.target && e.target.tagName === 'TEXTAREA') ggAutoAltoTextarea(e.target); }, true);
+  const revisar = nodo => {
+    if(!nodo || nodo.nodeType !== 1) return;
+    if(nodo.tagName === 'TEXTAREA') apuntar(nodo);
+    else if(nodo.querySelectorAll) nodo.querySelectorAll('textarea').forEach(apuntar);
+  };
+  const arrancar = () => {
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(revisar))).observe(document.body, {childList:true, subtree:true});
+    document.querySelectorAll('textarea').forEach(apuntar);
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => document.querySelectorAll('textarea').forEach(apuntar));
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
+})();
 

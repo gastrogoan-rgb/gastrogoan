@@ -97,21 +97,20 @@ await caso('Cada línea del pedido va en UNA fila (cantidad, nombre, precio y �
   }
 });
 
-await caso('El camarero sale BLOQUEADO (candado) para quien no es el propietario; el propietario puede reasignarlo', async () => {
+await caso('Camarero (18/11): la comanda NO enseña quién toma la nota (ni chip «Propietario»); solo hay botón si la mesa no tiene camarero', async () => {
   const {page} = await abrir(1280, 800);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
     const emp = {id:77, name:'Lola Mesera', area:'sala', active:true, color:'#4A5D4E'}; DB.employees.push(emp);
-    DB.tpvOrders.find(x => x.id === 901).camareroId = 77; saveDB();
+    const o = DB.tpvOrders.find(x => x.id === 901); o.camareroId = 77; saveDB();
     openTableOrder(2, 901); await esp(300);
-    const chip = () => document.querySelector('.tp-chip-fijo');
-    const dueno = {candado: !!chip()?.querySelector('.ti-lock'), pulsable: chip()?.classList.contains('badge-pulsable'), nombre: chip()?.textContent.trim()};
-    document.body.classList.remove('owner-session'); setAccessSession({type:'employee', employeeId:77, area:'sala', ts:Date.now()});
-    renderTableOrderModal(901); await esp(300);
-    const emple = {candado: !!chip()?.querySelector('.ti-lock'), pulsable: chip()?.classList.contains('badge-pulsable')};
-    return {dueno, emple};
+    const fila = () => document.querySelector('.tp-or-acciones-cab')?.textContent || '';
+    const conCamarero = /Lola|Propietario/i.test(fila());
+    delete o.camareroId; saveDB(); renderTableOrderModal(901); await esp(300);
+    const botonAsignar = !!document.querySelector('.tp-or-acciones-cab .ti-user');
+    return {conCamarero, botonAsignar};
   });
-  assert.ok(r.dueno.candado && r.dueno.pulsable && /Lola/.test(r.dueno.nombre), JSON.stringify(r)); assert.ok(r.emple.candado && !r.emple.pulsable, 'un empleado no puede cambiarlo: ' + JSON.stringify(r));
+  assert.ok(!r.conCamarero, 'con camarero no se pinta: ' + JSON.stringify(r)); assert.ok(r.botonAsignar, 'sin camarero, botón para asignarlo: ' + JSON.stringify(r));
   await page.close();
 });
 
@@ -128,7 +127,7 @@ await caso('Alérgenos de la mesa: los 14 como botones, un toque los marca, y ll
     document.getElementById('tpv-alg-nota').value = 'Celíaco';
     tpvAlgGuardar(901); await esp(300);
     const o = DB.tpvOrders.find(x => x.id === 901);
-    const badge = [...document.querySelectorAll('.tp-or-chips .badge')].find(b => /Gluten/.test(b.textContent))?.textContent.trim();
+    const badge = [...document.querySelectorAll('.tp-or-acciones-cab button')].find(b => /Gluten/.test(b.title))?.textContent.trim();
     return {botones, alto: Math.round(alto), lista: o.tableAllergenList, texto: o.tableAllergens, badge, cocina: ticketAlergiaTextos(o).join(' | ')};
   });
   assert.equal(r.botones, 14, JSON.stringify(r)); assert.ok(r.alto >= 40, 'tamaño de dedo: ' + JSON.stringify(r));

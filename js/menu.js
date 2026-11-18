@@ -248,7 +248,7 @@ function renderItemScheduleHtml(item){
     const on = d.activo !== false;
     const fr = on ? (d.franjas||[]).filter(f => f.desde && f.hasta) : [];
     const horas = !on ? '<span>—</span>'
-      : (fr.length ? fr.map(f => `<span>${escapeHtml(horaCorta(f.desde))}–${escapeHtml(horaCorta(f.hasta))}</span>`).join('')
+      : (fr.length ? fr.map(f => `<span class="hs" title="${escapeHtml(f.desde)}–${escapeHtml(f.hasta)}"><span>${escapeHtml(horaCorta(f.desde))}</span><span>${escapeHtml(horaCorta(f.hasta))}</span></span>`).join('')
         : `<span class="todo">${gl({es:'Todo', ca:'Tot', en:'All'})}</span>`);
     return `<div class="horsem-d${on ? '' : ' off'}" role="listitem" title="${escapeHtml(weekDayFull(i))}"><b>${escapeHtml(weekDayShort(i))}</b>${horas}</div>`;
   }).join('')}</div>`;
@@ -753,7 +753,7 @@ function renderCartaSecciones(){
   const searchBox = `
     <div class="oc-barra">
       <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>
-      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newCartaSection()"><i class="ti ti-plus"></i> ${t('btn.newSection')}</button>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on oc-barra-nuevo" aria-label="${escapeHtml(t('btn.newSection'))}" onclick="newCartaSection()"><i class="ti ti-plus"></i> <span class="oc-barra-txt">${t('btn.newSection')}</span></button>
     </div>`;
   if(!cartaEdit.secciones.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
@@ -770,7 +770,7 @@ function renderCartaSecciones(){
     <section class="oc-sec">
       <div class="oc-sec-cab">
         <div class="oc-sec-tit">
-          ${reorderButtons(`moveCartaSection(${si},-1)`, `moveCartaSection(${si},1)`, si===0, si===secciones.length-1)}
+          <span class="oc-sec-mover">${reorderButtons(`moveCartaSection(${si},-1)`, `moveCartaSection(${si},1)`, si===0, si===secciones.length-1)}</span>
           <!-- El icono de la sección es el que ve el cliente en la web de reservas y pedidos: allí cada sección
                es una carpeta, y este es su dibujo. Se elige a mano porque adivinarlo por el nombre nunca acierta
                del todo ("Cosas del chef", "La pizarra"). -->
@@ -1638,7 +1638,7 @@ function renderMenuGrupos(){
   const searchBox = `
     <div class="oc-barra">
       <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>
-      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> ${t('title.newGroup')}</button>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on oc-barra-nuevo" aria-label="${escapeHtml(t('title.newGroup'))}" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> <span class="oc-barra-txt">${t('title.newGroup')}</span></button>
     </div>`;
   if(!menuEdit.grupos.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${isBebidas ? t('empty.groups.sala') : t('empty.groups')}</div>`;
@@ -1655,7 +1655,7 @@ function renderMenuGrupos(){
     <section class="oc-sec">
       <div class="oc-sec-cab">
         <div class="oc-sec-tit">
-          ${reorderButtons(`moveMenuGrupo(${gi},-1)`, `moveMenuGrupo(${gi},1)`, gi===0, gi===grupos.length-1)}
+          <span class="oc-sec-mover">${reorderButtons(`moveMenuGrupo(${gi},-1)`, `moveMenuGrupo(${gi},1)`, gi===0, gi===grupos.length-1)}</span>
           <div style="min-width:0"><h4>${escapeHtml(g.nombre)}${g.bebida ? ` <span class="oc-sec-n"><i class="ti ti-glass-full"></i> ${t('label.sala')}</span>` : ''}</h4><span class="oc-sec-n">${opciones.length} ${gl({es:opciones.length===1?'opción':'opciones', ca:opciones.length===1?'opció':'opcions', en:opciones.length===1?'option':'options'})}${fuera ? ` · <b class="dishout-fuera">${fuera} ${gl({es:fuera===1?'agotada':'agotadas', ca:fuera===1?'esgotada':'esgotades', en:'out'})}</b>` : ''}</span></div>
         </div>
         <div class="oc-sec-acc">

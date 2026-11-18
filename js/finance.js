@@ -782,7 +782,7 @@ function geResultadoAntesImpMes(year, month){
 // sabe nada más.
 // La escala (estatal + autonómica, según el territorio fijado) vive en js/motor-fiscal.js: aquí solo se pide la cuota.
 const IRPF_MINIMO_PERSONAL = 5550;
-function cuotaIrpfEscala(base){ return motorIrpfCuotaEscala(base, territorioFiscal()); }
+function cuotaIrpfEscala(base, año){ return motorIrpfCuotaEscala(base, territorioFiscal(), año); }
 // IRPF de una persona por el rendimiento de la actividad. Estimación
 // directa simplificada: 5% de gastos de difícil justificación, como mucho
 // 2.000 € al año (art. 30.2.4ª LIRPF). El mínimo personal se descuenta
@@ -806,6 +806,23 @@ function reduccionActividadesEconomicas(rn){
   return Math.min(rn, rn <= 14047.5 ? 6498 : Math.max(0, 6498 - 1.14 * (rn - 14047.5)));
 }
 function irpfActividad(rendimiento, opts={}){ return irpfActividadDetalle(rendimiento, opts).cuota; }
+// Gastos de difícil justificación DENTRO del pago fraccionado (modelo 130). Verificado el 18/11/2026 con la AEAT:
+//  · instrucciones del modelo 130, casilla 02: en la modalidad simplificada incluye «los gastos de difícil justificación
+//    correspondientes al período» determinados «conforme a las especialidades del artículo 30 del Reglamento»;
+//  · Manual práctico de Renta 2025: 5 % del rendimiento neto POSITIVO (ingresos − demás gastos, amortizaciones incluidas),
+//    máximo 2.000 € al año, y en entidades en atribución de rentas el tope es de CADA socio sobre su parte.
+// El periodo del 130 es el acumulado del 1 de enero al fin del trimestre, así que el 5 % se calcula sobre el acumulado y el
+// tope de 2.000 € es anual (no por trimestre). Antes el 130 aplicaba el 20 % al rendimiento entero y pagaba de más (el exceso
+// se recuperaba en la renta anual: el dinero estaba prestado a Hacienda). Solo en estimación directa SIMPLIFICADA.
+// Límite: el tope de 2.000 € no sabe de otras actividades del titular; con varias, el exceso se reparte (lo ajusta el gestor).
+function pfDificilJustificacion(acumulado){
+  const b = DB.business || {};
+  if(b.modalidadDirecta === 'normal' || !(acumulado > 0)) return 0;
+  const com = fiscalPerfil().forma === 'cb' && Array.isArray(b.comuneros) ? b.comuneros : [];
+  const suma = com.reduce((s, c) => s + (parseFloat(c.pct) || 0), 0);
+  if(suma > 0) return com.reduce((s, c) => s + Math.min(2000, acumulado * (parseFloat(c.pct) || 0) / suma * 0.05), 0);
+  return Math.min(2000, acumulado * 0.05);
+}
 // Lo mismo, pero explicando cada paso (trazabilidad: js/motor-fiscal.js → fiscalTrazaAnual). Una sola implementación:
 // irpfActividad() solo se queda con la cuota.
 function irpfActividadDetalle(rendimiento, opts={}){
@@ -838,13 +855,20 @@ function irpfActividadDetalle(rendimiento, opts={}){
   const bz = DB.business || {};
   const otras = Math.max(0, parseFloat(opts.otrasRentas != null ? opts.otrasRentas : bz.otrasRentasTitular) || 0);
   const hijos = Math.max(0, parseInt(opts.hijos != null ? opts.hijos : bz.hijosTitular) || 0);
-  const minimo = IRPF_MINIMO_PERSONAL + [2400, 2700, 4000].slice(0, hijos).reduce((s,v)=>s+v, 0) + Math.max(0, hijos - 3) * 4500;
-  const cuotaMin = cuotaIrpfEscala(minimo);
-  d.baseGravada = otras + neto; d.minimo = minimo; d.cuotaMinimo = cuotaMin; d.neto = neto; d.otras = otras;
+  // Mínimo ESTATAL y AUTONÓMICO por separado: cada uno se descuenta de su mitad de la cuota (js/motor-fiscal.js, verificado con la AEAT).
+  const terr = territorioFiscal();
+  const año = parseInt(opts.año) || new Date().getFullYear();
+  const mins = irpfMinimosTerritorio(terr, hijos, año);
+  const minimo = mins.estatal;
+  const cuotaEsc = x => cuotaIrpfEscala(x, año);
+  const cuotaNeta = x => motorIrpfCuotaNeta(x, terr, mins.estatal, mins.auton, año);
+  d.baseGravada = otras + neto; d.minimo = minimo; d.minimoAutonomico = mins.auton; d.neto = neto; d.otras = otras;
   paso(gl({es:'Rendimiento neto reducido (base sobre la que se aplica la escala)', ca:'Rendiment net reduït (base sobre la qual s\'aplica l\'escala)', en:'Reduced net income (base the scale is applied to)'}), neto);
-  paso(gl({es:'Cuota por la escala del IRPF', ca:'Quota per l\'escala de l\'IRPF', en:'Tax by the income-tax scale'}), cuotaIrpfEscala(otras + neto) - cuotaIrpfEscala(otras), fiscalReglaEscalaId());
-  paso(gl({es:'Menos la cuota del mínimo personal y familiar', ca:'Menys la quota del mínim personal i familiar', en:'Less the tax on the personal and family allowance'}), -(Math.min(cuotaMin, cuotaIrpfEscala(otras + neto)) - Math.min(cuotaMin, cuotaIrpfEscala(otras))), 'IRPF-MIN-PERSONAL');
-  d.cuota = Math.max(0, cuotaIrpfEscala(otras + neto) - cuotaMin) - Math.max(0, cuotaIrpfEscala(otras) - cuotaMin);
+  const porEscala = cuotaEsc(otras + neto) - cuotaEsc(otras);
+  d.cuota = cuotaNeta(otras + neto) - cuotaNeta(otras);
+  paso(gl({es:'Cuota por la escala del IRPF', ca:'Quota per l\'escala de l\'IRPF', en:'Tax by the income-tax scale'}), porEscala, fiscalReglaEscalaId(año));
+  // El mínimo se descuenta de cada mitad (estatal y autonómica) con su importe: la resta es lo que falta para llegar a la cuota.
+  paso(gl({es:'Menos la cuota del mínimo personal y familiar', ca:'Menys la quota del mínim personal i familiar', en:'Less the tax on the personal and family allowance'}), d.cuota - porEscala, (IRPF_MINIMOS_AUTONOMICOS[terr] && !(terr === 'asturias' && año === 2024)) ? 'IRPF-MIN-AUTONOMICO' : 'IRPF-MIN-PERSONAL');
   return d;
 }
 // Impuesto ANUAL según la forma del negocio, sobre una base anual.
@@ -860,13 +884,17 @@ function irpfActividadDetalle(rendimiento, opts={}){
 //   «Cuota íntegra previa») para 2025-2028: es el tipo del art. 29.1 LIS menos 3 puntos, con tope del 20 %. 2029 se DERIVA de esa misma
 //   regla (ERD 20 − 3 = 17; micro igual que 2027); la AEAT aún no publica el cuadro de ese año. Antes la app llevaba 16/18 en 2025, que era erróneo.
 const TIPOS_IS = {
+  // 2024 (verificado el 18/11/2026 con la tabla de tipos de la AEAT, periodos iniciados en 2024): microempresas (INCN < 1 M€) 23 % en todo el
+  // tramo, reducida dimensión 25 % (todavía sin tipo propio), nueva creación 15 %; cooperativas fiscalmente protegidas 20 % en todos los casos
+  // según esa tabla (incluida la nueva creación: no contrastado con la ley, la traza avisa).
+  2024: {micro:[23,23], erd:25, coopMicro:[20,20], coopErd:20, nueva:15, coopNueva:20},
   2025: {micro:[21,22], erd:24, coopMicro:[18,19], coopErd:20, nueva:15, coopNueva:12},
   2026: {micro:[19,21], erd:23, coopMicro:[16,18], coopErd:20, nueva:15, coopNueva:12},
   2027: {micro:[17,20], erd:22, coopMicro:[14,17], coopErd:19, nueva:15, coopNueva:12},
   2028: {micro:[17,20], erd:21, coopMicro:[14,17], coopErd:18, nueva:15, coopNueva:12},
   2029: {micro:[17,20], erd:20, coopMicro:[14,17], coopErd:17, nueva:15, coopNueva:12},
 };
-function tiposIsAño(a){ return TIPOS_IS[a] || (a >= 2029 ? TIPOS_IS[2029] : TIPOS_IS[2025]); }
+function tiposIsAño(a){ return TIPOS_IS[a] || (a >= 2029 ? TIPOS_IS[2029] : TIPOS_IS[2025]); }   // antes de 2024: sin verificar (la traza lo avisa)
 // Cooperativa (Ley 20/1990): el excedente se minora con la dotación al FEP y el
 // 50 % de la del FRO; sobre esa base, tipo micro (INCN anterior < 1 M€), de
 // reducida dimensión o de nueva creación; y si es ESPECIALMENTE protegida,
@@ -914,7 +942,7 @@ function impuestoAnual(baseAnual, opts={}){
     return com.reduce((s,c) => {
       const parte = baseAnual * (parseFloat(c.pct)||0) / suma;
       const manual = parseFloat(c.tipoIrpf);
-      return s + (manual > 0 ? Math.max(0, parte) * manual/100 : irpfActividad(parte, {otrasRentas: parseFloat(c.otrasRentas)||0, hijos: parseInt(c.hijos)||0}));
+      return s + (manual > 0 ? Math.max(0, parte) * manual/100 : irpfActividad(parte, {otrasRentas: parseFloat(c.otrasRentas)||0, hijos: parseInt(c.hijos)||0, año: opts.año}));
     }, 0);
   }
   if(p.personaFisica) return irpfActividad(baseAnual, opts);

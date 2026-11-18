@@ -131,7 +131,7 @@ await caso('Nómina de 14 pagas: el coste de cada mes es el bruto × 14/12 más 
   assert.equal(Math.round(r.total*100)/100, Math.round(2000*14/12*1.30*100)/100);
 });
 
-await caso('Autónomo: pago del 130 = 20% del beneficio acumulado menos lo ya pagado', async () => {
+await caso('Autónomo (simplificada): pago del 130 = 20% del rendimiento acumulado MENOS su 5 % de difícil justificación (casilla 02 del 130), menos lo ya pagado', async () => {
   const r = await page.evaluate(() => {
     DB.business.formaJuridica = 'autonomo'; DB.business.regimenFiscal = 'directa';
     DB.ge.capex = []; DB.ge.variables = []; DB.ge.fijos = []; DB.ge.fijosLog = [];
@@ -139,7 +139,8 @@ await caso('Autónomo: pago del 130 = 20% del beneficio acumulado menos lo ya pa
                 {id:'2', date:'2025-05-10', total:5500, items:[{name:'x', price:5500, qty:1, ivaPct:10}]}];
     return {t1: GE.pagoACuentaTrimestre(2, 2025), t2: GE.pagoACuentaTrimestre(5, 2025)};
   });
-  assert.equal(r.t1.modelo, '130'); assert.equal(Math.round(r.t1.importe), 2000); assert.equal(Math.round(r.t2.importe), 1000);
+  // A mano: T1 acumulado 10.000 → 5 % = 500 → 9.500 × 20 % = 1.900. T2 acumulado 15.000 → 750 → 14.250 × 20 % = 2.850 − 1.900 = 950.
+  assert.equal(r.t1.modelo, '130'); assert.equal(Math.round(r.t1.importe), 1900); assert.equal(Math.round(r.t2.importe), 950);
 });
 
 // --- Para el gestor y registro de jornada --------------------------------

@@ -650,6 +650,30 @@ function entCodigosDeTexto(txt, previos){
   // Los códigos de compensación por retraso (los crea la app, un solo uso) no se editan a mano: se conservan.
   return out.concat((previos || []).filter(c => c.compensacion && !(c.usosMax > 0 && c.usados >= c.usosMax))).slice(0, 60);
 }
+/* VISTA PREVIA (18/11, dueño: «solo escribes y ya, que todo tenga un porqué»): debajo de cada campo se ve CÓMO lo ha entendido la app, línea a línea,
+   y cuáles NO entiende (se ignoran al guardar). Guarda solo al salir del campo (onchange) y lo dice. */
+function entPreviewHtml(que, txt){
+  const lineas = String(txt || '').split('\n').map(l => l.trim()).filter(Boolean);
+  if(!lineas.length) return `<small class="mn-prev-vacio">${escapeHtml(que === 'zonas' ? gl({es:'Sin zonas: se usa la tarifa, el mínimo y el envío gratis generales.', ca:'Sense zones: es fa servir la tarifa, el mínim i l\'enviament gratuït generals.', en:'No zones: the general fee, minimum and free delivery apply.'}) : gl({es:'Sin códigos: tus clientes no tienen ningún descuento por código.', ca:'Sense codis: els teus clients no tenen cap descompte per codi.', en:'No codes: customers have no discount codes.'}))}</small>`;
+  const eur = v => (v === '' || v == null) ? '' : fmtMoney(v);
+  const items = lineas.map(l => {
+    if(que === 'zonas'){
+      const z = entZonasDeTexto(l)[0];
+      if(!z) return `<li class="mn-prev-mal"><i class="ti ti-alert-triangle"></i> ${escapeHtml(l)} — ${escapeHtml(gl({es:'no entendida (hace falta nombre | códigos postales de 5 cifras | …)', ca:'no entesa (cal nom | codis postals de 5 xifres | …)', en:'not understood (needs name | 5-digit postal codes | …)'}))}</li>`;
+      const partes = [`CP ${z.cps.join(', ')}`, z.fee !== '' ? `${gl({es:'tarifa', ca:'tarifa', en:'fee'})} ${eur(z.fee)}` : gl({es:'tarifa general', ca:'tarifa general', en:'general fee'}), z.minimo !== '' ? `${gl({es:'mínimo', ca:'mínim', en:'minimum'})} ${eur(z.minimo)}` : '', z.gratis ? `${gl({es:'gratis desde', ca:'gratuït des de', en:'free from'})} ${eur(z.gratis)}` : ''].filter(Boolean);
+      return `<li class="mn-prev-ok"><i class="ti ti-check"></i> <b>${escapeHtml(z.nombre || gl({es:'Zona', ca:'Zona', en:'Zone'}))}</b> · ${escapeHtml(partes.join(' · '))}</li>`;
+    }
+    const c = entCodigosDeTexto(l, [])[0];
+    if(!c) return `<li class="mn-prev-mal"><i class="ti ti-alert-triangle"></i> ${escapeHtml(l)} — ${escapeHtml(gl({es:'no entendida (hace falta CÓDIGO | 10% o 5€ | …)', ca:'no entesa (cal CODI | 10% o 5€ | …)', en:'not understood (needs CODE | 10% or 5€ | …)'}))}</li>`;
+    const partes = [c.pct ? `−${c.pct} %` : `−${eur(c.eur)}`, c.minimo ? `${gl({es:'pedido mínimo', ca:'comanda mínima', en:'min. order'})} ${eur(c.minimo)}` : '', c.hasta ? `${gl({es:'hasta', ca:'fins', en:'until'})} ${fechaImpresaLegible ? fechaImpresaLegible(c.hasta) : c.hasta}` : '', c.usosMax ? `${c.usosMax} ${gl({es:'usos', ca:'usos', en:'uses'})}` : ''].filter(Boolean);
+    return `<li class="mn-prev-ok"><i class="ti ti-check"></i> <b>${escapeHtml(c.codigo)}</b> · ${escapeHtml(partes.join(' · '))}</li>`;
+  });
+  return `<ul class="mn-prev-lista">${items.join('')}</ul><small class="mn-prev-pie">${escapeHtml(gl({es:'Se guarda al salir del campo. Las líneas con ⚠ no se guardan.', ca:'Es desa en sortir del camp. Les línies amb ⚠ no es desen.', en:'Saved when you leave the field. Lines with ⚠ are not saved.'}))}</small>`;
+}
+function entPreviewActualiza(que){
+  const ta = document.getElementById(que === 'zonas' ? 'mn-zonas' : 'mn-codigos'), box = document.getElementById(que === 'zonas' ? 'mn-zonas-prev' : 'mn-codigos-prev');
+  if(ta && box) box.innerHTML = entPreviewHtml(que, ta.value);
+}
 // La app valida el código con SUS reglas al recibir el pedido (el navegador solo lo enseña). Devuelve {codigo, pct} o null.
 function entAplicarCodigo(codigo, subtotal){
   const p = (DB.business && DB.business.pedidos) || {}; const cod = String(codigo || '').trim().toUpperCase(); if(!cod) return null;
@@ -812,3 +836,15 @@ function entAbrirTablero(){
 }
 // Token propio para un pedido tomado por teléfono (mismo formato que el de la web: 12+ caracteres, ver reglas de orderStatus).
 function entNuevoToken(){ return Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(36).padStart(2, '0')).join(''); }
+
+/* Mi Negocio › Pedidos (18/11): CADA campo de la tarjeta se guarda al salir de él, como el resto de Mi Negocio. Antes solo lo hacía el botón «Guardar» y
+   quien escribía una zona, un código o una cifra no veía que pasara nada («solo escribes y ya»). Los textareas de zonas y códigos ya lo hacen por su cuenta. */
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(!el || !el.closest || el.id === 'mn-zonas' || el.id === 'mn-codigos') return;
+  if(!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || el.hasAttribute('onchange') || !/^mn-/.test(el.id || '')) return;
+  const card = el.closest('.card'); if(!card) return;
+  ['savePedidosConfig', 'saveTicketConfig'].forEach(fn => {
+    if(typeof window[fn] === 'function' && card.querySelector(`button[onclick="${fn}()"]`)) window[fn]();
+  });
+});
