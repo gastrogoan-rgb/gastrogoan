@@ -18,7 +18,7 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 ## Gestión
 - [ ] G1 Mi Negocio horario: turnos en una línea, selects pequeños; «Por turnos» limpio.
 - [ ] G2 Mi Negocio: «Zonas con tarifa propia» y «Códigos promocionales» no hacen nada al escribir → revisar que guardan y se usan; auditar el resto de campos sin efecto.
-- [ ] G3 Panel: Semana/Mes al lado del título de cada bloque; textos superpuestos (gráfico equilibrio); avisos alineados.
+- [x] G3 Panel: Semana/Mes al lado del título de cada bloque; textos superpuestos (gráfico equilibrio); avisos alineados.
 - [x] G4 (rejilla de 2 columnas permanente; test/economia-movil.mjs) Gestión Económica: quitar el botón «más» de las secciones.
 - [ ] G5 Existencias a fin de mes: revisar cálculo y lógica.
 - [ ] G6 Quitar «fiabilidad» de toda la app (sin romper el motor ni las pruebas).
