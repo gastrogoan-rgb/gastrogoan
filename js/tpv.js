@@ -1612,6 +1612,7 @@ function confirmAddMenuToOrder(orderId, menuId){
   const menuInstanceId = genId();
   const vale = valeParaNuevaLinea(order);
   order.tandas = order.tandas || [];
+  const indicePrimerApartadoComida = selections.findIndex(sel => { const gr = m.grupos.find(g => g.nombre === sel.grupoNombre); return !(gr && gr.bebida) && sel.opcionNombre; });
   selections.forEach((s, i) => {
     if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
     const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
@@ -1655,9 +1656,25 @@ function confirmAddMenuToOrder(orderId, menuId){
       autoSendTakeawayLine(order, line);
     }
     syncBebidaLineEstado(line, order);
+    // NORMA (18/11): el PRIMER apartado de comida de un menú (los «primeros») se marcha solo al pedirlo; el resto
+    // (segundos, postres…) espera a que la sala lo marche. Se mira la posición, no el nombre: cada negocio llama a sus apartados como quiere.
+    if(i === indicePrimerApartadoComida) autoSendMenuFirstGroup(order, line);
   });
   saveDB();
   renderTableOrderModal(orderId);
+}
+// Marcha la línea de un primer apartado de menú sin pulsar nada (en para llevar ya la marcha autoSendTakeawayLine).
+function autoSendMenuFirstGroup(order, line){
+  if(!line || line.bebida || order.tipo === 'takeaway') return;
+  const qtyFired = line.qty - (line.marchada||0);
+  if(qtyFired <= 0) return;
+  line.estado = 'cocina';
+  delete line.recogidoAt;
+  line.enviadoAt = line.enviadoAt || new Date().toISOString();
+  line.marchada = line.qty;
+  decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
+  order.cerrada = false;
+  encolarImpresionMarchada(order, {qty: qtyFired, name: line.name, notas: line.notas, bebida: false, platoId: line.platoId, recipeId: line.recipeId});
 }
 
 // Si se borra la línea que llevaba el precio base de un menú, ese importe pasa
@@ -2946,11 +2963,11 @@ function renderComandasCocina(){
     <div class="kds-toolbar">
       <button class="btn btn-sm btn-fino kds-tab ${comandasCocinaTab==='activas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm btn-fino kds-tab ${comandasCocinaTab==='cerradas' ? 'is-on' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
+      <button class="btn btn-sm btn-fino kds-undo" onclick="undoLastKitchenAction()" data-tip="${t('kitchen.undo')}" aria-label="${t('kitchen.undo')}"><i class="ti ti-arrow-back-up"></i><span class="kds-undo-txt"> ${t('kitchen.undo')}</span></button>
       <button class="btn btn-sm btn-fino" onclick="openAvisoSalaModal()"><i class="ti ti-bell-ringing"></i> ${gl({es:'Avisar a sala', ca:'Avisar la sala', en:'Alert dining room'})}</button>
       <span class="kds-sep" aria-hidden="true"></span>
       <button class="btn btn-sm btn-fino kds-toolbar-caos ${chaosCocina?'is-on':''}" onclick="toggleChaosCocina()" title="${t('kitchen.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
       <button class="btn btn-sm btn-fino" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
-      <button class="btn btn-sm btn-fino" onclick="undoLastKitchenAction()"><i class="ti ti-arrow-back-up"></i> ${t('kitchen.undo')}</button>
     </div>
   `;
 

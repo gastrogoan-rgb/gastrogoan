@@ -1,0 +1,30 @@
+import puppeteer from 'puppeteer-core';
+const W = +process.env.W || 360;
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', args:['--no-sandbox']});
+const page = await browser.newPage();
+await page.setViewport({width:W, height:740, deviceScaleFactor:1});
+await page.setRequestInterception(true);
+page.on('request', r => /firebase|gstatic|googleapis|qrserver/.test(r.url()) ? r.abort() : r.continue());
+await page.goto('http://localhost:8950/dist/index.html', {waitUntil:'domcontentloaded'});
+await page.evaluate(code => {
+  localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)}));
+  localStorage.setItem('gastrogoan_owner_login','1');
+  localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()}));
+  localStorage.setItem('gastrogoan_owner_pass_prompted','1');
+  localStorage.setItem('gastrogoan_backup_reminder_day', new Date().toISOString().slice(0,10));
+}, 'PROBE00001');
+await page.reload({waitUntil:'domcontentloaded'});
+await new Promise(r=>setTimeout(r,2200));
+await page.evaluate(()=>{
+  ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate','app-splash'].forEach(id=>document.getElementById(id)?.remove());
+  Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true});
+  DB.business.ownFirebase = {apiKey:'fake', databaseURL:'https://fake-default-rtdb.firebaseio.com'};
+  DB.tables.push({id:1, name:'Mesa 1', zona:'Salón', plazas:4});
+  const L = (n,p,q,tanda,estado,marchada,extra)=>Object.assign({lineId:genId(),platoId:genId(),recipeId:null,name:n,price:p,qty:q,tanda,estado,marchada,bebida:false,notas:''},extra||{});
+  const items=[L('Ensalada',0,1,'Primero','recogido',1,{menuId:5,menuName:'Menú del día'}),L('Bistec con patatas',0,1,'Segundos',null,0,{menuId:5,menuName:'Menú del día'}),L('Flan casero con nata',0,1,'Postres',null,0,{menuId:5,menuName:'Menú del día'}),L('Caña de cerveza',2.5,2,'Bebidas','entregado',2,{bebida:true}),L('Croquetas de jamón ibérico muy largo nombre',9.5,9,'Entrantes',null,0)];
+  DB.tpvOrders.push({id:77,tableId:1,tipo:'mesa',status:'abierta',pax:2,items,tandas:['Primero'],createdAt:new Date().toISOString(),tableAllergenList:['Pescado','Soja']});
+  saveDB(); navigate('tpv'); openTableOrder(1,77); setTpvOrderMobilePane && setTpvOrderMobilePane('comanda',77);
+});
+await new Promise(r=>setTimeout(r,800));
+await page.screenshot({path:process.env.OUT||'/tmp/claude-0/probe.png'});
+await browser.close();

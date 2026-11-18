@@ -224,6 +224,7 @@ lanzar; node test/tpv-nota-movil.mjs > "$SALIDA/tpvnm.txt" 2>&1 & PTPVNM=$!
 lanzar; node test/inicio-acceso.mjs > "$SALIDA/inicac.txt" 2>&1 & PINICAC=$!
 lanzar; node test/solicitudes-cifradas.mjs > "$SALIDA/solcif.txt" 2>&1 & PSOLCIF=$!
 lanzar; node test/fiscal-pendientes.mjs > "$SALIDA/fiscalpend.txt" 2>&1 & PFISPEN=$!
+lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -505,4 +506,5 @@ espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm
 espera $PINICAC "Entrada: frase sin comillas dobles y título de Puesta a punto sin cortar" "$SALIDA/inicac.txt" "en orden"
 espera $PSOLCIF "Solicitudes públicas cifradas: la web cifra los datos personales y solo la app los abre" "$SALIDA/solcif.txt" "en orden"
 espera $PFISPEN "Motor fiscal, pendientes cerrados: 5 % en el 130, mínimos autonómicos, IVA que no aplica y ejercicio 2024, con cuentas a mano" "$SALIDA/fiscalpend.txt" "todos los casos pasaron"
+espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 exit $FALLOS
