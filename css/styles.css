@@ -7490,7 +7490,8 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 /* ══ COMANDA DEL TPV · cabecera de PDA (18/11, pedido del dueño) ══
    «Mesa 1 · 2 pers.» centrado; debajo, pequeños y juntos, Cambiar de mesa y Alérgenos. Nada de una fila por botón.
    El camarero ya no se pinta aquí (se ve en la vista general de mesas). */
-.tp-or-cab{position:relative;justify-content:center !important;padding-right:44px !important;padding-left:44px !important}
+.tp-or-cab{position:relative;justify-content:center !important}
+.modal.modal-order > .modal-header.tp-or-cab{padding-left:58px;padding-right:58px}
 .tp-or-cab .tp-or-mesa{flex:1 1 auto !important;justify-content:center;text-align:center;font-size:22px}
 .tp-or-cab .modal-close{position:absolute;right:10px;top:50%;transform:translateY(-50%);margin:0 !important;order:0 !important}
 .tp-or-acciones-cab{justify-content:center;margin:2px 0 8px !important;gap:6px !important}
@@ -7774,17 +7775,7 @@ textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:
    de la carta se quedaba una fila entera y Guardar otra) y «Nueva sección» bajo el buscador. Ahora cada acción sube a una fila que ya
    existía: la carta y su «⋯» en la primera, el título de la sección y su «⋯» en la suya, «Atrás … Guardar» arriba y el nombre debajo. */
 @media (max-width:760px){
-  .oc-sec-cab{gap:6px 8px}
-  .oc-sec-tit{flex:1 1 calc(100% - 56px);order:0;min-width:0}
-  .oc-sec-acc{display:contents}
-  .oc-sec-acc > [data-acc]{order:1}
-  .oc-sec-acc > :not([data-acc]){order:2}
-  #carta-editor-view > .toolbar,#menu-editor-view > .toolbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;justify-content:stretch}
-  #carta-editor-view > .toolbar > .left,#menu-editor-view > .toolbar > .left{display:contents}
-  #carta-editor-view > .toolbar > .left > .btn,#menu-editor-view > .toolbar > .left > .btn{grid-column:1;grid-row:1}
-  #carta-editor-view > .toolbar > .left > input,#menu-editor-view > .toolbar > .left > input{grid-column:1 / -1;grid-row:2;min-width:0;max-width:none;width:100%}
-  #carta-editor-view > .toolbar > .btn,#menu-editor-view > .toolbar > .btn{grid-column:3;grid-row:1}
-  #carta-editor-view > .toolbar > .oc-sucio,#menu-editor-view > .toolbar > .oc-sucio{grid-column:1 / -1;grid-row:3;justify-self:start;margin:0}
+  /* (la cabecera de sección y la barra «Atrás … Guardar» de arriba ya las resuelve el bloque del 18/11 de Oferta, más arriba) */
   /* buscador + «Nueva sección / Nuevo grupo» en UNA fila; en pantallas muy estrechas el botón se queda en «+» (su nombre va en el aria-label) */
   .oc-barra{flex-wrap:nowrap;align-items:center;gap:8px}
   .oc-barra .oc-buscar{flex:1 1 0;min-width:0;max-width:none}
