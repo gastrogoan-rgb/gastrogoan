@@ -60,24 +60,20 @@ async function abrir(w, h){
 
 
 const hace = m => new Date(Date.now() - m*60000).toISOString();
-await caso('Rondas: lo que se pide cuando la mesa ya pidió sale en un SEGUNDO bloque, y con una sola ronda no hay cabeceras', async () => {
+await caso('Pedido (18/11): ya NO hay rondas ni cabeceras; lo añadido después aparece en la misma lista', async () => {
   const {page} = await abrir(1280, 800);
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
-    const vacia = (() => { openTableOrder(2, 901); return document.querySelectorAll('.tp-ronda').length; })();   // mesa con UNA ronda marchada
-    await esp(300);
-    // piden más: una línea nueva de comida sin marchar
+    openTableOrder(2, 901); await esp(300);
     const o = DB.tpvOrders.find(x => x.id === 901);
     o.items.push({lineId:genId(), platoId:101, recipeId:null, name:'Patatas bravas', price:6.5, qty:1, tanda:'Entrantes', estado:null, marchada:0, bebida:false, notas:'', vale:1});
     if(!o.tandas.includes('Entrantes')) o.tandas.push('Entrantes');
     saveDB(); renderTableOrderModal(901); await esp(300);
-    const rondas = [...document.querySelectorAll('.tp-ronda')].map(x => x.querySelector('.tp-ronda-tit').textContent.replace(/\s+/g,' ').trim());
-    const nueva = document.querySelector('.tp-ronda.es-nueva');
-    return {vacia, rondas, nuevaTiene: nueva ? nueva.querySelector('.tp-linea-nom')?.textContent : null, primera: document.querySelector('.tp-ronda:not(.es-nueva)')?.textContent.includes('Solomillo')};
+    const txt = document.querySelector('.modal')?.textContent || '';
+    return {rondas: document.querySelectorAll('.tp-ronda').length, bravas: /Patatas bravas/.test(txt), solomillo: /Solomillo/.test(txt)};
   });
-  assert.equal(r.vacia, 0, 'con una sola ronda no hay cabeceras: ' + JSON.stringify(r));
-  assert.equal(r.rondas.length, 2, JSON.stringify(r)); assert.match(r.rondas[0], /Pedido 1/i); assert.match(r.rondas[1], /Añadido ahora/i);
-  assert.equal(r.nuevaTiene, 'Patatas bravas', JSON.stringify(r)); assert.ok(r.primera, JSON.stringify(r));
+  assert.equal(r.rondas, 0, JSON.stringify(r));
+  assert.ok(r.bravas && r.solomillo, JSON.stringify(r));
   await page.close();
 });
 
