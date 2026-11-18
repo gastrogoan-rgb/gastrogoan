@@ -20,9 +20,9 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [x] G2 zonas y códigos: vista previa + guardado al salir; TODA la tarjeta Pedidos guarda al salir del campo (test/mi-negocio-zonas-codigos.mjs). Falta auditar otras tarjetas de Mi Negocio con campos sin efecto.
 - [x] G3 Panel: Semana/Mes al lado del título de cada bloque; textos superpuestos (gráfico equilibrio); avisos alineados.
 - [x] G4 (rejilla de 2 columnas permanente; test/economia-movil.mjs) Gestión Económica: quitar el botón «más» de las secciones.
-- [ ] G5 Existencias a fin de mes: revisar cálculo y lógica.
+- [x] G5 Existencias: revisado (consumo = compras + inicial − final; la variación suma al gasto si el almacén baja y lo resta si sube; el texto de la pantalla dice exactamente eso; sin mes anterior no aplica nada y lo avisa). test/existencias.mjs pasa.
 - [x] G6 (chip y etiquetas quitados; manual e IA sin «fiabilidad»; test/fiscal-motor.mjs lo vigila) Quitar «fiabilidad» de toda la app (sin romper el motor ni las pruebas).
-- [ ] G7 Punto de equilibrio: maquetar sublime (cifras desbordadas en móvil).
+- [x] G7 (cifras en una columna a 360 px) Punto de equilibrio: maquetar sublime (cifras desbordadas en móvil).
 ## Web pública
 - [ ] W1 Flecha de cada opción de entrada centrada/bien.
 - [ ] W2 Menús: tarjeta con título y precio + «i» con lo que lleva.
