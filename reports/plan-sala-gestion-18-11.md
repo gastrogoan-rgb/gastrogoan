@@ -12,7 +12,7 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [~] T7 (pestañas con reparto envueltas y nombre de menú sin repetir hechos; falta captura de delivery) Delivery/Take away del TPV: mismo trato (pestañas sin desbordar, nombre de menú no repetido).
 - [ ] T8 Vale/tique: revisar (captura del dueño).
 ## Resto de Sala
-- [ ] S1 Anulaciones y arqueos: solo mes en curso con selector de periodo.
+- [x] S1 (test/tpv-historiales-mes.mjs) Anulaciones y arqueos: solo mes en curso con selector de periodo.
 - [ ] S2 Reservas: filas desplegables (hora · nombre · personas; resto al desplegar); título de fecha sin cortar; «Hoy»/«Imprimir»/«Nueva» sin filas sueltas; semana compacta.
 - [ ] S3 Promoción: quitar botón «más», ver todo directamente.
 ## Gestión

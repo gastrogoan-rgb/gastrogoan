@@ -492,25 +492,46 @@ function printCashClosure(closure){
   printReportWindow(t('title.cashClosureReceipt'), body);
 }
 
-function openCashClosureHistory(){
-  const closures = [...DB.cashClosures].sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+/* Historial de arqueos y de anulaciones por MES (18/11, dueño: «se quedan arqueos de toda la vida»): se abre en el mes en curso, con el
+   selector de periodo común para ver otros meses o todo el año. */
+let tpvHistPeriodo = {anio: new Date().getFullYear(), mes: new Date().getMonth()};
+function tpvHistReset(){ const h = new Date(); tpvHistPeriodo = {anio: h.getFullYear(), mes: h.getMonth()}; }
+function tpvHistMesDe(f){ const m = String(f || '').match(/^(\d{4})-(\d{2})/); return m ? {a: +m[1], m: +m[2] - 1} : null; }
+function tpvHistFiltra(items, fechaDe){
+  const {anio, mes} = tpvHistPeriodo;
+  return items.filter(x => { const k = tpvHistMesDe(fechaDe(x)); return k && k.a === anio && (mes == null || k.m === mes); });
+}
+function tpvHistDatos(items, fechaDe){
+  const d = {};
+  items.forEach(x => { const k = tpvHistMesDe(fechaDe(x)); if(k){ const c = `${k.a}-${String(k.m + 1).padStart(2, '0')}`; d[c] = (d[c] || 0) + 1; } });
+  return d;
+}
+function tpvHistCbCash(anio, mes){ tpvHistPeriodo = {anio, mes}; openCashClosureHistory(true); }
+function tpvHistCbVoids(anio, mes){ tpvHistPeriodo = {anio, mes}; openVoidLogModal(true); }
+
+function openCashClosureHistory(keep){
+  if(keep !== true) tpvHistReset();
+  const todos = [...DB.cashClosures].sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  const closures = tpvHistFiltra(todos, c => c.fecha);
+  const selector = ggPeriodoHtml({anio: tpvHistPeriodo.anio, mes: tpvHistPeriodo.mes, cb: 'tpvHistCbCash', datos: tpvHistDatos(todos, c => c.fecha), anual: true});
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-history"></i> ${t('title.closureHistory')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    <div class="tp-hist-per">${selector}</div>
     ${closures.length ? `
     <div class="table-wrap">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('common.date')}</th><th>${t('label.closingTime')}</th><th>${t('label.responsible')}</th><th>${t('label.totalSales')}</th><th>${t('label.difference')}</th><th></th></tr></thead>
         <tbody>
           ${closures.map(c => `
             <tr>
-              <td>${escapeHtml(c.fecha)}</td>
-              <td>${fmtDateTime(new Date(c.hasta))}</td>
-              <td>${escapeHtml(c.responsableNombre||'—')}</td>
-              <td>${fmtMoney(c.total)}</td>
-              <td>${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
+              <td data-label="${t('common.date')}">${escapeHtml(fechaLegibleCorta(c.fecha))}</td>
+              <td data-label="${t('label.closingTime')}">${fmtDateTime(new Date(c.hasta))}</td>
+              <td data-label="${t('label.responsible')}">${escapeHtml(c.responsableNombre||'—')}</td>
+              <td data-label="${t('label.totalSales')}">${fmtMoney(c.total)}</td>
+              <td data-label="${t('label.difference')}">${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
               <td><button class="btn btn-sm btn-icon" onclick="(()=>{const x=DB.cashClosures.find(z=>z.id===${c.id});if(x)printCashClosure(x);})()"><i class="ti ti-printer"></i></button>
               <button class="btn btn-sm btn-icon" title="${t('tips.splitBtn')}" onclick="openTipsSplitModal(${c.id})"><i class="ti ti-cash"></i></button></td>
             </tr>
@@ -518,7 +539,7 @@ function openCashClosureHistory(){
         </tbody>
       </table>
     </div>
-    ` : `<div class="empty"><i class="ti ti-cash-register"></i>${t('empty.cashClosures')}</div>`}
+    ` : `<div class="empty"><i class="ti ti-cash-register"></i>${todos.length ? escapeHtml(gl({es:'Ningún arqueo en este periodo.', ca:'Cap arqueig en aquest període.', en:'No closures in this period.'})) : t('empty.cashClosures')}</div>`}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>

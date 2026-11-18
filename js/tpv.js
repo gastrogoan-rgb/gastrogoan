@@ -4090,13 +4090,17 @@ function reallyCancelSale(saleId, pin){
   showToast(t('msg.saleVoided'));
 }
 
-function openVoidLogModal(){
-  const log = [...(DB.voidLog||[])].reverse().slice(0, 100);
+function openVoidLogModal(keep){
+  if(keep !== true) tpvHistReset();
+  const todas = [...(DB.voidLog||[])].reverse();
+  const log = tpvHistFiltra(todas, e => e.fecha);
+  const selectorPeriodo = ggPeriodoHtml({anio: tpvHistPeriodo.anio, mes: tpvHistPeriodo.mes, cb: 'tpvHistCbVoids', datos: tpvHistDatos(todas, e => e.fecha), anual: true});
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    <div class="tp-hist-per">${selectorPeriodo}</div>
     <div class="table-wrap">
       <table class="table-cards">
         <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>

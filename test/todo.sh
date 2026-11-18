@@ -227,6 +227,7 @@ lanzar; node test/fiscal-pendientes.mjs > "$SALIDA/fiscalpend.txt" 2>&1 & PFISPE
 lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
 lanzar; node test/tpv-scroll.mjs > "$SALIDA/tpvscroll.txt" 2>&1 & PTPVSC=$!
 lanzar; node test/tpv-tomar-nota-pda.mjs > "$SALIDA/tpvpda.txt" 2>&1 & PTPVPDA=$!
+lanzar; node test/tpv-historiales-mes.mjs > "$SALIDA/tpvhist.txt" 2>&1 & PTPVHIST=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -507,6 +508,7 @@ espera $PFOTOPL "Fotos de platos en la web de pedidos: miniatura pequeña, solo 
 espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm.txt" "en orden"
 espera $PTPVSC "TPV: marchar un plato no devuelve el scroll de la comanda arriba" "$SALIDA/tpvscroll.txt" "Sin errores"
 espera $PTPVPDA "TPV Tomar nota estilo PDA: cartas en desplegable, Tu selección, una línea por plato" "$SALIDA/tpvpda.txt" "Sin errores"
+espera $PTPVHIST "TPV: anulaciones y arqueos por mes (mes en curso + selector)" "$SALIDA/tpvhist.txt" "Sin errores"
 espera $PINICAC "Entrada: frase sin comillas dobles y título de Puesta a punto sin cortar" "$SALIDA/inicac.txt" "en orden"
 espera $PSOLCIF "Solicitudes públicas cifradas: la web cifra los datos personales y solo la app los abre" "$SALIDA/solcif.txt" "en orden"
 espera $PFISPEN "Motor fiscal, pendientes cerrados: 5 % en el 130, mínimos autonómicos, IVA que no aplica y ejercicio 2024, con cuentas a mano" "$SALIDA/fiscalpend.txt" "todos los casos pasaron"
