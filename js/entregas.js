@@ -842,7 +842,9 @@ function entNuevoToken(){ return Array.from(crypto.getRandomValues(new Uint8Arra
 document.addEventListener('change', e => {
   const el = e.target;
   if(!el || !el.closest || el.id === 'mn-zonas' || el.id === 'mn-codigos') return;
-  if(!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || el.hasAttribute('onchange')) return;
-  const card = el.closest('.card');
-  if(card && card.querySelector('button[onclick="savePedidosConfig()"]') && /^mn-/.test(el.id || '') && typeof savePedidosConfig === 'function') savePedidosConfig();
+  if(!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || el.hasAttribute('onchange') || !/^mn-/.test(el.id || '')) return;
+  const card = el.closest('.card'); if(!card) return;
+  ['savePedidosConfig', 'saveTicketConfig'].forEach(fn => {
+    if(typeof window[fn] === 'function' && card.querySelector(`button[onclick="${fn}()"]`)) window[fn]();
+  });
 });

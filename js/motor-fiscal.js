@@ -358,7 +358,7 @@ function fiscalTrazaAnual(año){
   T.tipoEfectivo = baseImp > 0 ? T.impuestoAnual / baseImp : 0;
   // Fiabilidad: cada motivo rebaja el nivel, y se dice cuál.
   const M = (nivel, txt) => T.motivos.push({nivel, txt});
-  if(!p.forma) M('baja', L({es:'Falta la forma jurídica del negocio: el impuesto no se puede calcular con fiabilidad.', ca:'Falta la forma jurídica del negoci: l\'impost no es pot calcular amb fiabilitat.', en:'The legal form is missing: tax cannot be reliably computed.'}));
+  if(!p.forma) M('baja', L({es:'Falta la forma jurídica del negocio: el impuesto no se puede calcular con exactitud.', ca:'Falta la forma jurídica del negoci: l\'impost no es pot calcular amb exactitud.', en:'The legal form is missing: tax cannot be computed exactly.'}));
   if(p.forma === 'cooperativa') M('media', L({es:'Cooperativa: se supone fiscalmente protegida y todo el excedente como cooperativo. Los resultados extracooperativos (al tipo general) y las cooperativas de crédito o no protegidas los ajusta tu gestoría.', ca:'Cooperativa: se suposa fiscalment protegida i tot l\'excedent com a cooperatiu. Els resultats extracooperatius (al tipus general) i les cooperatives de crèdit o no protegides els ajusta la teva gestoria.', en:'Cooperative: assumed tax-protected with the whole surplus as cooperative. Extra-cooperative results (at the general rate) and credit or non-protected cooperatives are adjusted by your accountant.'}));
   if(año < 2024) M('baja', L({es:'Las reglas verificadas empiezan en 2024: un ejercicio anterior no es fiable.', ca:'Les regles verificades comencen el 2024: un exercici anterior no és fiable.', en:'Verified rules start in 2024: an earlier year is not reliable.'}));
   if(año === 2024 && p.forma === 'cooperativa') M('media', L({es:'Cooperativa en 2024: se aplica el 20 % de la tabla de la AEAT para todos los casos (también la nueva creación), sin contrastar con la ley; tu gestoría lo confirma.', ca:'Cooperativa el 2024: s\'aplica el 20 % de la taula de l\'AEAT per a tots els casos (també la nova creació), sense contrastar amb la llei; la teva gestoria ho confirma.', en:'Cooperative in 2024: the AEAT table\'s 20 % is applied to every case (new-company too), not checked against the law; your accountant confirms it.'}));
@@ -444,12 +444,11 @@ function fiscalMarcarGuardar(key, estimado){
 function fiscalTrazaModal(año){
   const T = fiscalTrazaAnual(año), L = o => gl(o);
   const fm = v => (v < 0 ? '−' : '') + fmtMoney(Math.abs(v));
-  const nivelTxt = {alta: L({es:'Alta', ca:'Alta', en:'High'}), media: L({es:'Media', ca:'Mitjana', en:'Medium'}), baja: L({es:'Baja', ca:'Baixa', en:'Low'})}[T.nivel];
   const reglas = T.reglas.map(fiscalRegla).filter(Boolean);
   openModal(`<div class="modal-header"><h3><i class="ti ti-route"></i> ${L({es:'Cómo se ha calculado el impuesto de ' + año, ca:'Com s\'ha calculat l\'impost de ' + año, en:'How the ' + año + ' tax was computed'})}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="cdr-expl">
-      <p><span class="gf-chip ${T.nivel === 'alta' ? 'is-ok' : T.nivel === 'media' ? 'is-amber' : 'is-aviso'}">${L({es:'Fiabilidad', ca:'Fiabilitat', en:'Reliability'})}: ${nivelTxt}</span>
-        <small style="color:var(--muted)"> · ${L({es:'actualizado', ca:'actualitzat', en:'updated'})} ${new Date(T.actualizado).toLocaleString(localeActual(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})} · ${L({es:'Es una ESTIMACIÓN, no una liquidación oficial.', ca:'És una ESTIMACIÓ, no una liquidació oficial.', en:'This is an ESTIMATE, not an official assessment.'})}</small></p>
+      <p>
+        <small style="color:var(--muted)">${L({es:'Actualizado', ca:'Actualitzat', en:'Updated'})} ${new Date(T.actualizado).toLocaleString(localeActual(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})} · ${L({es:'Es una ESTIMACIÓN, no una liquidación oficial.', ca:'És una ESTIMACIÓ, no una liquidació oficial.', en:'This is an ESTIMATE, not an official assessment.'})}</small></p>
       <h4>${L({es:'Pasos', ca:'Passos', en:'Steps'})}</h4>
       <table class="mf-pasos"><tbody>${T.pasos.map(x => `<tr><td>${escapeHtml(x.et)}${x.regla ? ` <small class="mf-regla">${escapeHtml(x.regla)}</small>` : ''}</td><td>${fm(x.v)}</td></tr>`).join('')}
         <tr class="mf-total"><td>${L({es:'Impuesto estimado del ejercicio', ca:'Impost estimat de l\'exercici', en:'Estimated tax for the year'})}${T.baseImp > 0 ? ` <small>(${fiscalPct(T.tipoEfectivo * 100)} %)</small>` : ''}</td><td>${fm(T.impuestoAnual)}</td></tr></tbody></table>
@@ -516,8 +515,6 @@ function fiscalSimularPintar(){
    ============================================================ */
 function fiscalPrevisionHtml(año, q, filasInformativas){
   const L = o => gl(o), P = fiscalPrevision(año, q), T = P.traza;
-  const nivelTxt = {alta: L({es:'Fiabilidad alta', ca:'Fiabilitat alta', en:'High reliability'}), media: L({es:'Fiabilidad media', ca:'Fiabilitat mitjana', en:'Medium reliability'}), baja: L({es:'Fiabilidad baja', ca:'Fiabilitat baixa', en:'Low reliability'})};
-  const nivCls = n => n === 'alta' ? 'is-ok' : n === 'media' ? 'is-amber' : 'is-aviso';
   const hora = new Date(P.actualizado).toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
   const filas = P.filas.map(f => {
     const E = FISCAL_ESTADOS[f.estado];
@@ -525,14 +522,14 @@ function fiscalPrevisionHtml(año, q, filasInformativas){
     const real = f.marca && f.marca.real != null ? `<small class="mf-real">${L({es:'Real', ca:'Real', en:'Actual'})}: <b>${fmtMoney(f.marca.real)}</b> ${f.desviacion != null ? `(${f.desviacion >= 0 ? '+' : '−'}${fmtMoney(Math.abs(f.desviacion))} ${L({es:'sobre lo previsto', ca:'sobre el previst', en:'vs forecast'})})` : ''}</small>` : '';
     return `<div class="te-cal-f mf-fila">
       <span class="te-cal-m">${escapeHtml(f.modelo)}</span>
-      <span class="te-cal-t">${f.concepto}<small class="mf-datos">${f.datos}</small><span class="mf-chips"><span class="gf-chip ${E.cls}">${E.txt()}</span><span class="gf-chip ${nivCls(f.nivel)}">${nivelTxt[f.nivel]}</span></span>${real}</span>
+      <span class="te-cal-t">${f.concepto}<small class="mf-datos">${f.datos}</small><span class="mf-chips"><span class="gf-chip ${E.cls}">${E.txt()}</span></span>${real}</span>
       <b class="te-cal-i"${f.importe < 0 ? ' style="color:var(--green)"' : ''}>${f.importe < 0 ? fmtMoney(-f.importe) + ' ' + t('hr.lbl.inYourFavor') : fmtMoney(f.importe)}</b>
       <span class="te-cal-v">${t('cal.hasta')} ${f.vence} ${chipDias}<button type="button" class="btn btn-sm" onclick="fiscalMarcarModal('${escapeHtml(f.key)}', '${escapeHtml(f.modelo)}', ${Number(f.importe) || 0})">${f.marca ? L({es:'Cambiar', ca:'Canviar', en:'Change'}) : L({es:'Marcar', ca:'Marcar', en:'Mark'})}</button></span></div>`;
   }).join('');
   const info = (filasInformativas || []).map(f => `<div class="te-cal-f te-info"><span class="te-cal-m">${escapeHtml(f.mod)}</span><span class="te-cal-t">${f.txt}</span><b class="te-cal-i"></b><span class="te-cal-v">${t('cal.hasta')} ${f.vence}</span></div>`).join('');
   return `<div class="ge-section te-cal mf-prev gg-plegable">
     <div class="ge-sec-head"><h4><i class="ti ti-calendar-event"></i> ${t('cal.titulo').replace('${q}', (q+1)+'T '+año)}</h4>
-      <span class="gf-acciones"><span class="gf-chip ${nivCls(T.nivel)}" data-tip="${escapeHtml(T.avisos.join(' · '))}" tabindex="0">${nivelTxt[T.nivel]}</span>
+      <span class="gf-acciones">
       <button type="button" class="btn btn-sm" onclick="fiscalTrazaModal(${año})"><i class="ti ti-route"></i> ${L({es:'Ver cálculo', ca:'Veure càlcul', en:'See calculation'})}</button>
       <button type="button" class="btn btn-sm" onclick="fiscalSimuladorModal()"><i class="ti ti-adjustments-horizontal"></i> ${L({es:'Simular', ca:'Simular', en:'Simulate'})}</button></span></div>
     <p class="te-nota">${t('cal.desc')} ${L({es:'Son ESTIMACIONES con tus datos de hoy (actualizado a las ' + hora + '), no liquidaciones oficiales: las presenta tu gestoría.', ca:'Són ESTIMACIONS amb les teves dades d\'avui (actualitzat a les ' + hora + '), no liquidacions oficials: les presenta la teva gestoria.', en:'These are ESTIMATES with today\'s data (updated at ' + hora + '), not official assessments: your accountant files them.'})}</p>

@@ -21,7 +21,7 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [x] G3 Panel: Semana/Mes al lado del título de cada bloque; textos superpuestos (gráfico equilibrio); avisos alineados.
 - [x] G4 (rejilla de 2 columnas permanente; test/economia-movil.mjs) Gestión Económica: quitar el botón «más» de las secciones.
 - [ ] G5 Existencias a fin de mes: revisar cálculo y lógica.
-- [ ] G6 Quitar «fiabilidad» de toda la app (sin romper el motor ni las pruebas).
+- [x] G6 (chip y etiquetas quitados; manual e IA sin «fiabilidad»; test/fiscal-motor.mjs lo vigila) Quitar «fiabilidad» de toda la app (sin romper el motor ni las pruebas).
 - [ ] G7 Punto de equilibrio: maquetar sublime (cifras desbordadas en móvil).
 ## Web pública
 - [ ] W1 Flecha de cada opción de entrada centrada/bien.

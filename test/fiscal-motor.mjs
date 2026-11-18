@@ -94,7 +94,7 @@ await caso('La tarjeta de Tesorería enseña el estado, la fiabilidad, la hora d
     [...box.querySelectorAll('button')].find(b => /ver cálculo/i.test(b.textContent)).click(); await esp(250); out.modal = document.getElementById('modal-box').innerText; closeModal(); await esp(150);
     [...box.querySelectorAll('button')].find(b => /marcar/i.test(b.textContent)).click(); await esp(250); out.marcar = document.getElementById('modal-box').innerText; closeModal(); return out;
   });
-  assert.match(r.txt, /ESTIMACIONES/i); assert.match(r.txt, /actualizado a las/); assert.match(r.txt, /Fiabilidad/i); assert.match(r.txt, /303/); assert.match(r.txt, /hasta el/);
+  assert.match(r.txt, /ESTIMACIONES/i); assert.match(r.txt, /actualizado a las/); assert.doesNotMatch(r.txt, /Fiabilidad|Reliability/i, '18/11 (dueño): ninguna etiqueta de «fiabilidad» en la app'); assert.match(r.txt, /303/); assert.match(r.txt, /hasta el/);
   assert.ok(r.botones.some(b => /ver cálculo/.test(b)) && r.botones.some(b => /simular/.test(b)) && r.botones.some(b => /marcar/.test(b)));
   assert.match(r.modal, /Cómo se ha calculado el impuesto/); assert.match(r.modal, /IS-TIPOS/); assert.match(r.modal, /Verificada con fuente oficial/i); assert.match(r.modal, /no una liquidación oficial/i); assert.match(r.marcar, /Presentado/);
 });
