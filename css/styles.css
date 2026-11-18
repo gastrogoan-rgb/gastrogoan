@@ -2672,7 +2672,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .oc-precio-m{color:var(--ink);font-weight:600}
 .oc-acc{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:2px 6px}
 @media (max-width:1100px){.oc-item{grid-template-columns:minmax(0,1fr) auto}.oc-item .horsem,.oc-item .horsem-vacio{grid-column:1/-1;order:3}.oc-acc{grid-column:2;grid-row:1}}
-@media (max-width:600px){.oc-item{grid-template-columns:1fr}.oc-acc{grid-column:1;grid-row:auto;justify-content:flex-start;order:4}.oc-nombre{font-size:17px}.horsem{gap:3px}.horsem-d{padding:5px 1px}.horsem-d b{font-size:11px}.horsem-d span{font-size:11px}}
+@media (max-width:600px){.oc-item{gap:10px 8px;padding:12px}.oc-nombre{font-size:17px}.horsem{gap:3px}.horsem-d{padding:5px 1px}.horsem-d b{font-size:11px}.horsem-d span{font-size:11px}}
 /* editor: cabecera, aviso de cambios y buscador */
 .oc-nombre-in{font-size:16px;font-weight:600;min-width:240px;letter-spacing:-.01em}
 /* el nombre ocupa el hueco de la cabecera en vez de dejar un vacío entre él y «Guardar» (7/11) */
@@ -2711,6 +2711,7 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .oc-sec{background:#fff;border:1px solid var(--hair);border-radius:3px;margin-bottom:14px;overflow:hidden}
 .oc-sec-cab{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:12px 14px;background:var(--brand-cream);border-bottom:1px solid var(--hair)}
 .oc-sec-tit{display:flex;align-items:center;gap:8px;min-width:0}
+.oc-sec-mover{display:contents}
 .oc-sec-tit h4{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em;overflow-wrap:break-word}
 .oc-sec-n{font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;color:var(--muted)}
 .oc-icono{width:40px;height:40px;border:1px solid var(--hair);background:#fff;border-radius:3px;font-size:20px;line-height:1;cursor:pointer;flex:0 0 auto}
@@ -2748,9 +2749,9 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
   .oc-plato.is-abierta .oc-estado{display:none}
 }
 /* Flechas de ordenar de Oferta: del mismo trazo fino que el resto, sin perder el tamaño de toque */
-.oc-mover .btn-icon,.oc-sec-tit > .btn-icon{width:36px;height:36px;min-width:36px;min-height:36px;padding:0;background:#fff;border:1px solid var(--hair);border-radius:3px;font-size:15px;color:var(--ink)}
-.oc-mover .btn-icon:hover:not(:disabled),.oc-sec-tit > .btn-icon:hover:not(:disabled){border-color:var(--olive);color:var(--olive)}
-.oc-mover .btn-icon:disabled,.oc-sec-tit > .btn-icon:disabled{opacity:.3;background:transparent}
+.oc-mover .btn-icon,.oc-sec-mover .btn-icon{width:36px;height:36px;min-width:36px;min-height:36px;padding:0;background:#fff;border:1px solid var(--hair);border-radius:3px;font-size:15px;color:var(--ink)}
+.oc-mover .btn-icon:hover:not(:disabled),.oc-sec-mover .btn-icon:hover:not(:disabled){border-color:var(--olive);color:var(--olive)}
+.oc-mover .btn-icon:disabled,.oc-sec-mover .btn-icon:disabled{opacity:.3;background:transparent}
 .oc-mover{gap:4px}
 /* los botones de solo icono de Oferta (borrar, renombrar, alérgenos) nunca por debajo del mínimo de toque */
 .oc-sec-acc .btn-fino[aria-label],.oc-ctrl .btn-fino[aria-label],.oc-acc .btn-fino[aria-label]{min-width:40px;justify-content:center;padding-left:8px;padding-right:8px}
@@ -7493,4 +7494,52 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .dt-delta{flex-wrap:wrap;row-gap:2px}
 @media (max-width:760px){
   .dp-k-s .badge{white-space:normal;overflow-wrap:break-word;max-width:100%}
+}
+
+/* Vista móvil revisada con el Android del dueño (18/11) */
+/* 1) Campana de avisos: su globito rojo quedaba DETRÁS del botón del chat (el siguiente en el DOM pinta encima). */
+.app-header #avisos-fab{position:relative;z-index:3}
+.app-header #avisos-fab .chat-badge{z-index:4}
+/* 2) Comandas Cocina en móvil: pestañas + «Deshacer» (solo icono) en la primera fila y las tres acciones en la segunda.
+   Rejilla de 12: pestañas 5+5, deshacer 2, acciones 4+4+4. Los rótulos envuelven entre palabras (nunca partidos) y no bajan de 11 px. */
+@media (max-width:600px){
+  .kds-toolbar{grid-template-columns:repeat(12,minmax(0,1fr))}
+  .kds-toolbar .btn.btn-fino{min-height:44px !important}   /* la regla de móvil general fija .btn a 36,5 px con !important */
+  .kds-toolbar .btn.btn-fino.kds-tab{grid-column:span 5}
+  .kds-toolbar .btn.btn-fino.kds-undo{grid-column:span 2;min-width:44px}
+  .kds-toolbar .btn.btn-fino.kds-undo .ti{display:inline-block;font-size:18px}
+  .kds-toolbar .kds-undo-txt{display:none}
+  .kds-toolbar .btn.btn-fino:not(.kds-tab):not(.kds-undo){grid-column:span 4;flex-direction:row;white-space:normal;overflow-wrap:normal;word-break:normal;hyphens:none;text-align:center;line-height:1.2;font-size:11px;padding:4px 6px;min-height:44px}
+  .kds-toolbar .btn.btn-fino:not(.kds-tab):not(.kds-undo) .ti{display:none}
+}
+
+/* Oferta · lista de cartas y menús, y cabeceras de sección del editor, en móvil (18/11).
+   a) Las horas de cada día: desde / hasta APILADAS (y una rayita entre ellas) en vez de «12–16» en una línea que no cabía en una casilla de 36 px y se montaba con la vecina. */
+.horsem-d .hs{display:inline}
+.horsem-d .hs > span+span::before{content:"–"}
+@media (max-width:600px){
+  .horsem-d{padding:5px 0}
+  .horsem-d span{white-space:normal}
+  .horsem-d .hs{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2}
+  .horsem-d .hs > span+span::before{content:"";display:block;width:8px;height:1px;background:var(--muted);margin:2px auto}
+  /* b) Cabecera de sección: fila 1 = icono + nombre + «⋯»; fila 2 = flechas y acciones, que envuelven entre sí. */
+  .oc-sec-cab{justify-content:flex-start;align-items:center;gap:6px 8px;padding:10px 12px}
+  .oc-sec-tit,.oc-sec-acc{display:contents}
+  .oc-sec-cab::after{content:"";order:4;flex:1 0 100%;height:0}
+  .oc-sec-cab .oc-icono{order:1}
+  .oc-sec-tit > div{order:2;flex:1 1 0;min-width:0}
+  .oc-sec-acc > .mn-btn{order:3;margin-left:auto}
+  .oc-sec-mover{display:flex;flex-direction:column;gap:2px;order:0;flex:0 0 auto}
+  .oc-sec-mover .btn-icon,.oc-sec-mover .btn-icon.btn-sm{width:36px;min-width:36px;height:30px;min-height:30px !important;font-size:14px}
+  .oc-sec-acc > :not(.mn-btn){order:6}
+  .oc-sec-acc > .btn-fino:not(.mn-btn){flex:0 1 auto;min-width:0;white-space:normal;overflow-wrap:normal;line-height:1.2}
+}
+/* Editor de carta y de menú en móvil: «← Cartas» y «Guardar» en la misma fila y el nombre debajo, a todo el ancho (Guardar iba solo en una fila). */
+@media (max-width:600px){
+  #carta-editor-view > .toolbar,#menu-editor-view > .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  #carta-editor-view > .toolbar > .left,#menu-editor-view > .toolbar > .left{display:contents}
+  #carta-editor-view > .toolbar .left > .btn,#menu-editor-view > .toolbar .left > .btn{order:1}
+  #carta-editor-view > .toolbar > .btn.is-on,#menu-editor-view > .toolbar > .btn.is-on{order:2;margin-left:auto}
+  #carta-editor-view > .toolbar > .oc-sucio,#menu-editor-view > .toolbar > .oc-sucio{order:3;flex:1 0 100%}
+  #carta-editor-view .oc-nombre-in,#menu-editor-view .oc-nombre-in{order:4;flex:1 0 100%;min-width:0;max-width:none}
 }

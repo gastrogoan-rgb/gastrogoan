@@ -137,6 +137,21 @@ for(const [ancho, alto] of [[1280, 900], [390, 800]]){
     assert.deepEqual(r.tandas, ['Primeros', 'Segundos', 'Postres']);
   });
 
+  await caso(`NORMA del 18/11: los «Primeros» del menú se marchan SOLOS al pedirlos; segundos y postres esperan a la sala (${ancho}px)`, async () => {
+    const r = await page.evaluate(() => { const o = DB.tpvOrders.find(x => x.id === 960);
+      return o.items.map(l => ({t: l.tanda, estado: l.estado || null, marchada: l.marchada || 0, qty: l.qty, enviadoAt: !!l.enviadoAt})); });
+    const p = r.find(l => l.t === 'Primeros'), s = r.find(l => l.t === 'Segundos'), d = r.find(l => l.t === 'Postres');
+    assert.equal(p.estado, 'cocina', 'primeros en cocina sin pulsar nada: ' + JSON.stringify(r));
+    assert.equal(p.marchada, p.qty); assert.ok(p.enviadoAt);
+    assert.equal(s.estado, null, 'los segundos esperan'); assert.equal(s.marchada, 0);
+    assert.equal(d.estado, null, 'los postres esperan'); assert.equal(d.marchada, 0);
+    // y marchar el resto a mano sigue funcionando sin volver a marchar los primeros
+    await page.evaluate(() => { marcharComanda(960, 'Segundos', true); });
+    const r2 = await page.evaluate(() => DB.tpvOrders.find(x => x.id === 960).items.map(l => ({t: l.tanda, marchada: l.marchada || 0, qty: l.qty})));
+    assert.equal(r2.find(l => l.t === 'Segundos').marchada, 1);
+    assert.equal(r2.find(l => l.t === 'Postres').marchada, 0);
+  });
+
   await caso(`«Cancelar» en el primer apartado vuelve a la mesa sin añadir nada (${ancho}px)`, async () => {
     await page.evaluate(() => { DB.tpvOrders.find(x => x.id === 960).items = []; openMenuConfigModal(960, 7); }); await w(300);
     await page.evaluate(() => document.getElementById('tp-mp-atras').click()); await w(400);
