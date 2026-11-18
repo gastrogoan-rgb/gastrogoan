@@ -434,6 +434,10 @@ function mostrarPuestaAPunto(){
     if(typeof navigate === 'function' && !navigate.__gg){
       const nav = navigate; const n2 = function(){ seqNav++; return nav.apply(this, arguments); }; n2.__gg = true; window.navigate = n2;
     }
+    // Una subida explícita DENTRO de un repintado (p. ej. entrar en Gestión Económica) cuenta como navegar: no se restaura.
+    if(typeof scrollContentToTop === 'function' && !scrollContentToTop.__gg){
+      const sc = scrollContentToTop; const s2 = function(){ seqNav++; return sc.apply(this, arguments); }; s2.__gg = true; window.scrollContentToTop = s2;
+    }
     Object.getOwnPropertyNames(window).forEach(nombre => {
       if(!/^render[A-Z]/.test(nombre) || /Modal|Html|Card|Fila|Row|Item|Chip|Tab|Selector|Panel$/.test(nombre)) return;
       let f; try{ f = window[nombre]; }catch(e){ return; }
@@ -447,7 +451,7 @@ function mostrarPuestaAPunto(){
         }catch(e){}
         return r;
       };
-      w.__ggScroll = true; try{ window[nombre] = w; }catch(e){}
+      w.__ggScroll = true; w.toString = () => Function.prototype.toString.call(f); try{ window[nombre] = w; }catch(e){}
     });
   }
   window.addEventListener('load', () => setTimeout(envolver, 0));

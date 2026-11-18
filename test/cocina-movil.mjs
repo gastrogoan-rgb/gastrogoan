@@ -91,6 +91,7 @@ await caso('Distribución: quien descansa hoy no lleva contador «0 / N» y el d
 
 await caso('APPCC › Alérgenos por plato: todos los alérgenos caben dentro de la tarjeta y el rótulo no pisa el nombre', async () => {
   await q("currentFolder='cocina'; navigate('limpieza'); setLimpiezaTab('alergenos')"); await esperar(700);
+  await q(() => { const s = lpAlergSecciones().sort((a, b) => b.platos.length - a.platos.length)[0]; if(s) lpAlergEntrar(s.key); }); await esperar(300);
   const r = await q(() => [...document.querySelectorAll('.lp-alerg-tabla tbody tr')].map(tr => {
     const R = tr.getBoundingClientRect();
     return {fuera: [...tr.querySelectorAll('.badge')].some(b => b.getBoundingClientRect().right > R.right + 1), nom: tr.querySelector('.lp-alerg-nom').textContent.length};
