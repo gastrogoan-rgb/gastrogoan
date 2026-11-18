@@ -7512,6 +7512,12 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .tp-or-pestana{min-width:0}
 .tp-or-pestana .tp-or-barra-n{flex:none}
 .tp-or-pest-tot{white-space:nowrap}
+@media (max-width:380px){
+  .tp-or-acciones-cab{gap:4px !important;flex-wrap:nowrap}
+  .tp-or-acciones-cab .tp-or-peq{padding:0 6px !important;font-size:11px !important;gap:3px;min-width:0}
+  .tp-or-acciones-cab .tp-or-peq i{font-size:13px}
+  .tp-or-acciones-cab:has(> :nth-child(3)){flex-wrap:wrap}
+}
 @media (max-width:420px){
   .tp-or-cab .tp-or-mesa{font-size:20px}
   .tp-or-pest .tp-or-pestana:first-child{font-size:13px;flex:0 1 28%}

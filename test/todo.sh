@@ -225,6 +225,7 @@ lanzar; node test/inicio-acceso.mjs > "$SALIDA/inicac.txt" 2>&1 & PINICAC=$!
 lanzar; node test/solicitudes-cifradas.mjs > "$SALIDA/solcif.txt" 2>&1 & PSOLCIF=$!
 lanzar; node test/fiscal-pendientes.mjs > "$SALIDA/fiscalpend.txt" 2>&1 & PFISPEN=$!
 lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
+lanzar; node test/tpv-scroll.mjs > "$SALIDA/tpvscroll.txt" 2>&1 & PTPVSC=$!
 lanzar; node test/existencias.mjs > "$SALIDA/existencias.txt" 2>&1 & P192=$!
 lanzar; node test/qr-mesa-stripe.mjs > "$SALIDA/qrmesastripe.txt" 2>&1 & P193=$!
 lanzar; node test/ventanas-visibles.mjs > "$SALIDA/ventanasvis.txt" 2>&1 & P194=$!
@@ -503,6 +504,7 @@ espera $P360L "Plan 360º · plantilla del programa (guardar y aplicar sin pisar
 espera $P360IC "Plan 360º · informe semanal del coach: hechas/sin hacer, área y objetivos" "$SALIDA/p360ic.txt" "en orden"
 espera $PFOTOPL "Fotos de platos en la web de pedidos: miniatura pequeña, solo con el interruptor encendido" "$SALIDA/fotopl.txt" "en orden"
 espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm.txt" "en orden"
+espera $PTPVSC "TPV: marchar un plato no devuelve el scroll de la comanda arriba" "$SALIDA/tpvscroll.txt" "Sin errores"
 espera $PINICAC "Entrada: frase sin comillas dobles y título de Puesta a punto sin cortar" "$SALIDA/inicac.txt" "en orden"
 espera $PSOLCIF "Solicitudes públicas cifradas: la web cifra los datos personales y solo la app los abre" "$SALIDA/solcif.txt" "en orden"
 espera $PFISPEN "Motor fiscal, pendientes cerrados: 5 % en el 130, mínimos autonómicos, IVA que no aplica y ejercicio 2024, con cuentas a mano" "$SALIDA/fiscalpend.txt" "todos los casos pasaron"
