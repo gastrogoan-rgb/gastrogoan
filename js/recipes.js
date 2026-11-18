@@ -549,14 +549,13 @@ function esPintarHoja(estado){
               </select>
             </div>` : ''}
           </div>
-          ${isBase ? '' : ggNota(`<i class="ti ti-info-circle"></i> ${tA('msg.escandalloForOnePerson')}`, 'es-nota')}
           <!-- El tipo (plato o elaboración base) lo decide el botón por el que se entró; ya no se vuelve a elegir aquí. -->
           <input type="checkbox" id="recipe-is-base" style="display:none" ${isBase ? 'checked' : ''}>
           <input type="hidden" id="recipe-comensales" value="1">
         </section>
 
         <section class="es-card">
-          <h3 class="es-tit">${t('label.ingredients')}</h3>
+          <h3 class="es-tit">${t('label.ingredients')}</h3>${isBase ? '' : ggNota(`<i class="ti ti-info-circle"></i> ${tA('msg.escandalloForOnePerson')}`, 'es-nota')}
           <div class="es-lineas" id="es-lineas"></div>
           ${areaIngredients.length || DB.recipes.some(b => b.isBase && (b.area||'cocina') === area) ? `
           <div class="es-anadir">
@@ -613,9 +612,8 @@ function esPintarHoja(estado){
           </div>
           ${hasDelivery ? `
           <div class="field">
-            <label for="recipe-delivery-supplement">${t('label.deliverySupplement')}</label>
-            <input type="number" id="recipe-delivery-supplement" value="${r.deliverySupplement != null ? r.deliverySupplement : ''}" step="0.01" min="0" placeholder="0,00" oninput="esRecalcular()">
-            ${ggNota(t('label.deliverySupplementHint'), 'es-pista')}
+            <div class="gg-lbl-ayuda"><label for="recipe-delivery-supplement">${t('label.deliverySupplement')}</label>${ggNota(t('label.deliverySupplementHint'), 'es-pista')}</div>
+            <input type="number" id="recipe-delivery-supplement" value="${r.deliverySupplement != null ? r.deliverySupplement : ''}" step="0.01" min="0" placeholder="0,00" inputmode="decimal" oninput="esRecalcular()">
           </div>` : ''}
           <div class="es-final">
             <div><span>${t('label.finalPriceWithVat')}</span><b id="recipe-price-final-display">—</b></div>
@@ -1901,7 +1899,7 @@ function fiPasosEditMover(desde, hasta){
 function fiPasosEditQuitar(idx){
   fichaPasosEdit = new Set([...fichaPasosEdit].filter(i => i !== idx).map(i => i > idx ? i - 1 : i));
 }
-function fiAutoAlto(el){ el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight, 56) + 'px'; }
+function fiAutoAlto(el){ ggAutoAltoTextarea(el); }   // el ajuste es común a toda la app (js/ui.js); el mínimo de 56 px lo pone el CSS
 function updateFichaPasoDet(idx, campo, valor){
   const f = fichaModalState;
   if(!Array.isArray(f.pasosDet)) f.pasosDet = [];

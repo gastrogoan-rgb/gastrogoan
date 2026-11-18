@@ -753,7 +753,7 @@ function renderCartaSecciones(){
   const searchBox = `
     <div class="oc-barra">
       <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="carta-search-input" placeholder="${bebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)"></div>
-      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newCartaSection()"><i class="ti ti-plus"></i> ${t('btn.newSection')}</button>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on oc-barra-nuevo" aria-label="${escapeHtml(t('btn.newSection'))}" onclick="newCartaSection()"><i class="ti ti-plus"></i> <span class="oc-barra-txt">${t('btn.newSection')}</span></button>
     </div>`;
   if(!cartaEdit.secciones.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
@@ -1638,7 +1638,7 @@ function renderMenuGrupos(){
   const searchBox = `
     <div class="oc-barra">
       <div class="oc-buscar"><i class="ti ti-search"></i><input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)"></div>
-      <button type="button" class="owner-only btn btn-sm btn-fino is-on" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> ${t('title.newGroup')}</button>
+      <button type="button" class="owner-only btn btn-sm btn-fino is-on oc-barra-nuevo" aria-label="${escapeHtml(t('title.newGroup'))}" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> <span class="oc-barra-txt">${t('title.newGroup')}</span></button>
     </div>`;
   if(!menuEdit.grupos.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${isBebidas ? t('empty.groups.sala') : t('empty.groups')}</div>`;

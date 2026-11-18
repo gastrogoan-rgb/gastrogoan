@@ -842,7 +842,7 @@ function openProviderInfoModal(id){
     ${filas ? `<div class="pv-ficha">${filas}</div>` : `<p class="pv-sin-datos">${t('prov.sinDatos')}</p>`}
     <div class="pv-enlaces">
       ${ings.length
-        ? `<button type="button" class="btn btn-sm btn-fino" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
+        ? `<button type="button" class="btn btn-sm btn-fino" onclick="openSupplierIngredientsModal(${p.id}, '')"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
         : `<span class="pv-cero"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
       <button type="button" class="btn btn-sm btn-fino" onclick="openSupplierOrdersModal(${p.id})"><i class="ti ti-history"></i> ${t('tab.orderHistory')} (${pedidosDeProveedor(p.nombre).length})</button>
     </div>
@@ -859,8 +859,8 @@ function pedidosDeProveedor(nombre){
     .filter(o => (o.area||'cocina') === currentArea() && String(o.supplier||'').trim().toLowerCase() === clave)
     .slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')) || (b.id||0) - (a.id||0));
 }
-// El historial se ve AQUÍ, sin salir de la ficha: antes saltaba a Pedidos y volver era un rodeo. Cada pedido se
-// despliega para ver sus líneas; «Abrir en Pedidos» sigue ahí para quien quiera gestionarlos.
+// El historial se ve AQUÍ, sin salir de la ficha. Los pedidos NO se despliegan: cada fila es fecha + estado + un botón «N artículos»
+// que abre una ventana con TODO lo pedido, e importe. La fila usa `.gg-fila` para que en 360 px el importe no se solape.
 function openSupplierOrdersModal(providerId){
   const p = DB.providers.find(x => x.id === providerId);
   if(!p) return;
@@ -868,24 +868,17 @@ function openSupplierOrdersModal(providerId){
   const recibidos = pedidos.filter(o => o.estado === 'RECIBIDO');
   const totalRecibido = recibidos.reduce((s, o) => s + pedidoTotalConIva(o), 0);
   const filas = pedidos.map(o => {
-    const lineas = (o.items||[]).map(line => {
-      const ing = getIngredient(line.ingredientId);
-      if(!ing) return '';
-      const rec = o.estado === 'RECIBIDO' && line.cantidadRecibida != null && line.cantidadRecibida !== line.cantidad
-        ? ` <span class="pv-ped-rec">(${gl({es:'llegó', ca:'va arribar', en:'received'})} ${fmtNum(line.cantidadRecibida)})</span>` : '';
-      return `<div class="pv-ped-linea"><span>${escapeHtml(ing.name)}</span><span class="pv-ped-q">${fmtNum(line.cantidad)} ${escapeHtml(ing.unit)}${rec}</span></div>`;
-    }).join('');
+    const n = (o.items||[]).length;
+    const txtN = `${n} ${gl({es:n === 1 ? 'artículo' : 'artículos', ca:n === 1 ? 'article' : 'articles', en:n === 1 ? 'item' : 'items'})}`;
     return `
-      <details class="pv-ped">
-        <summary>
-          <span class="pv-ped-f">${escapeHtml(o.date || '')}</span>
+      <div class="pv-ped gg-fila">
+        <span class="pv-ped-f gg-fila-nombre">${escapeHtml(fechaImpresaLegible(o.date || ''))}</span>
+        <span class="gg-fila-extra">
           <span class="badge ${PEDIDO_BADGE[o.estado] || 'badge-gray'}">${escapeHtml(pedidoEstadoLabel(o.estado))}</span>
-          <span class="pv-ped-n">${(o.items||[]).length} ${gl({es:(o.items||[]).length === 1 ? 'artículo' : 'artículos', ca:(o.items||[]).length === 1 ? 'article' : 'articles', en:(o.items||[]).length === 1 ? 'item' : 'items'})}</span>
+          <button type="button" class="btn btn-sm btn-fino pv-ped-n" onclick="openPedidoProductosModal(${p.id}, ${o.id})"><i class="ti ti-list"></i> ${txtN}</button>
           <span class="pv-ped-t">${fmtMoney(pedidoTotalConIva(o))}</span>
-          <i class="ti ti-chevron-down pv-ped-flecha"></i>
-        </summary>
-        <div class="pv-ped-lineas">${lineas || `<div class="pv-ped-linea"><span>—</span></div>`}</div>
-      </details>`;
+        </span>
+      </div>`;
   }).join('');
   openModal(`
     <div class="modal-header">
@@ -900,27 +893,65 @@ function openSupplierOrdersModal(providerId){
     </div>
   `);
 }
-function openSupplierIngredientsModal(providerId){
-  const p = DB.providers.find(x=>x.id===providerId);
-  if(!p) return;
-  const ings = ingredientsForSupplier(p.nombre).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+// Todos los productos de UN pedido a proveedor (lo que se pidió y, si ya llegó, lo que llegó).
+function openPedidoProductosModal(providerId, orderId){
+  const p = DB.providers.find(x => x.id === providerId);
+  const o = (DB.purchaseOrders || []).find(x => x.id === orderId);
+  if(!p || !o) return;
+  const lineas = (o.items||[]).map(line => {
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return '';
+    const rec = o.estado === 'RECIBIDO' && line.cantidadRecibida != null && line.cantidadRecibida !== line.cantidad
+      ? ` <span class="pv-ped-rec">(${gl({es:'llegó', ca:'va arribar', en:'received'})} ${fmtNum(line.cantidadRecibida)})</span>` : '';
+    return `<div class="pv-ped-linea gg-fila"><span class="pv-ped-ln gg-fila-nombre">${escapeHtml(ing.name)}</span><span class="pv-ped-q gg-fila-extra">${fmtNum(line.cantidad)} ${escapeHtml(ing.unit||'')}${rec}</span></div>`;
+  }).join('');
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-list"></i> ${escapeHtml(p.nombre)}</h3>
+      <h3><i class="ti ti-list"></i> ${escapeHtml(fechaImpresaLegible(o.date || ''))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    <p class="pv-ped-resumen">${escapeHtml(p.nombre)} · ${escapeHtml(pedidoEstadoLabel(o.estado))} · ${fmtMoney(pedidoTotalConIva(o))}</p>
+    <div class="pv-peds pv-ped-lineas">${lineas || `<div class="empty"><i class="ti ti-list"></i>—</div>`}</div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-fino" onclick="openSupplierOrdersModal(${p.id})"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+// Artículos del proveedor: índice A–Z con cuántos hay por letra; al elegir una letra salen solo sus productos.
+let pvArtLetra = '';
+function openSupplierIngredientsModal(providerId, letra){
+  const p = DB.providers.find(x=>x.id===providerId);
+  if(!p) return;
+  if(letra !== undefined) pvArtLetra = letra;
+  const ings = ingredientsForSupplier(p.nombre).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  const hay = {};
+  ings.forEach(i => { const L = pcLetraDe(i.name); hay[L] = (hay[L] || 0) + 1; });
+  if(pvArtLetra && !hay[pvArtLetra]) pvArtLetra = '';
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').concat(hay['#'] ? ['#'] : []);
+  const indice = `<div class="pv-az" role="group" aria-label="${escapeHtml(gl({es:'Índice por letra', ca:'Índex per lletra', en:'Index by letter'}))}">${letras.map(L => {
+    const n = hay[L] || 0;
+    return `<button type="button" class="pv-az-l${pvArtLetra === L ? ' is-on' : ''}" ${n ? '' : 'disabled'} aria-pressed="${pvArtLetra === L}" aria-label="${escapeHtml(L + (n ? ' · ' + n : ''))}" onclick="openSupplierIngredientsModal(${p.id}, '${pvArtLetra === L ? '' : L}')"><b>${L}</b><small>${n || ''}</small></button>`;
+  }).join('')}</div>`;
+  const lista = pvArtLetra ? ings.filter(i => pcLetraDe(i.name) === pvArtLetra) : [];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-list"></i> ${escapeHtml(p.nombre)} (${ings.length})</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${ings.length ? indice : ''}
     <div class="pv-arts">
-      ${ings.length ? ings.map(i => `
-        <div class="pv-art">
-          <span class="pv-art-n">${escapeHtml(i.name)}</span>
-          <span class="pv-art-u">${escapeHtml(i.unit||'')}</span>
-          <span class="pv-art-p">${fmtMoney(i.price)}</span>
-        </div>
-      `).join('') : `<div class="empty"><i class="ti ti-list"></i>${t('empty.suppliers')}</div>`}
+      ${!ings.length ? `<div class="empty"><i class="ti ti-list"></i>${t('empty.suppliers')}</div>`
+        : !pvArtLetra ? `<p class="pv-ped-resumen">${gl({es:'Elige una letra para ver sus artículos.', ca:'Tria una lletra per veure els seus articles.', en:'Pick a letter to see its items.'})}</p>`
+        : lista.map(i => `
+        <div class="pv-art gg-fila">
+          <span class="pv-art-n gg-fila-nombre">${escapeHtml(i.name)}</span>
+          <span class="gg-fila-extra"><span class="pv-art-u">${escapeHtml(i.unit||'')}</span><span class="pv-art-p">${fmtMoney(i.price)}</span></span>
+        </div>`).join('')}
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-fino" onclick="openProviderInfoModal(${p.id})"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
-      <button type="button" class="btn btn-fino" onclick="closeModal()">${t('common.close')}</button>
+      <button type="button" class="btn btn-fino" onclick="pvArtLetra='';openProviderInfoModal(${p.id})"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+      <button type="button" class="btn btn-fino" onclick="pvArtLetra='';closeModal()">${t('common.close')}</button>
     </div>
   `);
 }

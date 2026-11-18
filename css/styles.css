@@ -7385,10 +7385,10 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
    Ahora el paso se lee a todo el ancho y los mandos van en su propia fila, a la derecha. */
 .fi-paso-leer,.fi-paso-txt{text-transform:none;letter-spacing:normal;hyphens:manual;word-break:normal;overflow-wrap:break-word}
 @media (max-width:760px){
-  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c" ". acc"}
+  /* (18/11: los mandos ya NO van en fila propia bajo el texto; ver «COCINA · AJUSTES DE MÓVIL» al final del fichero) */
+  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c"}
   .fi-paso > .fi-paso-n{grid-area:n}
   .fi-paso > .fi-paso-c{grid-area:c}
-  .fi-paso > .fi-paso-acc{grid-area:acc;justify-self:end;margin-top:6px}
 }
 /* Mi puesto: el aviso de atrasadas se lee de un vistazo y «Verlas» es un botón de 44 px */
 .dp-aviso .dp-aviso-ver{flex:0 0 auto;min-height:44px}
@@ -7688,4 +7688,79 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
   #carta-editor-view > .toolbar > .btn.is-on,#menu-editor-view > .toolbar > .btn.is-on{order:2;margin-left:auto}
   #carta-editor-view > .toolbar > .oc-sucio,#menu-editor-view > .toolbar > .oc-sucio{order:3;flex:1 0 100%}
   #carta-editor-view .oc-nombre-in,#menu-editor-view .oc-nombre-in{order:4;flex:1 0 100%;min-width:0;max-width:none}
+/* ═══ COCINA · AJUSTES DE MÓVIL DEL 18/11 (vídeo en un Android real, ~360 px) ═══════════════════════════════════════
+   Cuatro causas comunes, no cuatro parches: (1) el «?» de ayuda ocupaba una fila entera, (2) el texto escrito en un buscador
+   con lupa caía ENCIMA de la lupa, (3) una fila con SOLO un lápiz/«⋯» ocupaba una línea completa, (4) los textarea enseñaban el
+   tirador de redimensionar. Bloque separado a propósito: cada punto lleva su explicación. */
+
+/* (1) «?» DE AYUDA PEQUEÑO, JUNTO A SU RÓTULO. Antes era un círculo de 44 px dentro de un bloque con margen: una línea para él solo.
+   Ahora es un botón de 28 px que se queda en línea con lo que tiene delante (el título de la tarjeta o el rótulo del campo); la zona
+   de toque sigue siendo de 44 px (la pone el ::after, que no ocupa sitio). Abierto, el texto sí ocupa el ancho entero, debajo. */
+.gg-ayuda{display:inline-block;vertical-align:middle;margin:0 0 0 8px;max-width:100%}
+.gg-ayuda > summary{width:28px;height:28px;min-width:28px;min-height:28px;font-size:13px;line-height:1;position:relative}
+.gg-ayuda > summary::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+.gg-ayuda[open]{display:block;margin:6px 0 0}
+.gg-ayuda[open] > summary{margin-bottom:2px}
+/* El título de una tarjeta y su «?» comparten línea (el título pasa a ser en línea sin perder su margen inferior). */
+.es-tit:has(+ .gg-ayuda:not([open])){display:inline-block;vertical-align:middle;margin-right:0}
+.es-tit + .gg-ayuda:not([open]){margin-bottom:12px}
+/* Rótulo + «?» de un campo: `<div class="gg-lbl-ayuda"><label>…</label>${ggNota(…)}</div>`; en PC la nota va a la vista, debajo. */
+.gg-lbl-ayuda{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;margin-bottom:6px}
+.gg-lbl-ayuda > label{margin:0;flex:0 1 auto;min-width:0}
+.gg-lbl-ayuda > .gg-ayuda{margin:0 0 0 4px}
+.gg-lbl-ayuda > .gg-ayuda[open],.gg-lbl-ayuda > .gg-nota{flex:1 1 100%;margin:4px 0 0}
+
+/* (2) BUSCADOR CON LUPA. La regla de móvil de la app pone `padding:… !important` a todo input y se comía el hueco de la lupa:
+   el texto (y el placeholder) quedaban encima del icono. Contrato: el icono es el hijo anterior del campo y va en posición
+   absoluta; el campo reserva 38 px a su izquierda en TODOS los anchos. Vale para Escandallo, Fichas, I+D, Oferta, el TPV y
+   cualquier buscador del área Cocina que use estas cajas. */
+:where(.es-anadir-buscar,.oc-buscar,.gg-buscar) > input:not([type=checkbox]):not([type=radio]):not([type=hidden]){padding-left:38px !important;text-overflow:ellipsis}
+:where(.es-anadir-buscar,.oc-buscar,.gg-buscar) > .ti:first-child{left:12px;z-index:1}
+.gg-buscar{position:relative}
+.gg-buscar > .ti:first-child{position:absolute;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+
+/* (3) UNA LÍNEA NUNCA LLEVA SOLO UN LÁPIZ / «⋯». En la ficha técnica los mandos de cada paso caían en una fila propia bajo el texto.
+   Ahora van en la fila del NÚMERO del paso (a la derecha, ya vacía) y el texto se lee debajo, sangrado bajo la línea de tiempo. */
+@media (max-width:760px){
+  .fi-paso{grid-template-columns:32px minmax(0,1fr);grid-template-areas:"n c";gap:0 10px}
+  .fi-paso:has(> .fi-paso-acc){grid-template-areas:"n acc" ". c"}
+  .fi-paso > .fi-paso-acc{grid-area:acc;justify-self:end;align-self:center;margin:0;gap:2px}
+  .fi-paso:has(> .fi-paso-acc) > .fi-paso-n{align-self:center}
+  .fi-paso:has(> .fi-paso-acc) > .fi-paso-c{padding-top:0}
+  .fi-paso:has(> .fi-paso-acc) > .fi-paso-c > .fi-paso-leer{margin-top:0}
+  .fi-paso:has(> .fi-paso-acc)::before{top:36px}
+  /* Un texto largo, aunque venga en MAYÚSCULAS y sin espacios, se lee con letra normal y nunca desborda. */
+  .fi-paso-leer{font-size:15px;line-height:1.5;min-width:0;overflow-wrap:break-word}
+  .fi-paso-c{min-width:0}
+}
+.fi-paso-leer,.fi-paso-txt{overflow-wrap:break-word;text-transform:none}
+
+/* (4) TEXTAREA SIN TIRADOR, QUE CRECE CON LO ESCRITO. El alto lo ajusta `ggAutoAltoTextarea` (js/ui.js, delegado en toda la app);
+   aquí solo se quita el tirador y se impide que el campo se salga por la derecha. */
+textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:hidden}
+
+/* (3 bis) MISMA NORMA EN EL EDITOR DE OFERTA. Antes caían a una línea para ellos solos: el «⋯» de cada carta (la lista pasaba a una
+   columna a ≤600 px), el «⋯» de cada sección o grupo («Plato manual» + «Escandallo» + «⋯» no caben en 360), «Guardar» (el nombre
+   de la carta se quedaba una fila entera y Guardar otra) y «Nueva sección» bajo el buscador. Ahora cada acción sube a una fila que ya
+   existía: la carta y su «⋯» en la primera, el título de la sección y su «⋯» en la suya, «Atrás … Guardar» arriba y el nombre debajo. */
+@media (max-width:760px){
+  .oc-sec-cab{gap:6px 8px}
+  .oc-sec-tit{flex:1 1 calc(100% - 56px);order:0;min-width:0}
+  .oc-sec-acc{display:contents}
+  .oc-sec-acc > [data-acc]{order:1}
+  .oc-sec-acc > :not([data-acc]){order:2}
+  #carta-editor-view > .toolbar,#menu-editor-view > .toolbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;justify-content:stretch}
+  #carta-editor-view > .toolbar > .left,#menu-editor-view > .toolbar > .left{display:contents}
+  #carta-editor-view > .toolbar > .left > .btn,#menu-editor-view > .toolbar > .left > .btn{grid-column:1;grid-row:1}
+  #carta-editor-view > .toolbar > .left > input,#menu-editor-view > .toolbar > .left > input{grid-column:1 / -1;grid-row:2;min-width:0;max-width:none;width:100%}
+  #carta-editor-view > .toolbar > .btn,#menu-editor-view > .toolbar > .btn{grid-column:3;grid-row:1}
+  #carta-editor-view > .toolbar > .oc-sucio,#menu-editor-view > .toolbar > .oc-sucio{grid-column:1 / -1;grid-row:3;justify-self:start;margin:0}
+  /* buscador + «Nueva sección / Nuevo grupo» en UNA fila; en pantallas muy estrechas el botón se queda en «+» (su nombre va en el aria-label) */
+  .oc-barra{flex-wrap:nowrap;align-items:center;gap:8px}
+  .oc-barra .oc-buscar{flex:1 1 0;min-width:0;max-width:none}
+  .oc-barra .oc-barra-nuevo{flex:0 0 auto}
+}
+@media (max-width:480px){
+  .oc-barra .oc-barra-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .oc-barra .oc-barra-nuevo{min-width:44px;justify-content:center;padding-left:8px;padding-right:8px}
 }

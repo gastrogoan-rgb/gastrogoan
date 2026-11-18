@@ -3102,3 +3102,59 @@ document.getElementById('modal-overlay').addEventListener('click', (e)=>{
   closeModal();
 });
 
+/* TEXTAREA QUE CRECE CON LO ESCRITO, EN TODA LA APP (18/11, pedido del dueño tras verlo en un Android real).
+   Los campos de texto largo enseñaban el tirador de redimensionar y, con texto previo, se abrían a 2 renglones y había que
+   arrastrar. Ahora: sin tirador (CSS, `resize:none`) y el alto sigue al contenido, hacia abajo.
+   Es DELEGADO: una escucha global de `input` + un observador del DOM para los que se pintan ya con texto (fichas, notas, modales,
+   Mi Negocio…). Ninguna pantalla tiene que acordarse de nada. `data-gg-fijo` en un textarea lo excluye.
+   · Un textarea OCULTO (pestaña o acordeón cerrado) mide 0: no se toca, y el ResizeObserver lo ajusta cuando aparece o cambia de ancho.
+   · Al encoger se pasa por `height:auto`, lo que acorta la página un instante y mueve el scroll: se guarda y se restaura. */
+function ggAutoAltoTextarea(ta){
+  if(!ta || ta.tagName !== 'TEXTAREA' || ta.hasAttribute('data-gg-fijo')) return;
+  if(!ta.isConnected || (!ta.offsetParent && getComputedStyle(ta).position !== 'fixed')) return;
+  const guardados = [];
+  for(let p = ta.parentElement; p; p = p.parentElement) if(p.scrollTop > 0) guardados.push([p, p.scrollTop]);
+  const cs = getComputedStyle(ta);
+  ta.style.height = 'auto';
+  const borde = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+  const relleno = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  const alto = cs.boxSizing === 'border-box' ? ta.scrollHeight + borde : ta.scrollHeight - relleno;
+  // Tope del 70 % de la pantalla: un texto pegado enorme no puede empujar el resto fuera; a partir de ahí, scroll propio.
+  const tope = Math.max(240, Math.round(window.innerHeight * 0.7));
+  ta.style.height = Math.min(Math.max(alto, 0), tope) + 'px';
+  ta.style.overflowY = alto > tope ? 'auto' : 'hidden';
+  guardados.forEach(([p, y]) => { if(p.scrollTop !== y) p.scrollTop = y; });
+}
+(function ggAutoAltoInstalar(){
+  if(typeof document === 'undefined' || window.__ggAutoAlto) return;
+  window.__ggAutoAlto = true;
+  const vistos = new WeakSet();
+  const anchos = new WeakMap();
+  const pendientes = new Set();
+  let programado = false;
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(entradas => {
+    entradas.forEach(e => {
+      const w = Math.round(e.contentRect.width);
+      if(anchos.get(e.target) !== w){ anchos.set(e.target, w); ggAutoAltoTextarea(e.target); }
+    });
+  }) : null;
+  const vaciar = () => { programado = false; const lista = [...pendientes]; pendientes.clear(); lista.forEach(ta => { ggAutoAltoTextarea(ta); }); };
+  const apuntar = ta => {
+    if(!vistos.has(ta)){ vistos.add(ta); if(ro) ro.observe(ta); }
+    pendientes.add(ta);
+    if(!programado){ programado = true; requestAnimationFrame(vaciar); }
+  };
+  document.addEventListener('input', e => { if(e.target && e.target.tagName === 'TEXTAREA') ggAutoAltoTextarea(e.target); }, true);
+  const revisar = nodo => {
+    if(!nodo || nodo.nodeType !== 1) return;
+    if(nodo.tagName === 'TEXTAREA') apuntar(nodo);
+    else if(nodo.querySelectorAll) nodo.querySelectorAll('textarea').forEach(apuntar);
+  };
+  const arrancar = () => {
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(revisar))).observe(document.body, {childList:true, subtree:true});
+    document.querySelectorAll('textarea').forEach(apuntar);
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => document.querySelectorAll('textarea').forEach(apuntar));
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
+})();
+
