@@ -494,19 +494,23 @@ const GE = (function(){
     }
     if(p.personaFisica){
       const meses = baseMesesAño(año);
-      // Deducción por rendimientos bajos del año anterior (art. 110.3.c
-      // RIRPF): 100 € por trimestre hasta 9.000 €, 75 hasta 10.000, 50
-      // hasta 11.000 y 25 hasta 12.000. Se acumula como el propio 130.
+      // Minoración por rendimientos bajos del año anterior (art. 110.3.c
+      // RIRPF, texto consolidado del BOE verificado el 18/11/2026): 100 € por
+      // pago hasta 9.000 €, 75 hasta 10.000, 50 hasta 11.000 y 25 hasta 12.000.
+      // Se resta en CADA trimestre; lo no aprovechado pasa a los siguientes del
+      // año, y lo ya pagado se resta sin minoración (art. 110.1.a): por eso
+      // 20 % del acumulado − dedTrim×(q+1) − lo realmente pagado equivale a la
+      // letra de la norma (probado a mano en test/fiscal-pendientes.mjs).
       const rnAnt = baseMesesAño(año-1).reduce((s,v)=>s+v,0);
       const dedTrim = rnAnt <= 0 ? 0 : rnAnt <= 9000 ? 100 : rnAnt <= 10000 ? 75 : rnAnt <= 11000 ? 50 : rnAnt <= 12000 ? 25 : 0;
       let pagado = 0;
       for(let k=0;k<q;k++){
         const acum = meses.slice(0, k*3+3).reduce((s,v)=>s+v,0);
-        pagado += Math.max(0, (acum - pfDificilJustificacion(acum))*0.20 - dedTrim*(k+1) - pagado);
+        pagado += Math.max(0, (acum - pfDificilJustificacion(acum, año))*0.20 - dedTrim*(k+1) - pagado);
       }
       const acum = meses.slice(0, mes+1).reduce((s,v)=>s+v,0);
       // Casilla 02 del 130: en simplificada incluye el 5 % de difícil justificación del acumulado (ver pfDificilJustificacion).
-      return {modelo:'130', importe: Math.max(0, (acum - pfDificilJustificacion(acum))*0.20 - dedTrim*(q+1) - pagado)};
+      return {modelo:'130', importe: Math.max(0, (acum - pfDificilJustificacion(acum, año))*0.20 - dedTrim*(q+1) - pagado)};
     }
     // El 202 de abril se calcula sobre el último impuesto YA presentado (el de
     // N-2, porque el de N-1 no se presenta hasta julio); octubre y diciembre,
