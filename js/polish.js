@@ -423,3 +423,32 @@ function mostrarPuestaAPunto(){
   if(typeof navigate === 'function') navigate('home');
   renderPuestaAPunto();
 }
+
+/* ══ El scroll NO sube al repintar una pantalla (18/11, dueño: «cada vez que le doy a marchar plato la pantalla sube hasta arriba… revísalo en toda la app») ══
+   Cada acción que cambia algo vuelve a pintar la vista entera (innerHTML) y el navegador recorta el scroll. En vez de acordarse de envolver cada
+   acción con withScrollPreserved, TODA función `render…()` se envuelve aquí: si el scroll de #content bajaba y seguimos en la MISMA pantalla y no se ha
+   navegado (navigate cuenta), se devuelve a donde estaba. Navegar y cambiar de pestaña siguen subiendo (esos llaman a scrollContentToTop DESPUÉS). */
+(function(){
+  let seqNav = 0;
+  function envolver(){
+    if(typeof navigate === 'function' && !navigate.__gg){
+      const nav = navigate; const n2 = function(){ seqNav++; return nav.apply(this, arguments); }; n2.__gg = true; window.navigate = n2;
+    }
+    Object.getOwnPropertyNames(window).forEach(nombre => {
+      if(!/^render[A-Z]/.test(nombre) || /Modal|Html|Card|Fila|Row|Item|Chip|Tab|Selector|Panel$/.test(nombre)) return;
+      let f; try{ f = window[nombre]; }catch(e){ return; }
+      if(typeof f !== 'function' || f.__ggScroll) return;
+      const w = function(){
+        const c = document.getElementById('content');
+        const y = c ? c.scrollTop : 0, s = seqNav, vista = (document.querySelector('.view.active') || {}).id;
+        const r = f.apply(this, arguments);
+        try{
+          if(c && y > 0 && s === seqNav && vista && vista === (document.querySelector('.view.active') || {}).id && c.scrollTop < y - 2) c.scrollTop = y;
+        }catch(e){}
+        return r;
+      };
+      w.__ggScroll = true; try{ window[nombre] = w; }catch(e){}
+    });
+  }
+  window.addEventListener('load', () => setTimeout(envolver, 0));
+})();
