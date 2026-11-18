@@ -2490,11 +2490,39 @@ function ggAfinarBotones(raiz){
 function ggAfinarTodo(){
   GG_FINO_CONTENEDORES.forEach(sel => { const el = document.querySelector(sel); if(el) ggAfinarBotones(el); });
 }
+/* Un botón fino dibuja su caja en ::before con 28 px fijos: si su texto envuelve a dos líneas («Historial de Pedidos», «Ver todos 6» en 360 px)
+   el texto SOBRA por arriba y por abajo de la caja. Aquí se detecta (una línea de texto = un rectángulo de Range) y se marca `btn-multi`,
+   que hace que la caja ocupe el botón entero y le da aire. Se cuenta con Range, no con la altura del botón (el padding engañaría). */
+let ggMultiPend = false;
+function ggBotonesMulti(){
+  ggMultiPend = false;
+  const bs = [];
+  GG_FINO_CONTENEDORES.forEach(sel => { const el = document.querySelector(sel); if(el) el.querySelectorAll('.btn.btn-fino').forEach(b => bs.push(b)); });
+  // 1.º un botón que se sale de su contenedor (texto en una sola línea más ancho que la pantalla: «Sorpréndeme (idea rápida para hoy)»
+  //    a 320 px) pasa a envolver su texto; 2.º se cuentan las líneas con el ancho ya corregido.
+  const ancho = bs.map(b => {
+    if(!b.getClientRects().length || b.classList.contains('btn-icon')) return false;
+    const rb = b.getBoundingClientRect(), pr = b.parentElement ? b.parentElement.getBoundingClientRect() : null;
+    const limite = Math.min(window.innerWidth, pr ? pr.right : window.innerWidth);
+    return rb.right > limite + 0.5 && rb.width > 80;
+  });
+  bs.forEach((b, i) => { if(ancho[i]) b.classList.add('btn-ajusta'); });
+  const r = document.createRange();
+  const lineas = bs.map(b => {
+    if(!b.getClientRects().length || b.classList.contains('btn-icon') || b.classList.contains('btn-toque')) return 0;
+    r.selectNodeContents(b);
+    const tops = new Set(); [...r.getClientRects()].forEach(q => { if(q.width > 1) tops.add(Math.round(q.top / 4)); });
+    return tops.size;
+  });
+  bs.forEach((b, i) => b.classList.toggle('btn-multi', lineas[i] > 1));
+}
+function ggBotonesMultiProgramar(){ if(ggMultiPend) return; ggMultiPend = true; requestAnimationFrame(ggBotonesMulti); }
+if(typeof window !== 'undefined') window.addEventListener('resize', ggBotonesMultiProgramar);
 if(typeof document !== 'undefined' && typeof MutationObserver !== 'undefined'){
   const arrancar = () => {
     const vigilar = document.getElementById('content');
     const modal = document.getElementById('modal-box');
-    const obs = new MutationObserver(() => ggAfinarTodo());
+    const obs = new MutationObserver(() => { ggAfinarTodo(); ggBotonesMultiProgramar(); });
     // Solo cuelgan hijos nuevos: cambiar una clase no vuelve a disparar nada (no hay bucle).
     if(vigilar) obs.observe(vigilar, {childList:true, subtree:true});
     if(modal) obs.observe(modal, {childList:true, subtree:true});

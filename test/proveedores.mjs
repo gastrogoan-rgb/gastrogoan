@@ -114,23 +114,30 @@ for(const ancho of [1280, 360]){
     await page.evaluate(() => closeModal());
   });
 
-  await caso(`Artículos del proveedor: se abre desde la ficha y vuelve (${ancho}px)`, async () => {
+  await caso(`Artículos del proveedor: índice A–Z con su cuenta; sin letra no hay lista, con letra salen solo sus productos (${ancho}px)`, async () => {
     await page.evaluate(() => { openProviderInfoModal(1); openSupplierIngredientsModal(1); }); await esperar(400);
+    const ini = await page.evaluate(() => ({indice: document.querySelectorAll('#modal-box .pv-az-l').length, filas: document.querySelectorAll('#modal-box .pv-art').length, cuentas: [...document.querySelectorAll('#modal-box .pv-az-l:not(:disabled)')].map(b => b.textContent.trim()), alto: Math.min(...[...document.querySelectorAll('#modal-box .pv-az-l')].map(b => b.getBoundingClientRect().height))}));
+    assert.ok(ini.indice >= 26 && ini.filas === 0 && ini.cuentas.some(c => /^G\s*\d/.test(c)) && ini.alto >= 44, JSON.stringify(ini));
+    await page.evaluate(() => [...document.querySelectorAll('#modal-box .pv-az-l')].find(b => /^G/.test(b.textContent.trim())).click()); await esperar(300);
     assert.ok((await page.evaluate(() => document.querySelector('#modal-box .pv-art-n')?.textContent)) === 'Gambas');
+    assert.ok(await page.evaluate(() => document.getElementById('modal-box').scrollWidth <= document.getElementById('modal-box').clientWidth + 1), 'sin desbordar');
     await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Volver/.test(b.textContent)).click()); await esperar(400);
     assert.ok(await page.evaluate(() => !!document.querySelector('#modal-box .pv-ficha')), 'Volver debe dejar la ficha');
     await page.evaluate(() => closeModal());
   });
 
-  await caso(`Historial de pedidos: se ve dentro de la ficha, se despliega y se vuelve sin dar rodeos (${ancho}px)`, async () => {
+  await caso(`Historial de pedidos: la fila no se despliega; «N artículos» abre una ventana con todos los productos (${ancho}px)`, async () => {
     await page.evaluate(() => { openProviderInfoModal(1); }); await esperar(300);
     await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Historial/.test(b.textContent)).click()); await esperar(400);
-    const r = await page.evaluate(() => ({vista: document.querySelector('.view.active')?.id, filas: document.querySelectorAll('#modal-box .pv-ped').length,
-      resumen: document.querySelector('#modal-box .pv-ped-resumen')?.textContent || '', abierto: document.getElementById('modal-overlay').classList.contains('active')}));
+    const r = await page.evaluate(() => { const f = document.querySelector('#modal-box .pv-ped'); const b = f.querySelector('.pv-ped-n'); const cs = [...f.querySelectorAll('.pv-ped-f,.badge,.pv-ped-n,.pv-ped-t')].map(e => e.getBoundingClientRect());
+      let solapa = false; for(let i = 0; i < cs.length; i++) for(let j = i + 1; j < cs.length; j++){ const a = cs[i], c = cs[j]; if(a.left < c.right - 1 && c.left < a.right - 1 && a.top < c.bottom - 1 && c.top < a.bottom - 1) solapa = true; }
+      return {vista: document.querySelector('.view.active')?.id, filas: document.querySelectorAll('#modal-box .pv-ped').length, desplegables: document.querySelectorAll('#modal-box .pv-ped summary, #modal-box details').length, boton: !!b && /1 art/.test(b.textContent), cabe: b.scrollWidth <= b.clientWidth + 1, solapa, fechaLegible: !/\d{4}-\d{2}-\d{2}/.test(f.querySelector('.pv-ped-f').textContent), resumen: document.querySelector('#modal-box .pv-ped-resumen')?.textContent || '', abierto: document.getElementById('modal-overlay').classList.contains('active')}; });
     assert.equal(r.vista, 'view-proveedores', 'no sale de Proveedores'); assert.ok(r.abierto);
-    assert.equal(r.filas, 1); assert.ok(/1 pedido/.test(r.resumen), r.resumen);
-    await page.evaluate(() => document.querySelector('#modal-box .pv-ped summary').click()); await esperar(150);
-    assert.ok(await page.evaluate(() => document.querySelector('#modal-box .pv-ped').open && /Gambas/.test(document.querySelector('.pv-ped-lineas').textContent)), 'el pedido se despliega con sus líneas');
+    assert.equal(r.filas, 1); assert.equal(r.desplegables, 0); assert.ok(r.boton && r.cabe && !r.solapa && r.fechaLegible, JSON.stringify(r)); assert.ok(/1 pedido/.test(r.resumen), r.resumen);
+    await page.evaluate(() => document.querySelector('#modal-box .pv-ped-n').click()); await esperar(300);
+    assert.ok(await page.evaluate(() => /Gambas/.test(document.querySelector('.pv-ped-lineas').textContent)), 'la ventana lista los productos pedidos');
+    await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Volver/.test(b.textContent)).click()); await esperar(300);
+    assert.ok(await page.evaluate(() => !!document.querySelector('#modal-box .pv-ped')), 'Volver deja el historial');
     await page.evaluate(() => [...document.querySelectorAll('#modal-box button')].find(b => /Volver/.test(b.textContent)).click()); await esperar(300);
     assert.ok(await page.evaluate(() => !!document.querySelector('#modal-box .pv-ficha')), 'Volver deja la ficha');
     // Y el salto a la pantalla de Pedidos sigue existiendo, para quien lo quiera.

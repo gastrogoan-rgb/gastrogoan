@@ -2828,22 +2828,15 @@ button.kt-cn.recoge:hover{background:#E3EDE6;border-color:var(--olive)}
 .pv-ped-resumen{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--muted);margin:0 0 10px}
 .pv-peds{max-height:58vh;overflow-y:auto;border-top:1px solid var(--hair)}
 .pv-ped{border-bottom:1px solid var(--hair)}
-.pv-ped summary{display:flex;align-items:center;gap:10px;min-height:48px;cursor:pointer;list-style:none;padding:0 2px}
-.pv-ped summary::-webkit-details-marker{display:none}
-.pv-ped summary:hover{background:var(--brand-cream)}
-.pv-ped summary:focus-visible{outline:2px solid var(--olive);outline-offset:-2px}
-.pv-ped-f{font-family:var(--mono);font-size:13px;font-weight:600;flex:none}
-.pv-ped-n{flex:1;min-width:0;font-size:13px;color:var(--muted);text-align:right}
-.pv-ped-t{font-family:var(--mono);font-size:13px;font-weight:600;min-width:78px;text-align:right}
-.pv-ped-flecha{font-size:16px;color:var(--muted);transition:transform .18s;flex:none}
-.pv-ped[open] .pv-ped-flecha{transform:rotate(180deg)}
-.pv-ped[open] summary{background:var(--brand-cream)}
-.pv-ped-lineas{padding:4px 4px 10px 12px;background:var(--brand-cream)}
+.pv-ped{padding:6px 2px}
+.pv-ped-f{font-family:var(--mono);font-size:13px;font-weight:600}
+.pv-ped-n{font-size:13px;white-space:nowrap}
+.pv-ped-t{font-family:var(--mono);font-size:13px;font-weight:600;min-width:72px;text-align:right}
+.pv-ped-lineas{padding:4px 4px 10px 12px;background:var(--brand-cream);max-height:58vh;overflow-y:auto}
 .pv-ped-linea{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--hair)}
 .pv-ped-linea:last-child{border-bottom:0}
 .pv-ped-q{font-family:var(--mono);font-size:12px;white-space:nowrap}
 .pv-ped-rec{color:#8A5A0F}
-@media (max-width:600px){.pv-ped summary{flex-wrap:wrap;row-gap:0;padding:6px 2px}.pv-ped-n{flex:1 1 0;text-align:left}.pv-ped-flecha{margin-left:auto}}
 .pv-dias{display:flex;flex-wrap:wrap;gap:6px}
 /* Selector de periodo (30/10): ver ggPeriodoHtml en js/ui.js */
 .pe-sel{display:inline-flex;align-items:center;gap:4px}
@@ -7687,6 +7680,7 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
   #carta-editor-view > .toolbar > .btn.is-on,#menu-editor-view > .toolbar > .btn.is-on{order:2;margin-left:auto}
   #carta-editor-view > .toolbar > .oc-sucio,#menu-editor-view > .toolbar > .oc-sucio{order:3;flex:1 0 100%}
   #carta-editor-view .oc-nombre-in,#menu-editor-view .oc-nombre-in{order:4;flex:1 0 100%;min-width:0;max-width:none}
+}
 /* ═══ COCINA · AJUSTES DE MÓVIL DEL 18/11 (vídeo en un Android real, ~360 px) ═══════════════════════════════════════
    Cuatro causas comunes, no cuatro parches: (1) el «?» de ayuda ocupaba una fila entera, (2) el texto escrito en un buscador
    con lupa caía ENCIMA de la lupa, (3) una fila con SOLO un lápiz/«⋯» ocupaba una línea completa, (4) los textarea enseñaban el
@@ -7709,6 +7703,38 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .gg-lbl-ayuda > .gg-ayuda{margin:0 0 0 4px}
 .gg-lbl-ayuda > .gg-ayuda[open],.gg-lbl-ayuda > .gg-nota{flex:1 1 100%;margin:4px 0 0}
 
+/* Índice A–Z de «Artículos de este proveedor»: cada letra lleva debajo cuántos hay; las vacías se apagan. Casillas de 44 px. */
+.pv-az{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;margin:0 0 10px}
+.pv-az-l{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;padding:2px 0;border:1px solid var(--hair);background:#fff;color:var(--ink);cursor:pointer;border-radius:3px;line-height:1.1}
+.pv-az-l b{font-family:var(--mono);font-size:14px;font-weight:600}
+.pv-az-l small{font-family:var(--mono);font-size:11px;color:var(--muted);min-height:12px}
+.pv-az-l:hover:not(:disabled){border-color:var(--olive);background:var(--brand-cream)}
+.pv-az-l.is-on{background:var(--olive);border-color:var(--olive);color:#fff}
+.pv-az-l.is-on small{color:#fff}
+.pv-az-l:disabled{color:#B9B6AD;background:transparent;border-color:transparent;cursor:default}
+.pv-az-l:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+
+/* Pasos de protocolo: el texto es fijo y el ⋯ va en la misma fila. Al editar un paso entran el ✓ y el ⋯ a la vez: cuatro columnas, nunca el ⋯ solo
+   en una fila de debajo. */
+.lp-paso.editando{grid-template-columns:30px minmax(0,1fr) auto auto}
+.lp-paso-leer{margin:6px 0 0;font-size:15px;line-height:1.45;min-width:0;overflow-wrap:break-word;text-transform:none}
+
+/* Aviso con atajo («Tienes N pedidos pendientes… [Ver todos]»): el botón no se encoge (se salía por la derecha a 320 px); el texto cede. */
+.pe-aviso > .btn{flex:0 0 auto;white-space:nowrap;margin-left:auto}
+.pe-aviso > .ti{flex:0 0 auto;margin-top:2px}
+
+/* APPCC: la franja de cinco cifras es 3 + 2. La regla genérica «la última impar ocupa la fila» la dejaba en 3 + 1 (media celda) + 1. */
+@media (max-width:760px){
+  .st-resumen.lp-resumen > .st-cel:nth-child(n+4){grid-column:span 3}
+}
+
+/* BOTÓN FINO CUYO TEXTO ENVUELVE (ggBotonesMulti, js/ui.js): la caja de 28 px se quedaba corta y el texto salía por arriba y abajo
+   («Ver todos», «Historial de Pedidos»). Con `btn-multi` la caja ocupa el botón entero y el botón lleva aire arriba y abajo. */
+.btn.btn-fino.btn-multi{padding-top:9px !important;padding-bottom:9px !important;line-height:1.25;text-align:center;justify-content:center}
+.btn.btn-fino.btn-multi::before{top:0;bottom:0;height:auto;margin-top:0}
+/* Un botón más ancho que la pantalla envuelve su texto en vez de salirse por el borde (ggBotonesMulti le pone `btn-ajusta`). */
+.btn.btn-fino.btn-ajusta{max-width:100%;white-space:normal;text-align:center;justify-content:center}
+
 /* (2) BUSCADOR CON LUPA. La regla de móvil de la app pone `padding:… !important` a todo input y se comía el hueco de la lupa:
    el texto (y el placeholder) quedaban encima del icono. Contrato: el icono es el hijo anterior del campo y va en posición
    absoluta; el campo reserva 38 px a su izquierda en TODOS los anchos. Vale para Escandallo, Fichas, I+D, Oferta, el TPV y
@@ -7728,6 +7754,11 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
   .fi-paso:has(> .fi-paso-acc) > .fi-paso-c{padding-top:0}
   .fi-paso:has(> .fi-paso-acc) > .fi-paso-c > .fi-paso-leer{margin-top:0}
   .fi-paso:has(> .fi-paso-acc)::before{top:36px}
+  /* El lápiz y el ⋯ comparten caja (28 px de alto) y zona de toque de 44 px: antes el lápiz era un cuadrado de 44 y el ⋯ una caja baja. */
+  .fi-paso > .fi-paso-acc .fi-lapiz{position:relative;background:transparent;border:0;isolation:isolate}
+  .fi-paso > .fi-paso-acc .fi-lapiz::before{content:"";position:absolute;left:2px;right:2px;top:50%;height:28px;margin-top:-14px;z-index:-1;background:#fff;border:1px solid var(--hair);border-radius:3px}
+  .fi-paso > .fi-paso-acc .fi-lapiz:hover::before,.fi-paso > .fi-paso-acc .fi-lapiz:focus-visible::before{border-color:var(--olive)}
+  .fi-paso > .fi-paso-acc .fi-lapiz.is-on::before{background:var(--olive);border-color:var(--olive)}
   /* Un texto largo, aunque venga en MAYÚSCULAS y sin espacios, se lee con letra normal y nunca desborda. */
   .fi-paso-leer{font-size:15px;line-height:1.5;min-width:0;overflow-wrap:break-word}
   .fi-paso-c{min-width:0}
