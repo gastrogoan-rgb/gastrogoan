@@ -2779,6 +2779,16 @@ function ggRutaPagina(fn){
 }
 if(typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('popstate', ev => {
+    // «Atrás» con una ventana abierta (18/11): cierra la ventana en vez de sacar de la pantalla. Sin tocar openModal/closeModal (un
+    // intento anterior que añadía una entrada al historial por ventana rompía el aviso de «cambios sin guardar» en la ventana
+    // siguiente): el navegador ya retrocedió, así que se vuelve a poner la entrada de ESTA pantalla y se cierra la ventana por el
+    // mismo camino que tocar fuera, que pregunta si hay algo sin guardar.
+    const ovAtras = document.getElementById('modal-overlay');
+    if(ovAtras && ovAtras.classList.contains('active') && !document.getElementById('gg-salida-sobre')){
+      try{ history.pushState(ggRutaEstado(), '', '#' + ggRutaVista()); }catch(e){}
+      ovAtras.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+      return;
+    }
     const st = ev.state;
     const v = (st && st.gg) ? st.v : (location.hash || '').replace('#', '');
     if(!v || !document.getElementById('view-' + v)) return;

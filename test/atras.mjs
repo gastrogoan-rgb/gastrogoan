@@ -92,6 +92,25 @@ await caso('Dentro de una carpeta: Cocina → Stock → «atrás» vuelve a la c
   const r = await page.evaluate(() => ({v: document.querySelector('.view.active').id, f: currentFolder}));
   assert.deepEqual(r, {v: 'view-folder', f: 'cocina'});
 });
+await caso('«Atrás» con una ventana abierta la CIERRA y se queda en la misma pantalla; sin ventana, vuelve a la pantalla anterior', async () => {
+  const previa = await vista();
+  await page.evaluate(() => navigate('pedidos')); await w(300);
+  await page.evaluate(() => openModal('<div class="modal-header"><h3>Aviso</h3><button class="modal-close" onclick="closeModal()">x</button></div><p>Hola</p>')); await w(200);
+  assert.ok(await page.evaluate(() => document.getElementById('modal-overlay').classList.contains('active')));
+  await atras();
+  assert.ok(!(await page.evaluate(() => document.getElementById('modal-overlay').classList.contains('active'))), 'la ventana debería haberse cerrado');
+  assert.equal(await vista(), 'view-pedidos', 'no debía salir de la pantalla');
+  await atras(); assert.equal(await vista(), previa);
+});
+await caso('«Atrás» con cambios sin guardar en la ventana PREGUNTA y no cierra ni sale de la pantalla', async () => {
+  await page.evaluate(() => navigate('pedidos')); await w(300);
+  await page.evaluate(() => openClientModal()); await w(400);
+  await page.evaluate(() => { const i = document.querySelector('#client-name'); i.focus(); document.execCommand('insertText', false, 'Ana'); }); await w(200);
+  await page.evaluate(() => history.back()); await w(500);
+  assert.ok(await page.evaluate(() => !!document.getElementById('gg-salida-sobre')), 'debería preguntar por los cambios sin guardar');
+  assert.equal(await vista(), 'view-pedidos');
+  await page.evaluate(() => { document.getElementById('gg-salida-sobre')?.remove(); ggGDescartar(null); closeModal(); }); await w(200);
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await browser.close();
 console.log(fallos ? `\n❌ ${fallos} caso(s) fallaron` : '\n✅ todos los casos pasaron'); process.exit(fallos ? 1 : 0);
