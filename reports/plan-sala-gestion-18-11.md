@@ -24,9 +24,9 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [x] G6 (chip y etiquetas quitados; manual e IA sin «fiabilidad»; test/fiscal-motor.mjs lo vigila) Quitar «fiabilidad» de toda la app (sin romper el motor ni las pruebas).
 - [x] G7 (cifras en una columna a 360 px) Punto de equilibrio: maquetar sublime (cifras desbordadas en móvil).
 ## Web pública
-- [ ] W1 Flecha de cada opción de entrada centrada/bien.
-- [ ] W2 Menús: tarjeta con título y precio + «i» con lo que lleva.
-- [ ] W3 Carta: quitar «evitar alérgenos».
+- [x] W1 Flecha de cada opción de entrada centrada/bien.
+- [x] W2 Menús: tarjeta con título y precio + «i» con lo que lleva.
+- [x] W3 Carta: quitar «evitar alérgenos».
 ## Respuestas
 - Copo de nieve = «mesa fría» (servida hace rato sin cobrar).
 
