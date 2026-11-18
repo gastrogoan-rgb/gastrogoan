@@ -54,6 +54,7 @@ const NO_PULSAR = /logout|cerrarSesion|closeSession|clearAccessSession|setLang\(
 
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:'new', protocolTimeout: 240000});
 const page = await browser.newPage();
+page.on('dialog', d => d.dismiss().catch(() => {}));   // un alert/confirm nativo deja la página colgada y todo "agota el tiempo"
 await page.setViewport({width:ANCHO, height: MOVIL ? 800 : 900, isMobile: MOVIL, hasTouch: MOVIL, deviceScaleFactor: 1});
 await page.setRequestInterception(true);
 page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver|raw.githubusercontent|stripe/.test(r.url()) ? r.abort() : r.continue());
