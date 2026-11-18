@@ -4,11 +4,11 @@
 //  3) en la ficha técnica el lápiz y el «⋯» de cada paso van en la fila del número, no en una fila propia bajo el texto;
 //  4) NINGÚN textarea enseña el tirador de redimensionar y todos crecen con lo escrito, sin salirse por la derecha;
 //  5) un paso con texto largo, en mayúsculas y sin espacios, no desborda y se lee con letra normal.
-// Servir con `python3 -m http.server 8963` (SHOTS=<carpeta> guarda capturas).
+// Servir con `python3 -m http.server 8950` (SHOTS=<carpeta> guarda capturas).
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 
-const PUERTO = process.env.PUERTO || '8963';
+const PUERTO = process.env.PUERTO || '8950';
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', headless:'new', args:['--no-sandbox'], protocolTimeout:30000});
 let fallos = 0;
 async function caso(nombre, fn){
