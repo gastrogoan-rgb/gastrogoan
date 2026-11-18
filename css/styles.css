@@ -7494,3 +7494,52 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 @media (max-width:760px){
   .dp-k-s .badge{white-space:normal;overflow-wrap:break-word;max-width:100%}
 }
+
+/* ══ COMANDA DEL TPV · cabecera de PDA (18/11, pedido del dueño) ══
+   «Mesa 1 · 2 pers.» centrado; debajo, pequeños y juntos, Cambiar de mesa y Alérgenos. Nada de una fila por botón.
+   El camarero ya no se pinta aquí (se ve en la vista general de mesas). */
+.tp-or-cab{position:relative;justify-content:center !important;padding-right:44px !important;padding-left:44px !important}
+.tp-or-cab .tp-or-mesa{flex:1 1 auto !important;justify-content:center;text-align:center;font-size:22px}
+.tp-or-cab .modal-close{position:absolute;right:10px;top:50%;transform:translateY(-50%);margin:0 !important;order:0 !important}
+.tp-or-acciones-cab{justify-content:center;margin:2px 0 8px !important;gap:6px !important}
+.tp-or-peq{min-height:34px !important;padding:0 10px !important;font-size:12px !important;flex:0 0 auto !important;width:auto !important;white-space:nowrap}
+.tp-or-peq i{font-size:14px}
+/* La pestaña «Tomar nota» pequeña y «Pedido» grande: con muchos platos el botón de Pedido no se comprime */
+.tp-or-pest .tp-or-pestana:first-child{flex:0 1 30%}
+.tp-or-pest .tp-or-pestana:nth-child(2){flex:1 1 0}
+.tp-or-pest .tp-or-pestana:only-child{flex:1 1 0}
+.tp-or-pestana{min-width:0}
+.tp-or-pestana .tp-or-barra-n{flex:none}
+.tp-or-pest-tot{white-space:nowrap}
+@media (max-width:420px){
+  .tp-or-cab .tp-or-mesa{font-size:20px}
+  .tp-or-pest .tp-or-pestana:first-child{font-size:13px;flex:0 1 28%}
+  .tp-or-pest .tp-or-pestana:nth-child(2){font-size:14px;gap:4px}
+}
+/* Cada plato de la comanda en UNA línea: [− n +] nombre … precio ⋯ (18/11). Botones más pequeños en móvil. */
+.tp-linea{grid-template-columns:auto minmax(0,1fr) auto auto !important}
+.tp-linea > .tp-linea-cant,.tp-linea > .tp-linea-txt,.tp-linea > .tp-linea-pre,.tp-linea > .tp-linea-acc{grid-row:auto !important;grid-column:auto !important;justify-self:auto !important}
+.tp-linea-pre{text-align:right}
+.tp-linea-nom{font-size:14.5px}
+/* «Carta» y «Menú»: título que se ve (antes un gris suave que no se percibía) */
+.tp-com-seccion{margin:14px 0 6px;padding:5px 8px;background:var(--ink);color:#fff !important;font-size:12px !important;font-weight:700;border-radius:2px}
+.tp-com-seccion i{color:#fff}
+@media (max-width:760px){
+  .tp-q{width:30px !important;height:30px !important;font-size:14px}
+  .tp-q-n{min-width:20px !important;font-size:15px !important}
+  .tp-linea{gap:4px 6px !important;padding:5px 0}
+  .tp-linea-acc button,.tp-linea-acc .tp-ac{min-width:30px !important;width:30px !important;min-height:30px !important;height:30px !important;padding:0 !important}
+  .tp-linea-pre{font-size:13px}
+  .tp-tanda-bt{min-height:34px !important;padding:0 10px !important}
+  .tp-tanda-cab{flex-wrap:nowrap}
+  .tp-tanda-nom{min-width:0;font-size:13px}
+}
+/* Ack de cocina (✓ / reloj): pegado a la esquina izquierda de la cabecera, no suelto en la fila de botones */
+.tp-or-ack{position:absolute;left:10px;top:50%;transform:translateY(-50%)}
+.tp-or-ack .tp-ack-t{display:none}
+/* Aviso de alérgenos en cocina: discreto, se despliega con un toque */
+.tp-alg-det{margin:0 0 8px;font-size:12px;color:var(--red)}
+.tp-alg-det summary{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid #E3C8BF;border-radius:3px;background:var(--red-l,#F5EBE7);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;list-style:none}
+.tp-alg-det summary::-webkit-details-marker{display:none}
+.tp-alg-det[open] summary{margin-bottom:6px}
+.tp-alg-det > span{display:block;font-weight:600;line-height:1.35;overflow-wrap:break-word}

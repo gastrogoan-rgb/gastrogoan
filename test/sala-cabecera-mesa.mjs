@@ -28,7 +28,7 @@ async function caso(nombre, fn){
   catch(e){ fallos++; console.log('❌ ' + nombre + '\n   ⤷ ' + e.message); }
 }
 
-await caso('"Cambiar de mesa" es el PRIMER elemento de la cabecera del modal, antes del título', async () => {
+await caso('Cabecera de PDA (18/11): título centrado y, debajo, «Cambiar de mesa» y «Alérgenos» pequeños y en la MISMA fila', async () => {
   const r = await page.evaluate(()=>{
     ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
     Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true});
@@ -39,15 +39,22 @@ await caso('"Cambiar de mesa" es el PRIMER elemento de la cabecera del modal, an
     saveDB();
     navigate('tpv');
     openTableOrder(1, orderId);
-    const header = document.querySelector('.modal-header');
-    const hijos = [...header.children];
-    const idxCambiar = hijos.findIndex(el => el.textContent.includes('Cambiar de mesa'));
-    const idxTitulo = hijos.findIndex(el => el.tagName === 'H3');
-    return {idxCambiar, idxTitulo, textoBoton: hijos[idxCambiar]?.textContent.trim()};
+    const modal = document.querySelector('.modal');
+    const h3 = modal.querySelector('.modal-header h3');
+    const fila = modal.querySelector('.tp-or-acciones-cab');
+    const btns = [...fila.querySelectorAll('button')];
+    const cambiar = btns.find(b => b.textContent.includes('Cambiar de mesa'));
+    const alerg = btns.find(b => /lérgenos/.test(b.textContent));
+    const rc = cambiar.getBoundingClientRect(), ra = alerg.getBoundingClientRect(), rh = h3.getBoundingClientRect(), rm = modal.getBoundingClientRect();
+    return {mismaFila: Math.abs(rc.top - ra.top) < 4, debajoTitulo: rc.top >= rh.bottom - 2,
+      centrado: Math.abs((rh.left + rh.width/2) - (rm.left + rm.width/2)) < 40,
+      chipPropietario: /propietario/i.test(fila.textContent), alto: rc.height};
   });
-  assert.ok(r.idxCambiar !== -1, 'debe existir el botón "Cambiar de mesa": ' + JSON.stringify(r));
-  assert.ok(r.idxCambiar < r.idxTitulo, 'debe ir ANTES que el título de la mesa: ' + JSON.stringify(r));
-  assert.ok(r.textoBoton.includes('Cambiar de mesa'), 'debe llevar el texto visible, no solo el icono: ' + JSON.stringify(r));
+  assert.ok(r.mismaFila, 'Cambiar de mesa y Alérgenos en la misma fila: ' + JSON.stringify(r));
+  assert.ok(r.debajoTitulo, 'debajo del título: ' + JSON.stringify(r));
+  assert.ok(r.centrado, 'título centrado: ' + JSON.stringify(r));
+  assert.ok(!r.chipPropietario, 'sin chip «Propietario»: ' + JSON.stringify(r));
+  assert.ok(r.alto <= 40, 'botones pequeños: ' + JSON.stringify(r));
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async () => {

@@ -596,13 +596,15 @@ function renderTableOrderModal(orderId){
   // El camarero es quien ha iniciado sesión: la app ya lo sabe, así que sale BLOQUEADO (candado). Solo el propietario puede
   // reasignarlo (7/11); una mesa sin camarero sí se puede asignar.
   const camareroFijo = order.camareroId != null || order.openedByOwner;
-  const camareroBadge = (DB.employees.length || camareroFijo)
-    ? (camareroFijo
-      ? `<span class="badge tp-chip-fijo${isOwnerSession() ? ' badge-pulsable' : ''}" ${isOwnerSession() ? `role="button" tabindex="0" onclick="openSetCamareroModal(${order.id})" title="${escapeHtml(t('title.changeWaiter'))}"` : `title="${escapeHtml(gl({es:'Quien toma la nota: es quien ha iniciado sesión', ca:'Qui pren la nota: és qui ha iniciat sessió', en:'Who takes the order: the signed-in user'}))}"`}><i class="ti ti-lock"></i> ${camareroLabel}</span>`
-      : `<span class="badge badge-pulsable" role="button" tabindex="0" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>`)
+  // 18/11 (dueño): el camarero NO se enseña en la comanda —la app ya sabe quién toma la nota y se ve en la vista general de mesas—.
+  // Solo sale un botón cuando la mesa NO tiene camarero y hay que asignarlo.
+  const camareroBadge = (DB.employees.length && !camareroFijo)
+    ? `<button type="button" class="btn btn-sm btn-fino tp-or-peq" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</button>`
     : '';
-  const algTexto = tableAllergensTexto(order);
-  const allergensBadge = `<span class="badge badge-pulsable ${algTexto ? 'badge-red' : ''}" role="button" tabindex="0" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${algTexto ? escapeHtml(algTexto) : t('tpv.tableAllergens.add')}</span>`;
+  // Alérgenos: botón pequeño. Con alérgenos avisados se pone rojo y cuenta cuántos; el detalle está dentro (promptTableAllergens).
+  const algTexto = mesaAlergiasTexto(order);
+  const algN = algTexto ? algTexto.split(/[,/]/).map(s => s.trim()).filter(Boolean).length : 0;
+  const allergensBadge = `<button type="button" class="btn btn-sm btn-fino tp-or-peq${algTexto ? ' is-off' : ''}" onclick="promptTableAllergens(${order.id})" title="${escapeHtml(algTexto || t('tpv.tableAllergens.hint'))}"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.allergens') || 'Alérgenos')}${algN ? ` · ${algN}` : ''}</button>`;
   // Confirmación visible de que la comanda llegó de verdad a la pantalla de Cocina (recibidoEnCocinaAt).
   const hasFiredLines = (order.items || []).some(l => l.estado && !l.bebida);
   const kitchenAckBadge = hasFiredLines
@@ -667,11 +669,17 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
     <div class="modal-header tp-or-cab">
-      ${order.tableId ? `<button type="button" class="btn btn-sm btn-fino tp-or-cambiar" onclick="openTableTransferModal(${order.id})" title="${escapeHtml(t('title.transferTable'))}"><i class="ti ti-transfer"></i> ${escapeHtml(t('title.transferTable'))}</button>` : ''}
+      ${kitchenAckBadge ? `<span class="tp-or-ack">${kitchenAckBadge}</span>` : ''}
       <h3 class="tp-or-mesa">${escapeHtml(nombre)}${subtitulo ? ` <span class="tp-or-sub">${escapeHtml(subtitulo)}</span>` : ''}</h3>
-      ${order.tableId && !order.items.length ? `<button type="button" class="btn btn-sm btn-fino is-off tp-or-acc" onclick="releaseEmptyTable(${order.id})" title="${escapeHtml(t('btn.releaseTable'))}"><i class="ti ti-door-exit"></i> ${escapeHtml(t('btn.releaseTable'))}</button>` : ''}
-      ${(!order.tableId && (order.tipo === 'delivery' || order.tipo === 'takeaway') && order.status !== 'pagada') ? `<button type="button" class="owner-only btn btn-sm btn-fino is-off tp-or-acc" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${escapeHtml(t('title.cancelOrder'))}"><i class="ti ti-x"></i> ${escapeHtml(t('btn.cancelOrder'))}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()" aria-label="${escapeHtml(t('common.close'))}">&times;</button>
+    </div>
+    <div class="tp-or-chips tp-or-acciones-cab">
+      ${order.tableId ? `<button type="button" class="btn btn-sm btn-fino tp-or-peq tp-or-cambiar" onclick="openTableTransferModal(${order.id})" title="${escapeHtml(t('title.transferTable'))}"><i class="ti ti-transfer"></i> ${escapeHtml(t('title.transferTable'))}</button>` : ''}
+      ${allergensBadge}
+      ${camareroBadge}
+      ${order.tableId && !order.items.length ? `<button type="button" class="btn btn-sm btn-fino is-off tp-or-peq tp-or-acc" onclick="releaseEmptyTable(${order.id})" title="${escapeHtml(t('btn.releaseTable'))}"><i class="ti ti-door-exit"></i> ${escapeHtml(t('btn.releaseTable'))}</button>` : ''}
+      ${(!order.tableId && (order.tipo === 'delivery' || order.tipo === 'takeaway') && order.status !== 'pagada') ? `<button type="button" class="owner-only btn btn-sm btn-fino is-off tp-or-peq tp-or-acc" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${escapeHtml(t('title.cancelOrder'))}"><i class="ti ti-x"></i> ${escapeHtml(t('btn.cancelOrder'))}</button>` : ''}
+      ${reservaBadge}${pagadoBadge}
     </div>
     <div class="tp-or-vista" role="tablist" aria-label="${escapeHtml(gl({es:'Vista de la mesa', ca:'Vista de la taula', en:'Table view'}))}">
       <div class="tp-or-pest">
@@ -679,7 +687,6 @@ function renderTableOrderModal(orderId){
         <button type="button" role="tab" class="tp-or-pestana${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? ' is-on' : ''}" aria-selected="${panel === 'comanda' || (soloConsulta && panel !== 'reparto')}" onclick="setTpvOrderMobilePane('comanda', ${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(gl({es:'Pedido', ca:'Comanda', en:'Order'}))}${unidades ? ` <b class="tp-or-barra-n">${unidades}</b>` : ''} <span class="tp-or-pest-tot">${fmtMoney(total)}</span></button>
         ${(esRepartoPropio(order) || (order.tipo === 'takeaway' && order.origenOnline) || order.origenTelefono) ? `<button type="button" role="tab" class="tp-or-pestana tp-or-pest-reparto${panel === 'reparto' ? ' is-on' : ''}" aria-selected="${panel === 'reparto'}" onclick="setTpvOrderMobilePane('reparto', ${order.id})"><i class="ti ti-moped"></i> ${escapeHtml(order.tipo === 'delivery' ? gl({es:'Reparto', ca:'Repartiment', en:'Delivery'}) : gl({es:'Empaquetado', ca:'Empaquetat', en:'Packing'}))}${esRepartoPropio(order) ? repartoStatusBadgeHtml(order) : ''}</button>` : ''}
       </div>
-      <div class="tp-or-chips">${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</div>
     </div>
     ${renderOrderClientNotesHtml(order)}
     ${incidenciaFranjaHtml(order, 'sala')}

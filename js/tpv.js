@@ -1788,14 +1788,13 @@ function renderOrderClientNotesHtml(order){
   if(order.clientId){
     const c = DB.clients.find(x => x.id === order.clientId);
     if(c){
-      if(c.allergies) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${c.allergies}`});
+      // Las alergias del cliente NO se repiten aquí: ya las enseña el botón «Alérgenos» de la cabecera (18/11, el dueño: «está repetido»).
       if(c.notes) parts.push({icon:'ti-note', text: c.notes});
     }
   }
   // Alérgenos anotados a mano para esta mesa (independiente de si hay algún
   // cliente vinculado) — para comensales sueltos que no están dados de alta
   // como cliente pero sí han avisado de una alergia al sentarse.
-  if(tableAllergensTexto(order)) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${tableAllergensTexto(order)}`});
   if(!parts.length) return '';
   return `<div class="card" style="border:2px solid var(--ink);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
     ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--ink);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
@@ -1822,7 +1821,20 @@ function orderAllergyWarningHtml(order){
   (order.items||[]).forEach(l => lineAllergens(l).forEach(a => dishAllergenSet.add(allergenLabel(a))));
   if(dishAllergenSet.size) texts.push(Array.from(dishAllergenSet).join(', '));
   if(!texts.length) return '';
-  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:var(--red,#8A4A3B);background:var(--red-l,#F5EBE7);border:1px solid #E3C8BF;border-left:3px solid var(--red,#8A4A3B);border-radius:3px;padding:7px 9px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
+  // Discreto (18/11): un botón pequeño que despliega el texto, no un bloque rojo gigante en cada ticket.
+  return `<details class="tp-alg-det"><summary><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('label.allergensPresent'))}</summary><span>${escapeHtml(texts.join(' / '))}</span></details>`;
+}
+
+// Alergias de la mesa + las del cliente enlazado, para el botón «Alérgenos» de la cabecera.
+function mesaAlergiasTexto(order){
+  const out = [];
+  if(order.clientId){
+    const c = (DB.clients || []).find(x => x.id === order.clientId);
+    if(c && c.allergies) out.push(c.allergies);
+  }
+  const m = tableAllergensTexto(order);
+  if(m) out.push(m);
+  return out.join(' / ');
 }
 
 
