@@ -7552,8 +7552,8 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .tp-plato-pre{flex:none;font-family:var(--mono);font-weight:600}
 .tp-linea-mods{display:flex;flex-direction:column;gap:1px;margin-top:2px;font-size:12px;color:var(--muted);font-weight:400}
 .tp-plato-sec{display:none}
-.tp-plato-acc{flex-direction:row !important;align-items:stretch}
-.tp-plato-acc button + button{border-top:0 !important;border-left:1px solid var(--hair)}
+@media (max-width:760px){.tp-plato-acc{flex-direction:row !important;align-items:stretch}.tp-plato-acc button + button{border-top:0 !important;border-left:1px solid var(--hair)}}
+@media (min-width:761px){.tp-platos{grid-template-columns:repeat(auto-fill,minmax(250px,1fr)) !important}.tp-plato-nom{overflow-wrap:break-word;word-break:normal}}
 .tp-plato-n{position:static !important;flex:none;order:-1;margin-right:2px}
 .tp-plato-main{position:relative}
 @media (max-width:760px){
