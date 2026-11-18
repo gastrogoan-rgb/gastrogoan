@@ -2691,6 +2691,9 @@ function ggGPendientes(incluirModal){
   for(const el of [...GG_G_CAMPOS]){
     if(!el.isConnected){ GG_G_CAMPOS.delete(el); continue; }
     if(!ggGVigilable(el)) continue;
+    // Los editores de carta y menú tienen su propio control (cartaBase/menuBase). Si además los vigilara la regla común, un campo tocado en un
+    // editor YA CERRADO (oculto) volvía a avisar desde el listado y «Guardar y salir» pulsaba un guardado sin carta («Ponle un nombre a la carta»).
+    if(el.closest && el.closest('#carta-editor-view, #menu-editor-view')) continue;
     if(ggGValor(el) === GG_G_ORIGEN.get(el)) continue;
     const c = ggGContexto(el);
     if(!c) continue;

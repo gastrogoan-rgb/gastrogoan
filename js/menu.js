@@ -244,13 +244,15 @@ function horaCorta(h){
 function renderItemScheduleHtml(item){
   const horario = migrateItemHorario(item);
   if(horarioNuncaActivo(horario)) return `<span class="horsem-vacio"><i class="ti ti-calendar-off"></i> ${t('empty.noActiveDays')}</span>`;
-  return `<div class="horsem" role="list">${horario.map((d, i) => {
-    const on = d.activo !== false;
-    const fr = on ? (d.franjas||[]).filter(f => f.desde && f.hasta) : [];
-    const horas = !on ? '<span>—</span>'
-      : (fr.length ? fr.map(f => `<span class="hs" title="${escapeHtml(f.desde)}–${escapeHtml(f.hasta)}"><span>${escapeHtml(horaCorta(f.desde))}</span><span>${escapeHtml(horaCorta(f.hasta))}</span></span>`).join('')
-        : `<span class="todo">${gl({es:'Todo', ca:'Tot', en:'All'})}</span>`);
-    return `<div class="horsem-d${on ? '' : ' off'}" role="listitem" title="${escapeHtml(weekDayFull(i))}"><b>${escapeHtml(weekDayShort(i))}</b>${horas}</div>`;
+  // 18/11 (dueño: «se sigue viendo mal»): siete casillas diminutas con dos horas cada una se montaban en 360 px. Ahora se agrupan los días
+  // CONSECUTIVOS con las mismas horas: una línea por grupo («Lun–Vie · 12:30–16:00», «Sáb–Dom · Cerrado»).
+  const clave = d => d.activo === false ? 'off' : ((d.franjas||[]).filter(f => f.desde && f.hasta).map(f => horaCorta(f.desde) + '–' + horaCorta(f.hasta)).join(' · ') || 'todo');
+  const grupos = [];
+  horario.forEach((d, i) => { const k = clave(d); const u = grupos[grupos.length - 1]; if(u && u.k === k) u.fin = i; else grupos.push({k, ini: i, fin: i}); });
+  return `<div class="horsem" role="list">${grupos.map(g => {
+    const dias = g.ini === g.fin ? weekDayShort(g.ini) : (g.fin === g.ini + 1 ? weekDayShort(g.ini) + ', ' + weekDayShort(g.fin) : weekDayShort(g.ini) + '–' + weekDayShort(g.fin));
+    const txt = g.k === 'off' ? gl({es:'Cerrado', ca:'Tancat', en:'Closed'}) : g.k === 'todo' ? gl({es:'Todo el día', ca:'Tot el dia', en:'All day'}) : g.k;
+    return `<div class="horsem-g${g.k === 'off' ? ' off' : ''}" role="listitem"><b>${escapeHtml(dias)}</b><span>${escapeHtml(txt)}</span></div>`;
   }).join('')}</div>`;
 }
 // Versión en texto plano (sin HTML) del horario, para el resumen que se ve

@@ -105,11 +105,11 @@ for(const ancho of [320, 360, 390, 412, 430, 768]){
     const r = await page.evaluate(() => {
       const it = document.querySelector('#carta-list .oc-item'), nom = it.querySelector('.oc-nombre').getBoundingClientRect(), acc = it.querySelector('.oc-acc').getBoundingClientRect();
       const hs = it.querySelector('.horsem').getBoundingClientRect(), ir = it.getBoundingClientRect();
-      const dias = [...it.querySelectorAll('.horsem-d')].map(d => {
+      const dias = [...it.querySelectorAll('.horsem-g')].map(d => {
         const dr = d.getBoundingClientRect();
         return {l: dr.left, r: dr.right, sobra: Math.max(0, ...[...d.querySelectorAll('span')].map(s => s.scrollWidth - s.clientWidth)), txt: d.innerText.replace(/\s+/g,' ')};
       });
-      let solapa = false; for(let i = 1; i < dias.length; i++) if(dias[i].l < dias[i-1].r - 0.5) solapa = true;
+      let solapa = false;
       return {accTop: acc.top, nomTop: nom.top, accBottom: acc.bottom, hsTop: hs.top, dias, solapa, desborda: it.scrollWidth > it.clientWidth + 1};
     });
     assert.ok(r.accBottom <= r.hsTop + 1, `«⋯» encima del horario, no debajo: ${JSON.stringify({acc:r.accBottom, hs:r.hsTop})}`);

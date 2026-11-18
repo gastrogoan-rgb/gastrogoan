@@ -7659,10 +7659,12 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .tp-linea.marchada{opacity:.8}
 /* Oferta · lista de menús (18/11): el «⋯» arriba a la derecha, el nombre entero, y «Disponible» / «Sin límite» debajo, pequeños */
 @media (max-width:1100px){
-  .oc-item-menu{position:relative;grid-template-columns:minmax(0,1fr) !important;padding-right:56px !important}
+  .oc-item-menu{position:relative;grid-template-columns:minmax(0,1fr) !important}
+  .oc-item-menu .oc-quien{padding-right:46px}
   .oc-item-menu .oc-acc{grid-column:1 / -1 !important;grid-row:auto !important;justify-content:flex-start !important;gap:6px !important}
   .oc-item-menu .oc-acc > .mn-btn{position:absolute;top:10px;right:10px}
-  .oc-item-menu .oc-acc .btn,.oc-item-menu .oc-acc button:not(.mn-btn){min-height:36px !important;padding:0 10px !important;font-size:12.5px !important;white-space:nowrap}
+  .oc-item-menu .oc-acc .btn,.oc-item-menu .oc-acc button:not(.mn-btn){min-height:36px !important;padding:0 9px !important;font-size:12px !important;white-space:nowrap;flex:0 1 auto}
+  .oc-item-menu .oc-acc{flex-wrap:nowrap !important}
   .oc-item-menu .oc-nombre{overflow-wrap:normal;word-break:normal}
 }
 /* APPCC › Alérgenos por secciones (18/11) */
@@ -7829,3 +7831,16 @@ textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:
   .oc-barra .oc-barra-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .oc-barra .oc-barra-nuevo{min-width:44px;justify-content:center;padding-left:8px;padding-right:8px}
 }
+
+/* Horario de cartas y menús en la lista (18/11): una línea por grupo de días con las mismas horas. */
+.horsem{display:flex;flex-wrap:wrap;gap:6px 18px;min-width:0}
+.horsem-g{display:flex;align-items:baseline;gap:8px;min-width:0}
+.horsem-g b{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.horsem-g span{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap}
+.horsem-g.off span,.horsem-g.off b{color:var(--muted)}
+
+/* Secciones de la carta en «Tomar nota» (18/11): una fila por sección, como los platos; sin «N productos». */
+.tp-secciones,.modal .tp-secciones{grid-template-columns:minmax(0,1fr) !important;gap:6px !important}
+@media (min-width:761px){.tp-secciones{grid-template-columns:minmax(0,1fr) !important}}
+.tp-seccion{min-height:46px !important;padding:8px 12px !important;flex-direction:row !important;justify-content:space-between !important;align-items:center !important;text-align:left !important}
+.tp-seccion-nom{flex:1;min-width:0;font-size:15px !important;font-weight:600 !important;overflow-wrap:break-word}

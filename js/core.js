@@ -6609,6 +6609,20 @@ function hayLapida(key, clave){
    enviar con lo último enviado: lo que estaba y ya no está, se borró aquí.
    Y lo que está presente pierde su lápida, que es lo que permite volver a
    crear una carpeta con un nombre que se borró hace meses. */
+/* Las claves de lo que había en la última foto subida. Se calcula UNA vez por foto: antes se hacía JSON.parse de cada lista en
+   cada subida (con fichas que llevan fotos de varios MB, ~0,1 s en un PC y varias veces eso en un móvil, justo al cobrar). */
+const lapidaPreviasCache = new Map();
+function clavesPreviasLapida(cacheKey, snapStr, sacar){
+  const c = lapidaPreviasCache.get(cacheKey);
+  if(c && c.s === snapStr) return c.claves;
+  let claves = null;
+  try{
+    const arr = sacar(JSON.parse(snapStr));
+    if(Array.isArray(arr)) claves = arr.map(claveDeElemento).filter(x => x != null);
+  }catch(e){ claves = null; }
+  lapidaPreviasCache.set(cacheKey, {s: snapStr, claves});
+  return claves;
+}
 function anotarLapidas(){
   if(!lastSyncedSnapshot) return false;
   const mapa = lapidasLeer() || {};
@@ -6618,12 +6632,10 @@ function anotarLapidas(){
     const ahora = new Set(DB[key].map(claveDeElemento).filter(c => c != null));
     ahora.forEach(c => { if(mapa[key + ':' + c] != null){ delete mapa[key + ':' + c]; cambio = true; } });
     if(!lastSyncedSnapshot[key]) return;
-    let antes;
-    try{ antes = JSON.parse(lastSyncedSnapshot[key]); }catch(e){ return; }
-    if(!Array.isArray(antes)) return;
-    antes.forEach(x => {
-      const c = claveDeElemento(x);
-      if(c != null && !ahora.has(c) && mapa[key + ':' + c] == null){
+    const antes = clavesPreviasLapida(key, lastSyncedSnapshot[key], v => v);
+    if(!antes) return;
+    antes.forEach(c => {
+      if(!ahora.has(c) && mapa[key + ':' + c] == null){
         mapa[key + ':' + c] = Date.now();
         cambio = true;
       }
@@ -6634,19 +6646,16 @@ function anotarLapidas(){
   // ninguna clave de nivel superior, que nunca lo llevan.
   Object.keys(NESTED_ARRAYS_CON_LAPIDA).forEach(parent => {
     if(!DB[parent] || typeof DB[parent] !== 'object') return;
-    let antesPadre;
-    if(lastSyncedSnapshot[parent]){
-      try{ antesPadre = JSON.parse(lastSyncedSnapshot[parent]); }catch(e){ antesPadre = null; }
-    }
     NESTED_ARRAYS_CON_LAPIDA[parent].forEach(nestedKey => {
       const key = parent + '.' + nestedKey;
       if(!Array.isArray(DB[parent][nestedKey])) return;
       const ahora = new Set(DB[parent][nestedKey].map(claveDeElemento).filter(c => c != null));
       ahora.forEach(c => { if(mapa[key + ':' + c] != null){ delete mapa[key + ':' + c]; cambio = true; } });
-      if(!antesPadre || !Array.isArray(antesPadre[nestedKey])) return;
-      antesPadre[nestedKey].forEach(x => {
-        const c = claveDeElemento(x);
-        if(c != null && !ahora.has(c) && mapa[key + ':' + c] == null){
+      if(!lastSyncedSnapshot[parent]) return;
+      const antesN = clavesPreviasLapida(key, lastSyncedSnapshot[parent], p => p && p[nestedKey]);
+      if(!antesN) return;
+      antesN.forEach(c => {
+        if(!ahora.has(c) && mapa[key + ':' + c] == null){
           mapa[key + ':' + c] = Date.now();
           cambio = true;
         }

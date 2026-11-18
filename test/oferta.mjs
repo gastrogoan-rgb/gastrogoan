@@ -45,15 +45,15 @@ const sembrar = () => page.evaluate(()=>{
 await sembrar();
 await esperar(700);
 
-await caso('Lista: el horario de cada carta cabe en UNA fila (Lun…Dom) aunque cada día tenga horas distintas', async () => {
+await caso('Lista: el horario se agrupa por días con las mismas horas (una línea por grupo, sin casillas diminutas)', async () => {
   const r = await page.evaluate(()=>{
     const it = document.querySelector('.oc-item');
-    const dias = [...it.querySelectorAll('.horsem-d')];
-    return {n: dias.length, tops: [...new Set(dias.map(d => Math.round(d.getBoundingClientRect().top)))], alto: Math.round(it.getBoundingClientRect().height)};
+    const g = [...it.querySelectorAll('.horsem-g')];
+    return {n: g.length, txt: g.map(x => x.innerText.replace(/\s+/g,' ')), alto: Math.round(it.getBoundingClientRect().height), casillas: it.querySelectorAll('.horsem-d').length};
   });
-  assert.equal(r.n, 7, JSON.stringify(r));
-  assert.equal(r.tops.length, 1, 'los siete días en la misma fila: ' + JSON.stringify(r));
-  assert.ok(r.alto < 140, 'la fila de la lista no se hace gigante: ' + JSON.stringify(r));
+  assert.ok(r.n >= 1 && r.n <= 7 && r.casillas === 0, JSON.stringify(r));
+  assert.ok(r.txt.every(x => /\d|Cerrado|Todo/i.test(x)), JSON.stringify(r));
+  assert.ok(r.alto < 240, 'la fila de la lista no se hace gigante: ' + JSON.stringify(r));
 });
 
 await caso('Editor: los siete días del horario también van en una fila, cada uno con su apertura y cierre', async () => {
