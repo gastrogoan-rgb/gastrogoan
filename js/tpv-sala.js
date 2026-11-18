@@ -412,6 +412,18 @@ function renderMenuSelectorInline(order, menu){
     </div>`;
 }
 
+
+// Una línea de menú que llega de la web viene como «Menú (Grupo: opción, Grupo: opción)». Se pinta el menú y, debajo, las opciones sin repetir
+// el nombre del grupo cuando coincide con el del menú («Plato único (Plato único: Rodaballo…)» salía con el nombre dos veces, 18/11).
+function tpvLineaNombreHtml(line){
+  const nombre = String(line.name || '');
+  const m = nombre.match(/^(.*?) \((.*: .*)\)$/);
+  if(!m) return `<span class="tp-linea-nom">${escapeHtml(nombre)}</span>`;
+  const menu = m[1];
+  const opciones = m[2].split(/, (?=[^,:]+: )/).map(o => { const i = o.indexOf(': '); const grupo = o.slice(0, i), opt = o.slice(i + 2); return grupo.trim().toLowerCase() === menu.trim().toLowerCase() ? opt : `${grupo}: ${opt}`; });
+  return `<span class="tp-linea-nom">${escapeHtml(menu)}</span><small class="tp-linea-mods">${opciones.map(o => `<span>${escapeHtml(o)}</span>`).join('')}</small>`;
+}
+
 // Las insignias de una línea (promoción, pagado online, precio cambiado, plato que ya no está).
 function tpvLineaInsigniasHtml(line){
   return `${line.promoId ? ` <span class="badge badge-green txt-xs"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green txt-xs" title="${escapeHtml((line.pagadorNombre ? t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre) : t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber txt-xs" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--ink)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}`;
@@ -478,7 +490,7 @@ function renderTandaGroupCard(order, g, isMenu, ocultarNombreMenuEnCabecera){
         <b class="tp-q-n" aria-label="${escapeHtml(gl({es:'Cantidad', ca:'Quantitat', en:'Quantity'}))}">${line.qty}</b>
         <button type="button" class="tp-q" aria-label="${escapeHtml(gl({es:'Añadir uno', ca:'Afegir-ne un', en:'Add one'}))}" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>`}
       </div>
-      <div class="tp-linea-txt"><span class="tp-linea-nom">${escapeHtml(line.name)}</span>${lineStatus}${menuBadge}${tpvLineaInsigniasHtml(line)}${nota}</div>
+      <div class="tp-linea-txt">${tpvLineaNombreHtml(line)}${lineStatus}${menuBadge}${tpvLineaInsigniasHtml(line)}${nota}</div>
       <div class="tp-linea-pre">${fmtMoney(line.price * line.qty)}</div>
       ${soloLectura ? '' : `<div class="tp-linea-acc">${ggMenuAcciones([
         {icono:'ti-note', texto:t('common.notes'), fn:`openLineNotesModal(${order.id}, ${idx})`},
@@ -579,6 +591,37 @@ function renderOrderComandaPanel(order){
   }).join('');
 }
 
+
+// Elegir carta/menú desde el desplegable.
+function tpvElegirCarta(id, orderId){
+  tpvSelectedCartaId = Number(id) || id; tpvSelectedSeccionId = null; tpvPlatoBusca = '';
+  renderTableOrderModal(orderId);
+}
+
+/* «Tu selección» (18/11, pedido del dueño: «me mola el estilo de Take Away y Delivery: eliges libremente y debajo te sale un desplegable con
+   tu selección»). Pegada abajo en Tomar nota: una barra con unidades y total que se abre con − n + por línea, para ajustar sin cambiar de pestaña. */
+let tpvBandejaAbierta = false;
+function tpvBandejaToggle(orderId){ tpvBandejaAbierta = !tpvBandejaAbierta; renderTableOrderModal(orderId); }
+function tpvBandejaHtml(order){
+  const items = order.items || [];
+  if(!items.length) return '';
+  const uds = items.reduce((s, l) => s + l.qty, 0);
+  const lineas = tpvBandejaAbierta ? `<div class="tp-bj-lista">${items.map((l, idx) => `
+      <div class="tp-bj-l">
+        <button type="button" class="tp-q" aria-label="${escapeHtml(gl({es:'Quitar uno', ca:'Treure\'n un', en:'Remove one'}))}" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+        <b class="tp-q-n">${l.qty}</b>
+        <button type="button" class="tp-q" aria-label="${escapeHtml(gl({es:'Añadir uno', ca:'Afegir-ne un', en:'Add one'}))}" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+        <span class="tp-bj-nom">${escapeHtml(l.name)}</span>
+        <span class="tp-bj-pre">${fmtMoney(l.price * l.qty)}</span>
+      </div>`).join('')}</div>` : '';
+  return `<div class="tp-bandeja${tpvBandejaAbierta ? ' abierta' : ''}">
+    <button type="button" class="tp-bj-cab" aria-expanded="${tpvBandejaAbierta}" onclick="tpvBandejaToggle(${order.id})">
+      <span><i class="ti ti-shopping-cart"></i> ${escapeHtml(gl({es:'Tu selección', ca:'La teva selecció', en:'Your selection'}))} <b>${uds}</b></span>
+      <span class="tp-bj-tot">${fmtMoney(orderTotal(order))} <i class="ti ti-chevron-${tpvBandejaAbierta ? 'down' : 'up'}"></i></span>
+    </button>${lineas}
+  </div>`;
+}
+
 /* La pantalla de tomar nota: cabecera corta, carta a un lado y comanda al otro (en móvil, una barra con el total que abre la comanda). */
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -632,8 +675,14 @@ function renderTableOrderModal(orderId){
     tpvSelectedCartaId = allCartas.length ? allCartas[0].id : (activeMenus.length ? activeMenus[0].id : null);
   }
   const pestana = (id, ic, txt) => `<button type="button" class="tp-or-tab${tpvSelectedCartaId === id ? ' is-on' : ''}" aria-pressed="${tpvSelectedCartaId === id}" onclick="tpvSelectedCartaId=${id};tpvSelectedSeccionId=null;tpvPlatoBusca='';renderTableOrderModal(${order.id})"><i class="ti ${ic}"></i> ${escapeHtml(txt)}</button>`;
-  const cartaTabs = allCartas.map(c => pestana(c.id, isBebidaCarta(c) ? 'ti-glass-cocktail' : 'ti-tools-kitchen-2', tItem(c))).join('');
-  const menuTabs = activeMenus.map(m => pestana(m.id, 'ti-clipboard-list', tItem(m))).join('');
+  // 18/11 (dueño): las cartas y menús, en UN desplegable (antes una tira de botones que se comía media pantalla en móvil).
+  const opcionCarta = (id, txt) => `<option value="${id}"${tpvSelectedCartaId === id ? ' selected' : ''}>${escapeHtml(txt)}</option>`;
+  const cartaTabs = allCartas.length + activeMenus.length > 1
+    ? `<div class="tp-or-selcarta"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i><select id="tp-sel-carta" aria-label="${escapeHtml(gl({es:'Carta o menú', ca:'Carta o menú', en:'Menu or set menu'}))}" onchange="tpvElegirCarta(this.value, ${order.id})">`
+      + (allCartas.length ? `<optgroup label="${escapeHtml(gl({es:'Cartas', ca:'Cartes', en:'Menus'}))}">${allCartas.map(c => opcionCarta(c.id, tItem(c))).join('')}</optgroup>` : '')
+      + (activeMenus.length ? `<optgroup label="${escapeHtml(gl({es:'Menús', ca:'Menús', en:'Set menus'}))}">${activeMenus.map(m => opcionCarta(m.id, tItem(m))).join('')}</optgroup>` : '')
+      + `</select></div>` : '';
+  const menuTabs = '';
 
   /* ⚠️ UN PEDIDO QUE HIZO EL CLIENTE POR LA WEB NO SE TOCA: el cliente ya pidió —y muchas veces ya PAGÓ— una lista
      concreta; si alguien añade algo, el total deja de cuadrar con lo cobrado y nadie se entera hasta el cierre de caja.
@@ -700,6 +749,7 @@ function renderTableOrderModal(orderId){
       <section class="tp-or-col tp-or-carta ${panel === 'carta' && !soloConsulta ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('tpv.section.carta'))}">
         ${soloConsulta || (!cartaTabs && !menuTabs) ? '' : `<div class="tp-or-tabs" role="group">${cartaTabs}${menuTabs}</div>`}
         ${selectorHtml}
+        ${soloConsulta ? '' : tpvBandejaHtml(order)}
       </section>
       <section class="tp-or-col tp-or-comanda ${(panel === 'comanda' || (soloConsulta && panel !== 'reparto')) ? 'tpv-pane-active' : ''}" aria-label="${escapeHtml(t('label.order'))}">
         ${comandaHtml}

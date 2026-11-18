@@ -157,7 +157,7 @@ await caso('Tomar nota: tocar un plato lo añade, la ficha dice cuántos lleva (
     closeModal(); openTableOrder(1, 900); await esp(400);
     out.abreEnPedido = document.querySelector('.tp-or-pestana.is-on')?.textContent.includes('Pedido');   // mesa con pedido ya empezado: abre en «Pedido»
     document.querySelectorAll('.tp-or-pestana')[0].click(); await esp(200);        // «Tomar nota»
-    document.querySelector('.tp-or-tab:not(.is-on)').click(); await esp(200);   // carta del día
+    {const sc=document.getElementById('tp-sel-carta'); sc.selectedIndex = sc.selectedIndex === 0 ? 1 : 0; sc.dispatchEvent(new Event('change', {bubbles:true}));} await esp(200);   // carta del día
     document.querySelectorAll('.tp-seccion')[1].click(); await esp(200);        // Principales: segunda tanda, no sale sola a cocina
     const p = document.querySelector('.tp-plato-main'); p.click(); await esp(200);
     document.querySelector('.tp-plato-main').click(); await esp(200);
@@ -184,7 +184,7 @@ await caso('El buscador de platos encuentra de cualquier carpeta y respeta lo qu
   const r = await page.evaluate(async () => {
     const esp = ms => new Promise(r => setTimeout(r, ms));
     openTableOrder(1, 900); await esp(400);
-    document.querySelector('.tp-or-tab:not(.is-on)').click(); await esp(200);
+    {const sc=document.getElementById('tp-sel-carta'); sc.selectedIndex = sc.selectedIndex === 0 ? 1 : 0; sc.dispatchEvent(new Event('change', {bubbles:true}));} await esp(200);
     const ent = document.getElementById('tp-plato-busca'); ent.value = 'croq'; ent.dispatchEvent(new Event('input', {bubbles:true})); await esp(200);
     const out = {hallados: [...document.querySelectorAll('.tp-plato-nom')].map(n => n.textContent.trim()), conN: document.querySelector('.tp-plato.tiene .tp-plato-n')?.textContent.trim()};
     ent.value = 'zzzz'; ent.dispatchEvent(new Event('input', {bubbles:true})); await esp(200);
@@ -222,7 +222,7 @@ await caso('La cabecera de la comanda conserva «Cambiar de mesa» primero y a l
     const esp = ms => new Promise(r => setTimeout(r, ms));
     openTableOrder(2, 901); await esp(300);
     const h = document.querySelector('.modal-header'); const hs = [...h.children];
-    const out = {primero: hs[0].textContent.trim(), h3: hs.findIndex(e => e.tagName === 'H3')};
+    const out = {primero: document.querySelector('.tp-or-acciones-cab button').textContent.trim(), h3: hs.filter(e => e.tagName === 'H3').length};
     document.querySelector('.tp-or-cobrar').click(); await esp(300);
     out.cobro = !!document.querySelector('.modal-footer .btn-primary') && /Cobrar/.test(document.querySelector('.modal-header h3').textContent);
     return out;

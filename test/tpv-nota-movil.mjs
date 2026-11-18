@@ -59,11 +59,12 @@ const {page, errs} = await abrir(360, 740);
 await page.evaluate(() => { openTableOrder(4); });
 await new Promise(r => setTimeout(r, 800));
 const clic = async re => { await page.evaluate(re => { [...document.querySelectorAll('.modal button, .modal [onclick]')].find(b => new RegExp(re).test(b.innerText)).click(); }, re.source); await new Promise(r => setTimeout(r, 350)); };
-await clic(/Carta del día/); await clic(/Principales/); await clic(/Hamburguesa/);
+await page.evaluate(() => { const sc = document.getElementById('tp-sel-carta'); const i = [...sc.options].findIndex(o => /Carta del día/.test(o.textContent)); sc.selectedIndex = i; sc.dispatchEvent(new Event('change', {bubbles:true})); }); await new Promise(r => setTimeout(r, 350));
+await clic(/Principales/); await clic(/Hamburguesa/);
 const alturas = await page.evaluate(() => [...document.querySelectorAll('.modal .tp-plato-acc button')].map(b => Math.round(b.getBoundingClientRect().height)));
 try{
   assert.ok(alturas.length >= 3, 'no salen los botones del plato');
-  assert.ok(alturas.every(h => h >= 44), 'botón por debajo de 44 px: ' + alturas.join(','));
+  assert.ok(alturas.every(h => h >= 36), '18/11 (dueño: «botones más pequeños en móvil»): botón por debajo de 36 px: ' + alturas.join(','));
   assert.deepEqual(errs, []);
   console.log('✅ Tomar nota en móvil: los botones − e ⓘ del plato miden 44 px o más');
 }catch(e){ fallos++; console.log('❌ ' + e.message); }

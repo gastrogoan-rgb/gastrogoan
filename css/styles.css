@@ -7544,6 +7544,41 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 /* Ack de cocina (✓ / reloj): pegado a la esquina izquierda de la cabecera, no suelto en la fila de botones */
 .tp-or-ack{position:absolute;left:10px;top:50%;transform:translateY(-50%)}
 .tp-or-ack .tp-ack-t{display:none}
+@media (max-width:520px){.tp-or-pest{flex-wrap:wrap}.tp-or-pest .tp-or-pest-reparto{flex:1 1 100%;justify-content:center}.tp-or-pest-reparto .badge{white-space:normal}}
+/* Tomar nota estilo PDA (18/11): cartas en un desplegable, carpetas y platos compactos, «Tu selección» pegada abajo */
+.tp-or-selcarta{position:relative;display:flex;align-items:center;margin:0 0 8px;width:100%}
+.tp-or-selcarta select{flex:1 1 auto;min-width:0}
+.tp-or-carta.tpv-pane-active{display:flex !important;flex-direction:column}
+.tp-or-carta .tp-bandeja{margin-top:auto}
+.tp-or-selcarta > i{position:absolute;left:12px;color:var(--olive);pointer-events:none}
+.tp-or-selcarta select{width:100%;height:44px;padding:0 36px 0 40px !important;border:1px solid var(--hair);border-radius:3px;background:#fff;font:inherit;font-size:16px;font-weight:600;color:var(--ink);appearance:auto}
+.tp-secciones{grid-template-columns:repeat(auto-fill,minmax(130px,1fr)) !important;gap:8px !important}
+.tp-seccion{min-height:68px !important;padding:8px 6px !important;gap:2px !important}
+.tp-seccion-ico{font-size:22px !important}
+.tp-seccion-nom{font-size:14px !important}
+.tp-plato-main{flex-direction:row !important;align-items:center !important;justify-content:space-between !important;gap:10px !important;min-height:48px !important;padding:6px 10px !important}
+.tp-plato-nom{flex:1;min-width:0;font-weight:600;overflow-wrap:break-word}
+.tp-plato-pre{flex:none;font-family:var(--mono);font-weight:600}
+.tp-linea-mods{display:flex;flex-direction:column;gap:1px;margin-top:2px;font-size:12px;color:var(--muted);font-weight:400}
+.tp-plato-sec{display:none}
+.tp-plato-acc{flex-direction:row !important;align-items:stretch}
+.tp-plato-acc button + button{border-top:0 !important;border-left:1px solid var(--hair)}
+.tp-plato-n{position:static !important;flex:none;order:-1;margin-right:2px}
+.tp-plato-main{position:relative}
+@media (max-width:760px){
+  .tp-platos{grid-template-columns:1fr !important;gap:6px !important}
+  .tp-plato-acc button{min-width:36px;min-height:36px}
+}
+.tp-bandeja{position:sticky;bottom:0;margin:10px -2px 0;background:#fff;border:1px solid var(--ink);border-radius:3px;z-index:3;box-shadow:0 -6px 12px rgba(28,26,23,.08)}
+.tp-bj-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:46px;padding:0 12px;border:0;background:#fff;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.tp-bj-cab b{font-family:var(--mono);background:var(--ink);color:#fff;border-radius:10px;padding:0 7px;font-size:12px;margin-left:4px}
+.tp-bj-tot{font-family:var(--mono);white-space:nowrap}
+.tp-bj-lista{max-height:38vh;overflow-y:auto;border-top:1px solid var(--hair);padding:4px 8px 8px}
+.tp-bj-l{display:flex;align-items:center;gap:4px;padding:4px 0;border-bottom:1px solid var(--hair)}
+.tp-bj-l:last-child{border-bottom:0}
+.tp-bj-nom{flex:1;min-width:0;font-size:14px;font-weight:600;overflow-wrap:break-word;margin-left:4px}
+.tp-bj-pre{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.tp-bj-l .tp-q{width:30px;height:30px}
 /* Aviso de alérgenos en cocina: discreto, se despliega con un toque */
 .tp-alg-det{margin:0 0 8px;font-size:12px;color:var(--red)}
 .tp-alg-det summary{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid #E3C8BF;border-radius:3px;background:var(--red-l,#F5EBE7);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;list-style:none}

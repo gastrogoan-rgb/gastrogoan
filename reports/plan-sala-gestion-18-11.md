@@ -4,12 +4,12 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 
 ## TPV · comanda (prioridad máxima; PDA clásica; vale para mesa, take away y delivery)
 - [x] T1 Cabecera de la ventana: «Mesa N · X pers.» centrado; debajo, pequeños y juntos, «Cambiar de mesa» y «Alérgenos»; quitar chip «Propietario» (solo se ve en la vista general de mesas).
-- [~] T2 (hecho en comanda; falta ver el aviso de cocina en captura) Alérgenos: quitar el recuadro repetido «Alérgenos presentes»; en cocina, aviso discreto con botón que despliega.
+- [x] T2 Alérgenos: quitar el recuadro repetido «Alérgenos presentes»; en cocina, aviso discreto con botón que despliega.
 - [x] T3 Pestañas Tomar nota / Pedido: «Tomar nota» pequeña, «Pedido N total» grande y sin desbordar.
-- [~] T4 (líneas en una fila y título Carta/Menú hechos; falta revisar en captura y ancho 320) Pedido: cada plato en UNA línea (cantidad · nombre · precio), botones más pequeños; apartados de menú y carta bien separados; título Menú/Carta más visible; «Marchar» sin recolocar nada.
+- [x] T4 (verificado a 320 y 360) Pedido: cada plato en UNA línea (cantidad · nombre · precio), botones más pequeños; apartados de menú y carta bien separados; título Menú/Carta más visible; «Marchar» sin recolocar nada.
 - [x] T5 (test/tpv-scroll.mjs; falta registrar en todo.sh y revisar otras pantallas) Marchar plato NO sube la pantalla arriba (revisar toda la app: scroll preservado al repintar).
-- [ ] T6 Tomar nota: cartas en desplegable; secciones/platos compactos; selección elegida visible en un desplegable inferior (estilo Take Away/Delivery de la web).
-- [ ] T7 Delivery/Take away del TPV: mismo trato (pestañas sin desbordar, nombre de menú no repetido).
+- [x] T6 (test/tpv-tomar-nota-pda.mjs) Tomar nota: cartas en desplegable; secciones/platos compactos; selección elegida visible en un desplegable inferior (estilo Take Away/Delivery de la web).
+- [~] T7 (pestañas con reparto envueltas y nombre de menú sin repetir hechos; falta captura de delivery) Delivery/Take away del TPV: mismo trato (pestañas sin desbordar, nombre de menú no repetido).
 - [ ] T8 Vale/tique: revisar (captura del dueño).
 ## Resto de Sala
 - [ ] S1 Anulaciones y arqueos: solo mes en curso con selector de periodo.
