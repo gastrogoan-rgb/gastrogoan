@@ -2422,15 +2422,9 @@ function ggAccPreparar(){
     if(fila && fila.children.length > 3) wrap.classList.add('tbl-scroll');
   });
   // Tiras de pestañas/filtros largas (`.gg-pest-col`): botón «Más / Menos» que despliega el resto (ver CSS, punto 9 de VIDEO-MÓVIL).
-  vista.querySelectorAll('.gg-pest-col').forEach(c => {
-    let b = c.querySelector(':scope > .gg-pest-mas');
-    if(!b){
-      b = document.createElement('button'); b.type = 'button'; b.className = 'gg-pest-mas';
-      b.addEventListener('click', () => { const ab = c.classList.toggle('gg-pest-abierta'); b.setAttribute('aria-expanded', ab ? 'true' : 'false'); b.textContent = ab ? gl({es:'Menos', ca:'Menys', en:'Less'}) : gl({es:'Más', ca:'Més', en:'More'}); });
-      b.setAttribute('aria-expanded', 'false'); b.textContent = gl({es:'Más', ca:'Més', en:'More'});
-      c.appendChild(b);
-    }
-  });
+  // 18/11 (dueño): el botón «Más» de las tiras de pestañas se QUITÓ en toda la app («deja ver las secciones tal cual»): las tiras envuelven y
+  // se ven todas. Si queda algún botón antiguo en el DOM, se retira.
+  vista.querySelectorAll('.gg-pest-col > .gg-pest-mas').forEach(b => b.remove());
   vista.querySelectorAll('.gg-plegable').forEach(el => {
     const h = el.querySelector(':scope > .ge-sec-head, :scope > h3, :scope > h4'); if(!h) return;
     if(!h.classList.contains('gg-acc-h')){ h.classList.add('gg-acc-h'); h.setAttribute('role','button'); h.tabIndex = 0; }

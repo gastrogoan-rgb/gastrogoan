@@ -14,12 +14,12 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 ## Resto de Sala
 - [x] S1 (test/tpv-historiales-mes.mjs) Anulaciones y arqueos: solo mes en curso con selector de periodo.
 - [x] S2 (filas plegables, barra en una fila, semana con + pequeño; test/reservas.mjs adaptado) Reservas: filas desplegables (hora · nombre · personas; resto al desplegar); título de fecha sin cortar; «Hoy»/«Imprimir»/«Nueva» sin filas sueltas; semana compacta.
-- [ ] S3 Promoción: quitar botón «más», ver todo directamente.
+- [x] S3 (botón «Más» quitado en toda la app: pestañas envuelven) Promoción: quitar botón «más», ver todo directamente.
 ## Gestión
 - [ ] G1 Mi Negocio horario: turnos en una línea, selects pequeños; «Por turnos» limpio.
 - [ ] G2 Mi Negocio: «Zonas con tarifa propia» y «Códigos promocionales» no hacen nada al escribir → revisar que guardan y se usan; auditar el resto de campos sin efecto.
 - [ ] G3 Panel: Semana/Mes al lado del título de cada bloque; textos superpuestos (gráfico equilibrio); avisos alineados.
-- [ ] G4 Gestión Económica: quitar el botón «más» de las secciones.
+- [x] G4 (rejilla de 2 columnas permanente; test/economia-movil.mjs) Gestión Económica: quitar el botón «más» de las secciones.
 - [ ] G5 Existencias a fin de mes: revisar cálculo y lógica.
 - [ ] G6 Quitar «fiabilidad» de toda la app (sin romper el motor ni las pruebas).
 - [ ] G7 Punto de equilibrio: maquetar sublime (cifras desbordadas en móvil).
