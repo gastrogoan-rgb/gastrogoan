@@ -5969,7 +5969,7 @@ function payWithCard(req, amount, description, refField, submitBtnId){
       setPaySubmitEnabled(true, submitBtnId);
       return;
     }
-    return db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+    return pushSolicitud(req).then(() => {
       yendoAPagar = true;   // salir hacia Stripe no es «perder el pedido»: el aviso de salida no debe saltar
       location.href = data.url;   // la página de pago de Stripe
     });
@@ -6248,7 +6248,7 @@ function submitMesaQrOrder(){
     return;
   }
   // JSON ida y vuelta: Firebase rechaza un `undefined` en cualquier rincón.
-  db.ref('gastrogoan/public/' + publicId + '/requests').push(JSON.parse(JSON.stringify(req))).then(() => {
+  pushSolicitud(JSON.parse(JSON.stringify(req))).then(() => {
     submittingRequest = false;
     cart = [];
     const directo = DB.business && DB.business.qrMesa && DB.business.qrMesa.aceptaCamarero === false;
@@ -6353,10 +6353,37 @@ function shareTrackUrl(url, isReserva, btnEl){
   }
 }
 
+/* Datos personales CIFRADOS con la clave pública del negocio (18/11): el buzón `requests` se puede leer con solo conocer el
+   publicId, y mientras la app del negocio está cerrada las solicitudes esperan ahí. Mismos campos y mismo formato que
+   `descifrarSolicitud` en js/core.js. Sin clave publicada (app antigua) o sin WebCrypto, se envía en claro como siempre. */
+const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas'];
+function bytesAb64(buf){ const u = new Uint8Array(buf); let s = ''; for(let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+async function cifrarSolicitud(req){
+  const pub = (DB.business || {}).reqPub;
+  if(!pub || typeof crypto === 'undefined' || !crypto.subtle) return req;
+  try{
+    const priv = {}; let hay = false;
+    CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { if(req[k] !== undefined && req[k] !== '' && req[k] !== null){ priv[k] = req[k]; hay = true; } });
+    if(!hay) return req;
+    const aes = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const dato = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, aes, new TextEncoder().encode(JSON.stringify(priv)));
+    const rsa = await crypto.subtle.importKey('jwk', pub, {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
+    const llave = await crypto.subtle.encrypt({name: 'RSA-OAEP'}, rsa, await crypto.subtle.exportKey('raw', aes));
+    const out = Object.assign({}, req);
+    CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { delete out[k]; });
+    out.enc = {v: 1, k: bytesAb64(llave), iv: bytesAb64(iv), d: bytesAb64(dato)};
+    return out;
+  }catch(e){ console.error('No se pudo cifrar la solicitud; se envía como siempre', e); return req; }
+}
+function pushSolicitud(req){
+  return cifrarSolicitud(req).then(r => db.ref('gastrogoan/public/' + publicId + '/requests').push(r));
+}
+
 /* ============ ENVÍO ============ */
 let reservaOptimista = false;
 function sendRequest(req, successMsg){
-  db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+  pushSolicitud(req).then(() => {
     // En vez de una pantalla de éxito de un solo uso con un botón para IR a
     // ver el estado, se entra DIRECTAMENTE en la vista en vivo (seguimiento
     // de pedido / gestión de reserva) — es la misma pantalla a la que

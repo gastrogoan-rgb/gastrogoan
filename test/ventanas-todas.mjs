@@ -52,8 +52,9 @@ const SOLO = process.env.VISTAS ? process.env.VISTAS.split(',') : null;
 // Botones que NO se pulsan: sacan de la app, borran de verdad o abren selectores del sistema.
 const NO_PULSAR = /logout|cerrarSesion|closeSession|clearAccessSession|setLang\(|resetApp|wipe|factoryReset|downloadFullBackup|restoreBackup|switchBusiness|showBusinessSelectScreen|openCloudWizard|saveOwnFirebase|deleteBusiness|archiveOld|exportAll|\.click\(\)|location\.|printFicha|window\.print|navigator\.|connectThermal|stripe|Stripe|conectarStripe|pairPrinter|print|imprimir|descargar|download|exportar|Export/i;
 
-const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:'new'});
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:'new', protocolTimeout: 240000});
 const page = await browser.newPage();
+page.on('dialog', d => d.dismiss().catch(() => {}));   // un alert/confirm nativo deja la página colgada y todo "agota el tiempo"
 await page.setViewport({width:ANCHO, height: MOVIL ? 800 : 900, isMobile: MOVIL, hasTouch: MOVIL, deviceScaleFactor: 1});
 await page.setRequestInterception(true);
 page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver|raw.githubusercontent|stripe/.test(r.url()) ? r.abort() : r.continue());
