@@ -9,8 +9,8 @@ Norma del dueño: hacer yo mismo, paso a paso, aprobar cada cambio con prueba, y
 - [x] T4 (verificado a 320 y 360) Pedido: cada plato en UNA línea (cantidad · nombre · precio), botones más pequeños; apartados de menú y carta bien separados; título Menú/Carta más visible; «Marchar» sin recolocar nada.
 - [x] T5 (test/tpv-scroll.mjs; falta registrar en todo.sh y revisar otras pantallas) Marchar plato NO sube la pantalla arriba (revisar toda la app: scroll preservado al repintar).
 - [x] T6 (test/tpv-tomar-nota-pda.mjs) Tomar nota: cartas en desplegable; secciones/platos compactos; selección elegida visible en un desplegable inferior (estilo Take Away/Delivery de la web).
-- [~] T7 (pestañas con reparto envueltas y nombre de menú sin repetir hechos; falta captura de delivery) Delivery/Take away del TPV: mismo trato (pestañas sin desbordar, nombre de menú no repetido).
-- [ ] T8 Vale/tique: revisar (captura del dueño).
+- [x] T7 (verificado con captura de delivery a 360) Delivery/Take away del TPV: mismo trato (pestañas sin desbordar, nombre de menú no repetido).
+- [x] T8 (la pantalla del «vale» era la de delivery: verificada) Vale/tique: revisar (captura del dueño).
 ## Resto de Sala
 - [x] S1 (test/tpv-historiales-mes.mjs) Anulaciones y arqueos: solo mes en curso con selector de periodo.
 - [x] S2 (filas plegables, barra en una fila, semana con + pequeño; test/reservas.mjs adaptado) Reservas: filas desplegables (hora · nombre · personas; resto al desplegar); título de fecha sin cortar; «Hoy»/«Imprimir»/«Nueva» sin filas sueltas; semana compacta.

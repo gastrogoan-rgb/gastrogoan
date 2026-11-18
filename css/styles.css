@@ -7504,9 +7504,8 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .tp-or-peq{min-height:34px !important;padding:0 10px !important;font-size:12px !important;flex:0 0 auto !important;width:auto !important;white-space:nowrap}
 .tp-or-peq i{font-size:14px}
 /* La pestaña «Tomar nota» pequeña y «Pedido» grande: con muchos platos el botón de Pedido no se comprime */
-.tp-or-pest .tp-or-pestana:first-child{flex:0 1 30%}
-.tp-or-pest .tp-or-pestana:nth-child(2){flex:1 1 0}
-.tp-or-pest .tp-or-pestana:only-child{flex:1 1 0}
+.tp-or-pest .tp-or-pestana.tp-or-pest-nota{flex:0 1 30%}
+.tp-or-pest .tp-or-pestana:not(.tp-or-pest-nota):not(.tp-or-pest-reparto){flex:1 1 0}
 .tp-or-pestana{min-width:0}
 .tp-or-pestana .tp-or-barra-n{flex:none}
 .tp-or-pest-tot{white-space:nowrap}
@@ -7518,8 +7517,8 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 }
 @media (max-width:420px){
   .tp-or-cab .tp-or-mesa{font-size:20px}
-  .tp-or-pest .tp-or-pestana:first-child{font-size:13px;flex:0 1 28%}
-  .tp-or-pest .tp-or-pestana:nth-child(2){font-size:14px;gap:4px}
+  .tp-or-pest .tp-or-pestana.tp-or-pest-nota{font-size:13px;flex:0 1 28%}
+  .tp-or-pest .tp-or-pestana:not(.tp-or-pest-nota):not(.tp-or-pest-reparto){font-size:14px;gap:4px}
 }
 /* Cada plato de la comanda en UNA línea: [− n +] nombre … precio ⋯ (18/11). Botones más pequeños en móvil. */
 .tp-linea{grid-template-columns:auto minmax(0,1fr) auto auto !important}
@@ -7542,7 +7541,7 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 /* Ack de cocina (✓ / reloj): pegado a la esquina izquierda de la cabecera, no suelto en la fila de botones */
 .tp-or-ack{position:absolute;left:10px;top:50%;transform:translateY(-50%)}
 .tp-or-ack .tp-ack-t{display:none}
-@media (max-width:520px){.tp-or-pest{flex-wrap:wrap}.tp-or-pest .tp-or-pest-reparto{flex:1 1 100%;justify-content:center}.tp-or-pest-reparto .badge{white-space:normal}}
+@media (max-width:520px){.tp-or-pest{flex-wrap:wrap}.tp-or-pest .tp-or-pestana.tp-or-pest-reparto{flex:1 1 100%;justify-content:center}.tp-or-pest-reparto .badge{white-space:normal}}
 /* Tomar nota estilo PDA (18/11): cartas en un desplegable, carpetas y platos compactos, «Tu selección» pegada abajo */
 .tp-or-selcarta{position:relative;display:flex;align-items:center;margin:0 0 8px;width:100%}
 .tp-or-selcarta select{flex:1 1 auto;min-width:0}
