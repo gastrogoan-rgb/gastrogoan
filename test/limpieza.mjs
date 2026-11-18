@@ -173,7 +173,11 @@ for(const ancho of [1280, 360]){
   await caso(`Alérgenos: se eligen los alérgenos y solo salen los platos que los llevan (${ancho}px)`, async () => {
     await q(() => { lpAlergLimpiar(); setLimpiezaTab('alergenos'); }); await esperar(200);
     const nombres = () => q(() => [...document.querySelectorAll('.lp-card tbody tr td:first-child')].map(x => x.textContent.trim()));
+    // 18/11 (dueño): sin filtrar se ven las SECCIONES; se entra en una para ver sus platos (y lo que llevan o no).
+    assert.ok(await q(() => document.querySelectorAll('.lp-sec').length >= 1), 'sin filtrar salen las secciones');
+    await q(() => lpAlergEntrar('otros')); await esperar(150);
     assert.deepEqual(await nombres(), ['Natillas', 'Pan']);
+    await q(() => lpAlergEntrar(null)); await esperar(100);
     const chips = await q(() => [...document.querySelectorAll('.lp-alerg')].map(c => c.textContent.replace(/\s+/g, ' ').trim()));
     assert.ok(chips.length === 2 && chips.some(c => /Gluten/.test(c)) && chips.some(c => /Lácteos/.test(c)), JSON.stringify(chips));
     await q(() => lpAlergToggle('Gluten')); await esperar(150);

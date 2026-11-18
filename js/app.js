@@ -168,15 +168,48 @@ function renderLimpiezaAlergenos(){
       ${lista.length ? `<div class="lp-alerg-chips" role="group" aria-label="${escapeHtml(t('label.allergens'))}">${lista.map(a => `<button type="button" class="lp-alerg${lpAlergSel.includes(a) ? ' on' : ''}" aria-pressed="${lpAlergSel.includes(a)}" onclick="lpAlergToggle('${escapeJsAttr(a)}')">${escapeHtml(allergenLabel(a))}<span>${cuenta[a]}</span></button>`).join('')}</div>
       ${lpAlergSel.length ? `<p class="pr-ayuda">${(currentArea()==='sala' ? gl({es:'Se muestran las bebidas que llevan alguno de los alérgenos marcados.', ca:'Es mostren les begudes que porten algun dels al·lèrgens marcats.', en:'Showing drinks that contain any of the selected allergens.'}) : gl({es:'Se muestran los platos que llevan alguno de los alérgenos marcados.', ca:'Es mostren els plats que porten algun dels al·lèrgens marcats.', en:'Showing dishes that contain any of the selected allergens.'}))}</p>` : ''}` : ''}
     </section>
-    <section class="lp-card">
-      <h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${tA('title.dishAllergensOverview')} <span class="dp-cuenta">${dishes.length}</span></h3>
-      <p class="pr-ayuda">${tA('msg.dishAllergensOverviewDesc')}</p>
-      ${dishes.length ? `<div class="table-wrap"><table class="table-cards lp-alerg-tabla">
-        <thead><tr><th>${tA('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td class="lp-alerg-nom" data-label="">${escapeHtml(d.name)}</td><td class="wrap lp-alerg-lista" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.map(a=>`<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
-      </table></div>` : `<div class="empty es-vacio">${filtrando ? t('common.noResults') : tA('empty.noDishesForAllergens')}</div>`}
-    </section>
+    ${lpAlergCuerpoHtml(dishes, filtrando)}
   `;
+}
+/* 18/11 (dueño): «en vez de mostrar todos los platos directamente, que sea como la carta: entras en las secciones y ves cada plato, lo que lleva y lo que no».
+   Sin buscar ni filtrar por alérgeno se ven las SECCIONES de la carta; al entrar, TODOS sus platos (los que no llevan ninguno lo dicen). Buscando o
+   filtrando, el resultado es una lista plana de todas las secciones. */
+let lpAlergSec = null;
+function lpAlergEntrar(k){ lpAlergSec = k; renderLimpiezaAlergenos(); }
+function lpAlergSecciones(){
+  const area = currentArea();
+  const mapa = new Map(); getAllDishAllergens().forEach(d => mapa.set(d.name.trim().toLowerCase(), d.allergens));
+  const usados = new Set(), secs = [];
+  (DB.cartas || []).forEach(c => {
+    if((c.area || (isBebidaCarta(c) ? 'sala' : 'cocina')) !== area) return;
+    (c.secciones || []).forEach(sec => {
+      const platos = (sec.platos || []).map(p => { const k = String(p.nombre || '').trim().toLowerCase(); usados.add(k); return {name: p.nombre, allergens: mapa.get(k) || ((p.allergensManual || []).slice())}; }).filter(p => p.name);
+      if(platos.length) secs.push({key: c.id + ':' + sec.id, nombre: (tItem ? tItem(sec) : sec.nombre), carta: tItem ? tItem(c) : c.nombre, platos});
+    });
+  });
+  const sueltos = []; mapa.forEach((al, k) => { if(!usados.has(k)) sueltos.push({name: getAllDishAllergens().find(d => d.name.trim().toLowerCase() === k).name, allergens: al}); });
+  if(sueltos.length) secs.push({key: 'otros', nombre: gl({es:'Otras elaboraciones', ca:'Altres elaboracions', en:'Other preparations'}), carta: '', platos: sueltos});
+  return secs;
+}
+function lpAlergPlatoFila(d){
+  return `<tr><td class="lp-alerg-nom" data-label="">${escapeHtml(d.name)}</td><td class="wrap lp-alerg-lista" data-label="${escapeHtml(t('label.allergensPresent'))}">${d.allergens.length ? d.allergens.map(a => `<span class="badge badge-amber${lpAlergSel.includes(a) ? ' lp-marcado' : ''}">${escapeHtml(allergenLabel(a))}</span>`).join(' ') : `<span class="lp-sin">${escapeHtml(gl({es:'Sin alérgenos declarados', ca:'Sense al·lèrgens declarats', en:'No allergens declared'}))}</span>`}</td></tr>`;
+}
+function lpAlergCuerpoHtml(dishes, filtrando){
+  const cab = `<h3 class="dp-h"><i class="ti ti-alert-triangle"></i> ${tA('title.dishAllergensOverview')}`;
+  if(filtrando){
+    return `<section class="lp-card">${cab} <span class="dp-cuenta">${dishes.length}</span></h3><p class="pr-ayuda">${tA('msg.dishAllergensOverviewDesc')}</p>
+      ${dishes.length ? `<div class="table-wrap"><table class="table-cards lp-alerg-tabla"><thead><tr><th>${tA('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${dishes.map(lpAlergPlatoFila).join('')}</tbody></table></div>` : `<div class="empty es-vacio">${t('common.noResults')}</div>`}</section>`;
+  }
+  const secs = lpAlergSecciones();
+  const sel = lpAlergSec ? secs.find(x => x.key === lpAlergSec) : null;
+  if(!sel){
+    lpAlergSec = null;
+    if(!secs.length) return `<section class="lp-card">${cab}</h3><div class="empty es-vacio">${tA('empty.noDishesForAllergens')}</div></section>`;
+    return `<section class="lp-card">${cab}</h3><p class="pr-ayuda">${escapeHtml(currentArea()==='sala' ? gl({es:'Entra en una sección para ver qué lleva cada bebida.', ca:'Entra en una secció per veure què porta cada beguda.', en:'Open a section to see what each drink contains.'}) : gl({es:'Entra en una sección para ver qué lleva cada plato.', ca:'Entra en una secció per veure què porta cada plat.', en:'Open a section to see what each dish contains.'}))}</p>
+      <div class="lp-secs">${secs.map(x => { const con = x.platos.filter(p => p.allergens.length).length; return `<button type="button" class="lp-sec" onclick="lpAlergEntrar('${escapeJsAttr(x.key)}')"><span class="lp-sec-n">${escapeHtml(x.nombre)}</span><span class="lp-sec-c">${x.platos.length} · ${con} ${escapeHtml(gl({es:'con alérgenos', ca:'amb al·lèrgens', en:'with allergens'}))}</span></button>`; }).join('')}</div></section>`;
+  }
+  return `<section class="lp-card"><div class="lp-sec-cab"><button type="button" class="btn btn-sm btn-fino" onclick="lpAlergEntrar(null)"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.back'))}</button><h3 class="dp-h" style="margin:0">${escapeHtml(sel.nombre)} <span class="dp-cuenta">${sel.platos.length}</span></h3></div>
+    <div class="table-wrap"><table class="table-cards lp-alerg-tabla"><thead><tr><th>${tA('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead><tbody>${sel.platos.map(lpAlergPlatoFila).join('')}</tbody></table></div></section>`;
 }
 // Pasos de lavado de manos, separados por área igual que el protocolo de
 // apertura/cierre: editar desde Cocina no debe cambiar lo que ve Sala.

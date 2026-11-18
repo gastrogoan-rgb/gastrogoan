@@ -7629,6 +7629,50 @@ input:focus,select:focus,textarea:focus,.field input:focus,.field select:focus,.
 .dp-card .dp-cab .dp-modo{position:absolute;top:12px;right:14px;z-index:2;display:flex;gap:4px}
 .dp-card .dp-cab .dp-modo .btn{min-height:32px;padding:0 10px}
 .dp-card .dp-cab .dp-ctl{padding-top:0}
+/* ══ TPV 18/11 (3.ª ronda): Pedido rehecho, platos con cantidad sin hincharse, secciones solo texto ══ */
+/* Secciones de la carta: SOLO el texto (sin icono), botón pequeño en rejilla de dos */
+.tp-seccion-ico{display:none !important}
+.tp-secciones{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:6px !important}
+.tp-seccion{min-height:46px !important;padding:6px 10px !important;flex-direction:row !important;justify-content:space-between !important;text-align:left !important}
+.tp-seccion-nom{font-size:14px !important;flex:1;min-width:0;overflow-wrap:break-word}
+.tp-seccion-cuenta{font-size:11px !important;white-space:nowrap}
+.tp-seccion-n{position:static !important;order:3}
+@media (min-width:761px){.tp-secciones{grid-template-columns:repeat(auto-fill,minmax(180px,1fr)) !important}}
+/* Plato con cantidad: la tarjeta NO crece. Nombre a todo lo que quepa; ×N, − e i pequeños */
+@media (max-width:760px){
+  .tp-plato-main{gap:6px !important;padding:6px 8px !important;min-height:46px !important}
+  .tp-plato-n{min-width:24px !important;height:22px !important;padding:0 5px !important;font-size:12px !important}
+  .tp-plato-pre{font-size:13px !important}
+  .tp-plato-acc button{min-width:34px !important;min-height:34px !important;font-size:16px !important}
+  .tp-plato-nom{font-size:14px}
+}
+/* Pedido: cabecera de tanda en UNA fila (nombre · estado/Marchar), sin que el botón pise el nombre */
+.tp-tanda-cab{display:flex !important;flex-wrap:nowrap !important;align-items:center;gap:8px;margin:10px 0 2px}
+.tp-tanda-nom{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:4px;font-size:13px;line-height:1.2;overflow-wrap:break-word}
+.tp-tanda-nom > i{flex:none}
+.tp-tanda-bts{flex:none;display:flex;align-items:center;gap:6px}
+.tp-tanda-bt{min-height:32px !important;padding:0 10px !important;font-size:12px !important;white-space:nowrap}
+.tp-com-cab{padding-bottom:6px !important;margin-bottom:2px !important}
+.tp-com-total{font-size:20px !important}
+.tp-com-seccion{margin:10px 0 2px !important}
+.tp-linea-txt .badge{margin-left:4px}
+.tp-linea.marchada{opacity:.8}
+/* Oferta · lista de menús (18/11): el «⋯» arriba a la derecha, el nombre entero, y «Disponible» / «Sin límite» debajo, pequeños */
+@media (max-width:1100px){
+  .oc-item-menu{position:relative;grid-template-columns:minmax(0,1fr) !important;padding-right:56px !important}
+  .oc-item-menu .oc-acc{grid-column:1 / -1 !important;grid-row:auto !important;justify-content:flex-start !important;gap:6px !important}
+  .oc-item-menu .oc-acc > .mn-btn{position:absolute;top:10px;right:10px}
+  .oc-item-menu .oc-acc .btn,.oc-item-menu .oc-acc button:not(.mn-btn){min-height:36px !important;padding:0 10px !important;font-size:12.5px !important;white-space:nowrap}
+  .oc-item-menu .oc-nombre{overflow-wrap:normal;word-break:normal}
+}
+/* APPCC › Alérgenos por secciones (18/11) */
+.lp-secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:8px}
+.lp-sec{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;padding:8px 12px;background:#fff;border:1px solid var(--hair);border-radius:3px;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.lp-sec:hover{border-color:var(--olive);background:var(--brand-cream)}
+.lp-sec-n{font-size:15px;font-weight:700;overflow-wrap:break-word}
+.lp-sec-c{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.lp-sec-cab{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.lp-sin{color:var(--muted);font-size:13px}
 /* Aviso de alérgenos en cocina: discreto, se despliega con un toque */
 .tp-alg-det{margin:0 0 8px;font-size:12px;color:var(--red)}
 .tp-alg-det summary{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid #E3C8BF;border-radius:3px;background:var(--red-l,#F5EBE7);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;list-style:none}
