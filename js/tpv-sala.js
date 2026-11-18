@@ -390,7 +390,6 @@ function tpvCartaZonaHtml(order, carta){
           ${n ? `<span class="tp-seccion-n" title="${escapeHtml(gl({es:'ya en la comanda', ca:'ja a la comanda', en:'already on the order'}))}">${n}</span>` : ''}
           <span class="tp-seccion-ico">${iconoSeccionHtml(sec.icono, sec.nombre, 30)}</span>
           <span class="tp-seccion-nom">${escapeHtml(tItem(sec))}</span>
-          <span class="tp-seccion-cuenta">${platos.length} ${platos.length === 1 ? t('noun.product') : t('noun.products')}</span>
         </button>`;
       }).join('')}
     </div>`;
