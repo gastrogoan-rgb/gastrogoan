@@ -104,7 +104,7 @@ await caso('«Recogido» lo marca COCINA: con el bloque listo en el pase, su nom
     out.cerrada = !!o.cerrada;
     return out;
   });
-  assert.ok(r.boton && /recogido/i.test(r.texto), JSON.stringify(r)); assert.equal(r.salaBotones, 0, 'Sala ya no tiene botón de entregar: ' + JSON.stringify(r)); assert.ok(r.salaAviso, JSON.stringify(r));
+  assert.ok(r.boton && /listo en el pase/i.test(r.texto) && !/recogido/i.test(r.texto), JSON.stringify(r)); assert.equal(r.salaBotones, 0, 'Sala ya no tiene botón de entregar: ' + JSON.stringify(r)); assert.ok(r.salaAviso, JSON.stringify(r));
   assert.ok(r.recogidas && r.cerrada, 'Cocina lo marca y la comanda se cierra: ' + JSON.stringify(r));
 });
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(erroresJs, []); });
