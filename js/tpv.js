@@ -3051,7 +3051,11 @@ function renderComandasCocina(){
     return;
   }
 
-  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines, vale, totalVales}) => ticketCocinaHtml(order, allLines, vale, totalVales)).join('')}</div>`);
+  // 19/11 (dueño): cuántas comandas hay y cuánto lleva la más antigua, a la vista aunque haya que desplazarse.
+  const primeraEnv = a => { const e = a.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime()); return e.length ? Math.min(...e) : null; };
+  const masAntigua = primeraEnv(tickets[0]);
+  const resumenKds = `<div class="kds-resumen" role="status"><b>${tickets.length}</b> ${tickets.length === 1 ? gl({es:'comanda', ca:'comanda', en:'order'}) : gl({es:'comandas', ca:'comandes', en:'orders'})}${masAntigua ? ` · ${gl({es:'la más antigua lleva', ca:'la més antiga porta', en:'oldest waiting'})} <b>${fmtDurCorta((Date.now() - masAntigua) / 60000)}</b>` : ''}</div>`;
+  pintar(tabsHtml + resumenKds + `<div class="grid grid-kds">${tickets.map(({order, allLines, vale, totalVales}) => ticketCocinaHtml(order, allLines, vale, totalVales)).join('')}</div>`);
 }
 
 /* ═══════════════ COMANDAS COCINA: TICKETS NUEVOS (29/10) ═══════════════
@@ -3201,7 +3205,7 @@ function ticketCocinaHtml(order, allLines, vale, totalVales){
           <div class="kt-rail"><span class="kt-dot ${est.dot}${est.k==='rec' ? ' rec' : ''}"></span>${i < tt.length - 1 ? '<span class="kt-line"></span>' : ''}</div>
           <div>
             ${est.k === 'listo'
-              ? `<button type="button" class="kt-cn avanza recoge" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar cuando sala lo haya recogido', ca:'Toca quan la sala ho hagi recollit', en:'Tap once the floor has picked it up'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-check kt-go" aria-hidden="true"></i><span class="kt-st l">${gl({es:'Listo en el pase · recogido', ca:'Llest al pas · recollit', en:'At the pass · picked up'})}</span></button>`
+              ? `<button type="button" class="kt-cn avanza recoge" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar cuando sala lo haya recogido', ca:'Toca quan la sala ho hagi recollit', en:'Tap once the floor has picked it up'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-check kt-go" aria-hidden="true"></i><span class="kt-st l">${gl({es:'Listo en el pase', ca:'Llest al pas', en:'Ready at the pass'})}</span></button>`
               : est.activo
               ? `<button type="button" class="kt-cn avanza" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(tanda)}', ${vale||1})" title="${escapeHtml(gl({es:'Tocar para avanzar todo el bloque', ca:'Toca per avançar tot el bloc', en:'Tap to advance the whole block'}))}"><b>${escapeHtml(nombreCurso(tanda))}</b><i class="ti ti-chevrons-right kt-go" aria-hidden="true"></i><span class="kt-st ${est.dot}">${est.texto}</span></button>`
               : `<div class="kt-cn"><b>${escapeHtml(nombreCurso(tanda))}</b><span class="kt-st ${est.dot}">${est.texto}</span></div>`}
