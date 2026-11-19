@@ -3051,7 +3051,11 @@ function renderComandasCocina(){
     return;
   }
 
-  pintar(tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines, vale, totalVales}) => ticketCocinaHtml(order, allLines, vale, totalVales)).join('')}</div>`);
+  // 19/11 (dueño): cuántas comandas hay y cuánto lleva la más antigua, a la vista aunque haya que desplazarse.
+  const primeraEnv = a => { const e = a.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime()); return e.length ? Math.min(...e) : null; };
+  const masAntigua = primeraEnv(tickets[0]);
+  const resumenKds = `<div class="kds-resumen" role="status"><b>${tickets.length}</b> ${tickets.length === 1 ? gl({es:'comanda', ca:'comanda', en:'order'}) : gl({es:'comandas', ca:'comandes', en:'orders'})}${masAntigua ? ` · ${gl({es:'la más antigua lleva', ca:'la més antiga porta', en:'oldest waiting'})} <b>${fmtDurCorta((Date.now() - masAntigua) / 60000)}</b>` : ''}</div>`;
+  pintar(tabsHtml + resumenKds + `<div class="grid grid-kds">${tickets.map(({order, allLines, vale, totalVales}) => ticketCocinaHtml(order, allLines, vale, totalVales)).join('')}</div>`);
 }
 
 /* ═══════════════ COMANDAS COCINA: TICKETS NUEVOS (29/10) ═══════════════

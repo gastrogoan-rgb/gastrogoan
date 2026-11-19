@@ -7844,3 +7844,7 @@ textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:
 @media (min-width:761px){.tp-secciones{grid-template-columns:minmax(0,1fr) !important}}
 .tp-seccion{min-height:46px !important;padding:8px 12px !important;flex-direction:row !important;justify-content:space-between !important;align-items:center !important;text-align:left !important}
 .tp-seccion-nom{flex:1;min-width:0;font-size:15px !important;font-weight:600 !important;overflow-wrap:break-word}
+
+/* Comandas Cocina: cuántas hay y cuánto lleva la más antigua (19/11). */
+.kds-resumen{margin:0 0 10px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.kds-resumen b{color:var(--ink);font-weight:600}
