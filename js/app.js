@@ -6077,7 +6077,7 @@ function plan360CierreHtml(){
           <div style="padding:8px 0;border-bottom:1px solid var(--border)">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
               <strong style="flex:1">${escapeHtml(o.titulo)}</strong>
-              ${o.estadoFinal ? `<span class="p360-day-tag" style="margin:0;background:${PLAN360_ESTADO_FINAL_COLOR[o.estadoFinal]};color:#fff">${escapeHtml(t(PLAN360_ESTADO_FINAL_LABEL[o.estadoFinal]))}</span>` : `<span class="p360-day-tag" style="margin:0">${escapeHtml(t('plan360.estadoFinal.pending'))}</span>`}
+              ${o.estadoFinal ? `<span class="p360-day-tag" style="margin:0;flex:none;white-space:nowrap;background:${PLAN360_ESTADO_FINAL_COLOR[o.estadoFinal]};color:#fff">${escapeHtml(t(PLAN360_ESTADO_FINAL_LABEL[o.estadoFinal]))}</span>` : `<span class="p360-day-tag" style="margin:0;flex:none;white-space:nowrap">${escapeHtml(t('plan360.estadoFinal.pending'))}</span>`}
             </div>
             ${plan360MedicionesResumenHtml(o)}
           </div>`).join('')}
@@ -6300,10 +6300,10 @@ function plan360SemanaTexto(){
   const lineas = [
     `*${L({es:'Plan 360º · semana del ', ca:'Pla 360º · setmana del ', en:'360º Plan · week of '})}${f(lunes)} ${L({es:'al', ca:'al', en:'to'})} ${f(domingo)}*${b.businessName || b.name ? ' · ' + (b.businessName || b.name) : ''}`,
     '',
-    tareas.length ? `✅ ${L({es:'Tareas', ca:'Tasques', en:'Tasks'})}: ${hechas} ${L({es:'de', ca:'de', en:'of'})} ${tareas.length} ${L({es:'hechas', ca:'fetes', en:'done'})}` : `✅ ${L({es:'Sin tareas esta semana', ca:'Sense tasques aquesta setmana', en:'No tasks this week'})}`,
+    tareas.length ? `${L({es:'Tareas', ca:'Tasques', en:'Tasks'})}: ${hechas} ${L({es:'de', ca:'de', en:'of'})} ${tareas.length} ${L({es:'hechas', ca:'fetes', en:'done'})}` : `${L({es:'Sin tareas esta semana', ca:'Sense tasques aquesta setmana', en:'No tasks this week'})}`,
   ];
-  if(objs.length){ lineas.push('', '🎯 ' + L({es:'Objetivos', ca:'Objectius', en:'Goals'})); objs.slice(0, 6).forEach(o => { const u = ultima(o); lineas.push(`• ${o.titulo}${u ? ': ' + u : ''}`); }); }
-  if(ganado != null && Math.abs(ganado) >= 1) lineas.push('', `💶 ${L({es:'Desde que empezamos', ca:'Des que vam començar', en:'Since we started'})}: ${ganado >= 0 ? '+' : '−'}${eur(Math.abs(ganado))}${L({es:' al mes', ca:' al mes', en:' per month'})}`);
+  if(objs.length){ lineas.push('', '*' + L({es:'Objetivos', ca:'Objectius', en:'Goals'}) + '*'); objs.slice(0, 6).forEach(o => { const u = ultima(o); lineas.push(`• ${o.titulo}${u ? ': ' + u : ''}`); }); }
+  if(ganado != null && Math.abs(ganado) >= 1) lineas.push('', `${L({es:'Desde que empezamos', ca:'Des que vam començar', en:'Since we started'})}: ${ganado >= 0 ? '+' : '−'}${eur(Math.abs(ganado))}${L({es:' al mes', ca:' al mes', en:' per month'})}`);
   return lineas.join('\n');
 }
 function plan360CompartirSemana(){
@@ -6325,7 +6325,7 @@ function plan360ActasHtml(){
   const tipo = {tarea: {es:'Tarea', ca:'Tasca', en:'Task'}, objetivo: {es:'Objetivo', ca:'Objectiu', en:'Goal'}, nota: {es:'Nota', ca:'Nota', en:'Note'}};
   const lista = plan360ActasLista();
   if(!lista.length) return `<p class="m">${escapeHtml(L({es:'Todavía no hay actas.', ca:'Encara no hi ha actes.', en:'There are no minutes yet.'}))}</p>`;
-  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.t{width:90px;font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px}</style>
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.t{width:90px;font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px}</style>
     ${lista.map(a => `<h2>${escapeHtml(L({es:'Reunión del ', ca:'Reunió del ', en:'Meeting of '}))}${escapeHtml(plan360FechaLegible(a.fecha))}</h2>
       <table>${a.decisiones.map(x => `<tr><td class="t">${escapeHtml(L(tipo[x.tipo] || tipo.nota))}</td><td>${escapeHtml(x.texto || '')}${x.tipo === 'tarea' && x.dia ? `<div class="m">${escapeHtml(L({es:'Día ', ca:'Dia ', en:'Day '}))}${escapeHtml(String(x.dia))}</div>` : ''}</td></tr>`).join('')}</table>`).join('')}`;
 }
@@ -6361,7 +6361,7 @@ function plan360PlanAccionHtml(){
   }).join('');
   const sueltas = tareas.filter(x => !ids.has(x.tk.objectiveId));
   const otras = sueltas.length ? `<h2>${escapeHtml(L({es:'Otras acciones', ca:'Altres accions', en:'Other actions'}))}</h2><table>${sueltas.map(fila).join('')}</table>` : '';
-  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px;letter-spacing:-.01em}h2 .n{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E;margin-left:8px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.c{width:26px;font-size:18px;line-height:1}td.f{width:120px;color:#716C65;font:12px 'IBM Plex Mono',monospace}.m{color:#716C65;font-size:12px;margin:2px 0}</style>
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px;letter-spacing:-.01em}h2 .n{font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E;margin-left:8px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.c{width:26px;font-size:18px;line-height:1}td.f{width:120px;color:#716C65;font:12px 'IBM Plex Mono',monospace}.m{color:#716C65;font-size:12px;margin:2px 0}</style>
     <p class="m">${escapeHtml(L({es:'Programa de 4 semanas con tu coach', ca:'Programa de 4 setmanes amb el teu coach', en:'4-week programme with your coach'}))} · ${escapeHtml(plan360FechaLegible(b.plan360StartDate))}</p>
     ${bloques}${otras}`;
 }

@@ -4518,7 +4518,7 @@ function plan360InversionesHtml(d, esc, negocio){
       </div>
       ${total ? barra : ''}
       <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
-      <div class="dr-regla"><span>★ Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
+      <div class="dr-regla"><span>Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
       <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
       ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
       <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
@@ -4528,7 +4528,7 @@ function plan360InversionesHtml(d, esc, negocio){
         <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
         <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
-      <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
+      <div class="dr-regla"><span>Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
       ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
       <div class="dr-h">Los 3 niveles de inversión</div>
       <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>

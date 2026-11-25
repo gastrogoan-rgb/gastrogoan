@@ -16,7 +16,7 @@ await page.evaluate(() => {
 });
 await page.reload({waitUntil:'domcontentloaded'});
 await new Promise(r => setTimeout(r, 2000));
-const r = await page.evaluate(() => {
+const r = await page.evaluate(async () => {
   ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
   DB.business.plan360 = true; delete DB.business.plan360Program; ensurePlan360Program();
   const hoy = todayStr();
@@ -24,8 +24,11 @@ const r = await page.evaluate(() => {
   DB.business.plan360Servicio = {cuota: 75, mantHasta: addDaysStr(hoy, 20), cobros: {'2026-09': {ts: 1, importe: 75}, '2026-10': {ts: 2, importe: 75}}};
   out.h1 = plan360MantServicioHtml();
   document.body.insertAdjacentHTML('beforeend', '<div id="plan360-content"></div>');
-  window.confirm = () => true;
-  plan360SolicitarBaja();
+  // La confirmación es ya la ventana propia de la app (confirmModal), no el confirm() nativo: se acepta desde ella.
+  const pBaja = plan360SolicitarBaja();
+  await new Promise(r => setTimeout(r, 200));
+  acceptConfirmModal();
+  await pBaja;
   out.baja = DB.business.plan360Servicio.baja && DB.business.plan360Servicio.baja.por;
   out.cobrosIntactos = Object.keys(DB.business.plan360Servicio.cobros).length;
   out.h2 = plan360MantServicioHtml();
