@@ -12812,6 +12812,17 @@ function marcarNubeAlDia(opciones){
    SIN token y se lo lleva por delante → el QR que se acaba de mostrar queda «no válido». Si lo que llega es exactamente lo que se
    mandó, no es de nadie más: se ignora. */
 const subidaEnVuelo = {};
+/* Rutas de lo que cambió entre dos versiones de un mismo árbol: baja por objetos y por listas de IGUAL largo hasta la hoja que
+   cambió; si una lista cambia de largo o un tipo cambia, esa rama se sube entera (Firebase no admite huecos en una lista). */
+function diffProfundoRutas(antes, ahora, ruta, out){
+  const esObj = x => x && typeof x === 'object' && !Array.isArray(x);
+  if((esObj(antes) && esObj(ahora)) || (Array.isArray(antes) && Array.isArray(ahora) && antes.length === ahora.length)){
+    const claves = new Set([...Object.keys(antes), ...Object.keys(ahora)]);
+    claves.forEach(k => diffProfundoRutas(antes[k], ahora[k], ruta + '/' + k, out));
+    return;
+  }
+  if(canonicalStringify(antes) !== canonicalStringify(ahora)) out[ruta] = ahora === undefined ? null : ahora;
+}
 function flushCloudSync(){
   cloudSyncTimer = null;
   if(!cloudRef || !lastSyncedSnapshot) return;
@@ -12835,7 +12846,17 @@ function flushCloudSync(){
   if(updates.business && lastSyncedSnapshot.business){
     try{
       const antes = JSON.parse(lastSyncedSnapshot.business), ahora = DB.business, sub = {};
-      Object.keys(ahora).forEach(k => { if(canonicalStringify(ahora[k]) !== canonicalStringify(antes[k])) sub['business/' + k] = ahora[k]; });
+      Object.keys(ahora).forEach(k => {
+        if(canonicalStringify(ahora[k]) === canonicalStringify(antes[k])) return;
+        /* El cuestionario del Plan 360º lo contestan a ratos el móvil y la tablet. Subido entero, el último en llegar a la nube
+           se llevaba por delante las respuestas del otro (lo cazó el emulador de dos aparatos: una sección entera de respuestas
+           desaparecía en los dos). Se sube pregunta a pregunta: dos aparatos que contestan preguntas distintas no se pisan. */
+        if(k === 'plan360Intake' && antes[k] && typeof antes[k] === 'object' && ahora[k] && typeof ahora[k] === 'object'){
+          const hojas = {}; diffProfundoRutas(antes[k], ahora[k], 'business/' + k, hojas);
+          Object.assign(sub, hojas); return;
+        }
+        sub['business/' + k] = ahora[k];
+      });
       Object.keys(antes).forEach(k => { if(!(k in ahora)) sub['business/' + k] = null; });
       delete updates.business;
       Object.assign(updates, sub);

@@ -123,6 +123,40 @@ await caso('1 · Sincronización: cada foto sube SOLA (plan360Pruebas/<tarea>), 
   });
   assert.deepEqual(r, [['plan360Pruebas/901', null], ['plan360Pruebas/903', 'valor']]);
 });
+await caso('2 · Sincronización: el cuestionario sube PREGUNTA a pregunta (dos aparatos que contestan cosas distintas no se pisan)', async () => {
+  const r = await page.evaluate(() => {
+    const intake = () => ({sections: [{title:'A', questions:[{q:'q1', a:''}, {q:'q2', a:''}]}, {title:'B', questions:[{q:'q3', a:''}]}]});
+    DB.business = DB.business || {}; DB.business.plan360Intake = intake();
+    cloudRef = {update: u => { window.__subida2 = u; return Promise.resolve(); }};
+    lastSyncedSnapshot = {}; Object.keys(DB).forEach(k => { lastSyncedSnapshot[k] = canonicalStringify(DB[k]); });
+    DB.business.plan360Intake.sections[1].questions[0].a = 'respuesta';
+    flushCloudSync();
+    const rutas = Object.keys(window.__subida2).sort();
+    // Si cambia la forma (una pregunta nueva), se sube la rama entera: una lista con huecos no se puede escribir por partes.
+    lastSyncedSnapshot = {}; Object.keys(DB).forEach(k => { lastSyncedSnapshot[k] = canonicalStringify(DB[k]); });
+    DB.business.plan360Intake.sections[0].questions.push({q:'q9', a:''});
+    flushCloudSync();
+    return {rutas, forma: Object.keys(window.__subida2).sort()};
+  });
+  assert.deepEqual(r.rutas, ['business/plan360Intake/sections/1/questions/0/a'], 'subió más de la pregunta tocada');
+  assert.deepEqual(r.forma, ['business/plan360Intake/sections/0/questions'], 'con la forma cambiada debe subir la lista de preguntas entera');
+});
+await caso('Móvil: en 360, 390 y 430 px ninguna palabra de la franja del Plan 360º se parte («COMPLETADAS» salía como «COMPLETADA / S»)', async () => {
+  const malas = [];
+  for(const w of [360, 390, 430]){
+    await page.setViewport({width: w, height: 900}); await new Promise(r => setTimeout(r, 400));
+    const r = await page.evaluate(() => [...document.querySelectorAll('.p360-hero-stat-label')].flatMap(el => {
+      const cs = getComputedStyle(el), disp = document.createElement('span');
+      disp.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${cs.font};letter-spacing:${cs.letterSpacing};text-transform:${cs.textTransform}`;
+      document.body.appendChild(disp);
+      const fuera = el.textContent.trim().split(/\s+/).filter(pal => { disp.textContent = pal; return disp.getBoundingClientRect().width > el.clientWidth + 0.5; });
+      disp.remove(); return fuera;
+    }));
+    if(r.length) malas.push(w + ': ' + r.join(','));
+  }
+  await page.setViewport({width: 1280, height: 900});
+  assert.deepEqual(malas, []);
+});
 await caso('1 · Fusión: lo que llega de la nube no pisa una foto aún sin subir; un mapa que Firebase devuelve como lista se arregla; lo borrado fuera se borra aquí', async () => {
   const r = await page.evaluate(() => {
     cloudRef = null; lastSyncedSnapshot = {};

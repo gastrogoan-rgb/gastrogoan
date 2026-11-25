@@ -7345,6 +7345,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
   .p360-hero{border-top:1px solid var(--olive)}
   .p360-hero-stat-num{font-size:24px}
   .p360-hero-stat-label{font-size:11px;letter-spacing:.02em;overflow-wrap:break-word}
+  /* En 360 px «COMPLETADAS» no cabía en un tercio de la franja y se partía a media palabra («COMPLETADA / S»): menos aire a los lados
+     y sin espaciado de letras para que la palabra entera quepa (norma: una palabra nunca se parte). */
+  .p360-hero{padding-left:14px;padding-right:14px}
+  .p360-hero-stat{padding:0 6px}
+  .p360-hero-stat-label{letter-spacing:0}
   .p360-atr-fila{grid-template-columns:minmax(0,1fr);gap:4px;min-height:0;padding:10px 0}
   .p360-atr-chip{justify-self:start;min-width:140px}
   .p360-day-progress{font-size:12px}
