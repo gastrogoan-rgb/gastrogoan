@@ -215,7 +215,7 @@ lanzar; node test/plan360-enlace.mjs > "$SALIDA/p360en.txt" 2>&1 & P360E=$!
 lanzar; node test/plan360-equipo.mjs > "$SALIDA/p360eq.txt" 2>&1 & P360Q=$!
 lanzar; node test/plan360-acta.mjs > "$SALIDA/p360ac.txt" 2>&1 & P360T=$!
 lanzar; node test/plan360-app-qa.mjs > "$SALIDA/p360qa.txt" 2>&1 & P360QA=$!
-lanzar; node test/plan360-panel-auditoria.mjs > "$SALIDA/p360pa.txt" 2>&1 & P360PA=$!
+lanzar; node test/plan360-panel-auditoria.mjs > "$SALIDA/p360pau.txt" 2>&1 & P360PA=$!
 lanzar; node test/pedidos-plataforma.mjs > "$SALIDA/platf.txt" 2>&1 & PPLAT=$!
 lanzar; node test/plan360-servicio.mjs > "$SALIDA/p360sv.txt" 2>&1 & P360S=$!
 lanzar; node test/plan360-cobros.mjs > "$SALIDA/p360co.txt" 2>&1 & P360O=$!
@@ -512,12 +512,12 @@ espera $P360E "Plan 360º · tareas con «Se hace en…» y botón «Ir a…»" 
 espera $P360Q "Plan 360º · tareas pasadas al equipo salen en «Mi puesto» como «Puesta por el coach»" "$SALIDA/p360eq.txt" "en orden"
 espera $P360T "Plan 360º · acta en vivo: el coach apunta decisiones y el negocio las lee" "$SALIDA/p360ac.txt" "en orden"
 espera $P360QA "Plan 360º · app del negocio: duración, contrato en vivo, prueba en tareas, avisos, tarea plegable, objetivos, mantenimiento, idiomas" "$SALIDA/p360qa.txt" "en orden"
-espera $P360PA "Plan 360º · panel del coach (auditoría 25/11: estado por cliente, banco plegado, guía, ⋯, 390 px)" "$SALIDA/p360pa.txt" "en orden"
+espera $P360PA "Plan 360º · panel del coach (auditoría 25/11: estado por cliente, banco plegado, guía, ⋯, 390 px)" "$SALIDA/p360pau.txt" "en orden"
 espera $PPLAT "Pedidos de plataformas (Glovo, Uber Eats…): entran por el buzón, por aceptar, sin duplicados, con su etiqueta" "$SALIDA/platf.txt" "en orden"
 espera $P360S "Plan 360º · «Mi mantenimiento» (cuota, cobros, baja) y resumen semanal para WhatsApp" "$SALIDA/p360sv.txt" "en orden"
 espera $P360O "Plan 360º · cobros del programa y CSV para el gestor" "$SALIDA/p360co.txt" "en orden"
 espera $P360L "Plan 360º · plantilla del programa (guardar y aplicar sin pisar nada)" "$SALIDA/p360pl.txt" "en orden"
-espera $P360PB "Plan 360º · plantilla base de GastroGoan (tareas reales, solo días laborables, sin duplicar)" "$SALIDA/p360pb.txt" "en orden"
+espera $P360PB "Plan 360º · plantilla base de GastroGoan (tareas reales, solo días laborables, sin duplicar)" "$SALIDA/p360pb.txt" "los [0-9]+ casos pasaron"
 espera $P360IC "Plan 360º · informe semanal del coach: hechas/sin hacer, área y objetivos" "$SALIDA/p360ic.txt" "en orden"
 espera $PFOTOPL "Fotos de platos en la web de pedidos: miniatura pequeña, solo con el interruptor encendido" "$SALIDA/fotopl.txt" "en orden"
 espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm.txt" "en orden"
