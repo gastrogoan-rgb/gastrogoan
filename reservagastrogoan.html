@@ -102,6 +102,8 @@
   .tab-btn:active{transform:translateY(1px);}
   .tab-btn.active{border-color:var(--ink);background:var(--ink);color:#fff;}
   .field{margin-bottom:14px;}
+  /* Campo trampa anti-bots (ver wzFiltroBot): fuera de pantalla, NO display:none (algunos bots saltan los ocultos), y fuera del teclado y de los lectores de pantalla. */
+  .gg-miel{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
   .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;margin-bottom:6px;color:var(--muted);}
   .field input, .field select, .field textarea{
     width:100%;padding:12px 14px;min-height:48px;border:1px solid var(--border);border-radius:0;
@@ -1487,7 +1489,7 @@ const I18N = {
 /* ============ Textos nuevos de los pasos (6/11) ============ */
 const I18N_WZ = {
   es:{
-    'wz.progress':'Pasos','wz.s.when':'Cuándo','wz.s.data':'Tus datos','wz.s.confirm':'Confirmar','wz.s.pick':'Elige',
+    'wz.err.bot':'No hemos podido enviar tu solicitud. Recarga la página e inténtalo de nuevo.','wz.progress':'Pasos','wz.s.when':'Cuándo','wz.s.data':'Tus datos','wz.s.confirm':'Confirmar','wz.s.pick':'Elige',
     'wz.next':'Continuar','wz.back':'Atrás','wz.edit':'Cambiar','wz.less':'Una persona menos','wz.more':'Una persona más','wz.guests':'personas',
     'wz.r.when.title':'¿Cuándo venís?','wz.r.when.sub':'Elige cuántos sois, el día y la hora. Solo ves las horas con sitio.',
     'wz.r.data.title':'¿A nombre de quién?','wz.r.data.sub':'Solo lo que el restaurante necesita para tenerte la mesa lista.',
@@ -1515,7 +1517,7 @@ const I18N_WZ = {
     'email.pedido.hint':'Opcional. El restaurante puede escribirte si hay algún problema con tu pedido.'
   },
   en:{
-    'wz.progress':'Steps','wz.s.when':'When','wz.s.data':'Your details','wz.s.confirm':'Confirm','wz.s.pick':'Choose',
+    'wz.err.bot':'We could not send your request. Reload the page and try again.','wz.progress':'Steps','wz.s.when':'When','wz.s.data':'Your details','wz.s.confirm':'Confirm','wz.s.pick':'Choose',
     'wz.next':'Continue','wz.back':'Back','wz.edit':'Change','wz.less':'One fewer guest','wz.more':'One more guest','wz.guests':'guests',
     'wz.r.when.title':'When are you coming?','wz.r.when.sub':'Choose how many you are, the day and the time. You only see times with room.',
     'wz.r.data.title':'Whose name is it under?','wz.r.data.sub':'Only what the restaurant needs to have your table ready.',
@@ -1543,7 +1545,7 @@ const I18N_WZ = {
     'email.pedido.hint':'Optional. The restaurant may write to you if there is any problem with your order.'
   },
   ca:{
-    'wz.progress':'Passos','wz.s.when':'Quan','wz.s.data':'Les teves dades','wz.s.confirm':'Confirmar','wz.s.pick':'Tria',
+    'wz.err.bot':'No hem pogut enviar la teva sol·licitud. Recarrega la pàgina i torna-ho a provar.','wz.progress':'Passos','wz.s.when':'Quan','wz.s.data':'Les teves dades','wz.s.confirm':'Confirmar','wz.s.pick':'Tria',
     'wz.next':'Continua','wz.back':'Enrere','wz.edit':'Canvia','wz.less':'Una persona menys','wz.more':'Una persona més','wz.guests':'persones',
     'wz.r.when.title':'Quan veniu?','wz.r.when.sub':'Tria quants sou, el dia i l\'hora. Només veus les hores amb lloc.',
     'wz.r.data.title':'A nom de qui?','wz.r.data.sub':'Només el que el restaurant necessita per tenir-te la taula a punt.',
@@ -2574,8 +2576,30 @@ let wzState = {kind:null, step:1, reached:1, rendered:null};
 const WZ_PASOS = {reserva:['wz.s.when','wz.s.data','wz.s.confirm'], pedido:['wz.s.pick','wz.s.data','wz.s.confirm']};
 const wzEl = id => document.getElementById(id);
 const wzVal = id => { const e = wzEl(id); return e ? String(e.value || '').trim() : ''; };
-function wzIniciar(kind){ if(wzState.kind !== kind) wzState = {kind, step:1, reached:1, rendered:null}; }
-function wzReset(){ wzState = {kind:null, step:1, reached:1, rendered:null}; }
+/* ═══ Filtro barato contra bots (auditoría 25/11, hallazgo de bots en la web pública) ═══
+   Turnstile/reCAPTCHA se descartaron A PROPÓSITO: las reglas de Firebase no pueden exigir un captcha (solo un servidor intermedio que lo verifique, y
+   ese intermediario sería un Worker de Cloudflare, justo lo que se evita con el servidor propio por los bloqueos de LaLiga: la reserva dejaría
+   de funcionar donde Cloudflare no llega). Lo que SÍ cabe aquí, sin servidor y sin coste:
+     1. Un campo trampa que un cliente no ve ni alcanza (fuera de pantalla, sin tabulador, oculto a los lectores de pantalla: accesibilidad intacta).
+        Los formularios que rellena un script lo rellenan; una persona, nunca. Si trae algo, no se envía nada.
+     2. Un tiempo mínimo desde que se abre el formulario hasta enviarlo (WZ_MIN_MS). Una persona tarda mucho más (tres pasos con datos); quien
+        va rápido de verdad (autorrelleno, «repetir último pedido») NO se rechaza: se le hace esperar el resto, 1-2 s, y se envía solo.
+   No para a un atacante que lo sepa y lo respete: sube su coste. Lo que ya está acotado por las reglas (aforo, tokens) sigue igual. */
+const WZ_MIN_MS = 3000;
+let wzDesde = Date.now(), wzEsperando = false;
+function wzFiltroBot(reenviar){
+  const miel = document.querySelector('.gg-miel input');
+  if(miel && String(miel.value || '').trim()) return 'bot';
+  const falta = WZ_MIN_MS - (Date.now() - wzDesde);
+  if(falta > 0){
+    if(!wzEsperando){ wzEsperando = true; setTimeout(() => { wzEsperando = false; reenviar(); }, falta + 40); }
+    return 'espera';
+  }
+  return null;
+}
+const wzMielHtml = () => `<div class="gg-miel" aria-hidden="true"><input type="text" name="gg_extra_contacto" tabindex="-1" autocomplete="off" inputmode="none" data-lpignore="true" data-1p-ignore="true"></div>`;
+function wzIniciar(kind){ if(wzState.kind !== kind){ wzState = {kind, step:1, reached:1, rendered:null}; wzDesde = Date.now(); } }
+function wzReset(){ wzState = {kind:null, step:1, reached:1, rendered:null}; wzDesde = Date.now(); }
 function telefonoValido(v){ return String(v || '').replace(/\D/g, '').length >= 7; }
 function wzProgHtml(kind){
   return `<ol class="wz-prog" aria-label="${escapeHtml(t('wz.progress'))}">${WZ_PASOS[kind].map((k, i) => {
@@ -3737,6 +3761,7 @@ function renderReservaForm(){
           <label for="r-name">${t('nombre')}</label>
           <input type="text" id="r-name" autocomplete="name">
         </div>
+        ${wzMielHtml()}
         <div class="field">
           <label for="r-phone">${t('telefono')}</label>
           <input type="tel" id="r-phone" placeholder="600 000 000" autocomplete="tel" inputmode="tel">
@@ -3847,6 +3872,8 @@ function sendReservaRequest(req, successMsg){
 
 function submitReserva(){
   if(submittingRequest) return;
+  const filtro = wzFiltroBot(submitReserva);
+  if(filtro){ if(filtro === 'bot') showInlineError(t('wz.err.bot')); else setBtnLoading('r-submit', true); return; }
   submittingRequest = true;
   setBtnLoading('r-submit', true);
   const clientName = document.getElementById('r-name').value.trim();
@@ -5162,6 +5189,7 @@ function renderOrderForm(){
           <label for="o-name">${t('nombre')}</label>
           <input type="text" id="o-name" autocomplete="name">
         </div>
+        ${wzMielHtml()}
         <div class="field">
           <label for="o-phone">${t('telefono')}</label>
           <input type="tel" id="o-phone" placeholder="600 000 000" autocomplete="tel" inputmode="tel">
@@ -5551,6 +5579,8 @@ async function submitOrder(){
   const pausaEnvio = canalPausadoHasta(currentTab === 'delivery' ? 'delivery' : 'takeaway');
   if(pausaEnvio){ showInlineError(t('error.pedidosPausados.title') + '. ' + mensajePausaCanal(currentTab === 'delivery' ? 'delivery' : 'takeaway', pausaEnvio)); return; }
   if(submittingRequest) return;
+  const filtro = wzFiltroBot(submitOrder);
+  if(filtro){ if(filtro === 'bot') showInlineError(t('wz.err.bot')); else setBtnLoading('o-submit', true); return; }
   submittingRequest = true;
   setBtnLoading('o-submit', true);
   const clienteNombre = document.getElementById('o-name').value.trim();

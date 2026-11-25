@@ -43,8 +43,10 @@ export async function servir(sitio, {extraConnect = '', puerto = 0} = {}){
     res.writeHead(200, Object.assign({'Content-Type': TIPOS[path.extname(fichero)] || 'application/octet-stream'}, cab));
     fs.createReadStream(fichero).pipe(res);
   });
-  await new Promise(r => srv.listen(puerto, '127.0.0.1', r));
-  const url = 'http://127.0.0.1:' + srv.address().port;
+  await new Promise(r => srv.listen(puerto, '0.0.0.0', r));
+  // 127.0.0.2, no localhost/127.0.0.1: la app y la web de reservas NO registran su service worker en esos dos nombres (a propósito), y la CSP
+  // tiene que probarse también con el worker de verdad (worker-src).
+  const url = 'http://127.0.0.2:' + srv.address().port;
   return {url, csp: cab['Content-Security-Policy'] || '', cabeceras: cab, close: () => new Promise(r => srv.close(r))};
 }
 
