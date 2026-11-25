@@ -733,7 +733,17 @@ function toggleAvisosPanel(){
   avisosRenderPanel();
 }
 function cerrarAvisos(){ const p = document.getElementById('avisos-panel'); if(p) p.classList.remove('active'); }
-function avisosIr(accion){ cerrarAvisos(); try{ (new Function(accion))(); }catch(e){ console.error('No se pudo abrir el aviso', e); } }
+/* Ejecuta el texto de una acción («navigate('x'); setTab('y')»). Era `new Function(accion)`, que la política de contenido (CSP) bloquea sin 'unsafe-eval'
+   —y permitir eval en toda la app para esto sería regalar justo lo que la CSP quiere cerrar—. Un atributo `onclick` se compila como cualquier otro
+   controlador en línea (que la app ya usa en todas partes y la CSP permite), sin eval. */
+function ggEjecutarAccion(codigo){
+  const b = document.createElement('button');
+  b.setAttribute('onclick', codigo);
+  b.style.display = 'none';
+  document.body.appendChild(b);
+  try{ b.click(); } finally { b.remove(); }
+}
+function avisosIr(accion){ cerrarAvisos(); try{ ggEjecutarAccion(accion); }catch(e){ console.error('No se pudo abrir el aviso', e); } }
 function avisosMarcarVisto(id, count){
   const v = avisosVistosLeer(); v[id] = count;
   try{ localStorage.setItem(AVISOS_VISTOS_LS, JSON.stringify(v)); }catch(e){}

@@ -1551,6 +1551,8 @@ function avisosDeLaApp(){
     // solo el propietario, solo en un aparato donde acaba de teclear un PIN corto, y «Visto» lo apaga en ese aparato (el PIN no se guarda, así que
     // la longitud solo se sabe al teclearlo: `ownerPinEsCorto`). Cambiar la contraseña a una larga lo borra solo.
     ...(avisoPinCorto()),
+    // Auditoría 25/11: alguien intentó bloquear el aforo/pedidos/mesas desde la web pública y la app ya lo corrigió (core.js, repararHoldsAtacados).
+    ...(typeof avisoAforoAtacado === 'function' ? avisoAforoAtacado() : []),
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},

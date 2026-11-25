@@ -9508,6 +9508,121 @@ function limpiarHolds(app, publicId, rama, fecha){
   }).catch(e => console.error('No se pudieron leer los holds', rama, fecha, e));
 }
 
+/* ═══ Auto-curación de los candados públicos (25/11, auditoría de seguridad) ═══
+   `aforoHold`, `pedidosHold` y `mesaHold` los escribe CUALQUIERA con una sesión anónima (la web pública no tiene otra identidad), y
+   unas reglas de Firebase no pueden limitar cuántas veces seguidas se escribe: con ~13 escrituras de +40 alguien dejaba el aforo de un
+   turno en 500 y la agenda online cerrada. Un límite de velocidad real pide backend (que no hay) y un intervalo mínimo entre
+   escrituras dañaría a clientes reales que reservan a la vez, así que la defensa es REPARAR: el dueño tiene escritura total en SU nube.
+
+   Un candado legítimo es transitorio: la web lo sube al reservar, la app procesa la solicitud en segundos y su sincronización lo suelta
+   (limpiarHolds). Uno que sigue ahí, igual o más alto, tras HOLDS_GRACIA_MS con la app abierta no lo justifica nada: se borra.
+   Si además es de un tamaño que no sale de una reserva normal (o que cerraría el turno entero) se anota para avisar en la campana. */
+let HOLDS_GRACIA_MS = 8 * 60 * 1000;
+let HOLDS_REPASO_MS = 10 * 60 * 1000;
+const HOLDS_ATAQUES_LS = 'gastrogoan_holds_atacados';
+// Sin el aforo configurado no se sabe cuándo «cierra el turno»; con él, un candado ≥ aforo es lo que de verdad bloquea la web.
+function holdsEsNotable(rama, valor, aforo){
+  if(rama === 'aforoHold') return valor >= 20 || (aforo > 0 && valor >= aforo);
+  if(rama === 'pedidosHold') return valor >= 5;
+  return valor >= 8;            // mesaHold: tantas franjas en una misma mesa y día no salen de una reserva (90 min = 6)
+}
+/* Parte pura (la prueba la llama sin Firebase): `snaps` = lo leído de cada rama, `previos` = lo visto en el repaso anterior,
+   devuelve qué borrar, qué recordar y qué es un ataque. Clave de cada candado: rama/fecha/hijo (hijo = turno, franja o mesa). */
+function holdsDecidirReparacion(snaps, previos, ahora, aforo, gracia){
+  const nuevos = {}, aReparar = [], ataques = [];
+  ['aforoHold', 'pedidosHold', 'mesaHold'].forEach(rama => {
+    const porFecha = (snaps && snaps[rama]) || {};
+    Object.keys(porFecha).forEach(fecha => {
+      const hijos = porFecha[fecha];
+      if(!hijos || typeof hijos !== 'object') return;
+      Object.keys(hijos).forEach(hijo => {
+        const v = hijos[hijo];
+        // Contador (aforo/pedidos) o, en mesaHold, nº de franjas ocupadas de esa mesa ese día.
+        const valor = rama === 'mesaHold' ? (v && typeof v === 'object' ? Object.keys(v).length : 0) : (Number(v) || 0);
+        if(valor <= 0) return;
+        const clave = rama + '/' + fecha + '/' + hijo;
+        const p = previos && previos[clave];
+        // Si ha BAJADO desde la última vez, alguien (la app) lo está soltando: empieza de nuevo.
+        const desde = p && valor >= p.valor ? p.desde : ahora;
+        nuevos[clave] = {valor, desde};
+        if(p && valor >= p.valor && ahora - p.desde >= gracia){
+          aReparar.push({rama, fecha, hijo, valor});
+          if(holdsEsNotable(rama, valor, aforo)) ataques.push({rama, fecha, valor});
+        }
+      });
+    });
+  });
+  return {nuevos, aReparar, ataques};
+}
+function holdsAtaquesLeer(){
+  try{ const a = JSON.parse(localStorage.getItem(HOLDS_ATAQUES_LS + ':' + getPublicId()) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; }
+}
+function holdsAtaquesAnotar(ataques){
+  if(!ataques.length) return;
+  try{
+    const corte = Date.now() - 7 * 86400000;
+    const lista = holdsAtaquesLeer().filter(a => a.ts > corte).concat(ataques.map(a => ({fecha: a.fecha, rama: a.rama, valor: a.valor, ts: Date.now()})));
+    localStorage.setItem(HOLDS_ATAQUES_LS + ':' + getPublicId(), JSON.stringify(lista.slice(-20)));
+  }catch(e){}
+}
+// El aviso de la campana (se suma en avisosDeLaApp, js/finance.js). Informativo: «Visto» lo apaga hasta que haya otro intento.
+function avisoAforoAtacado(){
+  try{
+    if(typeof isOwnerSession !== 'function' || !isOwnerSession()) return [];
+    const corte = Date.now() - 7 * 86400000;
+    const lista = holdsAtaquesLeer().filter(a => a.ts > corte);
+    if(!lista.length) return [];
+    const ultimo = lista[lista.length - 1];
+    const dia = (typeof fechaImpresaLegible === 'function' ? fechaImpresaLegible(ultimo.fecha) : ultimo.fecha);
+    const que = ultimo.rama === 'pedidosHold'
+      ? gl({es:'los pedidos online', ca:'les comandes en línia', en:'online orders'})
+      : ultimo.rama === 'mesaHold' ? gl({es:'tus mesas', ca:'les teves taules', en:'your tables'}) : gl({es:'tu aforo', ca:'el teu aforament', en:'your capacity'});
+    const vistos = (typeof avisosVistosLeer === 'function') ? avisosVistosLeer() : {};
+    if(vistos.aforoAtacado === lista.length) return [];
+    return [{count: lista.length, icon:'ti-shield-exclamation', id:'aforoAtacado', campana:true, soloDueno:true, ocultable:true,
+      label: gl({es:'Alguien intentó bloquear ' + que + ' del ' + dia + '; ya se corrigió', ca:'Algú va intentar bloquejar ' + que + ' del ' + dia + '; ja s\'ha corregit', en:'Someone tried to block ' + que + ' for ' + dia + '; it has been fixed'}),
+      onclick: `cerrarAvisos()`}];
+  }catch(e){ return []; }
+}
+let holdsPrevios = {}, holdsUltimoRepaso = 0, holdsReparando = false;
+async function repararHoldsAtacados(app, publicId, forzar){
+  if(holdsReparando) return;
+  const ahora = Date.now();
+  if(!forzar && ahora - holdsUltimoRepaso < HOLDS_REPASO_MS - 1000) return;
+  holdsUltimoRepaso = ahora;
+  holdsReparando = true;
+  try{
+    // Desde ayer en adelante, como el resto del espejo: nadie reserva el pasado y las claves de fecha ordenan como texto.
+    const desde = dateStr(new Date(ahora - 86400000));
+    const base = app.database().ref('gastrogoan/public/' + publicId);
+    const snaps = {};
+    for(const rama of ['aforoHold', 'pedidosHold', 'mesaHold']){
+      const s = await base.child(rama).orderByKey().startAt(desde).once('value');
+      snaps[rama] = s.val() || {};
+    }
+    const r = holdsDecidirReparacion(snaps, holdsPrevios, ahora, parseInt((DB.business || {}).aforo) || 0, HOLDS_GRACIA_MS);
+    holdsPrevios = r.nuevos;
+    for(const x of r.aReparar){
+      // Se borra el MISMO nivel que ya borra limpiarHolds (las reglas dan el permiso ahí y no en el padre).
+      try{ await base.child(x.rama + '/' + x.fecha + '/' + x.hijo).remove(); delete holdsPrevios[x.rama + '/' + x.fecha + '/' + x.hijo]; }
+      catch(e){ console.error('No se pudo reparar el candado', x, e); }
+    }
+    if(r.aReparar.length) console.warn('Candados públicos sin justificar, corregidos:', r.aReparar);
+    holdsAtaquesAnotar(r.ataques);
+    if(r.ataques.length && typeof avisosProgramar === 'function') avisosProgramar();
+  }catch(e){
+    console.warn('No se pudieron revisar los candados públicos', e && e.message);
+  }finally{ holdsReparando = false; }
+}
+let holdsTimer = null, holdsCtx = null;
+function programarReparacionHolds(app, publicId){
+  // Un solo reloj por pestaña: repasa los candados del negocio abierto mientras la app esté abierta (con la app cerrada no hay quien repare).
+  if(holdsCtx && holdsCtx.publicId !== publicId){ holdsPrevios = {}; holdsUltimoRepaso = 0; }   // otro negocio: no mezclar lo visto
+  holdsCtx = {app, publicId};
+  if(!holdsTimer) holdsTimer = setInterval(() => { if(holdsCtx) repararHoldsAtacados(holdsCtx.app, holdsCtx.publicId); }, HOLDS_REPASO_MS);
+  repararHoldsAtacados(app, publicId);
+}
+
 let espejoUltimoEnvio = {huella: '', ts: 0};
 const ESPEJO_REPASO_MS = 10 * 60 * 1000;
 function syncPublicMirror(){
@@ -9519,6 +9634,7 @@ function syncPublicMirror(){
     const sucursales = buildSucursalesList();
     getPublicMirrorApp().then(app => {
       if(!app) return;
+      try{ programarReparacionHolds(app, publicId); }catch(e){ console.warn('Reparación de candados', e); }
       const data = {
         business: negocioParaElEspejoPublico(),
         cartas: cartasParaElEspejo(),
@@ -11865,11 +11981,56 @@ function pagoOnlineInfoHtml(){
   });
 }
 function pagoOnlineIdentidad(){
-  return {tenantId: getTenantId(), publicId: getPublicId()};
+  /* ⚠️ `ownerAuthKey` es la prueba de que quien llama es el DUEÑO (auditoría 25/11): el tenantId lo conoce cualquier empleado y no vale. El Worker lo
+     comprueba contra la cuenta del propietario en la plataforma (worker/pagos-worker.js, esDuenoDelNegocio). Viaja en el cuerpo (POST), nunca en la URL. */
+  return {tenantId: getTenantId(), publicId: getPublicId(), ownerAuthKey: (typeof getOwnerAuthKey === 'function' ? getOwnerAuthKey() : null) || undefined};
 }
 function pagoOnlineErrorTexto(data){
   if(data && data.code === 'no_vinculado') return t('mn.pago.errNotLinked');
+  if(data && data.code === 'no_dueno') return gl({
+    es: 'No se ha podido comprobar que eres el propietario de este negocio. Entra con tu usuario y contraseña de propietario (si la cambiaste en otro aparato, con la nueva) y vuelve a probar.',
+    ca: 'No s\'ha pogut comprovar que ets el propietari d\'aquest negoci. Entra amb el teu usuari i contrasenya de propietari (si l\'has canviat en un altre aparell, amb la nova) i torna-ho a provar.',
+    en: 'We could not verify that you are the owner of this business. Sign in with your owner username and password (the new one if you changed it on another device) and try again.'});
   return (data && data.error) || t('mn.pago.error');
+}
+/* Llama al Worker de pagos como propietario. Un negocio cuya alta en la lista de la cuenta no llegó a subirse (sin conexión en su día, cola
+   pendiente) recibe «no_dueno»: se vuelve a anotar en la cuenta (es idempotente) y se reintenta UNA vez, para que el dueño no tenga que saber nada. */
+async function pagoOnlineLlamar(ruta, cuerpo){
+  const hacer = () => fetch(`${PAGOS_WORKER_URL}${ruta}`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign(pagoOnlineIdentidad(), cuerpo || {}))});
+  let res = await hacer();
+  let data = await res.json().catch(() => ({}));
+  if(data && data.code === 'no_dueno'){
+    try{
+      const lic = getLicense();
+      if(lic && lic.code){ linkBusinessToOwnerAccount(getTenantId(), lic.code, (DB.business && DB.business.name) || ''); await vaciarOwnerListOutbox(); }
+    }catch(e){}
+    res = await hacer();
+    data = await res.json().catch(() => ({}));
+  }
+  return {res, data};
+}
+/* ¿Sigue siendo la cuenta de Stripe que vio el dueño? Se recuerda la primera que se ve (en el negocio, así avisa en TODOS los aparatos) y si
+   cambia —cosa que la app no puede hacer sola y el Worker no deja sin ser el dueño— se avisa en rojo hasta que el dueño la confirme. */
+function stripeCuentaCambioAviso(data){
+  try{
+    if(!data || !data.accountId || !DB.business) return '';
+    const vista = DB.business.stripeCuentaVista;
+    if(!vista || !vista.accountId){ DB.business.stripeCuentaVista = {accountId: data.accountId, nombre: data.nombre || '', email: data.email || '', ts: Date.now()}; saveDB(); return ''; }
+    if(vista.accountId === data.accountId) return '';
+    const antes = [vista.nombre, vista.email].filter(Boolean).join(' · ') || vista.accountId;
+    const ahora = [data.nombre, data.email].filter(Boolean).join(' · ') || data.accountId;
+    try{ showToast(gl({es:'¡Ojo! La cuenta de Stripe de tu negocio ha cambiado', ca:'Compte! El compte d\'Stripe del teu negoci ha canviat', en:'Careful! Your business\'s Stripe account has changed'})); }catch(e){}
+    return `<div class="gg-aviso-stripe" style="margin-top:8px;padding:10px 12px;border:1px solid var(--red);border-radius:4px;color:var(--red);font-weight:600">
+      ${escapeHtml(gl({es:'La cuenta de Stripe conectada ha cambiado.', ca:'El compte d\'Stripe connectat ha canviat.', en:'The connected Stripe account has changed.'}))}
+      <div style="font-weight:400;margin-top:4px">${escapeHtml(gl({es:'Antes: ', ca:'Abans: ', en:'Before: '}) + antes)}<br>${escapeHtml(gl({es:'Ahora: ', ca:'Ara: ', en:'Now: '}) + ahora)}</div>
+      <div style="font-weight:400;margin-top:4px">${escapeHtml(gl({es:'Si no la has cambiado tú, pulsa «Desconectar» y avisa a GastroGoan: los cobros con tarjeta irían a otra cuenta.', ca:'Si no l\'has canviat tu, prem «Desconnectar» i avisa GastroGoan: els cobraments amb targeta anirien a un altre compte.', en:'If you did not change it, press “Disconnect” and tell GastroGoan: card payments would go to another account.'}))}</div>
+      <button class="btn btn-sm" style="margin-top:6px" onclick="stripeCuentaConfirmar('${escapeHtml(data.accountId)}')">${escapeHtml(gl({es:'Es mi cuenta', ca:'És el meu compte', en:'It is my account'}))}</button></div>`;
+  }catch(e){ return ''; }
+}
+function stripeCuentaConfirmar(accountId){
+  if(!/^acct_\w+$/.test(accountId || '')) return;
+  DB.business.stripeCuentaVista = Object.assign({}, DB.business.stripeCuentaVista, {accountId, ts: Date.now()});
+  saveDB(); loadPagoOnlineStatus();
 }
 async function loadPagoOnlineStatus(){
   const el = document.getElementById('pago-online-status');
@@ -11878,8 +12039,8 @@ async function loadPagoOnlineStatus(){
   let data = null;
   try{
     const {tenantId, publicId} = pagoOnlineIdentidad();
-    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/estado?tenantId=${encodeURIComponent(tenantId)}&publicId=${encodeURIComponent(publicId || '')}`);
-    data = await res.json();
+    // POST con la prueba de propietario: solo así el Worker enseña a nombre de quién está la cuenta (GET solo dice si cobra).
+    data = (await pagoOnlineLlamar('/stripe/estado', {})).data;
   }catch(e){ data = null; }
   if(!data || data.error){
     pagoOnlineActivo = false;
@@ -11891,20 +12052,21 @@ async function loadPagoOnlineStatus(){
     // A nombre de quién está la cuenta: que el dueño vea que es la SUYA
     // (el primer alta no puede comprobar quién la hace).
     const aNombre = [data.nombre, data.email].filter(Boolean).map(escapeHtml).join(' · ');
+    const avisoCuenta = stripeCuentaCambioAviso(data);
     if(!data.conectado){
       el.innerHTML = escapeHtml(t('mn.pago.notConnected'));
       if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-plug-connected"></i> ${t('mn.pago.connect')}</button>`;
     }else if(data.desconectado){
-      el.innerHTML = `${escapeHtml(t('mn.pago.paused'))}${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}`;
+      el.innerHTML = `${escapeHtml(t('mn.pago.paused'))}${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}${avisoCuenta}`;
       if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-plug-connected"></i> ${t('mn.pago.reconnect')}</button>`;
     }else if(!data.activo){
-      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-clock"></i> ${escapeHtml(t('mn.pago.pending'))}</span>${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}`;
+      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-clock"></i> ${escapeHtml(t('mn.pago.pending'))}</span>${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}${avisoCuenta}`;
       if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-arrow-right"></i> ${t('mn.pago.continue')}</button>
         <button class="btn btn-sm" onclick="loadPagoOnlineStatus()"><i class="ti ti-refresh"></i> ${t('mn.pago.retry')}</button>`;
     }else{
       el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${escapeHtml(t('mn.pago.active'))}</span>${aNombre ? `<div style="margin-top:4px">${t('mn.pago.account')}: ${aNombre}</div>` : ''}
         <div style="margin-top:4px">${escapeHtml(t('mn.pago.ownerNote'))}</div>
-        <div style="margin-top:6px;color:var(--muted)">${escapeHtml(t('mn.pago.twoAccounts').replace('${nombre}', data.nombre || data.email || ''))}</div>`;
+        <div style="margin-top:6px;color:var(--muted)">${escapeHtml(t('mn.pago.twoAccounts').replace('${nombre}', data.nombre || data.email || ''))}</div>${avisoCuenta}`;
       if(acciones) acciones.innerHTML = `<a class="btn btn-sm" href="https://dashboard.stripe.com/${/^acct_\w+$/.test(data.accountId||'') ? data.accountId + '/payments' : ''}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('mn.pago.openStripe')}</a>
         <button class="btn btn-sm btn-danger" onclick="desconectarStripe()"><i class="ti ti-plug-connected-x"></i> ${t('mn.pago.disconnect')}</button>`;
     }
@@ -12062,11 +12224,7 @@ async function conectarStripeAhora(){
     // una vez cargado el estado real (ver loadPagoOnlineStatus).
     try{ localStorage.setItem(STRIPE_VUELTA_LS, '1'); }catch(e){}
     const volver = location.origin + location.pathname + '#minegocio';
-    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/conectar`, {
-      method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify(Object.assign(pagoOnlineIdentidad(), {volver}))
-    });
-    const data = await res.json().catch(() => ({}));
+    const {res, data} = await pagoOnlineLlamar('/stripe/conectar', {volver});
     if(!res.ok || data.error){ showToast(pagoOnlineErrorTexto(data)); loadPagoOnlineStatus(); return; }
     if(data.url){ location.href = data.url; return; }
     showToast(t('mn.pago.active'));
@@ -12082,12 +12240,8 @@ async function conectarStripeAhora(){
 async function desconectarStripe(){
   if(!(await confirmModal(t('mn.pago.confirmDisconnect')))) return;
   try{
-    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/desconectar`, {
-      method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify(pagoOnlineIdentidad())
-    });
-    const data = await res.json().catch(() => ({}));
-    if(!res.ok || data.error){ showToast(t('mn.pago.disconnectError')); return; }
+    const {res, data} = await pagoOnlineLlamar('/stripe/desconectar', {});
+    if(!res.ok || data.error){ showToast(data && data.code === 'no_dueno' ? pagoOnlineErrorTexto(data) : t('mn.pago.disconnectError')); return; }
   }catch(e){
     showToast(t('mn.pago.disconnectError'));
     return;

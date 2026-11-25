@@ -2,8 +2,15 @@
 # se pueden incrustar en otra web (clickjacking). Falta la politica de contenido
 # (CSP): la app lleva mucho codigo dentro del propio HTML y hay que afinarla
 # con cuidado antes de ponerla.
+# Content-Security-Policy (25/11, auditoría de seguridad). La app lleva el JS y los estilos DENTRO del HTML, así que script-src necesita
+# 'unsafe-inline'; aun así la política corta lo que más importa: ningún script ni conexión a un origen que no esté en esta lista
+# (un XSS no puede cargar código de fuera ni sacar los datos a otro servidor), nada de <object>, <base> ni formularios a otra web.
+# Cada origen sale del código (fetch/src/href); test/csp.mjs sirve la web con ESTA cabecera en un Chromium real y falla ante
+# cualquier violación. Si se añade una conexión nueva (un proveedor, otro Worker), añadirla aquí, en servidor/fase1/Caddyfile
+# (solo reservas) y regenerar servidor/fase1/cloud-init.yaml.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=31536000
   X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'self' blob: data: https://*.firebaseapp.com; worker-src 'self'; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'

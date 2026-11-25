@@ -6102,7 +6102,7 @@ function p360AbrirMenu(btn, ev){
   const m = document.createElement('div'); m._btn = btn;
   m.id = 'p360-menu'; m.setAttribute('role', 'menu');
   m.innerHTML = acc.map((a, i) => `<button type="button" role="menuitem" class="${a.peligro ? 'peligro' : ''}" data-i="${i}"><i class="ti ${esc(a.icono || 'ti-point')}"></i> ${esc(a.texto)}</button>`).join('');
-  m.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const a = acc[Number(b.dataset.i)]; p360CerrarMenu(); try{ new Function(a.fn)(); }catch(err){ console.error(err); } });
+  m.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const a = acc[Number(b.dataset.i)]; p360CerrarMenu(); try{ /* sin new Function: la CSP del panel no permite eval; un onclick se compila como cualquier controlador en línea */ const x = document.createElement('button'); x.setAttribute('onclick', a.fn); x.style.display = 'none'; document.body.appendChild(x); try{ x.click(); } finally { x.remove(); } }catch(err){ console.error(err); } });
   document.body.appendChild(m);
   const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
   m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';

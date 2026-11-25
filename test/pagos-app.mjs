@@ -295,6 +295,54 @@ await caso('Mi Negocio: la tarjeta de Stripe enseña cada estado y solo activa e
   return 'sin conectar · alta a medias · activo · desactivado · guía antes de ir';
 });
 
+await caso('Stripe como PROPIETARIO: la prueba va en el cuerpo (nunca en la URL), «no_dueno» se reintenta una vez tras anotar el negocio en la cuenta y el mensaje es claro', async () => {
+  const r = await page.evaluate(async () => {
+    localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user: 'casapaco', authKey: 'AAAABBBBCCCCDDDDEEEEFFFF', pinHash: 'x'}));
+    const llamadas = [];
+    let n = 0;
+    window.fetch = async (url, opts = {}) => {
+      llamadas.push({url: String(url), metodo: opts.method || 'GET', cuerpo: opts.body ? JSON.parse(opts.body) : null});
+      n++;
+      return new Response(JSON.stringify(n === 1 ? {error: 'x', code: 'no_dueno'} : {conectado: false}), {status: n === 1 ? 403 : 200});
+    };
+    const lic = getLicense();
+    const cont = document.createElement('div'); cont.innerHTML = renderPagoOnlineCard(); document.body.appendChild(cont);
+    await loadPagoOnlineStatus(); cont.remove();
+    return {llamadas, texto: pagoOnlineErrorTexto({code: 'no_dueno'}), outbox: ownerListOutboxLeer().length, tieneLic: !!(lic && lic.code)};
+  });
+  assert.ok(r.llamadas.length >= 2, 'no_dueno no se reintentó: ' + JSON.stringify(r));
+  for(const l of r.llamadas){
+    assert.equal(l.metodo, 'POST', 'el estado debe pedirse por POST con la prueba');
+    assert.ok(!/AAAABBBB/.test(l.url) && !/ownerAuthKey/.test(l.url), 'el authKey viaja en la URL');
+    assert.equal(l.cuerpo.ownerAuthKey, 'AAAABBBBCCCCDDDDEEEEFFFF', 'falta la prueba de propietario en el cuerpo');
+    assert.ok(l.cuerpo.tenantId);
+  }
+  assert.match(r.texto, /propietario|propietari|owner/i);
+  return 'POST con ownerAuthKey en el cuerpo · reintento único tras no_dueno';
+});
+
+await caso('Stripe: si la cuenta conectada CAMBIA, la app lo dice en rojo hasta que el dueño la confirma', async () => {
+  const r = await page.evaluate(async () => {
+    const cont = document.createElement('div'); cont.innerHTML = renderPagoOnlineCard(); document.body.appendChild(cont);
+    DB.business.stripeCuentaVista = null;
+    const ver = async resp => { window.fetch = async () => new Response(JSON.stringify(resp)); await loadPagoOnlineStatus(); return document.getElementById('pago-online-status').innerHTML; };
+    const base = {conectado: true, activo: true, nombre: 'Bar Pepe', email: 'pepe@bar.es'};
+    const primera = await ver(Object.assign({accountId: 'acct_1'}, base));
+    const guardada = DB.business.stripeCuentaVista && DB.business.stripeCuentaVista.accountId;
+    const igual = await ver(Object.assign({accountId: 'acct_1'}, base));
+    const otra = await ver(Object.assign({accountId: 'acct_2'}, base, {nombre: 'Atacante SL', email: 'x@mal.es'}));
+    stripeCuentaConfirmar('acct_2'); await new Promise(r => setTimeout(r, 300));
+    const tras = document.getElementById('pago-online-status').innerHTML;
+    cont.remove();
+    return {primera: /gg-aviso-stripe/.test(primera), guardada, igual: /gg-aviso-stripe/.test(igual), otra: /gg-aviso-stripe/.test(otra), otraTexto: otra, tras: /gg-aviso-stripe/.test(tras)};
+  });
+  assert.equal(r.primera, false, 'avisa la primera vez que ve la cuenta'); assert.equal(r.guardada, 'acct_1');
+  assert.equal(r.igual, false); assert.equal(r.otra, true, 'no avisa de que la cuenta conectada ha cambiado');
+  assert.ok(r.otraTexto.includes('Atacante SL'), 'no dice a nombre de quién está ahora');
+  assert.equal(r.tras, false, '«Es mi cuenta» no apaga el aviso');
+  return 'primera vista sin aviso · igual sin aviso · cambio en rojo · confirmar lo apaga';
+});
+
 await caso('Reparto: un pedido a domicilio con código postal FUERA de la lista nunca entra solo (aunque el navegador diga que sí); uno de la lista sí', async () => {
   const r = await page.evaluate(async () => {
     DB.business.pedidosOnlineActivos = true;
