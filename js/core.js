@@ -12864,7 +12864,13 @@ function flushCloudSync(){
     scheduleCloudSyncRetry();
   };
   try{
-    cloudRef.update(sinIndefinidos(updates)).then(() => {
+    /* ⚠️ Las claves de `updates` pueden ser RUTAS (`business/plan360Program`, `plan360Pruebas/12`). sinIndefinidos limpia las claves de
+       un objeto reemplazando «/» por «_» (claveSeguraFirebase), así que pasarle `updates` entero convertía la ruta en una clave suelta
+       `business_plan360Program`: el negocio escribía en un nodo inventado y NADA de lo que cambiaba en `business` llegaba a la nube
+       ni a los demás aparatos. Se limpia el VALOR de cada ruta, no el nombre de la ruta. */
+    const aSubir = {};
+    Object.keys(updates).forEach(k => { aSubir[k] = sinIndefinidos(updates[k]); });
+    cloudRef.update(aSubir).then(() => {
       soltarEnVuelo();
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { const bloque = key.split('/')[0]; lastSyncedSnapshot[bloque] = pendingJson[bloque]; });
