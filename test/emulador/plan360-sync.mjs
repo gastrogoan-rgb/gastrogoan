@@ -144,7 +144,9 @@ await caso('4 · El cuestionario se contesta entre los dos aparatos (cada uno un
   await B.page.evaluate(() => { DB.business.plan360Intake.sections.forEach((s, si) => s.questions.forEach((q, qi) => { if(si === 0 && qi === 0) return; if(si % 2 === 1) return; q.a = q.a || 'respuesta móvil'; })); saveDB(); });
   await A.page.evaluate(() => { DB.business.plan360Intake.sections.forEach((s, si) => s.questions.forEach(q => { if(!q.a) q.a = 'respuesta tablet'; })); saveDB(); });
   const sin = d => d.page.evaluate(() => DB.business.plan360Intake.sections.reduce((n, s) => n + s.questions.filter(q => !q.a).length, 0));
-  assert.ok(await esperar(B, () => DB.business.plan360Intake.sections.every(s => s.questions.every(q => q.a)), null, 30000), 'al móvil le faltan respuestas de la tablet');
+  const diag = async () => JSON.stringify({A: await sin(A), B: await sin(B), nube: await C.page.evaluate(async () => { const i = (await cloudRef.child('business/plan360Intake').once('value')).val(); return ((i && i.sections) || []).reduce((n, s) => n + ((s && s.questions) || []).filter(q => q && !q.a).length, 0); })});
+  const llego = await esperar(B, () => DB.business.plan360Intake.sections.every(s => s.questions.every(q => q.a)), null, 30000);
+  assert.ok(llego, 'al móvil le faltan respuestas de la tablet ' + (llego ? '' : await diag()));
   assert.ok(await esperar(A, () => DB.business.plan360Intake.sections.every(s => s.questions.every(q => q.a)), null, 30000));
   for(const d of [A, B]){ assert.equal(await sin(d), 0); assert.ok(!(await avisos(d)).includes('plan360Cuestionario'), d.nombre + ' sigue avisando del cuestionario'); }
   assert.equal(await A.page.evaluate(() => DB.business.plan360Intake.sections[0].questions[0].a), 'respuesta de la tablet', 'se pisó la respuesta de antes');
