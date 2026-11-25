@@ -4,7 +4,7 @@
 # Cloudflare hasta comprobar en un partido que este servidor responde.
 # Caddy obtiene y renueva solo el certificado HTTPS.
 
-reservas.gastrogoan.com {
+(reservas) {
 	encode zstd gzip
 	header {
 		X-Content-Type-Options nosniff
@@ -24,3 +24,12 @@ reservas.gastrogoan.com {
 	try_files {path} /index.html
 	file_server
 }
+
+# El nombre de verdad. No se usa hasta que se cambie el DNS.
+reservas.gastrogoan.com {
+	import reservas
+}
+
+# Dirección de PRUEBA con la IP del servidor (x-x-x-x.sslip.io), generada al arrancar:
+# permite abrir la web desde el móvil o la tablet con certificado válido ANTES de tocar el DNS.
+import extra/*.caddy

@@ -1,4 +1,4 @@
-# Un solo contenedor: Caddy. Arranque: docker compose up -d (desde /srv/gastrogoan)
+# Un solo contenedor: Caddy. Se arranca solo desde cloud-init (docker compose up -d en /srv/gastrogoan).
 services:
   caddy:
     image: caddy:2
@@ -6,6 +6,7 @@ services:
     ports: ["80:80", "443:443", "443:443/udp"]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./extra:/etc/caddy/extra:ro
       - ./sitios:/srv/sitios:ro
       - caddy_datos:/data
       - caddy_config:/config
