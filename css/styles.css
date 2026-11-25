@@ -7296,6 +7296,30 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 .p360-prueba-nom{flex:1;min-width:0;font-size:13px;overflow-wrap:break-word}
 .p360-prueba-mini{flex:none;width:56px;height:56px;padding:0;border:1px solid var(--border);background:#fff;cursor:pointer;border-radius:3px;overflow:hidden}
 .p360-prueba-mini img{width:100%;height:100%;object-fit:cover;display:block}
+/* Servicio terminado: todo se ve, nada se edita (25/11). */
+.p360-solo-lectura{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;background:var(--cream,#F1EFE9);border-color:var(--ink)}
+.p360-solo-lectura > i{font-size:22px;flex:none;margin-top:1px}
+.p360-solo-lectura strong{display:block;margin-bottom:2px}
+.p360-tarea-nota-fija p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:break-word}
+/* Marcador semanal frente al Día 1 y radar antes/después (25/11). La flecha lleva texto oculto: el color solo no basta. */
+.p360-semanal{margin-bottom:14px}
+.p360-semanal-t{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.p360-sem-fila{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px}
+.p360-sem-nom{flex:1 1 150px;min-width:0;overflow-wrap:break-word}
+.p360-sem-cifras{font-variant-numeric:tabular-nums;white-space:nowrap}
+.p360-flecha{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;flex:none;font-size:16px;align-self:center}
+.p360-flecha.is-mejor{color:var(--green);background:var(--green-l,#E4EDE6)}
+.p360-flecha.is-peor{color:var(--red);background:var(--red-l,#F3DDD7)}
+.p360-flecha.is-igual{color:var(--muted);background:var(--cream,#F1EFE9)}
+.p360-sem-ganado{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:8px;padding:10px 12px;border-left:3px solid var(--green);background:var(--cream,#F1EFE9)}
+.p360-sem-ganado.is-peor{border-left-color:var(--red)}
+.p360-sem-ganado strong{font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.p360-radar-bloque{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.p360-radar-t{margin:0 0 4px;font-size:14px;font-weight:600}
+.p360-radar-ley{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted);margin-bottom:6px}
+.p360-radar-ley span{display:inline-flex;align-items:center;gap:6px}
+.p360-ley-linea{display:inline-block;width:22px;height:0;border-top:2px solid #4A5D4E}
+.p360-ley-linea.is-antes{border-top:2px dashed #716C65}
 /* Casilla de las tareas del mantenimiento: la casilla se ve de 22 px pero la zona de toque es de 44 */
 .p360-chk44{flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-8px 0 -8px -11px;cursor:pointer}
 /* Objetivos del negocio */

@@ -23,7 +23,10 @@ async function abrir(ancho){
     ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate','app-splash'].forEach(id=>document.getElementById(id)?.remove());
     Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true, plan360:true});
     delete DB.business.plan360StartDate; delete DB.business.plan360Program; delete DB.business.plan360Servicio; delete DB.business.plan360Mant;   // la IndexedDB la comparten las páginas de la prueba
+    delete DB.plan360Pruebas;
     ensurePlan360Program();
+    // Datos FICTICIOS del coach: el contrato los lee de plan360Coach (ya no hay ninguno escrito en el código) y sin ellos no se firma.
+    DB.business.plan360Coach = {nombre:'Coach de Prueba', dni:'00000000T', domicilio:'Calle Falsa 1, Ciudad de Prueba', iban:'ES00 0000 0000 0000 0000 0000', email:'coach@example.test', telefono:'600000000'};
     DB.business.plan360StartDate = addDaysStr(todayStr(), -4);   // día 5
     const d5 = DB.business.plan360Program.find(d => d.day === 5);
     d5.tasks = [{id:101, title:'Revisar mermas', description:'Pesa lo que se tira', status:'pendiente', note:''}, {id:102, title:'Llamar al proveedor', status:'hecha', note:''}];
@@ -94,14 +97,15 @@ await page.evaluate(async (dataUrl) => {
   const f = new File([blob], 'barra.png', {type:'image/png'});
   plan360GuardarPrueba(5, 0, 101, f);
 }, png);
-await page.waitForFunction(() => (DB.business.plan360Program.find(d => d.day === 5).tasks[0].pruebaData || '').startsWith('data:image/jpeg'), {timeout: 8000});
-const pr = await page.evaluate(() => { const tk = DB.business.plan360Program.find(d => d.day === 5).tasks[0]; return {bytes: Math.round(tk.pruebaData.length * 0.75), nombre: tk.pruebaNombre, fileData: tk.fileData, mini: !!document.querySelector('.p360-prueba-mini img')}; });
-await caso('P1-4 Una foto grande se comprime (≤ 350 KB), se guarda en campos propios y se ve la miniatura', async () => {
-  assert.ok(pr.bytes <= 350 * 1024, pr.bytes + ' bytes'); assert.equal(pr.nombre, 'barra.jpg'); assert.ok(!pr.fileData); assert.ok(pr.mini);
+await page.waitForFunction(() => ((DB.plan360Pruebas || {})['101'] || {}).data && (DB.plan360Pruebas['101'].data).startsWith('data:image/jpeg'), {timeout: 8000});
+const pr = await page.evaluate(() => { const tk = DB.business.plan360Program.find(d => d.day === 5).tasks[0]; const p = DB.plan360Pruebas['101']; return {bytes: Math.round(p.data.length * 0.75), nombre: p.nombre, fileData: tk.fileData, marcador: tk.tienePrueba, dentro: tk.pruebaData, mini: !!document.querySelector('.p360-prueba-mini img')}; });
+await caso('P1-4 Una foto grande se comprime (≤ 120 KB), va a su bloque propio (no dentro de la tarea) y se ve la miniatura', async () => {
+  assert.ok(pr.bytes <= 120 * 1024, pr.bytes + ' bytes'); assert.equal(pr.nombre, 'barra.jpg'); assert.ok(!pr.fileData); assert.ok(pr.mini);
+  assert.equal(pr.marcador, true, 'la tarea no lleva su marcador'); assert.equal(pr.dentro, undefined, 'la foto sigue DENTRO de la tarea (bloque business)');
 });
 await caso('P1-4 Un archivo no imagen de más de 350 KB se rechaza con aviso y no se guarda', async () => {
   await page.evaluate(() => { plan360GuardarPrueba(5, 1, 102, new File([new Uint8Array(400 * 1024)], 'grande.pdf', {type:'application/pdf'})); });
-  const r = await page.evaluate(() => ({p: DB.business.plan360Program.find(d => d.day === 5).tasks[1].pruebaData || null, toast: (document.querySelector('.toast')||{}).textContent || ''}));
+  const r = await page.evaluate(() => ({p: (DB.plan360Pruebas || {})['102'] || null, toast: (document.querySelector('.toast')||{}).textContent || ''}));
   assert.equal(r.p, null); assert.ok(/pesa demasiado/.test(r.toast), r.toast);
 });
 await caso('P1-4 Se puede ver la prueba (ventana) y quitarla con confirmación propia', async () => {
@@ -113,7 +117,7 @@ await caso('P1-4 Se puede ver la prueba (ventana) y quitarla con confirmación p
   assert.ok(await page.evaluate(() => !!document.querySelector('.modal-footer .btn-danger')), 'no salió la ventana de confirmación');
   await page.evaluate(() => acceptConfirmModal());
   await page.evaluate(() => window.__q);
-  assert.ok(await page.evaluate(() => !DB.business.plan360Program.find(d => d.day === 5).tasks[0].pruebaData));
+  assert.ok(await page.evaluate(() => !(DB.plan360Pruebas || {})['101'] && !DB.business.plan360Program.find(d => d.day === 5).tasks[0].tienePrueba));
 });
 
 // ── P1-5 avisos

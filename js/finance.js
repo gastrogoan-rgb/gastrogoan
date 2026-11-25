@@ -1152,6 +1152,157 @@ function plan360MarcadorEuros(){
   if(k.dia1.resultado != null) f.push({k:'resultado', antes: k.dia1.resultado, hoy: ult.resultado, mejora: r2(ult.resultado - k.dia1.resultado), euros: r2(ult.resultado - k.dia1.resultado)});
   return {desde: k.dia1.mes, mes: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, filas: f};
 }
+/* ── Marcador semanal frente al Día 1 y radar antes/después (25/11) ───────────────────────────────────────────────────────
+   Lo mismo que el marcador mensual de arriba, pero con lo que ocurre ESTA semana, para que el negocio vea que el plan se mueve
+   mientras lo hace y no un mes después. Todo sale de las cifras reales de la app (ventas, compras, nóminas, mermas, NPS); sin
+   Día 1 válido (el mes completo previo al inicio, ver plan360ActualizarKpis) no hay con qué comparar y NO se inventa nada:
+   «sin datos del Día 1». Una cifra que no se puede calcular con datos suficientes no sale (nunca un 0 por falta de datos). */
+const PLAN360_RANGO_MIN_DIAS = 3;   // días con venta que hacen falta en el periodo para fiarse de sus porcentajes
+function plan360KpisRango(desde, hasta){
+  const ventas = activeSales().filter(v => v.date >= desde && v.date <= hasta);
+  const fallback = (DB.business.ticket && DB.business.ticket.ivaPct != null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  let netas = 0, brutas = 0;
+  const dias = new Set();
+  ventas.forEach(v => {
+    dias.add(v.date);
+    brutas += (parseFloat(v.total) || 0) - (parseFloat(v.propina) || 0);
+    const desc = parseFloat(v.descuentoPct) || 0;
+    (v.items || []).forEach(l => {
+      const g = (parseFloat(l.price) || 0) * (parseFloat(l.qty) || 0) * (1 - desc / 100);
+      if(g <= 0) return;
+      const rate = l.ivaPct != null ? parseFloat(l.ivaPct) : parseFloat(typeof ivaPorDefectoDe === 'function' ? ivaPorDefectoDe(l) : fallback);
+      netas += g / (1 + rate / 100);
+    });
+  });
+  const compras = geVariablesTotalForRange(desde, hasta);
+  // Nóminas: lo del mes repartido por día, igual que hace el Panel de Control con los gastos fijos (geFijosForRange).
+  let personal = 0;
+  for(let d = new Date(desde + 'T00:00:00'), fin = new Date(hasta + 'T00:00:00'); d <= fin; d.setDate(d.getDate() + 1)){
+    const nm = daysInMonth(d.getFullYear(), d.getMonth());
+    personal += geTotalPersonalNetoForMonth(d.getFullYear(), d.getMonth()) / nm;
+  }
+  const mermas = (DB.mermas || []).filter(x => x.fecha >= desde && x.fecha <= hasta && x.motivo !== 'consumoPropio' && x.motivo !== 'comidaPersonal').reduce((s, x) => s + (parseFloat(x.coste) || 0), 0);
+  const nps = (DB.npsScores || []).filter(x => x.score != null && (x.createdAt || '').slice(0, 10) >= desde && (x.createdAt || '').slice(0, 10) <= hasta);
+  const ok = dias.size >= PLAN360_RANGO_MIN_DIAS && netas > 0;
+  return {
+    desde, hasta, dias: dias.size, valido: ok, tickets: ventas.length, netas: r2(netas),
+    ticketMedio: ok && ventas.length ? r2(brutas / ventas.length) : null,
+    foodCostPct: ok && compras > 0 ? r1(compras / netas * 100) : null,
+    personalPct: ok && personal > 0 ? r1(personal / netas * 100) : null,
+    mermas: r2(mermas), mermasPct: ok && compras > 0 ? r1(mermas / compras * 100) : null,
+    nps: nps.length >= 3 ? r1(nps.reduce((s, x) => s + Number(x.score), 0) / nps.length) : null, npsN: nps.length,
+  };
+}
+// Los N días terminados ANTES de hoy (hoy está a medias y bajaría todas las cifras).
+function plan360RangoTerminado(n){ const hoy = todayStr(); return {desde: addDaysStr(hoy, -n), hasta: addDaysStr(hoy, -1)}; }
+// Euros al mes que suponen, frente al Día 1, el food cost, el personal y el ticket de UN mes (las mismas tres filas que suma
+// plan360MarcadorEuros). Sirve para el acumulado «desde que empezamos».
+function plan360EurosDeMes(dia1, mes){
+  let e = 0;
+  [['foodCostPct', true], ['personalPct', true]].forEach(([c, baja]) => {
+    const a = dia1[c], h = mes[c];
+    if(a != null && h != null) e += ((baja ? a - h : h - a) / 100) * mes.netas;
+  });
+  if(dia1.ticketMedio && mes.ticketMedio) e += (mes.ticketMedio - dia1.ticketMedio) * mes.tickets;
+  return r2(e);
+}
+// «€ ganados desde que empezamos»: suma de los meses COMPLETOS posteriores al Día 1. Null si aún no hay ninguno.
+function plan360GanadoAcumulado(){
+  const k = (DB.business || {}).plan360Kpis, b = DB.business || {};
+  if(!k || !k.dia1 || !b.plan360StartDate) return null;
+  const hoy = new Date(), actual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  const meses = Object.keys(k.meses || {}).filter(c => c > k.dia1.mes && c < actual && c >= b.plan360StartDate.slice(0, 7) && k.meses[c] && k.meses[c].netas > 0).sort();
+  if(!meses.length) return null;
+  return {total: r2(meses.reduce((n, c) => n + plan360EurosDeMes(k.dia1, k.meses[c]), 0)), meses: meses.length};
+}
+const PLAN360_SEMANAL_FILAS = [
+  {k:'ventas', es:'Ventas netas', ca:'Vendes netes', en:'Net sales', tipo:'eur', mejorSiBaja:false, solo7:true},
+  {k:'ticketMedio', es:'Ticket medio', ca:'Tiquet mitjà', en:'Average ticket', tipo:'eur2', mejorSiBaja:false, solo7:true},
+  {k:'foodCostPct', es:'Food cost', ca:'Food cost', en:'Food cost', tipo:'pct', mejorSiBaja:true},
+  {k:'personalPct', es:'Personal sobre ventas', ca:'Personal sobre vendes', en:'Staff over sales', tipo:'pct', mejorSiBaja:true},
+  {k:'mermasPct', es:'Mermas sobre compras', ca:'Minves sobre compres', en:'Waste over purchases', tipo:'pct', mejorSiBaja:true},
+  {k:'nps', es:'Nota de clientes (sobre 10)', ca:'Nota de clients (sobre 10)', en:'Customer score (out of 10)', tipo:'num', mejorSiBaja:false},
+];
+/* Devuelve null si el negocio no está en el plan, {sinDia1:true} si no hay Día 1 válido, o {desde, hasta, filas, ganado}.
+   Ventas y ticket son de los últimos 7 días terminados (la semana); food cost, personal, mermas y nota de clientes, que dependen de
+   cuándo se apuntan las compras y las nóminas, usan esa semana si tiene compras y, si no, los últimos 28 días (`ventana: 28`),
+   para no enseñar un 0 % que parecería una mejora enorme. Las ventas del Día 1 se llevan a «semana tipo» (mes × 7 / días del mes). */
+function plan360MarcadorSemanal(){
+  const b = DB.business || {};
+  if(!b.plan360 || !b.plan360StartDate) return null;
+  const k = b.plan360Kpis;
+  if(!k || !k.dia1 || !(k.dia1.netas > 0)) return {sinDia1: true};
+  const r7 = plan360RangoTerminado(7), r28 = plan360RangoTerminado(28);
+  const w7 = plan360KpisRango(r7.desde, r7.hasta), w28 = plan360KpisRango(r28.desde, r28.hasta);
+  const [dy, dm] = k.dia1.mes.split('-').map(Number);
+  const dia1 = Object.assign({}, k.dia1, {ventas: k.dia1.netas * 7 / daysInMonth(dy, dm - 1), nps: k.dia1.npsN >= 3 ? k.dia1.nps : null});
+  const filas = [];
+  PLAN360_SEMANAL_FILAS.forEach(def => {
+    let w = w7, ventana = 7, hoy = def.k === 'ventas' ? w7.netas : w7[def.k];
+    if(!def.solo7 && (hoy == null || hoy === undefined)){ w = w28; ventana = 28; hoy = w28[def.k]; }
+    if(def.k === 'ventas' && !w7.valido) hoy = null;
+    const antes = dia1[def.k];
+    if(hoy == null || antes == null) return;
+    const dif = hoy - antes, igual = Math.abs(dif) < (def.tipo === 'pct' || def.tipo === 'num' ? 0.05 : 0.5);
+    const mejor = igual ? null : (def.mejorSiBaja ? dif < 0 : dif > 0);
+    filas.push({k: def.k, def, antes: r2(antes), hoy: r2(hoy), ventana, mejor});
+  });
+  return {desde: r7.desde, hasta: r7.hasta, filas, ganado: plan360GanadoAcumulado(), mesDia1: k.dia1.mes};
+}
+/* Radar antes/después. Cuatro ejes miden contra el objetivo que el propio negocio fijó (como el diagnóstico: costes de cocina,
+   equipo, mermas, satisfacción); dos miden contra el Día 1 mismo, porque no hay un «objetivo» de ticket o de ventas que valga para
+   todos: ahí 50 = «como el Día 1» y cada +1 % de mejora suma 2,5 puntos (±20 % = 0 / 100). Un eje solo sale si hay dato real en
+   AMBOS momentos. «Hoy» = los últimos 28 días terminados; «antes» = el mes completo del Día 1. */
+function plan360Puntos(k, opts){
+  const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+  const objFc = geFoodCostObjPct();
+  const dp = (DB.ge && DB.ge.config && DB.ge.config.distPct) || {};
+  const objPer = dp.per != null ? Number(dp.per) : 30;
+  const o = {};
+  if(k.foodCostPct != null) o.foodcost = clamp(100 - Math.max(0, k.foodCostPct - objFc) * 10);
+  if(k.personalPct != null && k.personalPct > 0) o.personal = clamp(100 - Math.max(0, k.personalPct - objPer) * 10);
+  if(k.mermasPct != null) o.mermas = clamp(100 - k.mermasPct * 20);
+  if(k.nps != null && (k.npsN == null || k.npsN >= 3)) o.nps = clamp(k.nps * 10);
+  const ref = opts && opts.dia1;
+  if(ref){
+    if(ref.ticketMedio && k.ticketMedio) o.ticket = clamp(50 + ((k.ticketMedio / ref.ticketMedio) - 1) * 100 * 2.5);
+    if(ref.netas > 0 && k.netas > 0 && k.ventasComparables != null) o.ventas = clamp(50 + ((k.ventasComparables / ref.netas) - 1) * 100 * 2.5);
+  }
+  return o;
+}
+// No-shows del mes (reservas ya pasadas): solo con ≥10 reservas ese mes, para que un solo plantón no mande el eje a 0.
+function plan360NoShows(desde, hasta){
+  const rs = (DB.reservations || []).filter(r => r.date >= desde && r.date <= hasta && (r.status === 'confirmada' || r.status === 'completada' || r.status === 'no_show'));
+  if(rs.length < 10) return null;
+  return r1(rs.filter(r => r.status === 'no_show').length / rs.length * 100);
+}
+const PLAN360_RADAR_EJES = [
+  {id:'foodcost', es:'Costes de cocina', ca:'Costos de cuina', en:'Kitchen costs'},
+  {id:'personal', es:'Equipo', ca:'Equip', en:'Team'},
+  {id:'mermas', es:'Control de mermas', ca:'Control de minves', en:'Waste control'},
+  {id:'nps', es:'Satisfacción de clientes', ca:'Satisfacció de clients', en:'Customer satisfaction'},
+  {id:'ticket', es:'Ticket medio', ca:'Tiquet mitjà', en:'Average ticket'},
+  {id:'ventas', es:'Ventas', ca:'Vendes', en:'Sales'},
+  {id:'noshows', es:'Reservas que acuden', ca:'Reserves que acudeixen', en:'Bookings that show up'},
+];
+function plan360RadarComparado(){
+  const b = DB.business || {}, k = b.plan360Kpis;
+  if(!b.plan360 || !k || !k.dia1 || !(k.dia1.netas > 0)) return null;
+  const r28 = plan360RangoTerminado(28);
+  const hoy = plan360KpisRango(r28.desde, r28.hasta);
+  if(!hoy.valido) return null;
+  hoy.ventasComparables = hoy.netas / 28 * (() => { const [y, m] = k.dia1.mes.split('-').map(Number); return daysInMonth(y, m - 1); })();   // 28 días → un mes del tamaño del Día 1
+  const antes = plan360Puntos(k.dia1), ahora = plan360Puntos(hoy, {dia1: k.dia1});
+  const [y1, m1] = k.dia1.mes.split('-').map(Number);
+  const ns0 = plan360NoShows(k.dia1.mes + '-01', k.dia1.mes + '-' + String(daysInMonth(y1, m1 - 1)).padStart(2, '0')), ns1 = plan360NoShows(r28.desde, r28.hasta);
+  const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+  if(ns0 != null && ns1 != null){ antes.noshows = clamp(100 - ns0 * 10); ahora.noshows = clamp(100 - ns1 * 10); }
+  // Ticket y ventas del Día 1 valen 50 por definición (son la referencia).
+  if(ahora.ticket != null) antes.ticket = 50;
+  if(ahora.ventas != null) antes.ventas = 50;
+  const ejes = PLAN360_RADAR_EJES.filter(e => antes[e.id] != null && ahora[e.id] != null).map(e => ({id: e.id, nombre: {es:e.es, ca:e.ca, en:e.en}, antes: antes[e.id], hoy: ahora[e.id]}));
+  return {ejes, mesDia1: k.dia1.mes, desde: r28.desde, hasta: r28.hasta};
+}
 /* ── Gráficos del Panel (2/11): curva con área en vez de barras ─────────────────────────────────────────────
    Una sola función pinta cualquier serie (12 meses, 24 horas…): el trazo y el área son un SVG que se estira (sin
    deformar el grosor: vector-effect), y los puntos, las etiquetas y los meses son HTML encima, así que el texto se ve

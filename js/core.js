@@ -4725,7 +4725,7 @@ function plan360WelcomeTexto(){ return gl({es: PLAN360_WELCOME_TEXT, ca: PLAN360
 const PLAN360_CONTRACT_TEXT =
 `ACUERDO DE PRESTACIÓN DE SERVICIOS
 
-Partes: de una parte, Marcos González Anguiano (GastroGoan), con DNI 47668150Y y domicilio en Vilafranca del Penedès. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+Partes: de una parte, {{coachNombre}} (GastroGoan), con DNI {{coachDni}} y domicilio en {{coachDomicilio}}. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
 
 1. Objeto y alcance
 GastroGoan se compromete a prestar servicios de asesoría gastronómica integral 360°, consistentes en diagnóstico y análisis operativo, financiero y de marketing; diseño e implementación de estrategias a medida; formación de equipo y optimización de procesos; y seguimiento y reporting de resultados con indicadores clave.
@@ -4736,7 +4736,7 @@ Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del inf
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
 Modalidad de pago: {{formaPago}}.
-Transferencia bancaria a la cuenta BE24 9677 3509 2638 — Concepto: Programa 360 GastroGoan.
+Transferencia bancaria a la cuenta {{coachIban}} — Concepto: Programa 360 GastroGoan.
 
 4. Responsabilidades
 GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
@@ -4785,8 +4785,24 @@ El incumplimiento da derecho a la parte reveladora a reclamar daños y perjuicio
 
 7. Legislación y jurisdicción
 Ley española. Juzgados y Tribunales de Barcelona.`;
+/* Los datos personales del coach (nombre, DNI, domicilio, IBAN, email y teléfono) NO viven en el código: la app va en un repositorio
+   público y se vendía con ellos escritos dentro del contrato. Los escribe el coach en su panel (`DB.business.plan360Coach`, clave
+   plan360*) y llegan por la nube del negocio como cualquier otro dato suyo. Sin ellos completos el contrato no se puede firmar
+   (ver plan360ContractSectionHtml): un contrato con «________» donde va el nombre de una de las partes no vale. */
+function plan360CoachDatos(){
+  const c = (DB.business && DB.business.plan360Coach) || null;
+  if(!c || typeof c !== 'object') return null;
+  const lim = k => String(c[k] == null ? '' : c[k]).trim();
+  const d = {nombre: lim('nombre'), dni: lim('dni'), domicilio: lim('domicilio'), iban: lim('iban'), email: lim('email'), telefono: lim('telefono')};
+  return d.nombre && d.dni && d.domicilio && d.iban ? d : null;
+}
 function plan360FillTemplate(text, c){
+  const co = plan360CoachDatos() || {};
   return text
+    .replace(/\{\{coachNombre\}\}/g, co.nombre || '________')
+    .replace(/\{\{coachDni\}\}/g, co.dni || '________')
+    .replace(/\{\{coachDomicilio\}\}/g, co.domicilio || '________')
+    .replace(/\{\{coachIban\}\}/g, co.iban || '________')
     .replace(/\{\{cliente\}\}/g, (c && c.clienteNombre) || '________')
     .replace(/\{\{nif\}\}/g, (c && c.clienteNIF) || '________')
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
@@ -4853,6 +4869,7 @@ function plan360FreshDoc(d){
 function ensurePlan360Program(){
   if(!DB.business.plan360) return;
   plan360RepararVacios(DB.business);
+  if(typeof plan360MigrarPruebas === 'function') plan360MigrarPruebas(DB.business);
   if(!Array.isArray(DB.business.plan360Docs) || !DB.business.plan360Docs.length){
     DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(plan360FreshDoc);
   }
@@ -6914,7 +6931,17 @@ const PREFER_LOCAL_ARRAYS = MERGEABLE_ARRAYS;
 // Objetos de nivel superior que son mapas planos {clave: valor} sin id ni
 // array dentro (mismo problema que DB.stock, fusionable con mergeStockField
 // campo a campo) — ver el comentario junto a su uso en applyRemoteBlock.
-const FLAT_MAP_FIELDS = new Set(['shifts', 'workDistribution', 'chatPinned', 'shiftHandoffNotes']);
+// plan360Pruebas (fotos de prueba de las tareas del Plan 360º, {tareaId: {data, nombre, ts}}) es un mapa plano como los demás: dos aparatos
+// que adjuntan la prueba de DOS tareas distintas a la vez no se pisan, y quitar una aquí no la resucita la nube. No está en defaultData
+// a propósito (igual que plan360LibroPdf): nace al guardar la primera foto y un `{}` por defecto solo daría trabajo a la sincronización.
+const FLAT_MAP_FIELDS = new Set(['shifts', 'workDistribution', 'chatPinned', 'shiftHandoffNotes', 'plan360Pruebas']);
+/* Firebase devuelve como LISTA un mapa cuyas claves son números seguidos ({"1":…,"2":…} → [null, …, …]). Los ids de tarea del
+   Plan 360º son números, y con una plantilla de 34 tareas pasa justo eso. Se vuelve a dejar como mapa antes de fusionar, o la
+   fusión por clave y la subida por clave verían índices de lista en vez de ids. */
+function plan360PruebasNormalizar(v){
+  if(Array.isArray(v)){ const o = {}; v.forEach((x, i) => { if(x != null) o[String(i)] = x; }); return o; }
+  return (v && typeof v === 'object') ? v : {};
+}
 
 // Hash simple para PINs (4 dígitos) — no almacenar en texto plano.
 // La sal incluye el código de licencia del propio negocio (DB.license.code):
@@ -10071,6 +10098,7 @@ function plan360RepararVacios(biz){
   });
 }
 function applyRemoteBlock(key, remoteValue){
+  if(key === 'plan360Pruebas') remoteValue = plan360PruebasNormalizar(remoteValue);
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
   // Lo que la nube tiene de verdad ahora mismo, ANTES de fusionar con nada
@@ -10152,6 +10180,8 @@ function applyRemoteBlock(key, remoteValue){
     try{ base = lastSyncedSnapshot && lastSyncedSnapshot.business ? JSON.parse(lastSyncedSnapshot.business) : null; }catch(e){ base = null; }
     if(base) merged = fusion3(base, DB.business, merged);
     plan360RepararVacios(merged);
+    // Una tablet con la versión antigua pudo subir las fotos de prueba DENTRO de la tarea: se mueven a su bloque (ver plan360MigrarPruebas).
+    if(typeof plan360MigrarPruebas === 'function') plan360MigrarPruebas(merged);
   }
   if(key === 'idr' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['creaciones','carpetas']);
@@ -10350,6 +10380,9 @@ function attachCloudChildListeners(){
   cloudRef.on('child_added', onOk, onErr);
   cloudRef.on('child_changed', onOk, onErr);
   cloudRef.on('child_removed', snap => {
+    // Quitada la ÚLTIMA foto de prueba en otro aparato, el bloque desaparece entero: aquí hay que tratarlo como «vacío», o la foto
+    // se quedaría viva en este aparato y al siguiente guardado volvería a subirse a la nube.
+    if(snap.key === 'plan360Pruebas'){ applyRemoteBlock(snap.key, {}); return; }
     const def = defaultData();
     if(!def.hasOwnProperty(snap.key)) return;
     applyRemoteBlock(snap.key, def[snap.key]);
@@ -10362,6 +10395,7 @@ function attachCloudChildListeners(){
 // activación (ver startCloudSync).
 function mergeRemoteIntoLocal(val){
   const merged = withDefaults(defaultData(), val);
+  if(merged.plan360Pruebas !== undefined) merged.plan360Pruebas = plan360PruebasNormalizar(merged.plan360Pruebas);
   let changedLocally = false;
   let needsReupload = false;
   const newSnapshot = {};
@@ -12755,6 +12789,17 @@ function flushCloudSync(){
       Object.assign(updates, sub);
     }catch(e){ /* si el snapshot no se puede leer, se sube entero como siempre */ }
   }
+  /* Las fotos de prueba (hasta 4 MB en total) tampoco suben en bloque: cada foto nueva o quitada viaja sola
+     (`plan360Pruebas/<tarea>`), y las demás no se reescriben. Sin foto anterior conocida se sube el mapa entero, que es la primera vez. */
+  if(updates.plan360Pruebas && lastSyncedSnapshot.plan360Pruebas){
+    try{
+      const antes = plan360PruebasNormalizar(JSON.parse(lastSyncedSnapshot.plan360Pruebas)), ahora = plan360PruebasNormalizar(DB.plan360Pruebas), sub = {};
+      Object.keys(ahora).forEach(k => { if(canonicalStringify(ahora[k]) !== canonicalStringify(antes[k])) sub['plan360Pruebas/' + k] = ahora[k]; });
+      Object.keys(antes).forEach(k => { if(!(k in ahora)) sub['plan360Pruebas/' + k] = null; });
+      delete updates.plan360Pruebas;
+      Object.assign(updates, sub);
+    }catch(e){ /* si el snapshot no se puede leer, se sube entero */ }
+  }
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
   const seqAlSubir = cambiosLocalesSeq;
@@ -12770,7 +12815,7 @@ function flushCloudSync(){
     cloudRef.update(sinIndefinidos(updates)).then(() => {
       soltarEnVuelo();
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
-      keys.forEach(key => { if(key.startsWith('business/')) lastSyncedSnapshot.business = pendingJson.business; else lastSyncedSnapshot[key] = pendingJson[key]; });
+      keys.forEach(key => { const bloque = key.split('/')[0]; lastSyncedSnapshot[bloque] = pendingJson[bloque]; });
       lastSyncOkAt = Date.now();
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio
