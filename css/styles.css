@@ -7281,6 +7281,37 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 .p360-estados .btn{justify-content:center;min-height:44px;padding-left:4px;padding-right:4px;letter-spacing:0}
 .p360-tarea-nota{margin:10px 0 0}
 .p360-tarea-nota textarea{resize:none}
+/* Tarea del Plan 360º plegable en móvil (norma «lo denso se pliega», 25/11): a la vista título + estado; el resto, tras un toque. */
+.p360-tarea-cab{display:flex;align-items:center;gap:8px;min-height:44px}
+.p360-tarea-cab .p360-tarea-tit{flex:1;min-width:0}
+.p360-tarea-est{flex:none;font:600 11px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted);background:#fff}
+.p360-tarea-est.is-hecha{color:var(--green);border-color:var(--green);background:var(--green-l)}
+.p360-tarea-est.is-no_hecha{color:var(--red);border-color:var(--red);background:var(--red-l)}
+.p360-tarea .pl-extra{margin-top:6px}
+.p360-tarea-area{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--olive,#4A5D4E);margin-bottom:2px}
+/* Prueba (foto o archivo) de la tarea */
+.p360-prueba{margin-top:10px}
+.p360-prueba-et{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.p360-prueba-fila{display:flex;align-items:center;gap:10px}
+.p360-prueba-nom{flex:1;min-width:0;font-size:13px;overflow-wrap:break-word}
+.p360-prueba-mini{flex:none;width:56px;height:56px;padding:0;border:1px solid var(--border);background:#fff;cursor:pointer;border-radius:3px;overflow:hidden}
+.p360-prueba-mini img{width:100%;height:100%;object-fit:cover;display:block}
+/* Casilla de las tareas del mantenimiento: la casilla se ve de 22 px pero la zona de toque es de 44 */
+.p360-chk44{flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-8px 0 -8px -11px;cursor:pointer}
+/* Objetivos del negocio */
+.p360-obj-cab-fila{display:flex;align-items:flex-start;gap:6px}
+.p360-obj-cab-fila .p360-obj-tit{flex:1;min-width:0}
+.p360-obj-valores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px}
+.p360-obj-valores .field{margin-bottom:0}
+.p360-obj-urg-fija{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:44px}
+.p360-obj-urg-chip{font:600 12px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border:2px solid var(--border);border-radius:999px}
+.p360-med{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;flex-wrap:wrap}
+.p360-med-nota{min-width:0;overflow-wrap:break-word;flex:1}
+.p360-med .mn-btn{margin-left:auto}
+@media (max-width:760px){
+  .p360-tarea:not(.is-abierta) .pl-extra{display:none}
+  .p360-tarea.plegable{cursor:pointer}
+}
 @media (max-width:720px){
   /* Sin raya gruesa de acento sobre cada tarjeta (norma del barrido del 7/11) */
   #plan360-content .card{border-top:1px solid var(--border)}

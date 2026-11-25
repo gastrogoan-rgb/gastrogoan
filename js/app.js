@@ -6207,7 +6207,9 @@ function plan360Puntuaciones(k){
   const objPer = dp.per != null ? Number(dp.per) : 30;
   const out = [];
   if(k.foodCostPct != null) out.push({id:'foodcost', nombre:{es:'Costes de cocina', ca:'Costos de cuina', en:'Kitchen costs'}, puntos: clamp(100 - Math.max(0, k.foodCostPct - objFc) * 10), dato: `${k.foodCostPct} % / ${objFc} %`});
-  if(k.personalPct != null) out.push({id:'personal', nombre:{es:'Equipo', ca:'Equip', en:'Team'}, puntos: clamp(100 - Math.max(0, k.personalPct - objPer) * 10), dato: `${k.personalPct} % / ${objPer} %`});
+  // Un % de personal en 0 no es «cumplir el objetivo»: es que no hay nóminas cargadas (no se puede medir). Puntuarlo 100 lo hacía
+  // pasar por un logro en el impreso (auditoría QA del 25/11). Como cualquier dato no medible, simplemente no sale.
+  if(k.personalPct != null && k.personalPct > 0) out.push({id:'personal', nombre:{es:'Equipo', ca:'Equip', en:'Team'}, puntos: clamp(100 - Math.max(0, k.personalPct - objPer) * 10), dato: `${k.personalPct} % / ${objPer} %`});
   if(k.mermasPct != null) out.push({id:'mermas', nombre:{es:'Control de mermas', ca:'Control de minves', en:'Waste control'}, puntos: clamp(100 - k.mermasPct * 20), dato: `${k.mermasPct} %`});
   if(k.nps != null && k.npsN >= 3) out.push({id:'nps', nombre:{es:'Satisfacción de clientes', ca:'Satisfacció de clients', en:'Customer satisfaction'}, puntos: clamp(k.nps * 10), dato: `${k.nps} / 10`});
   return out;
@@ -6226,9 +6228,11 @@ function plan360RadarSvg(ps){
   const rot = ps.map((x, i) => {
     const [tx, ty] = pt(i, 1.2);
     const anc = tx < cx - 8 ? 'end' : tx > cx + 8 ? 'start' : 'middle';
-    return `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="${anc}" font-family="Schibsted Grotesk,sans-serif" font-size="11" fill="#3D3A34">${escapeHtml(L(x.nombre))}</text>`;
+    return `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="${anc}" font-family="Schibsted Grotesk,sans-serif" font-size="12" fill="#3D3A34">${escapeHtml(L(x.nombre))}</text>`;
   }).join('');
-  return `<svg viewBox="0 0 300 240" role="img" aria-label="${escapeHtml(L({es:'Radar de áreas', ca:'Radar d\'àrees', en:'Area radar'}))}" style="width:100%;max-width:420px;height:auto;display:block;margin:6px auto">${anillos}${ejes}${area}${puntos}${rot}</svg>`;
+  // El viewBox es más ancho que el dibujo (radio 78 en 300) a propósito: las etiquetas largas de los ejes laterales («Control de
+  // mermas», «Satisfacción de clientes») se salían por el borde y salían cortadas («rol de mermas»).
+  return `<svg viewBox="-70 0 440 240" role="img" aria-label="${escapeHtml(L({es:'Radar de áreas', ca:'Radar d\'àrees', en:'Area radar'}))}" style="width:100%;max-width:440px;height:auto;display:block;margin:6px auto">${anillos}${ejes}${area}${puntos}${rot}</svg>`;
 }
 function plan360PuntuacionesHtml(k){
   const ps = plan360Puntuaciones(k);
@@ -6554,10 +6558,11 @@ function plan360MantMarcadorHtml(){
   if(!m.desde) return '';
   const [y, mo] = m.desde.split('-').map(Number);
   const desdeTxt = new Date(y, mo - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'});
+  // «1 reporte», no «1 reportes»: la etiqueta tiene singular propio (clave + «1»).
   const celda = (n, icono, clave) => `<div style="flex:1;min-width:92px;text-align:center;padding:6px 4px">
       <i class="ti ${icono}" style="font-size:20px;opacity:.85"></i>
       <div style="font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums">${n}</div>
-      <div class="txt-xs" style="opacity:.85">${escapeHtml(t(clave))}</div>
+      <div class="txt-xs" style="opacity:.85">${escapeHtml(t(n === 1 ? clave + '1' : clave))}</div>
     </div>`;
   return `<div class="card" style="background:var(--ink);color:#fff;margin-bottom:12px">
     <div style="font-weight:700;margin-bottom:2px">${escapeHtml(t('plan360.mant.scoreTitle'))}</div>
@@ -6612,9 +6617,11 @@ function plan360MantServicioHtml(){
       : (esOwner ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
   </div>`;
 }
-function plan360SolicitarBaja(){
+// La confirmación va con la ventana propia de la app (confirmModal), no con el confirm() nativo del navegador: fuera de lugar
+// en una app con su diseño, y en un móvil o una tablet en modo PWA puede ni salir.
+async function plan360SolicitarBaja(){
   if(!plan360EsOwner()) return;
-  if(!confirm(gl({es:'¿Pedir la baja del mantenimiento? Será efectiva a fin de este mes y tu coach la recibe al momento.', ca:'Demanar la baixa del manteniment? Serà efectiva a final d\'aquest mes i el teu coach la rep a l\'instant.', en:'Request cancellation of the maintenance? It takes effect at the end of this month and your coach gets it right away.'}))) return;
+  if(!(await confirmModal(gl({es:'¿Pedir la baja del mantenimiento? Será efectiva a fin de este mes y tu coach la recibe al momento.', ca:'Demanar la baixa del manteniment? Serà efectiva a final d\'aquest mes i el teu coach la rep a l\'instant.', en:'Request cancellation of the maintenance? It takes effect at the end of this month and your coach gets it right away.'}), {danger:true, icon:'ti-door-exit', confirmLabel: gl({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'})}))) return;
   DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {baja: {ts: Date.now(), por: 'negocio'}});
   saveDB(); plan360PingActivity(); showToast(gl({es:'Baja solicitada', ca:'Baixa sol·licitada', en:'Cancellation requested'}));
   renderPlan360Mant();
@@ -6655,7 +6662,7 @@ function renderPlan360Mant(clave){
       const atrasada = tarea && !it.hecho && fecha && fecha < hoy;
       const idSeguro = escapeHtml(it.id);
       const marca = tarea
-        ? `<input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${idSeguro}',this.checked)" style="width:22px;height:22px;flex:none;margin-top:1px" aria-label="${escapeHtml(t('plan360.mant.markDone'))}">`
+        ? `<label class="p360-chk44"><input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${idSeguro}',this.checked)" style="width:22px;height:22px;margin:0" aria-label="${escapeHtml(t('plan360.mant.markDone'))}"></label>`
         : `<i class="ti ${it.hecho ? 'ti-circle-check' : 'ti-circle'}" style="font-size:22px;flex:none;color:${it.hecho ? 'var(--green)' : 'var(--muted)'}"></i>`;
       return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border)">
         ${marca}
@@ -7530,10 +7537,17 @@ function renderPlan360ReunionReport(day){
 function plan360ObjectiveRow(day, o, i){
   const col = plan360ObjPriorityColor(o.prioridad);
   const mediciones = o.mediciones || [];
-  return `<div class="card" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
-    <div class="field" style="margin-bottom:8px">
-      <label>${escapeHtml(t('plan360.objTitle'))}</label>
-      <input id="p360-obj-titulo-${i}" value="${escapeHtml(o.titulo || '')}">
+  // La «Urgencia» la fija el coach: un objetivo que puso él llega sin `origen`; los que añade el negocio desde aquí llevan
+  // origen:'negocio' y esos sí los puede graduar. Sin esto el negocio rebajaba a «complementario» lo que el coach marcó prioritario.
+  const propio = o.origen === 'negocio';
+  const menu = propio ? ggMenuAcciones([{icono:'ti-trash', texto: gl({es:'Borrar el objetivo', ca:'Esborrar l\'objectiu', en:'Delete the goal'}), fn:`plan360BorrarObjetivo(${day},${i})`, peligro:true}]) : '';
+  return `<div class="card p360-obj" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
+    <div class="field p360-obj-cab" style="margin-bottom:8px">
+      <label for="p360-obj-titulo-${i}">${escapeHtml(t('plan360.objTitle'))}</label>
+      <div class="p360-obj-cab-fila">
+        <textarea id="p360-obj-titulo-${i}" class="p360-obj-tit" rows="1">${escapeHtml(o.titulo || '')}</textarea>
+        ${menu}
+      </div>
     </div>
     <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objWhy'))}</label>
@@ -7541,23 +7555,31 @@ function plan360ObjectiveRow(day, o, i){
     </div>
     <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objUrgency'))}</label>
-      <select id="p360-obj-prioridad-${i}">
+      ${propio ? `<select id="p360-obj-prioridad-${i}">
         <option value="prioritario" ${o.prioridad === 'prioritario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.prioritario'))}</option>
         <option value="esencial" ${o.prioridad === 'esencial' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.esencial'))}</option>
         <option value="complementario" ${o.prioridad === 'complementario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.complementario'))}</option>
-      </select>
+      </select>` : `<div class="p360-obj-urg-fija"><span class="p360-obj-urg-chip" style="${col ? 'border-color:' + col : ''}">${escapeHtml(t('plan360.priority.' + (o.prioridad || 'esencial')))}</span><span class="txt-xs muted">${escapeHtml(gl({es:'La fija tu coach', ca:'La fixa el teu coach', en:'Set by your coach'}))}</span></div>`}
     </div>
-    <div class="field" style="margin-bottom:0">
+    <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objMetric'))}</label>
       <input id="p360-obj-metrica-${i}" value="${escapeHtml(o.metrica || '')}" placeholder="${escapeHtml(t('plan360.objMetricPlaceholder'))}">
+    </div>
+    <div class="p360-obj-valores">
+      <div class="field"><label for="p360-obj-vini-${i}">${escapeHtml(gl({es:'Valor inicial', ca:'Valor inicial', en:'Starting value'}))}</label><input id="p360-obj-vini-${i}" value="${escapeHtml(o.valorInicial || '')}" inputmode="decimal" placeholder="${escapeHtml(gl({es:'Ej. 8 %', ca:'Ex. 8 %', en:'E.g. 8%'}))}"></div>
+      <div class="field"><label for="p360-obj-vobj-${i}">${escapeHtml(gl({es:'Objetivo', ca:'Objectiu', en:'Target'}))}</label><input id="p360-obj-vobj-${i}" value="${escapeHtml(o.valorObjetivo || '')}" inputmode="decimal" placeholder="${escapeHtml(gl({es:'Ej. 3 %', ca:'Ex. 3 %', en:'E.g. 3%'}))}"></div>
+      <div class="field"><label for="p360-obj-fecha-${i}">${escapeHtml(gl({es:'Fecha objetivo', ca:'Data objectiu', en:'Target date'}))}</label><input type="date" id="p360-obj-fecha-${i}" value="${escapeHtml(o.fechaObjetivo || '')}"></div>
     </div>
     ${o.metrica ? `
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${escapeHtml(t('plan360.objMeasurements'))}</div>
-        ${mediciones.length ? mediciones.map(m => `<div style="display:flex;gap:8px;padding:3px 0;font-size:13px"><span class="muted" style="flex:none">${escapeHtml(plan360FechaLegible(m.fecha))}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted">— ${escapeHtml(m.nota)}</span>` : ''}</div>`).join('')
+        ${mediciones.length ? mediciones.map((m, j) => `<div class="p360-med"><span class="muted" style="flex:none">${escapeHtml(plan360FechaLegible(m.fecha))}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted p360-med-nota">— ${escapeHtml(m.nota)}</span>` : ''}${ggMenuAcciones([
+            {icono:'ti-pencil', texto: gl({es:'Editar la medición', ca:'Editar el mesurament', en:'Edit the measurement'}), fn:`plan360EditarMedicion(${i},${j})`},
+            {icono:'ti-trash', texto: gl({es:'Borrar la medición', ca:'Esborrar el mesurament', en:'Delete the measurement'}), fn:`plan360BorrarMedicion(${i},${j})`, peligro:true},
+          ])}</div>`).join('')
           : `<p class="muted" style="margin:0;font-size:13px">${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`}
         <div style="display:flex;gap:6px;margin-top:8px">
-          <input id="p360-obj-medicion-${i}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" style="flex:1">
+          <input id="p360-obj-medicion-${i}" aria-label="${escapeHtml(t('plan360.objMeasurementValue'))}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" inputmode="decimal" style="flex:1">
           <button class="btn btn-sm" onclick="plan360AddMedicion(${i})">${escapeHtml(t('plan360.objMeasurementAdd'))}</button>
         </div>
       </div>` : ''}
@@ -7569,40 +7591,107 @@ function addPlan360Objective(day){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
-  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
-  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(day, o, i)).join('');
+  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null, origen: 'negocio'});
+  plan360ObjRepintar(d);
+}
+function plan360ObjRepintar(d){
+  const lista = document.getElementById('p360-obj-list');
+  if(lista) lista.innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(d.day, o, i)).join('');
+}
+// Se vuelve a buscar el día en DB (la nube pudo sustituir el objeto) y se recoge lo escrito antes de repintar.
+function plan360ObjDiaVivo(){
+  if(!plan360EsOwner() || !plan360ObjetivosDiaActivo) return null;
+  const d = (DB.business.plan360Program || []).find(x => x.day === plan360ObjetivosDiaActivo.day);
+  if(!d || !Array.isArray(d.objectives)) return null;
+  plan360ObjetivosDiaActivo = d;
+  plan360SyncObjectivesFromForm(d);
+  return d;
+}
+// Solo los objetivos que añadió el negocio se pueden borrar: los del coach son el plan pactado. Las tareas que apuntaban a él
+// no se borran, solo dejan de mostrar el objetivo.
+async function plan360BorrarObjetivo(day, i){
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const o = d.objectives[i];
+  if(!o || o.origen !== 'negocio') return;
+  const enlazadas = (DB.business.plan360Program || []).reduce((n, x) => n + (x.tasks || []).filter(tk => tk.objectiveId != null && tk.objectiveId === o.id).length, 0);
+  const aviso = gl({es:'¿Borrar este objetivo?', ca:'Esborrar aquest objectiu?', en:'Delete this goal?'})
+    + (enlazadas ? '\n' + gl({es:`Tiene ${enlazadas} tarea(s) enlazada(s): se quedarán sin objetivo.`, ca:`Té ${enlazadas} tasca/ques enllaçada/des: es quedaran sense objectiu.`, en:`It has ${enlazadas} linked task(s): they will be left without a goal.`}) : '');
+  if(!(await confirmModal(aviso, {danger:true, icon:'ti-trash', confirmLabel: gl({es:'Borrar', ca:'Esborrar', en:'Delete'})}))) return;
+  const d2 = plan360ObjDiaVivo(); if(!d2) return;
+  d2.objectives = d2.objectives.filter(x => x.id !== o.id);
+  saveDB(); plan360PingActivity();
+  plan360ObjRepintar(d2);
 }
 // La medición se guarda al momento (no espera al botón Guardar general de
 // la pantalla) porque es un hecho puntual — "hoy tocaba anotar el número"
 // — no un borrador de texto que tenga sentido dejar a medias.
 function plan360AddMedicion(i){
-  if(!plan360EsOwner() || !plan360ObjetivosDiaActivo) return;
   // Se vuelve a buscar el día en DB: si mientras tanto llegó el bloque de la
   // nube, el objeto guardado ya no es el de DB y la medición se perdía (la
   // misma trampa que el cVivo del I+D). Y antes de repintar se recoge lo
   // escrito en el formulario: repintar sin eso borraba lo no guardado.
-  const d = (DB.business.plan360Program || []).find(x => x.day === plan360ObjetivosDiaActivo.day);
-  if(!d || !Array.isArray(d.objectives)) return;
-  plan360ObjetivosDiaActivo = d;
-  plan360SyncObjectivesFromForm(d);
+  const d = plan360ObjDiaVivo(); if(!d) return;
   const o = d.objectives[i];
   const input = document.getElementById('p360-obj-medicion-' + i);
   if(!o || !input || !input.value.trim()) return;
   if(!Array.isArray(o.mediciones)) o.mediciones = [];
   o.mediciones.push({fecha: todayStr(), valor: input.value.trim(), nota: ''});
   saveDB();
-  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((ob, j) => plan360ObjectiveRow(d.day, ob, j)).join('');
+  plan360ObjRepintar(d);
+}
+// Una medición mal tecleada ya no obliga a vivir con ella: se edita (valor, nota, fecha) o se borra, siempre con ventana propia.
+function plan360EditarMedicion(i, j){
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const m = ((d.objectives[i] || {}).mediciones || [])[j];
+  if(!m) return;
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-pencil"></i> ${escapeHtml(gl({es:'Editar la medición', ca:'Editar el mesurament', en:'Edit the measurement'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field"><label for="p360-med-valor">${escapeHtml(t('plan360.objMeasurementValue'))}</label><input id="p360-med-valor" value="${escapeHtml(m.valor || '')}" inputmode="decimal"></div>
+    <div class="field"><label for="p360-med-fecha">${escapeHtml(gl({es:'Fecha', ca:'Data', en:'Date'}))}</label><input type="date" id="p360-med-fecha" value="${escapeHtml(m.fecha || todayStr())}"></div>
+    <div class="field"><label for="p360-med-nota">${escapeHtml(gl({es:'Nota (opcional)', ca:'Nota (opcional)', en:'Note (optional)'}))}</label><textarea id="p360-med-nota" rows="2">${escapeHtml(m.nota || '')}</textarea></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button><button class="btn btn-primary" onclick="plan360GuardarMedicionEditada(${i},${j})">${escapeHtml(t('common.save'))}</button></div>
+  `);
+}
+function plan360GuardarMedicionEditada(i, j){
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const m = ((d.objectives[i] || {}).mediciones || [])[j];
+  const valor = (document.getElementById('p360-med-valor') || {}).value;
+  if(!m || !valor || !valor.trim()){ showToast(gl({es:'Escribe el valor de la medición.', ca:'Escriu el valor del mesurament.', en:'Enter the measurement value.'})); return; }
+  m.valor = valor.trim();
+  m.fecha = (document.getElementById('p360-med-fecha') || {}).value || m.fecha;
+  m.nota = ((document.getElementById('p360-med-nota') || {}).value || '').trim();
+  saveDB(); plan360PingActivity();
+  closeModal();
+  plan360ObjRepintar(d);
+}
+async function plan360BorrarMedicion(i, j){
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const lista = (d.objectives[i] || {}).mediciones || [];
+  const m = lista[j];
+  if(!m) return;
+  if(!(await confirmModal(gl({es:'¿Borrar esta medición?', ca:'Esborrar aquest mesurament?', en:'Delete this measurement?'}), {danger:true, icon:'ti-trash', confirmLabel: gl({es:'Borrar', ca:'Esborrar', en:'Delete'})}))) return;
+  const d2 = plan360ObjDiaVivo(); if(!d2) return;
+  const l2 = (d2.objectives[i] || {}).mediciones || [];
+  const k = l2.indexOf(m) >= 0 ? l2.indexOf(m) : l2.findIndex(x => x.fecha === m.fecha && x.valor === m.valor);
+  if(k >= 0) l2.splice(k, 1);
+  saveDB(); plan360PingActivity();
+  plan360ObjRepintar(d2);
 }
 function plan360SyncObjectivesFromForm(d){
   d.objectives.forEach((o, i) => {
-    const tituloEl = document.getElementById('p360-obj-titulo-' + i);
-    const explEl = document.getElementById('p360-obj-explicacion-' + i);
+    const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : null; };
+    const tit = val('p360-obj-titulo-' + i), expl = val('p360-obj-explicacion-' + i), met = val('p360-obj-metrica-' + i);
+    if(met !== null) o.metrica = met;
+    if(tit !== null) o.titulo = tit;
+    if(expl !== null) o.explicacion = expl;
+    // La urgencia solo se lee si el campo existe: en un objetivo del coach no hay select (la fija él).
     const prioEl = document.getElementById('p360-obj-prioridad-' + i);
-    const metricaEl = document.getElementById('p360-obj-metrica-' + i);
-    if(metricaEl) o.metrica = metricaEl.value.trim();
-    if(tituloEl) o.titulo = tituloEl.value.trim();
-    if(explEl) o.explicacion = explEl.value.trim();
-    if(prioEl) o.prioridad = prioEl.value;
+    if(prioEl && o.origen === 'negocio') o.prioridad = prioEl.value;
+    [['valorInicial', 'p360-obj-vini-'], ['valorObjetivo', 'p360-obj-vobj-'], ['fechaObjetivo', 'p360-obj-fecha-']].forEach(([campo, pre]) => {
+      const v = val(pre + i);
+      if(v === null) return;
+      if(v) o[campo] = v; else delete o[campo];
+    });
   });
 }
 // Solo para el día 2 (presentación): el día 1 tiene su propio hub con tres
@@ -7720,10 +7809,21 @@ function plan360AddMedicionDesdeReunion(day, objId){
 function plan360TaskRow(day, tk, i){
   const obj = plan360ObjetivoDeTarea(tk);
   const estado = tk.status || 'pendiente';
-  return `<div class="card p360-tarea">
+  // Plegable en móvil (norma «lo denso se pliega»): a la vista solo el título y cómo va (dos tareas desplegadas eran ~800 px
+  // en 390 de ancho). Colgando de un toque: el objetivo, la descripción, el empleado, los tres botones, la prueba y la nota.
+  // En PC todo sigue a la vista. La clave es por tarea (id) para que el estado abierto sobreviva al repintar.
+  const clave = 'p360t-' + day + '-' + (tk.id != null ? tk.id : i);
+  const abierta = ggPlegableAbierta(clave);
+  const area = plan360AreaDeTarea(tk);
+  return `<div class="card p360-tarea plegable${abierta ? ' is-abierta' : ''}" data-pl="${escapeHtml(clave)}" onclick="ggTogglePlegable(event, this)">
+    <div class="p360-tarea-cab">
+      <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
+      <span class="p360-tarea-est is-${estado}">${escapeHtml(plan360TaskEstadoLabel(estado))}</span>
+      <button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+    </div>
+    <div class="pl-extra">
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
-    ${plan360AreaDeTarea(tk) ? `<div class="p360-tarea-area txt-xs" style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--olive,#4A5D4E);margin-bottom:2px">${escapeHtml(gl(plan360AreaDeTarea(tk).nombre))}</div>` : ''}
-    <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
+    ${area ? `<div class="p360-tarea-area">${escapeHtml(gl(area.nombre))}</div>` : ''}
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
@@ -7736,7 +7836,101 @@ function plan360TaskRow(day, tk, i){
       <label>${escapeHtml(t('plan360.taskNote'))}</label>
       <textarea id="p360-task-note-${i}" rows="2" onchange="plan360SaveTaskNote(${day},${i},this.value,${Number(tk.id) || 0})">${escapeHtml(tk.note || '')}</textarea>
     </div>
+    ${plan360PruebaHtml(day, i, tk)}
+    </div>
   </div>`;
+}
+/* ---- Prueba de la tarea: foto o archivo (25/11) ----
+   El diseño prometía «cada tarea admite comentario Y foto/archivo de prueba» y la app solo tenía la nota. Va en campos PROPIOS del
+   negocio (`pruebaData`, `pruebaNombre`, `pruebaTs`), nunca en `fileData`/`fileName`: esos son el adjunto que sube el coach desde su
+   panel, y compartirlos haría que uno pisase el archivo del otro en la fusión. Una foto se reduce a 800 px (calidad .6, ~60-120 KB)
+   como la de entrega del reparto; cualquier otro archivo respeta el mismo tope que el panel (350 KB): todo viaja dentro del bloque
+   `business`, que Firebase rechaza entero si crece demasiado. */
+const PLAN360_PRUEBA_MAX_BYTES = 350 * 1024;
+function plan360PruebaHtml(day, i, tk){
+  const id = Number(tk.id) || 0;
+  if(tk.pruebaData){
+    const esImg = /^data:image\//.test(tk.pruebaData);
+    return `<div class="p360-prueba">
+      <div class="p360-prueba-et">${escapeHtml(gl({es:'Prueba', ca:'Prova', en:'Proof'}))}</div>
+      <div class="p360-prueba-fila">
+        ${esImg ? `<button type="button" class="p360-prueba-mini" onclick="plan360VerPrueba(${day},${i},${id})" aria-label="${escapeHtml(gl({es:'Ver la foto', ca:'Veure la foto', en:'View the photo'}))}"><img src="${escapeHtml(tk.pruebaData)}" alt=""></button>` : ''}
+        <span class="p360-prueba-nom"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.pruebaNombre || gl({es:'Archivo', ca:'Fitxer', en:'File'}))}</span>
+        ${ggMenuAcciones([
+          {icono:'ti-eye', texto: gl({es:'Ver', ca:'Veure', en:'View'}), fn:`plan360VerPrueba(${day},${i},${id})`},
+          {icono:'ti-camera', texto: gl({es:'Cambiar la prueba', ca:'Canviar la prova', en:'Replace the proof'}), fn:`plan360AdjuntarPrueba(${day},${i},${id})`},
+          {icono:'ti-trash', texto: gl({es:'Quitar la prueba', ca:'Treure la prova', en:'Remove the proof'}), fn:`plan360QuitarPrueba(${day},${i},${id})`, peligro:true},
+        ])}
+      </div>
+    </div>`;
+  }
+  return `<div class="p360-prueba"><button type="button" class="btn btn-sm btn-fino btn-toque" onclick="plan360AdjuntarPrueba(${day},${i},${id})"><i class="ti ti-camera"></i> ${escapeHtml(gl({es:'Adjuntar foto o archivo', ca:'Adjuntar foto o fitxer', en:'Attach a photo or file'}))}</button></div>`;
+}
+function plan360AdjuntarPrueba(day, i, id){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if(!f) return;
+    plan360GuardarPrueba(day, i, id, f);
+  };
+  inp.click();
+}
+// Separado del selector de archivos para poder probarlo sin abrir ningún diálogo del sistema.
+function plan360GuardarPrueba(day, i, id, f){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const demasiado = () => showToast(gl({es:'El archivo pesa demasiado (máx. 350 KB). Prueba con una foto.', ca:'El fitxer pesa massa (màx. 350 KB). Prova amb una foto.', en:'The file is too big (max 350 KB). Try a photo.'}));
+  const guardar = (data, nombre) => {
+    const tk = plan360BuscarTarea(d, i, id);   // se vuelve a buscar: mientras se leía el archivo pudo llegar la nube
+    if(!tk) return;
+    if(data.length * 0.75 > PLAN360_PRUEBA_MAX_BYTES){ demasiado(); return; }
+    tk.pruebaData = data; tk.pruebaNombre = nombre; tk.pruebaTs = Date.now();
+    saveDB(); plan360PingActivity();
+    showToast(gl({es:'Prueba guardada', ca:'Prova desada', en:'Proof saved'}));
+    plan360RepintarTareas(day);
+  };
+  if(/^image\//.test(f.type || '')){
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const k = Math.min(1, 800 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      guardar(c.toDataURL('image/jpeg', 0.6), (f.name || 'foto').replace(/\.[a-z0-9]+$/i, '') + '.jpg');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); showToast(gl({es:'No se pudo leer la imagen', ca:'No s\'ha pogut llegir la imatge', en:'The image could not be read'})); };
+    img.src = url;
+    return;
+  }
+  if(f.size > PLAN360_PRUEBA_MAX_BYTES){ demasiado(); return; }
+  const rd = new FileReader();
+  rd.onload = () => guardar(String(rd.result || ''), f.name || 'archivo');
+  rd.readAsDataURL(f);
+}
+function plan360VerPrueba(day, i, id){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk || !tk.pruebaData) return;
+  const esImg = /^data:image\//.test(tk.pruebaData);
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-paperclip"></i> ${escapeHtml(tk.pruebaNombre || gl({es:'Prueba', ca:'Prova', en:'Proof'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    ${esImg ? `<img src="${escapeHtml(tk.pruebaData)}" alt="" style="max-width:100%;height:auto;display:block;margin:0 auto">`
+      : `<a class="btn btn-primary" href="${escapeHtml(tk.pruebaData)}" download="${escapeHtml(tk.pruebaNombre || 'archivo')}"><i class="ti ti-download"></i> ${escapeHtml(gl({es:'Descargar', ca:'Descarregar', en:'Download'}))}</a>`}
+  `);
+}
+async function plan360QuitarPrueba(day, i, id){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk) return;
+  if(!(await confirmModal(gl({es:'¿Quitar la prueba adjunta a esta tarea?', ca:'Treure la prova adjunta a aquesta tasca?', en:'Remove the proof attached to this task?'}), {danger:true, icon:'ti-trash', confirmLabel: gl({es:'Quitar', ca:'Treure', en:'Remove'})}))) return;
+  delete tk.pruebaData; delete tk.pruebaNombre; delete tk.pruebaTs;
+  saveDB(); plan360PingActivity();
+  plan360RepintarTareas(day);
+}
+// El detalle del día tiene su lista (#p360-task-list); la tarjeta «Hoy» de la pantalla principal no: ahí se repinta la pantalla.
+function plan360RepintarTareas(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const lista = document.getElementById('p360-task-list');
+  if(lista && d) lista.innerHTML = d.tasks.map((tk2, j) => plan360TareaReal(tk2) ? plan360TaskRow(day, tk2, j) : '').join('');
+  else withScrollPreserved(() => renderPlan360Grid());
 }
 // Las tareas se buscan por su id: por posición, si el coach reordenaba o
 // quitaba una con esta pantalla abierta, el estado caía en otra tarea.
@@ -7768,13 +7962,8 @@ function plan360SetTaskEstado(day, i, estado, id){
   if(!tk) return;
   tk.status = estado;
   saveDB();
-  // El mismo botón se pinta en dos sitios distintos (el detalle del día y
-  // la tarjeta "Hoy" de la pantalla principal), y solo el primero tiene el
-  // contenedor #p360-task-list — en el segundo hay que repintar la
-  // pantalla entera para que también se actualicen los atrasados.
-  const lista = document.getElementById('p360-task-list');
-  if(lista) lista.innerHTML = d.tasks.map((tk2, j) => plan360TareaReal(tk2) ? plan360TaskRow(day, tk2, j) : '').join('');
-  else withScrollPreserved(() => renderPlan360Grid());
+  // El mismo botón se pinta en dos sitios (detalle del día y tarjeta «Hoy»): ver plan360RepintarTareas.
+  plan360RepintarTareas(day);
 }
 function plan360SaveTaskNote(day, i, valor, id){
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
@@ -7792,8 +7981,10 @@ function plan360MedicionesResumenHtml(obj){
   const m = obj.mediciones || [];
   if(!m.length) return `<p class="muted" style="margin:0 0 6px;font-size:12.5px">${escapeHtml(obj.metrica)} — ${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`;
   const primero = m[0], ultimo = m[m.length - 1];
+  // Con valor inicial y objetivo puestos, el resumen dice a dónde se quiere llegar (no solo de dónde se parte).
+  const meta = obj.valorObjetivo ? ` · ${escapeHtml(gl({es:'objetivo', ca:'objectiu', en:'target'}))} <strong style="color:var(--text)">${escapeHtml(obj.valorObjetivo)}</strong>${obj.fechaObjetivo ? ' (' + escapeHtml(plan360FechaLegible(obj.fechaObjetivo)) + ')' : ''}` : '';
   return `<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
-    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(plan360FechaLegible(ultimo.fecha))})</span>
+    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(plan360FechaLegible(ultimo.fecha))})</span>${meta}
   </div>`;
 }
 function renderPlan360SummaryPage(){

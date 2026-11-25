@@ -1252,19 +1252,62 @@ function plan360AvisosDeHoy(){
   try{
     if(typeof plan360EsOwner !== 'function' || !plan360EsOwner()) return [];
     const b = DB.business || {};
-    if(!Array.isArray(b.plan360Program) || !b.plan360StartDate || typeof plan360DiaDeHoy !== 'function') return [];
-    const diaHoy = plan360DiaDeHoy();
-    if(diaHoy === null || diaHoy < 1) return [];
+    if(!Array.isArray(b.plan360Program)) return [];
     const out = [];
+    // Los avisos de «lo que falta por hacer» (contrato, cuestionario) y los de «tu coach te ha enviado» no dependen de que ya haya
+    // fecha de inicio: justo son lo que ocurre ANTES del primer día. Antes, con el contrato sin firmar y el cuestionario a 0/28,
+    // la campana y el Panel no decían nada (auditoría QA del 25/11). Se calculan, no se guardan: se apagan solos al hacerse.
+    const c = b.plan360Contract || {};
+    // Sin precio o forma de pago (los pacta el coach) no se puede firmar: avisar de firmar algo imposible sería un callejón sin salida.
+    // Un cliente que ya pasó al mantenimiento (o terminó) no necesita que se le recuerde lo del arranque.
+    const faseSv = (b.plan360Servicio || {}).fase;
+    const enArranque = faseSv !== 'mant' && faseSv !== 'fin';
+    if(enArranque && !c.signedAt && c.precio && c.formaPago){
+      out.push({count: 1, icon:'ti-signature', id:'plan360Contrato', campana:true, soloDueno:true, warn:true, label: gl({es:'Firma el contrato del Plan 360º', ca:'Signa el contracte del Pla 360º', en:'Sign the 360º Plan agreement'}), onclick: `navigate('plan360'); renderPlan360Contract()`});
+    }
+    const secciones = (b.plan360Intake || {}).sections || [];
+    let totalQ = 0, contestadas = 0;
+    secciones.forEach(s => (s.questions || []).forEach(q => { totalQ++; if((typeof q.a === 'string' && q.a.trim()) || q.fileData) contestadas++; }));
+    if(enArranque && totalQ > 0 && contestadas < totalQ){
+      out.push({count: totalQ - contestadas, icon:'ti-clipboard-text', id:'plan360Cuestionario', campana:true, soloDueno:true, warn:true, label: gl({es:`Contesta el cuestionario del Plan 360º (${contestadas}/${totalQ})`, ca:`Contesta el qüestionari del Pla 360º (${contestadas}/${totalQ})`, en:`Answer the 360º Plan questionnaire (${contestadas}/${totalQ})`}), onclick: `navigate('plan360'); renderPlan360Intake()`});
+    }
+    // «Tu coach te ha enviado X»: informativo, 14 días y con «Visto». La clave del aviso lleva la fecha de envío, así un acta
+    // NUEVA vuelve a avisar aunque la anterior ya se marcase como vista (`vistos[id] === count`).
+    const vistos = (typeof avisosVistosLeer === 'function') ? avisosVistosLeer() : {};
+    const reciente = ts => !Number(ts) || (Date.now() - Number(ts)) < 14 * 86400000;
+    const envio = (clave, ts, icon, etiqueta, abrir) => {
+      const id = 'plan360Envio-' + clave + '-' + (Number(ts) || 0);
+      if(vistos[id] === 1) return;
+      out.push({count: 1, icon, id, campana:true, soloDueno:true, ocultable:true, label: etiqueta, onclick: `plan360AvisoEnvioVisto('${id}'); ${abrir}`});
+    };
+    const actas = (typeof plan360ActasLista === 'function') ? plan360ActasLista() : [];
+    if(actas[0] && reciente(actas[0].enviadoEn)) envio('acta', actas[0].enviadoEn, 'ti-notes', gl({es:'Tu coach te ha enviado el acta de la reunión', ca:'El teu coach t\'ha enviat l\'acta de la reunió', en:'Your coach sent you the meeting minutes'}), 'plan360AbrirActas()');
+    const libro = (b.plan360Docs || []).find(x => x && x.id === 'identidad');
+    if(libro && libro.sentAt && typeof plan360LibroPdfData === 'function' && plan360LibroPdfData(libro) && reciente(libro.sentAt)) envio('libro', libro.sentAt, 'ti-book-2', gl({es:'Tu coach te ha enviado tu libro de marca', ca:'El teu coach t\'ha enviat el teu llibre de marca', en:'Your coach sent you your brand book'}), `navigate('plan360'); renderPlan360LibroMarca()`);
+    const dia1 = b.plan360Program.find(x => x.day === 1) || {};
+    if(dia1.misteryCheck && dia1.misteryCheck.sentAt && reciente(dia1.misteryCheck.sentAt)) envio('misterioso', dia1.misteryCheck.sentAt, 'ti-eye-check', gl({es:'Tu coach te ha enviado el informe del cliente misterioso', ca:'El teu coach t\'ha enviat l\'informe del client misteriós', en:'Your coach sent you the mystery guest report'}), `navigate('plan360'); renderPlan360MisteryReport(1)`);
+    if(dia1.reunionInicial && dia1.reunionInicial.sentAt && reciente(dia1.reunionInicial.sentAt)) envio('reunion', dia1.reunionInicial.sentAt, 'ti-users', gl({es:'Tu coach te ha enviado el informe de la reunión inicial', ca:'El teu coach t\'ha enviat l\'informe de la reunió inicial', en:'Your coach sent you the initial meeting report'}), `navigate('plan360'); renderPlan360ReunionReport(1)`);
+
+    if(!b.plan360StartDate || typeof plan360DiaDeHoy !== 'function') return out;
+    const diaHoy = plan360DiaDeHoy();
+    if(diaHoy === null || diaHoy < 1) return out;
     const prog = b.plan360Program.filter(d => d.phase === 'trabajo');
     const deHoy = prog.filter(d => d.day === diaHoy).reduce((n, d) => n + plan360TareasReales(d).filter(x => x.status !== 'hecha').length, 0);
     const atrasadas = plan360TareasAtrasadas(diaHoy).length;
     if(deHoy + atrasadas > 0) out.push({count: deHoy + atrasadas, icon:'ti-target-arrow', label: gl({es: atrasadas ? `Tareas del Plan 360º (${atrasadas} atrasadas)` : 'Tareas del Plan 360º para hoy', ca: atrasadas ? `Tasques del Pla 360º (${atrasadas} endarrerides)` : 'Tasques del Pla 360º per a avui', en: atrasadas ? `360º Plan tasks (${atrasadas} overdue)` : '360º Plan tasks for today'}), onclick: `navigate('plan360')`, warn: atrasadas > 0});
-    const c = b.plan360Cierre || {};
-    const mant = c.mantenimiento || {};
-    if(diaHoy >= 28 && !c.informeVistoEn && !mant.respuesta) out.push({count: 1, icon:'ti-file-text', label: gl({es:'Tu informe de cierre del Plan 360º está listo', ca:'El teu informe de tancament del Pla 360º està a punt', en:'Your 360º Plan closing report is ready'}), onclick: `navigate('plan360')`});
+    const cierre = b.plan360Cierre || {};
+    const mant = cierre.mantenimiento || {};
+    if(diaHoy >= 28 && !cierre.informeVistoEn && !mant.respuesta) out.push({count: 1, icon:'ti-file-text', label: gl({es:'Tu informe de cierre del Plan 360º está listo', ca:'El teu informe de tancament del Pla 360º està a punt', en:'Your 360º Plan closing report is ready'}), onclick: `navigate('plan360')`});
     return out;
   }catch(e){ return []; }
+}
+// Abrir el aviso ya cuenta como verlo: no hace falta además pulsar «Visto».
+function plan360AvisoEnvioVisto(id){
+  try{
+    const v = (typeof avisosVistosLeer === 'function') ? avisosVistosLeer() : {};
+    v[id] = 1;
+    localStorage.setItem(typeof AVISOS_VISTOS_LS !== 'undefined' ? AVISOS_VISTOS_LS : 'gastrogoan_avisos_vistos', JSON.stringify(v));
+  }catch(e){}
 }
 function avisosDeLaApp(){
   const today = new Date();
@@ -1363,7 +1406,7 @@ function avisosDeLaApp(){
     'ti-cash-register': {id:'caja', c:1, d:1},
     'ti-target-arrow': {id:'plan360Tareas', c:1, d:1}, 'ti-file-text': {id:'plan360Cierre', c:1, d:1}
   };
-  attentionItems.forEach(i => { const m = META[i.icon]; if(m){ i.id = m.id; i.campana = !!m.c; i.soloDueno = !!m.d; i.ocultable = !!m.o; } });
+  attentionItems.forEach(i => { const m = META[i.icon]; if(m && i.id === undefined){ i.id = m.id; i.campana = !!m.c; i.soloDueno = !!m.d; i.ocultable = !!m.o; } });
   return attentionItems;
 }
 

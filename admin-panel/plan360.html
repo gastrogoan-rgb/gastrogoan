@@ -71,6 +71,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-day-date{font-size:15px;font-weight:700;overflow-wrap:break-word}
 .p360-day-tag{font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.p360-mas{min-width:36px}
+#p360-menu{position:fixed;z-index:9999;background:#fff;border:1px solid var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.18);min-width:190px;max-width:calc(100vw - 16px);padding:4px;border-radius:var(--r-m,4px)}
+#p360-menu button{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;border:0;background:none;text-align:left;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+#p360-menu button:hover,#p360-menu button:focus{background:var(--brand-cream);outline:none}
+#p360-menu button.peligro{color:var(--red)}
+.p360-day-hoy{box-shadow:inset 0 0 0 2px var(--olive)}
+.p360-day-hoy .p360-day-weekday{color:var(--olive);font-weight:700}
+.p360-day-late .p360-day-progress{color:var(--red);font-weight:700}
+.p360-leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin:-6px 0 14px}
+.p360-guia-paso{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border)}
+.p360-guia-paso:first-of-type{border-top:0}
+.p360-guia-num{flex:none;width:28px;height:28px;border:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700}
+.p360-guia-paso.hecho .p360-guia-num{background:var(--olive);border-color:var(--olive);color:#fff}
+.p360-guia-paso.hecho .p360-guia-txt{color:var(--muted)}
 .p360-day-presencial{background:var(--ink);border-left-color:var(--ink);color:#fff}
 .p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:#fff;opacity:.75}
 /* Mismo fallo que en css/styles.css: .p360-day:hover pone fondo claro para
@@ -218,6 +232,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
   .dr-cuerpo{padding:4px 18px 14px}.dr-cap{margin:26px -18px 16px;padding:22px 18px 18px}.dr-cap-n{font-size:84px}
   .dr-pie{padding:12px 18px}.dr-paso{grid-template-columns:40px 1fr;gap:10px}
 }
+/* Panel en un móvil (25/11): con 13-14 px, Safari de iPhone amplía toda la página al tocar un campo y no vuelve solo.
+   Los tamaños escritos en línea en cada select/input se vencen con !important. Una palabra larga se parte con
+   overflow-wrap:break-word (NUNCA anywhere/break-all: partiría palabras normales). */
+@media (max-width:700px){
+  input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}
+  .btn-sm{min-height:40px}
+  .card,.field,.p360-day,.p360-card{min-width:0;overflow-wrap:break-word}
+  #client-grid,#client-list,#panel{overflow-wrap:break-word}
+  input[type=checkbox],input[type=radio]{width:22px;height:22px;min-height:0;flex:none}
+  .p360-guia-paso .btn{flex:1 1 100%}
+}
 @media print{.dr-doc{box-shadow:none;border:none;max-width:none;margin:0}.dr-cap,.dr-paso,.dr-check,.dr-frases,.dr-regla{break-inside:avoid}}
 
 /* PREMIUM (28/10) — mismo lenguaje que la app: radio único pequeño, rotulación en mono, filetes, foco visible. */
@@ -237,7 +262,7 @@ code,pre,kbd{font-family:var(--mono)}
 
 <div id="login-gate" class="wrap">
   <div class="card">
-    <h1 style="font-size:18px;margin-bottom:6px">🔑 Plan 360° — panel del coach</h1>
+    <h1 style="font-size:18px;margin-bottom:6px"><i class="ti ti-key"></i> Plan 360° — panel del coach</h1>
     <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador.</p>
     <label>Email</label>
     <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
@@ -254,7 +279,7 @@ code,pre,kbd{font-family:var(--mono)}
     <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
     <div class="hd-btns">
       <a class="btn" href="index.html">← Panel</a>
-      <button class="btn" onclick="ggAdminHardReload()">↻ Actualizar</button>
+      <button class="btn" onclick="ggAdminHardReload()"><i class="ti ti-refresh"></i> Actualizar</button>
       <button class="btn" onclick="doLogout()">Salir</button>
     </div>
   </header>
@@ -268,9 +293,14 @@ code,pre,kbd{font-family:var(--mono)}
 
   <div id="view-client" class="hidden">
     <button class="btn btn-sm" onclick="closeClient()">← Clientes</button>
-    <h2 id="client-name" style="margin:10px 0 4px"></h2>
-    <p id="client-status" class="status-line" style="margin-bottom:10px"></p>
-    <div id="client-startdate" class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+    <!-- Título y fecha de inicio comparten fila: antes la fecha era una tarjeta a todo el ancho con el 60 % vacío. -->
+    <div style="display:flex;gap:10px 18px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
+      <div style="flex:1 1 280px;min-width:0">
+        <h2 id="client-name" style="margin:10px 0 4px;overflow-wrap:break-word"></h2>
+        <p id="client-status" class="status-line" style="margin:0"></p>
+      </div>
+      <div id="client-startdate" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:0 1 auto"></div>
+    </div>
     <div id="client-grid"></div>
   </div>
 </div>
@@ -294,7 +324,7 @@ function ggMostrarErrorGlobal(msg, detalle){
   linea.textContent = msg + (detalle ? '\n' + detalle : '');
   banner.appendChild(linea);
   const cerrar = document.createElement('button');
-  cerrar.textContent = '✕ Cerrar todos';
+  cerrar.textContent = 'Cerrar todos';
   cerrar.style.cssText = 'background:#fff;color:#B33;border:none;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px';
   cerrar.onclick = () => banner.remove();
   banner.appendChild(cerrar);
@@ -330,7 +360,7 @@ async function doLogin(){
     onLoggedIn();
   }catch(e){
     console.error(e);
-    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
+    statusEl.textContent = 'No se pudo entrar (' + (e.message || e.code || 'error') + ').';
   }
 }
 function doLogout(){
@@ -422,7 +452,7 @@ async function openClient(tenantId, name){
     const lookupSnap = await getApp().database().ref('gastrogoan/tenantLookup/' + tenantId).once('value');
     const cfg = lookupSnap.val();
     if(!cfg || !cfg.apiKey || !cfg.databaseURL){
-      document.getElementById('client-status').textContent = '⚠️ No se encontró la nube de este negocio (todavía no ha sincronizado ninguna vez).';
+      document.getElementById('client-status').textContent = 'No se encontró la nube de este negocio (todavía no ha sincronizado ninguna vez).';
       return;
     }
     const appName = 'biz-' + tenantId;
@@ -458,7 +488,7 @@ async function openClient(tenantId, name){
       else avisoCambiosDelNegocio();
     }, err => {
       console.error(err);
-      document.getElementById('client-status').textContent = '⚠️ Error de conexión: ' + (err.message || err.code || 'error');
+      document.getElementById('client-status').textContent = 'Error de conexión: ' + (err.message || err.code || 'error');
     });
     // Nodo hermano, no dentro de db/business: por eso necesita su propia
     // conexión. La app del negocio no lo lee nunca, así que aquí no hay
@@ -477,7 +507,7 @@ async function openClient(tenantId, name){
     }, err => console.error('Error cargando coachPrivate', err));
   }catch(e){
     console.error(e);
-    document.getElementById('client-status').textContent = '⚠️ No se pudo conectar: ' + (e.message || e.code || 'error');
+    document.getElementById('client-status').textContent = 'No se pudo conectar: ' + (e.message || e.code || 'error');
   }
 }
 function closeClient(){
@@ -2643,7 +2673,7 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
   const b = pl.bloques.map(x => {
     if(x.t === 'cap') return `<div class="dr-cap"><span class="dr-cap-n">${x.n}</span><div class="dr-cap-e">Capítulo ${x.n}</div><div class="dr-cap-t">${esc(x.titulo)}</div><div class="dr-cap-s">${esc(x.sub)}</div></div>`;
     if(x.t === 'p') return `<p class="dr-p">${esc(x.x)}</p>`;
-    if(x.t === 'regla') return `<div class="dr-regla"><span>★ Regla de oro</span>${esc(x.x)}</div>`;
+    if(x.t === 'regla') return `<div class="dr-regla"><span>Regla de oro</span>${esc(x.x)}</div>`;
     if(x.t === 'campo') return campo(x, x.grande);
     if(x.t === 'campos'){ const h = x.items.map(f => campo(f)).join(''); return h ? `<div class="dr-campos">${h}</div>` : ''; }
     if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div>${s.e ? `<div class="dr-paso-e"><span>${esc(x.etiqueta || 'Estándar')}</span>${esc(s.e)}</div>` : ''}${s.id ? campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'}) : ''}</div></div>`).join('')}</div>`;
@@ -2716,7 +2746,7 @@ function plan360InversionesHtml(d, esc, negocio){
       </div>
       ${total ? barra : ''}
       <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
-      <div class="dr-regla"><span>★ Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
+      <div class="dr-regla"><span>Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
       <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
       ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
       <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
@@ -2726,7 +2756,7 @@ function plan360InversionesHtml(d, esc, negocio){
         <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
         <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
-      <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
+      <div class="dr-regla"><span>Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
       ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
       <div class="dr-h">Los 3 niveles de inversión</div>
       <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>
@@ -4277,7 +4307,7 @@ function renderStartDateControl(){
     document.getElementById('client-startdate').innerHTML = `
       <label style="margin:0">Fecha de inicio del programa</label>
       <div style="font-weight:600">${esc(weekday)} · ${esc(dayMonth)}</div>
-      <button class="btn btn-sm" onclick="startDateEditing=true;renderStartDateControl()" title="Modificar la fecha de inicio">✏️</button>
+      <button class="btn btn-sm btn-icon" onclick="startDateEditing=true;renderStartDateControl()" title="Modificar la fecha de inicio" aria-label="Modificar la fecha de inicio"><i class="ti ti-pencil"></i></button>
     `;
     return;
   }
@@ -4287,6 +4317,54 @@ function renderStartDateControl(){
     <button class="btn btn-sm btn-primary" onclick="saveStartDate()">Guardar</button>
     ${remoteBiz.plan360StartDateConfirmed ? '' : '<span class="txt-xs" style="color:var(--red);font-weight:600">Sin confirmar: el negocio ve «tu coach está fijando la primera visita» hasta que guardes.</span>'}
   `;
+}
+/* Cliente recién dado de alta: «Sin fecha de inicio · 0 de 0 acciones» no decía qué hacer. Tres pasos, cada uno con su
+   botón y marcado solo cuando está hecho. La fecha NO se fija sola: la confirma el coach al pulsar el paso 1 (la app del
+   negocio la ve en cuanto se guarda; no hay un segundo clic). Desaparece cuando los tres están hechos. */
+function plan360CuestionarioAvisadoKey(){ return 'gg_p360_cuestionario_avisado_' + currentTenantId; }
+function plan360PrimerosPasos(){
+  const trabajo = (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo');
+  const conTareas = trabajo.reduce((n, d) => n + plan360TareasReales(d).length, 0) > 0;
+  const secs = (remoteBiz.plan360Intake || {}).sections || [];
+  const respondido = secs.some(sec => (sec.questions || []).some(q => q && q.a));
+  let avisado = false; try{ avisado = !!localStorage.getItem(plan360CuestionarioAvisadoKey()); }catch(e){}
+  return [
+    {n: 1, hecho: !!remoteBiz.plan360StartDateConfirmed},
+    {n: 2, hecho: conTareas},
+    {n: 3, hecho: respondido || avisado},
+  ];
+}
+function plan360GuiaPrimerosPasosHtml(){
+  const p = plan360PrimerosPasos();
+  if(p.every(x => x.hecho)) return '';
+  const paso = (x, titulo, ayuda, boton, fn, deshabilitado) => `<div class="p360-guia-paso${x.hecho ? ' hecho' : ''}">
+    <span class="p360-guia-num">${x.hecho ? '<i class="ti ti-check"></i>' : x.n}</span>
+    <div class="p360-guia-txt" style="flex:1;min-width:200px"><strong>${esc(titulo)}</strong><div class="muted txt-xs">${esc(ayuda)}</div></div>
+    ${x.hecho ? '<span class="muted txt-xs">Hecho</span>' : `<button class="btn btn-sm btn-primary" ${deshabilitado ? 'disabled title="Antes, confirma la fecha"' : ''} onclick="${fn}">${esc(boton)}</button>`}
+  </div>`;
+  return `<div class="card" id="p360-guia" style="margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:4px">Primeros pasos con este cliente</div>
+    ${paso(p[0], 'Confirmar la fecha de la primera visita', 'Hasta que la confirmes, el negocio ve «tu coach está fijando la primera visita».', 'Confirmar la fecha', 'plan360GuiaConfirmarFecha()')}
+    ${paso(p[1], 'Preparar el programa con la plantilla base', 'Reparte las tareas de GastroGoan por los días laborables; luego las ajustas.', 'Aplicar la plantilla base', 'plan360GuiaPlantilla()', !p[0].hecho)}
+    ${paso(p[2], 'Enviar el cuestionario previo', 'Ya está en su app: le preparamos el aviso por WhatsApp para que lo rellene antes de la visita.', 'Enviar el aviso', 'plan360GuiaCuestionario()')}
+  </div>`;
+}
+function plan360GuiaConfirmarFecha(){
+  const inp = document.getElementById('p360-startdate');
+  if(!inp || !inp.value){ if(inp) inp.focus(); return; }
+  saveStartDate();
+}
+async function plan360GuiaPlantilla(){
+  await plantillaPonerBase();
+  renderClientGrid();
+}
+function plan360GuiaMensajeCuestionario(){
+  return 'Hola. Antes de nuestra primera visita, entra en tu app de GastroGoan, abre Plan 360º y rellena la «Documentación inicial» (el cuestionario). Cuanto más completo, mejor aprovechamos el primer día.';
+}
+function plan360GuiaCuestionario(){
+  try{ localStorage.setItem(plan360CuestionarioAvisadoKey(), String(Date.now())); }catch(e){}
+  try{ window.open('https://wa.me/?text=' + encodeURIComponent(plan360GuiaMensajeCuestionario()), '_blank', 'noopener'); }catch(e){}
+  renderClientGrid();
 }
 function saveStartDate(){
   const val = document.getElementById('p360-startdate').value;
@@ -4331,15 +4409,23 @@ function renderClientGrid(){
     const tReales = plan360TareasReales(d);
     const done = tReales.length && tReales.every(x => x.status === 'hecha');
     const doneCount = tReales.filter(x => x.status === 'hecha').length;
-    return `<div class="p360-day" style="${colStyle}${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
+    // Como en la app: HOY marcado y el día pasado con tareas sin hacer, en rojo. Sin fecha confirmada no se marca nada
+    // (los días son provisionales y «hoy» no significaría nada).
+    const fijada = !!remoteBiz.plan360StartDateConfirmed;
+    const fd = plan360DateForDay(d.day);
+    const esHoy = fijada && fd === todayStr();
+    const atrasado = fijada && fd < todayStr() && !done && tReales.some(x => x.status !== 'hecha');
+    return `<div class="p360-day${esHoy ? ' p360-day-hoy' : ''}${atrasado ? ' p360-day-late' : ''}" style="${colStyle}${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
       <div class="p360-day-weekday">${esc(weekday)}</div>
       <div class="p360-day-date">${esc(dayMonth)}</div>
+      ${esHoy ? '<div class="p360-day-tag" style="color:var(--olive);font-weight:700">HOY</div>' : ''}
       ${d.reunion ? `<div class="p360-day-tag">${d.reunion.tipo === 'presencial' ? 'Presencial' : 'Online'}</div>` : ''}
-      ${tReales.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + tReales.length}</div>` : ''}
+      ${tReales.length ? `<div class="p360-day-progress">${done ? 'Hecho' : doneCount + '/' + tReales.length}${atrasado ? ' · atrasado' : ''}</div>` : ''}
     </div>`;
   };
   document.getElementById('client-grid').innerHTML = `<span id="p360-coach-calendario" hidden></span>
     ${p360PestanasHtml('360')}
+    ${plan360GuiaPrimerosPasosHtml()}
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderIntakePage()">
         <i class="ti ti-clipboard-text"></i>
@@ -4368,7 +4454,7 @@ function renderClientGrid(){
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
       <div>Programa de 28 días</div>
-      <div class="p360-summary-count">★ ${hechos} / ${totalTareas}</div>
+      <div class="p360-summary-count">${hechos} / ${totalTareas} tareas hechas</div>
     </div>
     ${semanas.map((s, i) => `
       <div class="p360-week">
@@ -4509,7 +4595,7 @@ function plan360CierreHtml(){
         ${m.respuesta ? `
           <div class="card" style="background:${m.respuesta==='acepta'?'var(--green-l)':'var(--amber-l)'};border-color:${m.respuesta==='acepta'?'var(--green)':'var(--amber)'}">
             ${m.respuesta==='acepta'
-              ? `✓ El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}.`
+              ? `<i class="ti ti-check"></i> El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}.`
               : `El negocio se lo piensa. Volver a hablar el: <strong>${esc(m.volverAHablarFecha || '—')}</strong>.`}
           </div>` : `<p class="muted" style="font-size:12px;margin:0">Todavía no ha respondido — se lo enseñas en su app, en su propio Cierre.</p>`}
       </div>
@@ -4949,7 +5035,7 @@ function renderMantPage(clave){
               <div style="white-space:pre-wrap">${esc(it.respuesta)}</div>
             </div>` : ''}
           </div>
-          <button class="btn btn-sm" onclick="mantBorrar('${sk}','${it.id}')" title="Quitar"><i class="ti ti-trash"></i></button>
+          ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar del mes', fn: `mantBorrar('${sk}','${it.id}')`, peligro: true}], 'Acciones de este elemento')}
         </div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <select id="mant-add-${sk}" style="flex:1;min-width:200px">
@@ -5706,8 +5792,8 @@ async function renderMiSemana(){
   const lista = (arr, n) => arr.slice(0, n).map(esc).join(' · ') + (arr.length > n ? ` y ${arr.length - n} más` : '');
   const tarjeta360 = f => `<div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>
-        <span style="font-size:12px">${f.dia === null ? 'Sin fecha de inicio' : f.dia < 1 ? 'Empieza en ' + (1 - f.dia) + ' días' : 'Día ' + Math.min(f.dia, 28) + ' de 28'}</span></div>
-      <div style="font-size:13px">${f.prog.hechas} de ${f.prog.total} acciones hechas${f.biz.plan360StartDate ? ' · cierre el ' + esc(new Date(p360FechaDiaPrograma(f.biz, 28) + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})) : ''}</div>
+        <span style="font-size:12px">${f.dia === null ? 'Falta confirmar la fecha' : f.dia < 1 ? 'Empieza en ' + (1 - f.dia) + ' días' : 'Día ' + Math.min(f.dia, 28) + ' de 28'}</span></div>
+      <div style="font-size:13px">${f.prog.total === 0 ? 'Programa sin preparar: ábrelo para ver los primeros pasos' : f.prog.hechas + ' de ' + f.prog.total + ' acciones hechas'}${f.biz.plan360StartDate ? ' · cierre el ' + esc(new Date(p360FechaDiaPrograma(f.biz, 28) + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})) : ''}</div>
       ${f.prog.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.prog.atrasadas.length} atrasadas: ${lista(f.prog.atrasadas, 2)}</div>` : ''}
     </div>`;
   const tarjetaOtra = f => {
@@ -5865,7 +5951,8 @@ async function plantillaGuardar(){
   catch(e){ est.textContent = 'No se pudo guardar en la plataforma (¿reglas de coachConfig publicadas?): ' + (e.message || e.code || 'error'); }
 }
 async function plantillaPonerBase(){
-  const est = document.getElementById('plantilla-estado');
+  // Se llama también desde la guía de primeros pasos, donde no existe #plantilla-estado.
+  const est = document.getElementById('plantilla-estado') || {};
   const tpl = plantillaBaseParaPrograma(remoteBiz.plan360Program, remoteBiz.plan360StartDate);
   const n = plantillaAplicar(remoteBiz.plan360Program, tpl);
   if(n){ saveRemoteBiz(); }
@@ -5974,6 +6061,35 @@ function cobros360Exportar(){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+/* Menú «⋯» de acciones de una fila (equivalente a ggMenuAcciones de la app). Editar y eliminar no van como dos botones
+   sueltos en cada fila: van dentro de UN «⋯» que despliega un menú flotante fuera de la fila (así ningún overflow lo recorta).
+   Se cierra con un toque fuera, Escape o al hacer scroll. acciones = [{icono:'ti-trash', texto, fn:'js a ejecutar', peligro}] */
+function p360MenuAcciones(acciones, etiqueta){
+  return `<button type="button" class="btn btn-sm btn-icon p360-mas" aria-haspopup="menu" aria-label="${esc(etiqueta || 'Acciones')}" title="${esc(etiqueta || 'Acciones')}" data-acc="${esc(JSON.stringify(acciones))}" onclick="p360AbrirMenu(this, event)"><i class="ti ti-dots"></i></button>`;
+}
+function p360CerrarMenu(){ const m = document.getElementById('p360-menu'); if(m) m.remove(); }
+function p360AbrirMenu(btn, ev){
+  if(ev) ev.stopPropagation();
+  const abierto = document.getElementById('p360-menu');
+  const mismo = abierto && abierto._btn === btn;
+  p360CerrarMenu(); if(mismo) return;
+  let acc = []; try{ acc = JSON.parse(btn.dataset.acc || '[]'); }catch(e){}
+  if(!acc.length) return;
+  const m = document.createElement('div'); m._btn = btn;
+  m.id = 'p360-menu'; m.setAttribute('role', 'menu');
+  m.innerHTML = acc.map((a, i) => `<button type="button" role="menuitem" class="${a.peligro ? 'peligro' : ''}" data-i="${i}"><i class="ti ${esc(a.icono || 'ti-point')}"></i> ${esc(a.texto)}</button>`).join('');
+  m.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const a = acc[Number(b.dataset.i)]; p360CerrarMenu(); try{ new Function(a.fn)(); }catch(err){ console.error(err); } });
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+  const abajo = r.bottom + 4 + h <= window.innerHeight - 8;
+  m.style.top = (abajo ? r.bottom + 4 : Math.max(8, r.top - h - 4)) + 'px';
+  const primero = m.querySelector('button'); if(primero) primero.focus();
+}
+document.addEventListener('click', p360CerrarMenu);
+document.addEventListener('scroll', p360CerrarMenu, true);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') p360CerrarMenu(); });
+
 /* ---- Acta en vivo (17/11) ----
    Pantalla pensada para tenerla abierta delante del cliente (letra grande, una cosa cada vez). Cada decisión se apunta con
    un toque: «tarea» (al día que toca del programa), «objetivo» (al Día 2) o «nota» (solo queda en el acta). «Enviar el acta»
@@ -5981,14 +6097,42 @@ function cobros360Exportar(){
    fusión no se pisa por posición). El borrador vive en memoria hasta enviarlo. */
 let actaBorrador = [];
 function actaSanitizar(t){ return String(t == null ? '' : t).trim().slice(0, 600); }
+// Fecha ISO → «23 de noviembre de 2026». El panel enseñaba «2026-11-23» en crudo (el equivalente de fechaImpresaLegible de la app).
+function fechaLegible(f){
+  if(!f || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return f || '—';
+  const [y, m, d] = f.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-ES', {day: 'numeric', month: 'long', year: 'numeric'});
+}
+function plural(n, uno, varios){ return n + ' ' + (n === 1 ? uno : varios); }
+// Solo los días de trabajo de hoy en adelante: «Para el día» arrancaba en el Día 3, ya pasado, y una tarea apuntada en
+// directo caía en un día que el negocio ya no iba a mirar. El primero de la lista es el que sale elegido.
+function actaDiasFuturos(){
+  const hoy = todayStr();
+  return (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo' && plan360DateForDay(d.day) >= hoy);
+}
 function actaDiasOpciones(){
-  return (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo').map(d => {
+  const dias = actaDiasFuturos();
+  if(!dias.length) return '<option value="">No quedan días de trabajo por delante</option>';
+  return dias.map(d => {
     const f = plan360FormatDate(d.day);
     return `<option value="${d.day}">Día ${d.day} · ${esc(f.weekday)} ${esc(f.dayMonth)}</option>`;
   }).join('');
 }
+// Quién lo hace. El panel no lee la plantilla de empleados del negocio (solo claves plan360*), así que el nombre del
+// empleado se escribe; así la tarea sale con nombre y apellido en su descripción.
+function actaResponsableTexto(x){
+  if(x.responsable === 'coach') return 'Tu coach';
+  if(x.responsable === 'empleado') return x.responsableNombre || 'Un empleado';
+  if(x.responsable === 'negocio') return 'El negocio';
+  return '';
+}
+function actaResponsableChange(){
+  const v = document.getElementById('acta-resp').value;
+  document.getElementById('acta-resp-nombre').style.display = v === 'empleado' ? '' : 'none';
+}
 function renderActaPage(){
   const act = (remoteBiz.plan360Actas && typeof remoteBiz.plan360Actas === 'object') ? Object.values(remoteBiz.plan360Actas).sort((a, b) => (b.enviadoEn || 0) - (a.enviadoEn || 0)) : [];
+  const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Acta en vivo', 'Lo que se decide en la reunión, apuntado al momento')}
     <div class="card" style="font-size:16px">
@@ -5996,23 +6140,47 @@ function renderActaPage(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
         <div class="field" style="margin:0"><label>Se convierte en</label><select id="acta-tipo" onchange="document.getElementById('acta-dia-box').style.display = this.value === 'tarea' ? '' : 'none'"><option value="tarea">Tarea</option><option value="objetivo">Objetivo</option><option value="nota">Solo nota</option></select></div>
         <div class="field" style="margin:0" id="acta-dia-box"><label>Para el día</label><select id="acta-dia">${actaDiasOpciones()}</select></div>
+        <div class="field" style="margin:0"><label>Quién lo hace</label><select id="acta-resp" onchange="actaResponsableChange()"><option value="negocio">El negocio</option><option value="empleado">Un empleado</option><option value="coach">Tu coach</option></select></div>
+        <div class="field" style="margin:0;display:none" id="acta-resp-nombre"><label>Nombre del empleado</label><input id="acta-resp-nombre-in" placeholder="Por ejemplo, Marta"></div>
+        <div class="field" style="margin:0"><label>Fecha límite (opcional)</label><input type="date" id="acta-fecha"></div>
         <button class="btn btn-primary" onclick="actaAnadir()">Añadir decisión</button>
       </div>
     </div>
     <div id="acta-lista">${actaListaHtml()}</div>
-    ${act.length ? `<h3 style="margin:18px 0 6px">Actas ya enviadas</h3>${act.map(a => `<div class="card" style="margin-bottom:8px;font-size:13px"><strong>${esc(a.fecha || '')}</strong> · ${(a.decisiones || []).length} decisiones</div>`).join('')}` : ''}`;
+    ${act.length ? `<h3 style="margin:18px 0 6px">Actas ya enviadas</h3>${act.map(a => `<details class="card" style="margin-bottom:8px;font-size:14px"><summary style="cursor:pointer;min-height:36px;display:flex;align-items:center"><strong>${esc(fechaLegible(a.fecha))}</strong>&nbsp;· ${esc(plural((a.decisiones || []).length, 'decisión', 'decisiones'))}</summary>
+      ${(a.decisiones || []).map(x => `<div style="padding:6px 0;border-top:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo] || 'Nota'}${x.tipo === 'tarea' && x.dia ? ' · día ' + esc(String(x.dia)) : ''}</span> ${esc(x.texto || '')}${actaResponsableTexto(x) || x.fecha ? `<div class="muted txt-xs">${[actaResponsableTexto(x), x.fecha ? 'para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>`).join('')}
+      <div style="margin-top:8px"><button class="btn btn-sm" onclick="actaImprimir('${esc(String(a.id))}')"><i class="ti ti-printer"></i> Imprimir el acta</button></div></details>`).join('')}` : ''}`;
+}
+// Ventana de impresión del acta. Ahí NO hay fuente de iconos: solo texto y estilos propios.
+function actaImprimir(id){
+  const a = remoteBiz && remoteBiz.plan360Actas && remoteBiz.plan360Actas[id];
+  if(!a) return;
+  const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
+  const filas = (a.decisiones || []).map(x => `<tr><td class="t">${tipos[x.tipo] || 'Nota'}</td><td>${esc(x.texto || '')}${x.tipo === 'tarea' && x.dia ? `<div class="m">Día ${esc(String(x.dia))}</div>` : ''}${actaResponsableTexto(x) || x.fecha ? `<div class="m">${[actaResponsableTexto(x), x.fecha ? 'para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</td></tr>`).join('');
+  const win = window.open('', '_blank');
+  if(!win){ alert('El navegador ha bloqueado la ventana emergente — permite pop-ups para imprimir el acta.'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Acta · ${esc(fechaLegible(a.fecha))}</title>
+  <style>@page{size:A4;margin:14mm}body{font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#1C1A17}h1{font-size:22px;margin:0 0 2px}.s{color:#716C65;font-size:13px;margin-bottom:14px}table{width:100%;border-collapse:collapse}td{padding:8px 10px 8px 0;border-bottom:1px solid #E7E2D9;font-size:14px;vertical-align:top}td.t{width:90px;font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px;margin-top:2px}</style></head><body>
+  <h1>Acta de la reunión</h1><div class="s">${esc(remoteBiz.name || '')} · ${esc(fechaLegible(a.fecha))}</div><table>${filas}</table>
+  <script>window.onload=function(){window.print();}<\/script></body></html>`);
+  win.document.close();
 }
 function actaListaHtml(){
   if(!actaBorrador.length) return '<p class="muted" style="margin:14px 0">Todavía no hay decisiones en esta acta.</p>';
   const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
-  return `<div class="card" style="margin-top:12px">${actaBorrador.map((x, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo]}${x.tipo === 'tarea' ? ' · día ' + x.dia : ''}</span><div style="flex:1;font-size:15px">${esc(x.texto)}</div><button class="btn btn-sm" onclick="actaQuitar(${i})">Quitar</button></div>`).join('')}
+  return `<div class="card" style="margin-top:12px">${actaBorrador.map((x, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo]}${x.tipo === 'tarea' ? ' · día ' + x.dia : ''}</span><div style="flex:1;font-size:15px">${esc(x.texto)}${actaResponsableTexto(x) || x.fecha ? `<div class="muted txt-xs">${[actaResponsableTexto(x), x.fecha ? 'para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div><button class="btn btn-sm" onclick="actaQuitar(${i})">Quitar</button></div>`).join('')}
     <div style="margin-top:12px"><button class="btn btn-primary" onclick="actaEnviar()">Enviar el acta al negocio</button> <span class="muted" style="font-size:12px">Crea las tareas y los objetivos y deja el acta en su app.</span></div></div>`;
 }
 function actaAnadir(){
   const texto = actaSanitizar(document.getElementById('acta-texto').value);
   if(!texto){ alert('Escribe la decisión.'); return; }
   const tipo = document.getElementById('acta-tipo').value;
-  actaBorrador.push({tipo, texto, dia: tipo === 'tarea' ? Number(document.getElementById('acta-dia').value) : null});
+  const dia = tipo === 'tarea' ? Number(document.getElementById('acta-dia').value) : null;
+  if(tipo === 'tarea' && !dia){ alert('No quedan días de trabajo por delante: apúntala como nota o como objetivo.'); return; }
+  const responsable = document.getElementById('acta-resp').value;
+  const nombre = actaSanitizar(document.getElementById('acta-resp-nombre-in').value).slice(0, 60);
+  if(responsable === 'empleado' && !nombre){ alert('Escribe el nombre del empleado.'); return; }
+  actaBorrador.push({tipo, texto, dia, responsable, responsableNombre: responsable === 'empleado' ? nombre : '', fecha: document.getElementById('acta-fecha').value || ''});
   document.getElementById('acta-texto').value = '';
   document.getElementById('acta-lista').innerHTML = actaListaHtml();
 }
@@ -6025,7 +6193,10 @@ function actaAplicar(){
     if(x.tipo === 'tarea'){
       const d = prog.find(y => y.day === x.dia && y.phase === 'trabajo'); if(!d) return;
       if(!Array.isArray(d.tasks)) d.tasks = [];
-      d.tasks.push({id: plan360GenId(), objectiveId: null, title: x.texto.slice(0, 140), description: x.texto.length > 140 ? x.texto : '', status: 'pendiente', note: '', fileData: null, fileName: null});
+      // Responsable y fecha viajan en la descripción: es lo único del modelo de tarea que el negocio ya pinta.
+      const extra = [actaResponsableTexto(x) && x.responsable !== 'negocio' ? 'Responsable: ' + actaResponsableTexto(x) : '', x.fecha ? 'Para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).join(' · ');
+      const descr = [x.texto.length > 140 ? x.texto : '', extra].filter(Boolean).join('\n\n');
+      d.tasks.push({id: plan360GenId(), objectiveId: null, title: x.texto.slice(0, 140), description: descr, status: 'pendiente', note: '', fileData: null, fileName: null});
       tareas++;
     }else if(x.tipo === 'objetivo'){
       const d2 = prog.find(y => y.day === 2); if(!d2) return;
@@ -6036,7 +6207,7 @@ function actaAplicar(){
   });
   if(!remoteBiz.plan360Actas || typeof remoteBiz.plan360Actas !== 'object' || Array.isArray(remoteBiz.plan360Actas)) remoteBiz.plan360Actas = {};
   const id = String(plan360GenId());
-  remoteBiz.plan360Actas[id] = {id, fecha: todayStr(), enviadoEn: Date.now(), decisiones: actaBorrador.map(x => ({tipo: x.tipo, texto: x.texto, dia: x.dia}))};
+  remoteBiz.plan360Actas[id] = {id, fecha: todayStr(), enviadoEn: Date.now(), decisiones: actaBorrador.map(x => ({tipo: x.tipo, texto: x.texto, dia: x.dia, responsable: x.responsable || '', responsableNombre: x.responsableNombre || '', fecha: x.fecha || ''}))};
   return {tareas, objetivos, id};
 }
 function actaEnviar(){
@@ -6046,7 +6217,7 @@ function actaEnviar(){
   actaBorrador = [];
   saveRemoteBiz();
   renderActaPage();
-  alert('Acta enviada: ' + r.tareas + ' tareas y ' + r.objetivos + ' objetivos creados.');
+  alert('Acta enviada: ' + plural(r.tareas, 'tarea', 'tareas') + ' y ' + plural(r.objetivos, 'objetivo', 'objetivos') + ' creados.');
 }
 
 /* ---- Documentación inicial ---- */
@@ -6119,7 +6290,7 @@ function plan360ContractSectionHtml(){
     return `<div class="card" style="margin-top:14px">
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:10px">${esc(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
-        ✓ Firmado por <strong>${esc(c.signedName)}</strong> (${esc(c.signedDNI)}) — ${esc(new Date(c.signedAt).toLocaleString('es-ES'))}
+        <i class="ti ti-check"></i> Firmado por <strong>${esc(c.signedName)}</strong> (${esc(c.signedDNI)}) — ${esc(new Date(c.signedAt).toLocaleString('es-ES'))}
       </div>
     </div>`;
   }
@@ -6405,7 +6576,7 @@ function renderDocRicoPage(i){
     ${plan360DocRicoHtml(pl, doc.campos, 'editar', esc, remoteBiz.name || '', plan360DocTextoAnterior(doc))}
     <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0;margin-top:12px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center">
       <button class="btn btn-primary" onclick="saveDocRico(${i})">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-      <span id="dr-ok" class="muted" style="display:none">✓ Guardado — el negocio ya lo ve</span>
+      <span id="dr-ok" class="muted" style="display:none">Guardado — el negocio ya lo ve</span>
     </div>
   `;
 }
@@ -6442,7 +6613,7 @@ function renderDocSimplePage(i){
       </div>
       <div id="doc-editor" class="p360-doc-editor"></div>
       <button class="btn btn-primary" onclick="saveDocSimple(${i})" style="margin-top:16px">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-      <span id="doc-save-ok" class="muted" style="margin-left:10px;display:none">✓ Guardado y enviado</span>
+      <span id="doc-save-ok" class="muted" style="margin-left:10px;display:none">Guardado y enviado</span>
     </div>
   `;
   plan360RenderDocEditor();
@@ -6762,7 +6933,7 @@ function renderLibroMarcaHub(){
           ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
              <p class="muted" style="margin-top:8px">Se envía el PDF que has subido.</p>`
           : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con el PDF actual)</button>
-             <p class="muted" style="margin-top:8px">✓ Enviado — el negocio ya lo ve.</p>`}
+             <p class="muted" style="margin-top:8px">Enviado — el negocio ya lo ve.</p>`}
       </div>
     ` : `
       <p class="muted" style="margin:14px 0">Hasta que no subas un PDF, el negocio no ve nada en Libro de marca. Herramienta para ir montando el contenido mientras tanto (esto NO lo ve el negocio):</p>
@@ -6947,7 +7118,7 @@ function renderNegocioExport(day){
     <div class="card">
       <textarea id="neg-export-text" rows="20" readonly style="font-family:'IBM Plex Mono',monospace;font-size:12px">${esc(texto)}</textarea>
       <button class="btn btn-primary" onclick="copiarNegocioTexto()" style="margin-top:10px"><i class="ti ti-copy"></i> Copiar todo</button>
-      <span id="neg-copy-ok" class="muted" style="margin-left:10px;display:none">Copiado ✓</span>
+      <span id="neg-copy-ok" class="muted" style="margin-left:10px;display:none">Copiado</span>
     </div>
   `;
 }
@@ -7220,7 +7391,7 @@ function renderInversionesPage(day){
       <input id="inv-nombre-${i}" value="${esc(x.nombre || '')}" placeholder="Inversión / material" style="flex:2;min-width:180px">
       <input id="inv-zona-${i}" value="${esc(x.zona || '')}" placeholder="Zona" style="flex:1;min-width:110px">
       <input id="inv-coste-${i}" type="number" min="0" value="${x.coste || ''}" placeholder="Coste €" style="flex:none;width:110px">
-      <button class="btn btn-sm" onclick="borrarInversion(${day},${i})" title="Quitar">✕</button>
+      <button class="btn btn-sm" onclick="borrarInversion(${day},${i})" title="Quitar" aria-label="Quitar"><i class="ti ti-x"></i></button>
     </div>
     <textarea id="inv-porque-${i}" rows="2" placeholder="Por qué / qué resuelve" style="width:100%;margin-top:8px">${esc(x.porque || '')}</textarea>
   </div>`;
@@ -7250,7 +7421,7 @@ function renderInversionesPage(day){
     </div>
     <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0;margin-top:12px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="saveInversiones(${day})">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-      <span id="inv-ok" class="muted" style="display:none">✓ Guardado — el negocio ya lo ve</span>
+      <span id="inv-ok" class="muted" style="display:none">Guardado — el negocio ya lo ve</span>
     </div>
     <p class="muted" style="margin:18px 0 6px">Así lo ve el negocio:</p>
     <div id="inv-preview">${plan360InversionesHtml(d, esc, remoteBiz.name || '')}</div>
@@ -7546,7 +7717,7 @@ function tbRenderIntro(box, day, tb){
       ${tbPruebaCard(1, 'ti-brain', 'Test', 'Preguntas de hostelería. Responde primero el equipo que sepa la respuesta — un acierto, un punto.')}
       ${tbPruebaCard(2, 'ti-eye', 'Los 5 sentidos', 'Vista (sopa de letras), Oído, Olfato, Gusto y Tacto — un punto por cada acierto en cada uno.')}
       ${tbPruebaCard(3, 'ti-chef-hat', 'Creatividad', `${tb.creatividad.presupuesto}€ y ${tb.creatividad.tiempoMin} min para ir al súper, comprar, preparar y servir algo propio.`)}
-      ${tbPruebaCard('🏆', '', 'Marcador final', 'Se suman las 3 pruebas. El equipo con más puntos se lleva el premio.')}
+      ${tbPruebaCard('<i class="ti ti-trophy"></i>', '', 'Marcador final', 'Se suman las 3 pruebas. El equipo con más puntos se lleva el premio.')}
       <p class="muted" style="margin-bottom:0">Dos equipos MEZCLADOS a propósito — cocina y sala repartidos entre los dos, nunca "cocina contra sala". El objetivo es que se conozcan entre puestos, no que gane un departamento.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -7730,7 +7901,7 @@ function tbRenderKahoot(box, day, tb){
       </div>
       ${!q ? '<p class="muted">No hay preguntas todavía — añade alguna en el editor de abajo.</p>' : `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TB_DIFICULTAD_COLOR[q.dificultad]||'var(--muted)'}">${esc(PLAN360_TB_DIFICULTAD_LABEL[q.dificultad] || '')}</span>
+          <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TB_DIFICULTAD_COLOR[q.dificultad]||'var(--muted)'}">${esc(PLAN360_TB_DIFICULTAD_LABEL[q.dificultad] || '')}</span>
           <div style="flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
             <div id="tb-kahoot-barra" style="height:100%;background:var(--ink);width:${corriendo ? (tbTimerRestante/k.tiempoSeg*100) : (k.revelada?0:100)}%;transition:width 1s linear"></div>
           </div>
@@ -7762,8 +7933,8 @@ function tbRenderKahoot(box, day, tb){
         ` : `
           <p class="muted" style="font-size:12px">¿Qué equipos la acertaron? Los dos pueden llevarse el punto si los dos la dijeron bien.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button class="btn ${marc.A?'btn-primary':''}" onclick="tbKahootPunto(${day},'A')">${marc.A?'✓ ':''}Acertó ${esc(tb.equipoA)}</button>
-            <button class="btn ${marc.B?'btn-primary':''}" onclick="tbKahootPunto(${day},'B')">${marc.B?'✓ ':''}Acertó ${esc(tb.equipoB)}</button>
+            <button class="btn ${marc.A?'btn-primary':''}" onclick="tbKahootPunto(${day},'A')">${marc.A?'<i class="ti ti-check"></i> ':''}Acertó ${esc(tb.equipoA)}</button>
+            <button class="btn ${marc.B?'btn-primary':''}" onclick="tbKahootPunto(${day},'B')">${marc.B?'<i class="ti ti-check"></i> ':''}Acertó ${esc(tb.equipoB)}</button>
           </div>
           <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">${i < total - 1 ? 'Siguiente pregunta →' : 'Ver resultado del Test →'}</button>
         `}
@@ -7826,9 +7997,9 @@ function tbRenderKahootResultado(box, day, tb){
           <div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${k.puntos.B}</div>
         </div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en el Test' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana el Test`}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? 'Empate en el Test' : `${esc(ganaA?tb.equipoA:tb.equipoB)} gana el Test`}</div>
     </div>
-    <button class="btn btn-sm" onclick="tbKahootRepetir(${day})">↺ Repetir el Test desde la pregunta 1</button>
+    <button class="btn btn-sm" onclick="tbKahootRepetir(${day})"><i class="ti ti-rotate"></i> Repetir el Test desde la pregunta 1</button>
     <button class="btn btn-primary" onclick="tbIr(${day},'${PLAN360_TB_SENTIDOS[0].id}')">Siguiente prueba: ${esc(PLAN360_TB_SENTIDOS[0].label)} →</button>
   `;
 }
@@ -7996,8 +8167,8 @@ function tbRenderBanco(day, tb, sen){
           ${it.revelado
             ? `<span style="flex:1;min-width:100px">${esc(it.nombre) || '<span class=\"muted\">(sin nombre)</span>'}</span>`
             : `<button class="btn btn-sm" onclick="tbBancoRevelar(${day},'${sen.id}',${idx})" style="flex:1;min-width:100px" title="Revelar qué era">? ¿Qué era?</button>`}
-          <button class="btn btn-sm ${it.aciertoA?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'A')">${it.aciertoA?'✓ ':''}${esc(tb.equipoA)}</button>
-          <button class="btn btn-sm ${it.aciertoB?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'B')">${it.aciertoB?'✓ ':''}${esc(tb.equipoB)}</button>
+          <button class="btn btn-sm ${it.aciertoA?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'A')">${it.aciertoA?'<i class="ti ti-check"></i> ':''}${esc(tb.equipoA)}</button>
+          <button class="btn btn-sm ${it.aciertoB?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'B')">${it.aciertoB?'<i class="ti ti-check"></i> ':''}${esc(tb.equipoB)}</button>
           <button class="btn btn-sm btn-icon" onclick="tbBancoBorrar(${day},'${sen.id}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
         </div>
         ${!it.revelado ? `<div style="padding:0 0 6px ${sen.necesitaAudio?'30':'0'}px"><input placeholder="¿Qué es? (oculto hasta revelar)" value="${esc(it.nombre)}" onchange="tbBancoNombre(${day},'${sen.id}',${idx},this.value)" style="width:100%;max-width:320px"></div>` : ''}
@@ -8029,7 +8200,7 @@ function tbRenderBancoResultado(day, tb, sen, banco){
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? `🤝 Empate en ${esc(sen.label)}` : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana ${esc(sen.label)}`}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? `Empate en ${esc(sen.label)}` : `${esc(ganaA?tb.equipoA:tb.equipoB)} gana ${esc(sen.label)}`}</div>
     </div>
     <button class="btn btn-sm" onclick="tbBancoVolver(${day},'${sen.id}')">← Volver a los sonidos</button>
     ${tbSiguienteSentidoBtn(day, sen.id)}
@@ -8283,9 +8454,9 @@ function tbRenderVistaResultado(day, tb, v){
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en Vista' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana Vista`}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? 'Empate en Vista' : `${esc(ganaA?tb.equipoA:tb.equipoB)} gana Vista`}</div>
     </div>
-    <button class="btn btn-sm" onclick="tbVistaRepetir(${day})">↺ Repetir Vista</button>
+    <button class="btn btn-sm" onclick="tbVistaRepetir(${day})"><i class="ti ti-rotate"></i> Repetir Vista</button>
     ${tbSiguienteSentidoBtn(day, 'vista')}
   `;
 }
@@ -8434,14 +8605,14 @@ function tbRenderCreatividadIntro(box, day, tb){
       <div style="margin-top:14px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Cómo se va a evaluar cada plato:</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${c.criterios.map((cr, ci) => `<span class="badge" style="display:inline-flex;align-items:center;gap:5px">${esc(cr)} <button onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar" style="border:none;background:none;cursor:pointer;color:inherit;padding:0;font-size:12px;line-height:1">✕</button></span>`).join('')}
+          ${c.criterios.map((cr, ci) => `<span class="badge" style="display:inline-flex;align-items:center;gap:5px">${esc(cr)} <button onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar" aria-label="Quitar" style="border:none;background:none;cursor:pointer;color:inherit;padding:0;font-size:12px;line-height:1"><i class="ti ti-x"></i></button></span>`).join('')}
         </div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <input id="tb-nuevo-criterio" placeholder="Añadir criterio (ej. Aprovechamiento del presupuesto)" style="flex:1">
           <button class="btn btn-sm" onclick="tbCreatividadCriterioAnadir(${day})">Añadir</button>
         </div>
       </div>
-      <button class="btn btn-primary" style="margin-top:18px" onclick="tbCreatividadEmpezar(${day})">▶️ Empezar (${c.tiempoMin} min)</button>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="tbCreatividadEmpezar(${day})">Empezar (${c.tiempoMin} min)</button>
     </div>
   `;
 }
@@ -8472,7 +8643,7 @@ function tbRenderCreatividadPreparando(box, day, tb){
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">
         <button class="btn btn-sm" onclick="tbCreatividadAjustarTiempo(${day},5)">+5 min</button>
         <button class="btn btn-sm" onclick="tbCreatividadAjustarTiempo(${day},-5)">-5 min</button>
-        <button class="btn btn-primary" onclick="tbCreatividadTerminarTiempo(${day})">🍽️ Terminar y pasar a evaluar</button>
+        <button class="btn btn-primary" onclick="tbCreatividadTerminarTiempo(${day})">Terminar y pasar a evaluar</button>
       </div>
     </div>
   `;
@@ -8540,7 +8711,7 @@ function tbRenderCreatividadEvaluando(box, day, tb){
         <div style="text-align:center;font-weight:800;font-size:18px">${subA}</div>
         <div style="text-align:center;font-weight:800;font-size:18px">${subB}</div>
       </div>
-      <button class="btn btn-primary" style="margin-top:16px" onclick="tbCreatividadResolver(${day})">🍽️ Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="tbCreatividadResolver(${day})">Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>
     </div>
   `;
 }
@@ -8626,18 +8797,18 @@ function tbRenderCreatividadResultado(box, day, tb){
       <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de Creatividad</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
         <div style="flex:1;${ganaA ? 'transform:scale(1.08)' : ''}">
-          <div style="font-weight:700">${esc(tb.equipoA)}${ganaA ? ' 🏆' : ''}</div>
+          <div style="font-weight:700">${esc(tb.equipoA)}</div>
           <div style="font-size:44px;font-weight:800;${ganaA ? 'color:var(--brand-orange,#F0A868)' : ''}">${subA}</div>
           <div style="font-size:12px;opacity:.7">${c.puntos.A} pto${c.puntos.A === 1 ? '' : 's'} de la prueba</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1;${ganaB ? 'transform:scale(1.08)' : ''}">
-          <div style="font-weight:700">${esc(tb.equipoB)}${ganaB ? ' 🏆' : ''}</div>
+          <div style="font-weight:700">${esc(tb.equipoB)}</div>
           <div style="font-size:44px;font-weight:800;${ganaB ? 'color:var(--brand-orange,#F0A868)' : ''}">${subB}</div>
           <div style="font-size:12px;opacity:.7">${c.puntos.B} pto${c.puntos.B === 1 ? '' : 's'} de la prueba</div>
         </div>
       </div>
-      <div style="margin-top:14px;font-size:16px">${empate ? '🤝 Empate en Creatividad' : `🎉 ${esc(ganaA ? tb.equipoA : tb.equipoB)} gana la prueba de Creatividad`}</div>
+      <div style="margin-top:14px;font-size:16px">${empate ? 'Empate en Creatividad' : `${esc(ganaA ? tb.equipoA : tb.equipoB)} gana la prueba de Creatividad`}</div>
     </div>
     ${(c.fotoA || c.fotoB) ? `
     <div class="card">
@@ -8646,7 +8817,7 @@ function tbRenderCreatividadResultado(box, day, tb){
         ${c.fotoB ? `<div style="text-align:center"><img src="${esc(c.fotoB)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaB ? '3px solid var(--brand-orange,#F0A868)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoB)}</div></div>` : ''}
       </div>
     </div>` : ''}
-    <button class="btn btn-sm" onclick="tbCreatividadRepetir(${day})">↺ Repetir Creatividad desde el principio</button>
+    <button class="btn btn-sm" onclick="tbCreatividadRepetir(${day})"><i class="ti ti-rotate"></i> Repetir Creatividad desde el principio</button>
     <button class="btn btn-primary" onclick="tbIr(${day},'final')">Ver marcador final →</button>
   `;
 }
@@ -8680,8 +8851,8 @@ function tbRenderFinal(box, day, tb){
       </div>
       <div id="tb-final-ganador" style="margin-top:14px;font-size:18px;min-height:26px"></div>
       ${empate
-        ? `<div style="margin-top:6px;font-size:14px;opacity:.8">🤝 Empate — no hay equipo ganador</div>`
-        : `<button id="tb-final-btn-ganador" class="btn btn-primary" style="margin-top:6px" onclick="tbMostrarGanadorFinal(${day})">🏆 Mostrar equipo ganador</button>`}
+        ? `<div style="margin-top:6px;font-size:14px;opacity:.8">Empate — no hay equipo ganador</div>`
+        : `<button id="tb-final-btn-ganador" class="btn btn-primary" style="margin-top:6px" onclick="tbMostrarGanadorFinal(${day})"><i class="ti ti-trophy"></i> Mostrar equipo ganador</button>`}
     </div>
     ${(tb.integrantesA || tb.integrantesB) ? `
     <div class="card" style="display:flex;gap:10px">
@@ -8712,10 +8883,10 @@ function tbRenderFinal(box, day, tb){
         ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" data-v="${esc(p)}" onclick="tbElegirPremio(${day},this.dataset.v)">${esc(p)}</button>`).join('')}
       </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
-      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} data-g="${esc(ganador||'')}" data-p="${esc(tb.premio||'')}" data-f="${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}" onclick="tbRevelarPremio(this.dataset.g, this.dataset.p, this.dataset.f)" style="margin-left:6px">🎁 Premios</button>
+      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} data-g="${esc(ganador||'')}" data-p="${esc(tb.premio||'')}" data-f="${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}" onclick="tbRevelarPremio(this.dataset.g, this.dataset.p, this.dataset.f)" style="margin-left:6px">Premios</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
+      <button class="btn btn-sm" onclick="tbReiniciar(${day})"><i class="ti ti-rotate"></i> Reiniciar las 3 pruebas</button>
       ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted" style="margin:0">Marcada como hecha — el marcador se puede seguir tocando.</p>'}
     </div>
   `;
@@ -8737,7 +8908,7 @@ function tbMostrarGanadorFinal(day){
   const btn = document.getElementById('tb-final-btn-ganador');
   if(elA && ganaA) elA.style.color = 'var(--brand-orange,#F0A868)';
   if(elB && ganaB) elB.style.color = 'var(--brand-orange,#F0A868)';
-  if(elG) elG.textContent = `🏆 Gana ${ganaA ? tb.equipoA : tb.equipoB}`;
+  if(elG) elG.textContent = `Gana ${ganaA ? tb.equipoA : tb.equipoB}`;
   if(btn) btn.style.display = 'none';
   tbAcorde();
 }
@@ -8775,7 +8946,7 @@ function tbRevelarPremio(ganador, premio, foto){
     <div id="tb-rev-confeti" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
     <div id="tb-rev-suspense" style="font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--muted,#999);animation:tbPulso 1s infinite">Calculando resultados…</div>
     <div id="tb-rev-final" style="display:none">
-      <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite">🏆</div>
+      <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite"><i class="ti ti-trophy"></i></div>
       <div style="font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--brand-orange,#F0A868);margin-top:10px">¡Habéis ganado!</div>
       <div style="font-size:44px;font-weight:800;margin-top:6px">${esc(ganador)}</div>
       ${foto ? `<img src="${esc(foto)}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;margin-top:18px;border:3px solid var(--brand-orange,#F0A868)">` : ''}
@@ -9040,7 +9211,7 @@ function renderMisteryHub(day){
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
     <h2 style="margin:10px 0 4px">Cliente misterioso</h2>
     <p class="muted" style="margin-bottom:14px">Puntúa cada bloque; la nota del bloque y la nota final se calculan solas.</p>
-    ${mc.sentAt ? `<div class="card" style="background:var(--green-l);border-color:var(--green);margin-bottom:14px">✓ Enviado al negocio el ${esc(new Date(mc.sentAt).toLocaleString('es-ES'))}</div>` : ''}
+    ${mc.sentAt ? `<div class="card" style="background:var(--green-l);border-color:var(--green);margin-bottom:14px">Enviado al negocio el ${esc(new Date(mc.sentAt).toLocaleString('es-ES'))}</div>` : ''}
     ${mc.blocks.map((b, bi) => {
       const avg = plan360MisteryBlockAvg(b);
       const col = plan360ScoreColor(avg);
@@ -9288,8 +9459,8 @@ function taskRow(tk, i){
         <option value="">— Sin objetivo —</option>
         ${objetivos.map(o => `<option value="${o.id}" ${tk.objectiveId === o.id ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}
       </select>
-      <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[estado]};white-space:nowrap">${PLAN360_TASK_ESTADO_LABEL[estado]}</span>
-      <button class="btn btn-sm btn-icon" onclick="borrarTask(${i})" title="Quitar tarea"><i class="ti ti-trash"></i></button>
+      <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[estado]};white-space:nowrap">${PLAN360_TASK_ESTADO_LABEL[estado]}</span>
+      ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar tarea', fn: `borrarTask(${i})`, peligro: true}], 'Acciones de la tarea')}
     </div>
     <div class="field" style="margin-bottom:8px"><label>Título</label><input id="task-title-${i}" value="${esc(tk.title)}" placeholder="Qué hay que hacer"></div>
     <div class="field" style="margin-bottom:8px"><label>Descripción</label><textarea id="task-desc-${i}" rows="3" placeholder="Por qué / cómo se hace">${esc(tk.description || '')}</textarea></div>
@@ -9338,7 +9509,7 @@ function renderTrabajoPage(d){
             </label>
           `).join('') : '<p class="muted" style="margin:0">Todavía no hay objetivos en el Día 2.</p>'}
           <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${d.reunion.hecha?'var(--green)':'var(--muted)'}">${d.reunion.hecha?'Hecha':'Pendiente'}</span>
+            <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${d.reunion.hecha?'var(--green)':'var(--muted)'}">${d.reunion.hecha?'Hecha':'Pendiente'}</span>
             ${d.reunion.notas ? `<p style="font-size:13px;margin:8px 0 0">${esc(d.reunion.notas)}</p>` : '<p class="muted" style="font-size:12px;margin:8px 0 0">Todavía sin notas del negocio.</p>'}
           </div>
         </div>
@@ -9471,10 +9642,10 @@ function renderSummaryPage(){
   const tareaLinea = tk => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">
     <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[tk.status || 'pendiente']};flex:none">${PLAN360_TASK_ESTADO_LABEL[tk.status || 'pendiente']}</span>
     <span class="muted" style="flex:none">${esc(plan360FormatDate(tk.day).dayMonth)}</span>
-    <span style="flex:1">${esc(tk.title)}</span>
+    <span style="flex:1;min-width:0;overflow-wrap:break-word">${esc(tk.title)}</span>
   </div>`;
   document.getElementById('client-grid').innerHTML = `
-    ${plan360PageHeader('★ Resumen del programa')}
+    ${plan360PageHeader('Resumen del programa')}
     <div class="card" style="margin-top:14px">
       <div style="font-weight:600">Tareas completadas</div>
       <div style="font-size:28px;font-weight:800;margin-top:4px">${hechas.length}<span style="font-size:16px;color:var(--muted);font-weight:600"> / ${tareas.length}</span></div>
@@ -9484,12 +9655,12 @@ function renderSummaryPage(){
       <div class="card" style="margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(g.obj.prioridad)};flex:none"></span>
-          <strong style="flex:1">${esc(g.obj.titulo)}</strong>
-          <span class="muted" style="font-size:12px">${g.tareas.length} tarea${g.tareas.length === 1 ? '' : 's'}</span>
+          <strong style="flex:1;min-width:0;overflow-wrap:break-word">${esc(g.obj.titulo)}</strong>
+          <span class="muted" style="font-size:12px">${plural(g.tareas.length, 'tarea', 'tareas')}</span>
         </div>
         ${plan360MedicionesResumenHtml(g.obj)}
         ${g.tareas.length ? g.tareas.map(tareaLinea).join('')
-          : '<p style="margin:0;font-size:13px;color:var(--red)">⚠ Sin ninguna tarea asignada todavía en los 26 días de trabajo.</p>'}
+          : '<p style="margin:0;font-size:13px;color:var(--red)">Sin ninguna tarea asignada todavía en los ' + plural(trabajo.length, 'día', 'días') + ' de trabajo.</p>'}
       </div>`).join('')}
     ${sinObjetivo.length ? `
       <div class="card" style="margin-bottom:10px;border-color:var(--amber)">

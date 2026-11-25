@@ -57,7 +57,7 @@ code,pre,kbd{font-family:var(--mono)}
 
 <div id="login-gate" class="wrap">
   <div class="card">
-    <h1>🔑 Panel de administración GastroGoan</h1>
+    <h1>Panel de administración GastroGoan</h1>
     <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador (Firebase Authentication).</p>
     <label>Email</label>
     <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
@@ -72,7 +72,7 @@ code,pre,kbd{font-family:var(--mono)}
   <header>
     <h1>Panel de administración GastroGoan</h1>
     <div style="display:flex;gap:8px">
-      <button class="btn" style="width:auto" onclick="ggAdminHardReload()">↻ Actualizar</button>
+      <button class="btn" style="width:auto" onclick="ggAdminHardReload()">Actualizar</button>
       <button class="btn" style="width:auto" onclick="doLogout()">Salir</button>
     </div>
   </header>
@@ -120,7 +120,7 @@ async function doLogin(){
     onLoggedIn();
   }catch(e){
     console.error(e);
-    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
+    statusEl.textContent = 'No se pudo entrar (' + (e.message || e.code || 'error') + ').';
   }
 }
 function doLogout(){
