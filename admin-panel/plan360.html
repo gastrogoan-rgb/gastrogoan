@@ -10226,7 +10226,7 @@ function taskRow(tk, i){
     ${tk.note ? `<div class="field" style="margin-bottom:8px"><label>Nota del negocio</label><p style="font-size:13px;margin:0;padding:8px;background:var(--brand-cream);border-radius:6px">${esc(tk.note)}</p></div>` : ''}
     ${p360PruebaBotonHtml(tk, i)}
     <div style="font-size:12px;color:var(--muted)">
-      <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto">
+      <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto;max-width:100%">
       ${tk.fileName ? esc(tk.fileName) + ' <a href="#" onclick="event.preventDefault();document.getElementById(\'task-file-clear-' + i + '\').value=\'1\'">Eliminar</a><input type="hidden" id="task-file-clear-' + i + '">' : ''}
     </div>
   </div>`;

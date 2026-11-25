@@ -7033,10 +7033,10 @@ function renderPlan360Questionnaire(){
     ${plan360PageHeader(t('plan360.questionnaire'), null, 'renderPlan360Intake')}
     <div class="card" style="margin-top:14px">
       ${sections.map((s, si) => `
-        <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(s.title)}</div>
+        <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(plan360IntakeTxt(s.title))}</div>
         ${s.questions.map((q, qi) => `
           <div class="field">
-            <label>${escapeHtml(q.q)}</label>
+            <label>${escapeHtml(plan360IntakeTxt(q.q))}</label>
             <textarea id="p360-intake-${si}-${qi}" rows="2">${escapeHtml(q.a)}</textarea>
           </div>
         `).join('')}

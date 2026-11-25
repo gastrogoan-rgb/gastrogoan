@@ -4480,6 +4480,17 @@ const PLAN360_INV_NIVELES = [
   {id: 'esencial', color: 'amarillo', nombre: 'Esencial', resumen: 'Mejora experiencia, eficiencia y rentabilidad.', incluye: 'Mejora experiencia, eficiencia y rentabilidad. Recepción del cliente, vajilla/cristalería, pintura y luz, herramientas de gestión (TPV, reservas).', ejemplo: 'Ej: renovar vajilla/cristalería, pintura, luz cálida, plantas, atril/cartelería, TPV y software de reservas, carta QR.'},
   {id: 'complementario', color: 'verde', nombre: 'Complementario', resumen: 'Marca y ticket medio. Lo que pule.', incluye: 'Marca y ticket medio. Mobiliario y decoración, acústica, fotografía profesional, packaging propio, branding y señalética.', ejemplo: 'Ej: mobiliario y decoración, acústica y música, fotografía profesional, packaging propio, branding y señalética nueva.'},
 ];
+// Los textos de los tres niveles son del propio programa (no del coach): se traducen al PINTAR, el dato guardado es solo la clave `nivel`.
+const PLAN360_INV_NIVELES_TR = {
+  prioritario: {ca:{nombre:'Prioritari', resumen:'Estabilitza i evita pèrdues. S\'inverteix primer.', incluye:'Estabilitza i evita pèrdues. Maquinària crítica avariada, seguretat, higiene greu, alguna cosa trencada que impedeix operar. S\'inverteix primer.'}, en:{nombre:'Priority', resumen:'Stabilises and prevents losses. Invest first.', incluye:'Stabilises and prevents losses. Broken critical machinery, safety, serious hygiene issues, anything broken that stops you operating. Invest first.'}},
+  esencial: {ca:{nombre:'Essencial', resumen:'Millora l\'experiència, l\'eficiència i la rendibilitat.', incluye:'Millora l\'experiència, l\'eficiència i la rendibilitat. Recepció del client, vaixella/cristalleria, pintura i llum, eines de gestió (TPV, reserves).'}, en:{nombre:'Essential', resumen:'Improves experience, efficiency and profitability.', incluye:'Improves experience, efficiency and profitability. Guest reception, tableware/glassware, paint and lighting, management tools (POS, bookings).'}},
+  complementario: {ca:{nombre:'Complementari', resumen:'Marca i tiquet mitjà. El que polix.', incluye:'Marca i tiquet mitjà. Mobiliari i decoració, acústica, fotografia professional, packaging propi, branding i retolació.'}, en:{nombre:'Complementary', resumen:'Brand and average ticket. The finishing touches.', incluye:'Brand and average ticket. Furniture and decor, acoustics, professional photography, own packaging, branding and signage.'}},
+};
+function plan360InvNivelTxt(n){
+  const idioma = typeof getLang === 'function' ? getLang() : 'es';
+  const tr = PLAN360_INV_NIVELES_TR[n.id] && PLAN360_INV_NIVELES_TR[n.id][idioma];
+  return tr ? Object.assign({}, n, tr) : n;
+}
 function plan360InvEuros(n){
   // Punto de miles siempre: toLocaleString('es-ES') no lo pone con cuatro
   // cifras, y en la misma tabla salían «9000 €» junto a «13.200 €».
@@ -4493,9 +4504,10 @@ function plan360InversionesHtml(d, esc, negocio){
   const presu = Number(d.presupuestoMaximo) || 0;
   const dif = presu - total;
   const escala = Math.max(total, presu) || 1;
-  const barra = `<div class="dr-inv-bar">${PLAN360_INV_NIVELES.map(n => sub[n.id] ? `<i class="dr-inv-${n.color}" style="width:${(sub[n.id] / escala * 100).toFixed(2)}%"></i>` : '').join('')}${presu ? `<b style="left:${(presu / escala * 100).toFixed(2)}%"><span style="${presu / escala > 0.7 ? 'right:6px' : 'left:6px'}">Presupuesto ${plan360InvEuros(presu)}</span></b>` : ''}</div>
-    <div class="dr-inv-ley">${PLAN360_INV_NIVELES.map(n => `<span><i class="dr-inv-${n.color}"></i>${n.nombre} · ${plan360InvEuros(sub[n.id])}</span>`).join('')}</div>`;
-  const bloque = n => {
+  const barra = `<div class="dr-inv-bar">${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => sub[n.id] ? `<i class="dr-inv-${n.color}" style="width:${(sub[n.id] / escala * 100).toFixed(2)}%"></i>` : '').join('')}${presu ? `<b style="left:${(presu / escala * 100).toFixed(2)}%"><span style="${presu / escala > 0.7 ? 'right:6px' : 'left:6px'}">Presupuesto ${plan360InvEuros(presu)}</span></b>` : ''}</div>
+    <div class="dr-inv-ley">${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => `<span><i class="dr-inv-${n.color}"></i>${n.nombre} · ${plan360InvEuros(sub[n.id])}</span>`).join('')}</div>`;
+  const bloque = n0 => {
+    const n = plan360InvNivelTxt(n0);
     const lista = items.filter(x => (x.nivel || 'esencial') === n.id);
     if(!lista.length) return '';
     return `<div class="dr-inv-n dr-inv-n-${n.color}">
@@ -4508,35 +4520,35 @@ function plan360InversionesHtml(d, esc, negocio){
     </div>`;
   };
   return `<div class="dr-doc">
-    <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · Plan exprés</div><div class="dr-portada-t">Plan de inversiones</div><div class="dr-portada-s">Qué necesita comprar o reformar el local, y en qué orden.</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}${d.inversionesFecha ? ` · ${esc(d.inversionesFecha)}` : ''}</div>` : ''}</div>
+    <div class="dr-portada"><div class="dr-portada-e">${gl({es:'GastroGoan · Plan 360° · Plan exprés', ca:'GastroGoan · Pla 360° · Pla exprés', en:'GastroGoan · 360° Plan · Express plan'})}</div><div class="dr-portada-t">${gl({es:'Plan de inversiones</div><div class="dr-portada-s">Qué necesita comprar o reformar el local, y en qué orden.', ca:'Pla d\'inversions</div><div class="dr-portada-s">Què necessita comprar o reformar el local, i en quin ordre.', en:'Investment plan</div><div class="dr-portada-s">What the venue needs to buy or refurbish, and in what order.'})}</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}${d.inversionesFecha ? ` · ${esc(d.inversionesFecha)}` : ''}</div>` : ''}</div>
     <div class="dr-cuerpo">
       <div class="dr-datos">
-        <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">inversión total necesaria</div></div>
-        <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">presupuesto máximo que asume el negocio</div></div>
-        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
-        <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">inversiones detectadas</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">${gl({es:'inversión total necesaria</div></div>', ca:'inversió total necessària</div></div>', en:'total investment needed</div></div>'})}
+        <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">${gl({es:'presupuesto máximo que asume el negocio', ca:'pressupost màxim que assumeix el negoci', en:'maximum budget the business takes on'})}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? gl({es:'diferencia', ca:'diferència', en:'difference'}) : dif < 0 ? gl({es:'de exceso sobre el presupuesto', ca:'d\'excés sobre el pressupost', en:'over the budget'}) : gl({es:'de margen dentro del presupuesto', ca:'de marge dins del pressupost', en:'of room within the budget'})}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">${gl({es:'inversiones detectadas', ca:'inversions detectades', en:'investments identified'})}</div></div>
       </div>
       ${total ? barra : ''}
-      <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
-      <div class="dr-regla"><span>Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
-      <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
-      ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
-      <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
+      <p class="dr-p">${gl({es:'Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.', ca:'Aquesta plantilla acompanya el Pla d\'Acció, però separa el que cal COMPRAR o REFORMAR del que cal fer. Es classifica amb els mateixos 3 colors i es posa un cost estimat a cada inversió, perquè el propietari decideixi amb els diners al davant.', en:'This template goes with the Action Plan, but separates what has to be BOUGHT or REFURBISHED from what has to be done. It uses the same 3 colours and gives each investment an estimated cost, so the owner decides with the money in front of them.'})}</p>
+      <div class="dr-regla"><span>${gl({es:'Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.', ca:'Clau</span>La jerarquia de la despesa intel·ligent: primer el que evita perdre diners o tancar (maquinària crítica, seguretat), després el que fa guanyar (imatge, eines de venda) i per últim el que diferencia (marca, detalls). Neteja + llum + pintura donen el 70% de la millora percebuda per menys del 30% de la despesa.', en:'Key</span>The hierarchy of smart spending: first what stops you losing money or closing (critical machinery, safety), then what makes you earn (image, sales tools) and last what sets you apart (brand, details). Cleaning + lighting + paint give 70% of the perceived improvement for under 30% of the spend.'})}</div>
+      <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">${gl({es:'Listado por prioridad', ca:'Llistat per prioritat', en:'List by priority'})}</div><div class="dr-cap-t">${gl({es:'Inversiones necesarias', ca:'Inversions necessàries', en:'Investments needed'})}</div><div class="dr-cap-s">${gl({es:'Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).', ca:'Els colors marquen l\'ordre de despesa: vermell primer (el que estabilitza), verd al final (el que polix).', en:'The colours set the order of spending: red first (what stabilises), green last (what polishes).'})}</div></div>
+      ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : `<p class="dr-p">${gl({es:'Tu coach todavía no ha añadido inversiones.', ca:'El teu coach encara no ha afegit inversions.', en:'Your coach has not added any investments yet.'})}</p>`}
+      <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">${gl({es:'Resumen económico', ca:'Resum econòmic', en:'Financial summary'})}</div><div class="dr-cap-t">${gl({es:'Con el dinero delante', ca:'Amb els diners al davant', en:'With the money in front of you'})}</div><div class="dr-cap-s">${gl({es:'Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.', ca:'Cada bloc suma el seu subtotal, i al final es compara el total amb el pressupost disponible.', en:'Each block adds its subtotal, and at the end the total is compared with the available budget.'})}</div></div>
       <div class="dr-tabla-w"><table class="dr-tabla dr-inv-res"><tbody>
-        ${PLAN360_INV_NIVELES.map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>Subtotal ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
-        <tr class="dr-inv-tot"><td>Inversión total necesaria</td><td>${plan360InvEuros(total)}</td></tr>
-        <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
-        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
+        ${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>${gl({es:'Subtotal', ca:'Subtotal', en:'Subtotal'})} ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
+        <tr class="dr-inv-tot"><td>${gl({es:'Inversión total necesaria</td>', ca:'Inversió total necessària</td>', en:'Total investment needed</td>'})}<td>${plan360InvEuros(total)}</td></tr>
+        <tr><td>${gl({es:'Presupuesto máximo del negocio</td>', ca:'Pressupost màxim del negoci</td>', en:'Maximum budget of the business</td>'})}<td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
+        <tr class="dr-inv-tot"><td>${gl({es:'Diferencia (margen o exceso)</td>', ca:'Diferència (marge o excés)</td>', en:'Difference (room or excess)</td>'})}<td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
-      <div class="dr-regla"><span>Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
-      ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
-      <div class="dr-h">Los 3 niveles de inversión</div>
-      <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>
-        ${PLAN360_INV_NIVELES.map(n => `<tr><td data-l="Color"><span class="dr-inv-dot dr-inv-${n.color}"></span>${n.color === 'rojo' ? 'Rojo' : n.color === 'amarillo' ? 'Amarillo' : 'Verde'}</td><td data-l="Nivel">${n.nombre.toUpperCase()}</td><td data-l="Qué incluye">${esc(n.incluye)}</td></tr>`).join('')}
+      <div class="dr-regla"><span>${gl({es:'Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.', ca:'Clau</span>Si el total supera el pressupost, no es retalla a cegues: s\'executa tot el vermell sí o sí, el groc fins on arribi, i el verd s\'ajorna. Mai al revés.', en:'Key</span>If the total exceeds the budget, do not cut blindly: the red is done in full no matter what, the yellow as far as it goes, and the green is postponed. Never the other way round.'})}</div>
+      ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">${gl({es:'Decisión y notas: qué se aprueba en esta fase y qué se aplaza', ca:'Decisió i notes: què s\'aprova en aquesta fase i què s\'ajorna', en:'Decision and notes: what is approved in this phase and what is postponed'})}</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
+      <div class="dr-h">${gl({es:'Los 3 niveles de inversión', ca:'Els 3 nivells d\'inversió', en:'The 3 investment levels'})}</div>
+      <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>${gl({es:'Color', ca:'Color', en:'Colour'})}</th><th>${gl({es:'Nivel', ca:'Nivell', en:'Level'})}</th><th>${gl({es:'Qué incluye', ca:'Què inclou', en:'What it includes'})}</th></tr></thead><tbody>
+        ${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => `<tr><td data-l="${gl({es:'Color', ca:'Color', en:'Colour'})}"><span class="dr-inv-dot dr-inv-${n.color}"></span>${n.color === 'rojo' ? gl({es:'Rojo', ca:'Vermell', en:'Red'}) : n.color === 'amarillo' ? gl({es:'Amarillo', ca:'Groc', en:'Yellow'}) : gl({es:'Verde', ca:'Verd', en:'Green'})}</td><td data-l="${gl({es:'Nivel', ca:'Nivell', en:'Level'})}">${n.nombre.toUpperCase()}</td><td data-l="${gl({es:'Qué incluye', ca:'Què inclou', en:'What it includes'})}">${esc(n.incluye)}</td></tr>`).join('')}
       </tbody></table></div>
-      <div class="dr-inv-lema">Primero lo que estabiliza. Luego lo que rentabiliza. Después lo que diferencia.</div>
+      <div class="dr-inv-lema">${gl({es:'Primero lo que estabiliza. Luego lo que rentabiliza. Después lo que diferencia.', ca:'Primer el que estabilitza. Després el que rendibilitza. Després el que diferencia.', en:'First what stabilises. Then what pays off. Then what sets you apart.'})}</div>
     </div>
-    <div class="dr-pie">GastroGoan · Plan 360° — Plan de inversiones</div>
+    <div class="dr-pie">${gl({es:'GastroGoan · Plan 360° — Plan de inversiones', ca:'GastroGoan · Pla 360° — Pla d\'inversions', en:'GastroGoan · 360° Plan — Investment plan'})}</div>
   </div>`;
 }
 function plan360DocRicoLeerCampos(){
@@ -4578,6 +4590,46 @@ const PLAN360_INTAKE_TEMPLATE = [
     ],
   },
 ];
+/* El cuestionario inicial se GUARDA en castellano (la pregunta es la clave con la que se casan las respuestas al actualizar la
+   plantilla), y se traduce al mostrarlo. Una pregunta que el coach añada o cambie a mano no está aquí y se ve tal cual. */
+const PLAN360_INTAKE_TR = {
+  'Datos de la empresa': {ca:'Dades de l\'empresa', en:'Company details'},
+  'Información básica del negocio': {ca:'Informació bàsica del negoci', en:'Basic business information'},
+  'Situación actual': {ca:'Situació actual', en:'Current situation'},
+  'Nombre comercial': {ca:'Nom comercial', en:'Trading name'},
+  'Razón social': {ca:'Raó social', en:'Registered company name'},
+  'CIF/NIF': {ca:'CIF/NIF', en:'Tax ID (CIF/NIF)'},
+  'Estructura societaria (nombres, apellidos y %)': {ca:'Estructura societària (noms, cognoms i %)', en:'Ownership structure (names, surnames and %)'},
+  'Dirección completa': {ca:'Adreça completa', en:'Full address'},
+  'Localidad y provincia': {ca:'Localitat i província', en:'Town and province'},
+  'Teléfono': {ca:'Telèfon', en:'Phone'},
+  'Email': {ca:'Email', en:'Email'},
+  'Página web': {ca:'Pàgina web', en:'Website'},
+  'Redes sociales (Instagram, Facebook, TikTok…)': {ca:'Xarxes socials (Instagram, Facebook, TikTok…)', en:'Social media (Instagram, Facebook, TikTok…)'},
+  'Tipo de establecimiento (restaurante / bar / cafetería / catering / foodtruck / obrador…)': {ca:'Tipus d\'establiment (restaurant / bar / cafeteria / càtering / foodtruck / obrador…)', en:'Type of venue (restaurant / bar / café / catering / food truck / production kitchen…)'},
+  'Año de apertura': {ca:'Any d\'obertura', en:'Opening year'},
+  'Nº de empleados (desglosar por categorías)': {ca:'Nº d\'empleats (desglossar per categories)', en:'No. of employees (broken down by category)'},
+  'Horario de apertura': {ca:'Horari d\'obertura', en:'Opening hours'},
+  'Nº total de plazas': {ca:'Nº total de places', en:'Total number of seats'},
+  'Modalidades de servicio (carta / menú del día / delivery…)': {ca:'Modalitats de servei (carta / menú del dia / delivery…)', en:'Service types (à la carte / set menu / delivery…)'},
+  'Ticket medio estimado (por persona)': {ca:'Tiquet mitjà estimat (per persona)', en:'Estimated average ticket (per person)'},
+  'Nº de comensales/día promedio': {ca:'Nº de comensals/dia de mitjana', en:'Average number of diners per day'},
+  'Gastos fijos mensuales (detallados)': {ca:'Despeses fixes mensuals (detallades)', en:'Monthly fixed costs (itemised)'},
+  'Gastos variables (detallados)': {ca:'Despeses variables (detallades)', en:'Variable costs (itemised)'},
+  'Gasto mensual en materia prima': {ca:'Despesa mensual en matèria primera', en:'Monthly spend on raw materials'},
+  'Coste de trabajadores': {ca:'Cost de treballadors', en:'Staff cost'},
+  'Facturación anual aproximada': {ca:'Facturació anual aproximada', en:'Approximate annual revenue'},
+  'EBITDA': {ca:'EBITDA', en:'EBITDA'},
+  'Principales 3 problemas urgentes a resolver': {ca:'3 problemes urgents principals a resoldre', en:'Top 3 urgent problems to solve'},
+  'Objetivos principales a 3 meses': {ca:'Objectius principals a 3 mesos', en:'Main goals for 3 months'},
+  'Objetivos principales a 12 meses': {ca:'Objectius principals a 12 mesos', en:'Main goals for 12 months'},
+  'Capacidad de inversión material (hornos, pintura, rótulo…)': {ca:'Capacitat d\'inversió material (forns, pintura, rètol…)', en:'Capacity to invest in equipment (ovens, paint, signage…)'},
+};
+function plan360IntakeTxt(txt){
+  const idioma = typeof getLang === 'function' ? getLang() : 'es';
+  const x = PLAN360_INTAKE_TR[txt];
+  return (x && x[idioma]) || txt;
+}
 // Carta de bienvenida real (1- CARTA DE BIENVENIDA NUEVOS CLIENTES.docx).
 // {{cliente}} se sustituye por el nombre que se rellena en el contrato.
 const PLAN360_WELCOME_TEXT =
