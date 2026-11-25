@@ -3,6 +3,8 @@
 App de gestión para restaurantes, **100% cliente**, que se vende por licencia a hosteleros.
 Se entrega como **dos archivos HTML sueltos** que el cliente abre desde `gastrogoan.com`.
 
+> 📌 **Lo pendiente vive en `docs/PENDIENTE-MAESTRO.md`** (un solo sitio, con quién hace cada cosa). Antes de empezar una sesión, léelo; al terminar, actualízalo. Para vender: `docs/CHECKLIST-LUNES.md`. Para que el dueño entienda y proteja el sistema: `docs/GUIA-PARA-EL-DUENO.md`.
+
 ---
 
 ## La meta, y lo que obliga

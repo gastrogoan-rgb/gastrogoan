@@ -71,6 +71,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-day-date{font-size:15px;font-weight:700;overflow-wrap:break-word}
 .p360-day-tag{font-size:11px;color:var(--muted);margin-top:2px}
 .p360-day-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.p360-mas{min-width:36px}
+#p360-menu{position:fixed;z-index:9999;background:#fff;border:1px solid var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.18);min-width:190px;max-width:calc(100vw - 16px);padding:4px;border-radius:var(--r-m,4px)}
+#p360-menu button{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;border:0;background:none;text-align:left;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+#p360-menu button:hover,#p360-menu button:focus{background:var(--brand-cream);outline:none}
+#p360-menu button.peligro{color:var(--red)}
+.p360-day-hoy{box-shadow:inset 0 0 0 2px var(--olive)}
+.p360-day-hoy .p360-day-weekday{color:var(--olive);font-weight:700}
+.p360-day-late .p360-day-progress{color:var(--red);font-weight:700}
+.p360-leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin:-6px 0 14px}
+.p360-guia-paso{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border)}
+.p360-guia-paso:first-of-type{border-top:0}
+.p360-guia-num{flex:none;width:28px;height:28px;border:1px solid var(--ink);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700}
+.p360-guia-paso.hecho .p360-guia-num{background:var(--olive);border-color:var(--olive);color:#fff}
+.p360-guia-paso.hecho .p360-guia-txt{color:var(--muted)}
 .p360-day-presencial{background:var(--ink);border-left-color:var(--ink);color:#fff}
 .p360-day-presencial .p360-day-weekday,.p360-day-presencial .p360-day-tag{color:#fff;opacity:.75}
 /* Mismo fallo que en css/styles.css: .p360-day:hover pone fondo claro para
@@ -115,6 +129,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .p360-block:hover .p360-block-tools,.p360-block:focus-within .p360-block-tools{opacity:1}
 .p360-block-tools button{width:24px;height:24px;border:1px solid var(--border);background:#fff;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;padding:0}
 .p360-block-tools button:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.p360-block-tools .p360-mas{width:36px;height:36px}
 /* Recursos como documento maquetado (plan360DocRicoHtml): una hoja con
    aspecto de página impresa. Mismo bloque en css/styles.css y en el
    <style> propio de admin-panel/plan360.html. Sin esquinas redondeadas. */
@@ -218,6 +233,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
   .dr-cuerpo{padding:4px 18px 14px}.dr-cap{margin:26px -18px 16px;padding:22px 18px 18px}.dr-cap-n{font-size:84px}
   .dr-pie{padding:12px 18px}.dr-paso{grid-template-columns:40px 1fr;gap:10px}
 }
+/* Panel en un móvil (25/11): con 13-14 px, Safari de iPhone amplía toda la página al tocar un campo y no vuelve solo.
+   Los tamaños escritos en línea en cada select/input se vencen con !important. Una palabra larga se parte con
+   overflow-wrap:break-word (NUNCA anywhere/break-all: partiría palabras normales). */
+@media (max-width:700px){
+  input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}
+  .btn-sm{min-height:40px}
+  .card,.field,.p360-day,.p360-card{overflow-wrap:break-word}
+  .card,.field,.p360-day{min-width:0}
+  #client-grid,#client-list,#panel{overflow-wrap:break-word}
+  input[type=checkbox],input[type=radio]{width:22px;height:22px;min-height:0;flex:none}
+  .p360-guia-paso .btn{flex:1 1 100%}
+}
 @media print{.dr-doc{box-shadow:none;border:none;max-width:none;margin:0}.dr-cap,.dr-paso,.dr-check,.dr-frases,.dr-regla{break-inside:avoid}}
 
 /* PREMIUM (28/10) — mismo lenguaje que la app: radio único pequeño, rotulación en mono, filetes, foco visible. */
@@ -237,7 +264,7 @@ code,pre,kbd{font-family:var(--mono)}
 
 <div id="login-gate" class="wrap">
   <div class="card">
-    <h1 style="font-size:18px;margin-bottom:6px">🔑 Plan 360° — panel del coach</h1>
+    <h1 style="font-size:18px;margin-bottom:6px"><i class="ti ti-key"></i> Plan 360° — panel del coach</h1>
     <p class="muted" style="margin-bottom:14px">Archivo privado. Inicia sesión con tu email y contraseña de administrador.</p>
     <label>Email</label>
     <input id="login-email" type="email" placeholder="gastrogoan@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
@@ -254,7 +281,8 @@ code,pre,kbd{font-family:var(--mono)}
     <h1>Plan 360°<span style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#C9A15A;margin-top:4px">ARCHIVO PRIVADO</span></h1>
     <div class="hd-btns">
       <a class="btn" href="index.html">← Panel</a>
-      <button class="btn" onclick="ggAdminHardReload()">↻ Actualizar</button>
+      <button class="btn" onclick="renderCoachDatosPage()"><i class="ti ti-id"></i> Mis datos</button>
+      <button class="btn" onclick="ggAdminHardReload()"><i class="ti ti-refresh"></i> Actualizar</button>
       <button class="btn" onclick="doLogout()">Salir</button>
     </div>
   </header>
@@ -263,14 +291,22 @@ code,pre,kbd{font-family:var(--mono)}
     <div class="card" style="margin-bottom:4px"><span class="muted">Clientes con Plan 360° activo. Aparecen solos en cuanto activan la casilla al emitirles el código.</span></div>
     <div id="mi-semana" style="margin:10px 0 14px"></div>
     <div id="client-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="client-archivados"></div>
     <p id="client-list-empty" class="muted hidden">Todavía no hay ningún cliente con el Plan 360° activo.</p>
   </div>
 
+  <div id="view-coach" class="hidden"></div>
+
   <div id="view-client" class="hidden">
     <button class="btn btn-sm" onclick="closeClient()">← Clientes</button>
-    <h2 id="client-name" style="margin:10px 0 4px"></h2>
-    <p id="client-status" class="status-line" style="margin-bottom:10px"></p>
-    <div id="client-startdate" class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+    <!-- Título y fecha de inicio comparten fila: antes la fecha era una tarjeta a todo el ancho con el 60 % vacío. -->
+    <div style="display:flex;gap:10px 18px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
+      <div style="flex:1 1 280px;min-width:0">
+        <h2 id="client-name" style="margin:10px 0 4px;overflow-wrap:break-word"></h2>
+        <p id="client-status" class="status-line" style="margin:0"></p>
+      </div>
+      <div id="client-startdate" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:0 1 auto"></div>
+    </div>
     <div id="client-grid"></div>
   </div>
 </div>
@@ -294,7 +330,7 @@ function ggMostrarErrorGlobal(msg, detalle){
   linea.textContent = msg + (detalle ? '\n' + detalle : '');
   banner.appendChild(linea);
   const cerrar = document.createElement('button');
-  cerrar.textContent = '✕ Cerrar todos';
+  cerrar.textContent = 'Cerrar todos';
   cerrar.style.cssText = 'background:#fff;color:#B33;border:none;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px';
   cerrar.onclick = () => banner.remove();
   banner.appendChild(cerrar);
@@ -330,7 +366,7 @@ async function doLogin(){
     onLoggedIn();
   }catch(e){
     console.error(e);
-    statusEl.textContent = '⚠️ No se pudo entrar (' + (e.message || e.code || 'error') + ').';
+    statusEl.textContent = 'No se pudo entrar (' + (e.message || e.code || 'error') + ').';
   }
 }
 function doLogout(){
@@ -341,6 +377,8 @@ function doLogout(){
 async function onLoggedIn(){
   document.getElementById('login-gate').classList.add('hidden');
   document.getElementById('panel').classList.remove('hidden');
+  // Antes que la lista: lo archivado ni se lista ni se lee, y los datos de coach hacen falta al abrir un cliente.
+  await Promise.all([p360ArchivadosCargar(), coachDatosCargar(), p360PendientesCargar()]);
   await loadClientList();
   mantCargarPlantillaNube();
   renderMiSemana();
@@ -361,10 +399,11 @@ function plan360SeenKey(tenantId){ return 'gg_p360_seen_' + tenantId; }
 async function loadClientList(){
   const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
   const val = snap.val() || {};
-  const entries = Object.keys(val).map(tenantId => ({
+  const entries = Object.keys(val).filter(t => !p360EstaArchivado(t)).map(tenantId => ({
     tenantId, name: val[tenantId].name || '(sin nombre)', lastActivityAt: val[tenantId].lastActivityAt || 0,
   }));
   entries.sort((a, b) => a.name.localeCompare(b.name));
+  renderArchivados();
   document.getElementById('client-list-empty').classList.toggle('hidden', entries.length > 0);
   document.getElementById('client-list').innerHTML = entries.map(e => {
     const visto = Number(localStorage.getItem(plan360SeenKey(e.tenantId)) || 0);
@@ -390,9 +429,25 @@ let remoteBiz = null;
 let savingRemote = false;
 let lastPushedJson = null;
 
+/* Todo el estado en memoria que pertenece a UN cliente. El borrador del acta se quedaba al cambiar de cliente: se
+   apuntaba una decisión en A, se abría B y «Enviar el acta» creaba la tarea de A en el programa de B y se la enviaba a B.
+   Se reinicia aquí, al abrir y al cerrar, para que ningún estado global cruce de un negocio a otro. */
+function reiniciarEstadoDeCliente(){
+  lastPushedJson = null; mantBase = null; programaBase = null; remoteBiz = null;
+  actaBorrador = [];
+  plan360TrabajoDiaActivo = null;
+  mantMesActivo = null;
+  startDateEditing = false;
+  migracionIdsPendiente = false;
+  lastPushedCoachPrivateJson = null;
+  // coachPrivate del cliente anterior se quedaba en memoria: «guardar el guion» o la voz del equipo en B habría escrito los datos de A.
+  coachPrivate = null; pruebasCache = {}; ordenDiaActivo = null;
+  try{ if(typeof tbTimerHandle !== 'undefined' && tbTimerHandle){ clearInterval(tbTimerHandle); tbTimerHandle = null; } }catch(e){}
+}
 async function openClient(tenantId, name){
   try{ localStorage.setItem(plan360SeenKey(tenantId), String(Date.now())); }catch(e){}
   document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-coach').classList.add('hidden');
   document.getElementById('view-client').classList.remove('hidden');
   document.getElementById('client-name').textContent = name;
   document.getElementById('client-status').textContent = 'Conectando con su nube...';
@@ -402,14 +457,14 @@ async function openClient(tenantId, name){
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
   // El SEGUNDO cliente de una sesión salía en blanco: la huella del primero seguía puesta y la primera lectura del
   // segundo se tomaba por «eco de mi propio guardado» y se descartaba. Cada cliente empieza de cero.
-  lastPushedJson = null; mantBase = null; programaBase = null; remoteBiz = null;
+  reiniciarEstadoDeCliente();
   currentTenantId = tenantId;
   migracionCoachPrivadoHecha = false;
   try{
     const lookupSnap = await getApp().database().ref('gastrogoan/tenantLookup/' + tenantId).once('value');
     const cfg = lookupSnap.val();
     if(!cfg || !cfg.apiKey || !cfg.databaseURL){
-      document.getElementById('client-status').textContent = '⚠️ No se encontró la nube de este negocio (todavía no ha sincronizado ninguna vez).';
+      document.getElementById('client-status').textContent = 'No se encontró la nube de este negocio (todavía no ha sincronizado ninguna vez).';
       return;
     }
     const appName = 'biz-' + tenantId;
@@ -432,6 +487,7 @@ async function openClient(tenantId, name){
       ensureRemotePlan360();
       intentarMigrarReunionPersonal();
       migrarLibroPdfANodo();
+      coachDatosSincronizar();
       if(migracionIdsPendiente){ migracionIdsPendiente = false; saveRemoteBiz(); }
       document.getElementById('client-status').textContent = 'Conectado — los cambios se ven al instante en su app, y los suyos aquí.';
       // Si el coach está dentro de un día, un documento o el team building,
@@ -445,7 +501,7 @@ async function openClient(tenantId, name){
       else avisoCambiosDelNegocio();
     }, err => {
       console.error(err);
-      document.getElementById('client-status').textContent = '⚠️ Error de conexión: ' + (err.message || err.code || 'error');
+      document.getElementById('client-status').textContent = 'Error de conexión: ' + (err.message || err.code || 'error');
     });
     // Nodo hermano, no dentro de db/business: por eso necesita su propia
     // conexión. La app del negocio no lo lee nunca, así que aquí no hay
@@ -454,6 +510,7 @@ async function openClient(tenantId, name){
     // dos pestañas, de ahí el mismo filtro por lastPushedCoachPrivateJson.
     currentLibroPdfRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/plan360LibroPdf');
     libroPdfCache = null;
+    currentPruebasRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/plan360Pruebas');
     currentCoachPrivateRef = bizApp.database().ref('gastrogoan/tenants/' + tenantId + '/db/coachPrivate');
     currentCoachPrivateRef.on('value', snap => {
       const val = snap.val();
@@ -464,16 +521,17 @@ async function openClient(tenantId, name){
     }, err => console.error('Error cargando coachPrivate', err));
   }catch(e){
     console.error(e);
-    document.getElementById('client-status').textContent = '⚠️ No se pudo conectar: ' + (e.message || e.code || 'error');
+    document.getElementById('client-status').textContent = 'No se pudo conectar: ' + (e.message || e.code || 'error');
   }
 }
 function closeClient(){
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
-  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null; programaBase = null; lastPushedJson = null;
+  currentBizRef = null; currentTenantId = null; reiniciarEstadoDeCliente();
   currentCoachPrivateRef = null; coachPrivate = null;
-  currentLibroPdfRef = null; libroPdfCache = null;
+  currentLibroPdfRef = null; libroPdfCache = null; currentPruebasRef = null;
   document.getElementById('view-client').classList.add('hidden');
+  document.getElementById('view-coach').classList.add('hidden');
   document.getElementById('view-list').classList.remove('hidden');
   loadClientList();
   renderMiSemana();
@@ -2630,7 +2688,7 @@ function plan360DocRicoHtml(pl, campos, modo, esc, negocio, anterior){
   const b = pl.bloques.map(x => {
     if(x.t === 'cap') return `<div class="dr-cap"><span class="dr-cap-n">${x.n}</span><div class="dr-cap-e">Capítulo ${x.n}</div><div class="dr-cap-t">${esc(x.titulo)}</div><div class="dr-cap-s">${esc(x.sub)}</div></div>`;
     if(x.t === 'p') return `<p class="dr-p">${esc(x.x)}</p>`;
-    if(x.t === 'regla') return `<div class="dr-regla"><span>★ Regla de oro</span>${esc(x.x)}</div>`;
+    if(x.t === 'regla') return `<div class="dr-regla"><span>Regla de oro</span>${esc(x.x)}</div>`;
     if(x.t === 'campo') return campo(x, x.grande);
     if(x.t === 'campos'){ const h = x.items.map(f => campo(f)).join(''); return h ? `<div class="dr-campos">${h}</div>` : ''; }
     if(x.t === 'pasos') return `<div class="dr-pasos">${x.items.map((s, i) => `<div class="dr-paso"><div class="dr-paso-n">${String(i + 1).padStart(2, '0')}</div><div class="dr-paso-b"><div class="dr-paso-t">${esc(s.t)}</div><div class="dr-paso-d">${esc(s.d)}</div>${s.e ? `<div class="dr-paso-e"><span>${esc(x.etiqueta || 'Estándar')}</span>${esc(s.e)}</div>` : ''}${s.id ? campo({id: s.id, label: 'Cómo lo hacemos aquí', ayuda: 'Lo propio de este negocio en este paso'}) : ''}</div></div>`).join('')}</div>`;
@@ -2703,7 +2761,7 @@ function plan360InversionesHtml(d, esc, negocio){
       </div>
       ${total ? barra : ''}
       <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
-      <div class="dr-regla"><span>★ Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
+      <div class="dr-regla"><span>Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
       <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
       ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
       <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
@@ -2713,7 +2771,7 @@ function plan360InversionesHtml(d, esc, negocio){
         <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
         <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#A63D2F' : '#3F7A4A'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
-      <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
+      <div class="dr-regla"><span>Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
       ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
       <div class="dr-h">Los 3 niveles de inversión</div>
       <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>
@@ -2808,7 +2866,7 @@ Marcos González Anguiano — GastroGoan`;
 const PLAN360_CONTRACT_TEXT =
 `ACUERDO DE PRESTACIÓN DE SERVICIOS
 
-Partes: de una parte, Marcos González Anguiano (GastroGoan), con DNI 47668150Y y domicilio en Vilafranca del Penedès. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+Partes: de una parte, {{coachNombre}} (GastroGoan), con DNI {{coachDni}} y domicilio en {{coachDomicilio}}. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
 
 1. Objeto y alcance
 GastroGoan se compromete a prestar servicios de asesoría gastronómica integral 360°, consistentes en diagnóstico y análisis operativo, financiero y de marketing; diseño e implementación de estrategias a medida; formación de equipo y optimización de procesos; y seguimiento y reporting de resultados con indicadores clave.
@@ -2819,7 +2877,7 @@ Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del inf
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
 Modalidad de pago: {{formaPago}}.
-Transferencia bancaria a la cuenta BE24 9677 3509 2638 — Concepto: Programa 360 GastroGoan.
+Transferencia bancaria a la cuenta {{coachIban}} — Concepto: Programa 360 GastroGoan.
 
 4. Responsabilidades
 GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
@@ -2875,7 +2933,12 @@ function plan360FillTemplate(text, c){
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
     .replace(/\{\{precio\}\}/g, (c && c.precio) || '________')
     .replace(/\{\{formaPago\}\}/g, (c && c.formaPago) || '________')
-    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € + IVA al mes');
+    .replace(/\{\{precioMantenimiento\}\}/g, (c && c.precioMantenimiento) || '75 € + IVA al mes')
+    // Los datos del coach ya NO están escritos en el código (este fichero es público): salen de «Mis datos» o, si no, de los que el negocio ya trae.
+    .replace(/\{\{coach(Nombre|Dni|Domicilio|Iban)\}\}/g, (_, k) => {
+      const co = (typeof coachDatos !== 'undefined' && coachDatos) || (typeof remoteBiz !== 'undefined' && remoteBiz && remoteBiz.plan360Coach) || {};
+      return co[k.toLowerCase()] || '________';
+    });
 }
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
@@ -4264,7 +4327,7 @@ function renderStartDateControl(){
     document.getElementById('client-startdate').innerHTML = `
       <label style="margin:0">Fecha de inicio del programa</label>
       <div style="font-weight:600">${esc(weekday)} · ${esc(dayMonth)}</div>
-      <button class="btn btn-sm" onclick="startDateEditing=true;renderStartDateControl()" title="Modificar la fecha de inicio">✏️</button>
+      <button class="btn btn-sm btn-icon" onclick="startDateEditing=true;renderStartDateControl()" title="Modificar la fecha de inicio" aria-label="Modificar la fecha de inicio"><i class="ti ti-pencil"></i></button>
     `;
     return;
   }
@@ -4274,6 +4337,54 @@ function renderStartDateControl(){
     <button class="btn btn-sm btn-primary" onclick="saveStartDate()">Guardar</button>
     ${remoteBiz.plan360StartDateConfirmed ? '' : '<span class="txt-xs" style="color:var(--red);font-weight:600">Sin confirmar: el negocio ve «tu coach está fijando la primera visita» hasta que guardes.</span>'}
   `;
+}
+/* Cliente recién dado de alta: «Sin fecha de inicio · 0 de 0 acciones» no decía qué hacer. Tres pasos, cada uno con su
+   botón y marcado solo cuando está hecho. La fecha NO se fija sola: la confirma el coach al pulsar el paso 1 (la app del
+   negocio la ve en cuanto se guarda; no hay un segundo clic). Desaparece cuando los tres están hechos. */
+function plan360CuestionarioAvisadoKey(){ return 'gg_p360_cuestionario_avisado_' + currentTenantId; }
+function plan360PrimerosPasos(){
+  const trabajo = (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo');
+  const conTareas = trabajo.reduce((n, d) => n + plan360TareasReales(d).length, 0) > 0;
+  const secs = (remoteBiz.plan360Intake || {}).sections || [];
+  const respondido = secs.some(sec => (sec.questions || []).some(q => q && q.a));
+  let avisado = false; try{ avisado = !!localStorage.getItem(plan360CuestionarioAvisadoKey()); }catch(e){}
+  return [
+    {n: 1, hecho: !!remoteBiz.plan360StartDateConfirmed},
+    {n: 2, hecho: conTareas},
+    {n: 3, hecho: respondido || avisado},
+  ];
+}
+function plan360GuiaPrimerosPasosHtml(){
+  const p = plan360PrimerosPasos();
+  if(p.every(x => x.hecho)) return '';
+  const paso = (x, titulo, ayuda, boton, fn, deshabilitado) => `<div class="p360-guia-paso${x.hecho ? ' hecho' : ''}">
+    <span class="p360-guia-num">${x.hecho ? '<i class="ti ti-check"></i>' : x.n}</span>
+    <div class="p360-guia-txt" style="flex:1;min-width:200px"><strong>${esc(titulo)}</strong><div class="muted txt-xs">${esc(ayuda)}</div></div>
+    ${x.hecho ? '<span class="muted txt-xs">Hecho</span>' : `<button class="btn btn-sm btn-primary" ${deshabilitado ? 'disabled title="Antes, confirma la fecha"' : ''} onclick="${fn}">${esc(boton)}</button>`}
+  </div>`;
+  return `<div class="card" id="p360-guia" style="margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:4px">Primeros pasos con este cliente</div>
+    ${paso(p[0], 'Confirmar la fecha de la primera visita', 'Hasta que la confirmes, el negocio ve «tu coach está fijando la primera visita».', 'Confirmar la fecha', 'plan360GuiaConfirmarFecha()')}
+    ${paso(p[1], 'Preparar el programa con la plantilla base', 'Reparte las tareas de GastroGoan por los días laborables; luego las ajustas.', 'Aplicar la plantilla base', 'plan360GuiaPlantilla()', !p[0].hecho)}
+    ${paso(p[2], 'Enviar el cuestionario previo', 'Ya está en su app: le preparamos el aviso por WhatsApp para que lo rellene antes de la visita.', 'Enviar el aviso', 'plan360GuiaCuestionario()')}
+  </div>`;
+}
+function plan360GuiaConfirmarFecha(){
+  const inp = document.getElementById('p360-startdate');
+  if(!inp || !inp.value){ if(inp) inp.focus(); return; }
+  saveStartDate();
+}
+async function plan360GuiaPlantilla(){
+  await plantillaPonerBase();
+  renderClientGrid();
+}
+function plan360GuiaMensajeCuestionario(){
+  return 'Hola. Antes de nuestra primera visita, entra en tu app de GastroGoan, abre Plan 360º y rellena la «Documentación inicial» (el cuestionario). Cuanto más completo, mejor aprovechamos el primer día.';
+}
+function plan360GuiaCuestionario(){
+  try{ localStorage.setItem(plan360CuestionarioAvisadoKey(), String(Date.now())); }catch(e){}
+  try{ window.open('https://wa.me/?text=' + encodeURIComponent(plan360GuiaMensajeCuestionario()), '_blank', 'noopener'); }catch(e){}
+  renderClientGrid();
 }
 function saveStartDate(){
   const val = document.getElementById('p360-startdate').value;
@@ -4318,15 +4429,23 @@ function renderClientGrid(){
     const tReales = plan360TareasReales(d);
     const done = tReales.length && tReales.every(x => x.status === 'hecha');
     const doneCount = tReales.filter(x => x.status === 'hecha').length;
-    return `<div class="p360-day" style="${colStyle}${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
+    // Como en la app: HOY marcado y el día pasado con tareas sin hacer, en rojo. Sin fecha confirmada no se marca nada
+    // (los días son provisionales y «hoy» no significaría nada).
+    const fijada = !!remoteBiz.plan360StartDateConfirmed;
+    const fd = plan360DateForDay(d.day);
+    const esHoy = fijada && fd === todayStr();
+    const atrasado = fijada && fd < todayStr() && !done && tReales.some(x => x.status !== 'hecha');
+    return `<div class="p360-day${esHoy ? ' p360-day-hoy' : ''}${atrasado ? ' p360-day-late' : ''}" style="${colStyle}${col ? 'border-left-color:' + col : ''}" onclick="renderDayDetail(${d.day})">
       <div class="p360-day-weekday">${esc(weekday)}</div>
       <div class="p360-day-date">${esc(dayMonth)}</div>
+      ${esHoy ? '<div class="p360-day-tag" style="color:var(--olive);font-weight:700">HOY</div>' : ''}
       ${d.reunion ? `<div class="p360-day-tag">${d.reunion.tipo === 'presencial' ? 'Presencial' : 'Online'}</div>` : ''}
-      ${tReales.length ? `<div class="p360-day-progress">${done ? '✓' : doneCount + '/' + tReales.length}</div>` : ''}
+      ${tReales.length ? `<div class="p360-day-progress">${done ? 'Hecho' : doneCount + '/' + tReales.length}${atrasado ? ' · atrasado' : ''}</div>` : ''}
     </div>`;
   };
   document.getElementById('client-grid').innerHTML = `<span id="p360-coach-calendario" hidden></span>
     ${p360PestanasHtml('360')}
+    ${plan360GuiaPrimerosPasosHtml()}
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderIntakePage()">
         <i class="ti ti-clipboard-text"></i>
@@ -4355,7 +4474,7 @@ function renderClientGrid(){
     </div>
     <div class="card p360-summary-bar" onclick="renderSummaryPage()">
       <div>Programa de 28 días</div>
-      <div class="p360-summary-count">★ ${hechos} / ${totalTareas}</div>
+      <div class="p360-summary-count">${hechos} / ${totalTareas} tareas hechas</div>
     </div>
     ${semanas.map((s, i) => `
       <div class="p360-week">
@@ -4496,7 +4615,7 @@ function plan360CierreHtml(){
         ${m.respuesta ? `
           <div class="card" style="background:${m.respuesta==='acepta'?'var(--green-l)':'var(--amber-l)'};border-color:${m.respuesta==='acepta'?'var(--green)':'var(--amber)'}">
             ${m.respuesta==='acepta'
-              ? `✓ El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}.`
+              ? `<i class="ti ti-check"></i> El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}.`
               : `El negocio se lo piensa. Volver a hablar el: <strong>${esc(m.volverAHablarFecha || '—')}</strong>.`}
           </div>` : `<p class="muted" style="font-size:12px;margin:0">Todavía no ha respondido — se lo enseñas en su app, en su propio Cierre.</p>`}
       </div>
@@ -4936,7 +5055,7 @@ function renderMantPage(clave){
               <div style="white-space:pre-wrap">${esc(it.respuesta)}</div>
             </div>` : ''}
           </div>
-          <button class="btn btn-sm" onclick="mantBorrar('${sk}','${it.id}')" title="Quitar"><i class="ti ti-trash"></i></button>
+          ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar del mes', fn: `mantBorrar('${sk}','${it.id}')`, peligro: true}], 'Acciones de este elemento')}
         </div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         <select id="mant-add-${sk}" style="flex:1;min-width:200px">
@@ -5367,6 +5486,7 @@ function p360PestanasHtml(activa){
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 12px">
     ${tab('360', 'Plan 360', 'ti-calendar-event', 'renderClientGrid()')}
     ${tab('mant', 'Mantenimiento', 'ti-calendar-repeat', 'renderMantPage()')}
+    <button class="btn btn-sm" style="flex:none;width:auto" onclick="p360ArchivarActual()"><i class="ti ti-archive"></i> ${p360EstaArchivado(currentTenantId) ? 'Reactivar' : 'Archivar'}</button>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;flex:0 1 auto;min-width:0;max-width:100%">Servicio activo:
       <select onchange="p360CambiarFase(this.value)" style="width:auto;min-width:0;max-width:100%">
         ${Object.keys(P360_FASES).map(k => `<option value="${k}" ${k === fase ? 'selected' : ''}>${P360_FASES[k].label}</option>`).join('')}
@@ -5541,17 +5661,14 @@ function mantTarjetasHtml(conMant, lista){
       <div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="mantAbrirDesdeSemana(this.dataset.t, this.dataset.n)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
           <strong style="flex:1">${esc(f.name)}</strong>
+          ${p360MenuArchivar(f)}
           ${f.canal ? `<span style="font-size:12px"><i class="ti ${f.canal === 'video' ? 'ti-video' : 'ti-brand-whatsapp'}"></i> ${f.canal === 'video' ? 'Videollamada' : 'WhatsApp'}</span>` : '<span class="muted" style="font-size:12px">Sin plan esta semana</span>'}
         </div>
         ${f.tuyas.length ? `<div style="font-size:13px"><span style="color:#2F6B3A;font-weight:600">Tú:</span> ${lista(f.tuyas, 3)}</div>` : ''}
         ${f.suyas.length ? `<div style="font-size:13px"><span style="color:#86600F;font-weight:600">Negocio:</span> ${lista(f.suyas, 3)}</div>` : ''}
         ${f.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.atrasadas.length} sin hacer de semanas pasadas: ${lista(f.atrasadas, 2)}</div>` : ''}
         ${f.respuestas.length ? `<div style="font-size:13px;color:var(--olive)"><i class="ti ti-message-circle"></i> Te ha contestado en: ${lista(f.respuestas, 2)}</div>` : ''}
-        ${(() => {
-          // Cliente parado: tiene tareas puestas y lleva 14 días sin marcar ninguna.
-          const dias = f.ultimaMarca ? Math.floor((Date.now() - f.ultimaMarca) / 86400000) : null;
-          return f.tareasTotal && f.atrasadas.length && (dias === null || dias >= 14) ? `<div style="font-size:13px;color:var(--red);font-weight:600"><i class="ti ti-phone-call"></i> ${dias === null ? 'No ha marcado ninguna tarea todavía' : 'Lleva ' + dias + ' días sin marcar nada'}: llámale.</div>` : '';
-        })()}
+        ${(() => { const a = (f.alertas || []).find(x => x.id === 'sin_marcar'); return a ? `<div style="font-size:13px;color:var(--red);font-weight:600"><i class="ti ti-phone-call"></i> ${esc(a.texto)}</div>` : ''; })()}
         ${(() => {
           const K = f.kpis || {};
           const cl = Object.keys(K.meses || {}).sort();
@@ -5625,7 +5742,7 @@ function p360EventosDia(f, fechaStr){
     if(f.fase === 'mant' && mAnt && mAnt.semanas && !(mAnt.cierre && mAnt.cierre.ts)) out.push({i: 'ti-flag-check', t: 'Cerrar el mes de ' + kpiNombreMes(kpiClaveMes(claveHoy, -1)).toLowerCase(), alerta: true});
     const sv = b.plan360Servicio || {};
     // El día 5 en adelante, si el mes no está cobrado.
-    if(f.fase === 'mant' && Number(fechaStr.slice(8)) >= 5 && !((sv.cobros || {})[claveHoy])) out.push({i: 'ti-receipt', t: 'Cuota de ' + kpiNombreMes(claveHoy).toLowerCase() + ' sin cobrar', alerta: true});
+    if(p360CuotaSinCobrar(f, fechaStr)) out.push({i: 'ti-receipt', t: 'Cuota de ' + kpiNombreMes(claveHoy).toLowerCase() + ' sin cobrar', alerta: true});
     if(f.fase === 'mant' && sv.mantHasta && sv.mantHasta <= claveHoy) out.push({i: 'ti-refresh', t: sv.mantHasta < claveHoy ? 'Contrato vencido: hablar de la renovación' : 'Renueva este mes', alerta: true});
     const mc = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
     const dia = p360DiaDelPrograma(b);
@@ -5642,7 +5759,8 @@ async function renderMiSemana(){
   cont.innerHTML = '<div class="card"><span class="muted">Preparando tu agenda con cada negocio…</span></div>';
   const snap = await getApp().database().ref('gastrogoan/coaching360').once('value');
   const val = snap.val() || {};
-  const clientes = Object.keys(val).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)', lastActivityAt: val[tenantId].lastActivityAt || 0}));
+  // Los archivados no se leen: es justo lo que ahorra lecturas de nube con los clientes que ya terminaron.
+  const clientes = Object.keys(val).filter(t => !p360EstaArchivado(t)).map(tenantId => ({tenantId, name: val[tenantId].name || '(sin nombre)', lastActivityAt: val[tenantId].lastActivityAt || 0}));
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0); const hoyStr = p360Fecha(hoy);
   const filas = await Promise.all(clientes.map(async c => {
     try {
@@ -5659,6 +5777,8 @@ async function renderMiSemana(){
     }
   }));
   const por = k => filas.filter(f => f.fase === k && !f.error);
+  filas.forEach(f => { f.alertas = p360AlertasCliente(f, hoyStr); });
+  p360UltimasFilas = filas;
   // La semana de lunes a domingo.
   const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
   const dias = Array.from({length: 7}, (_, i) => { const d = new Date(lunes); d.setDate(lunes.getDate() + i); return d; });
@@ -5681,6 +5801,7 @@ async function renderMiSemana(){
         ${(() => { const n = por('mant').reduce((s, f) => s + ((f.atrasadas || []).length ? 1 : 0), 0); return n ? `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${n} con tareas atrasadas</span>` : ''; })()}
       </div>
     </div>
+    <div id="p360-alertas-caja">${p360PendientesCardHtml()}${p360AlertasCardHtml(filas)}</div>
     <div class="card" style="margin-bottom:14px">
       <div style="font-weight:700;margin-bottom:8px">Esta semana</div>
       ${agenda.map(a => `<div style="display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--border);${a.fs === hoyStr ? 'background:var(--brand-cream);' : ''}">
@@ -5692,15 +5813,16 @@ async function renderMiSemana(){
   // La lista de clientes, agrupada por servicio.
   const lista = (arr, n) => arr.slice(0, n).map(esc).join(' · ') + (arr.length > n ? ` y ${arr.length - n} más` : '');
   const tarjeta360 = f => `<div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>
-        <span style="font-size:12px">${f.dia === null ? 'Sin fecha de inicio' : f.dia < 1 ? 'Empieza en ' + (1 - f.dia) + ' días' : 'Día ' + Math.min(f.dia, 28) + ' de 28'}</span></div>
-      <div style="font-size:13px">${f.prog.hechas} de ${f.prog.total} acciones hechas${f.biz.plan360StartDate ? ' · cierre el ' + esc(new Date(p360FechaDiaPrograma(f.biz, 28) + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})) : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>${p360MenuArchivar(f)}
+        <span style="font-size:12px">${f.dia === null ? 'Falta confirmar la fecha' : f.dia < 1 ? 'Empieza en ' + (1 - f.dia) + ' días' : 'Día ' + Math.min(f.dia, 28) + ' de 28'}</span></div>
+      <div style="font-size:13px">${f.prog.total === 0 ? 'Programa sin preparar: ábrelo para ver los primeros pasos' : f.prog.hechas + ' de ' + f.prog.total + ' acciones hechas'}${f.biz.plan360StartDate ? ' · cierre el ' + esc(new Date(p360FechaDiaPrograma(f.biz, 28) + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})) : ''}</div>
       ${f.prog.atrasadas.length ? `<div style="font-size:13px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${f.prog.atrasadas.length} atrasadas: ${lista(f.prog.atrasadas, 2)}</div>` : ''}
+      ${(() => { const a = (f.alertas || []).find(x => x.id === 'sin_marcar'); return a ? `<div style="font-size:13px;color:var(--red);font-weight:600"><i class="ti ti-phone-call"></i> ${esc(a.texto)}</div>` : ''; })()}
     </div>`;
   const tarjetaOtra = f => {
     const m = ((f.biz || {}).plan360Cierre || {}).mantenimiento || {};
     return `<div class="card" style="margin-bottom:8px;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">${esc(f.name)}</strong>${p360MenuArchivar(f)}
       ${f.error ? '<span class="muted" style="font-size:12px">No se pudo leer su nube ahora mismo</span>' : f.sinNube ? '<span class="muted" style="font-size:12px">Aún no ha conectado su nube</span>' : f.fase === 'piensa' && m.volverAHablarFecha ? `<span style="font-size:12px;color:${m.volverAHablarFecha < p360Fecha(new Date()) ? 'var(--red)' : P360_FASES.piensa.color}">Volver a hablar el ${esc(new Date(m.volverAHablarFecha + 'T12:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'short'}))}</span>` : ''}</div>
     </div>`;
   };
@@ -5711,6 +5833,7 @@ async function renderMiSemana(){
     grupo('mant', mantHtml) +
     grupo('piensa', por('piensa').map(tarjetaOtra).join('')) +
     grupo('fin', filas.filter(f => f.fase === 'fin' || f.error).map(tarjetaOtra).join(''));
+  renderArchivados();
   document.getElementById('client-list-empty').classList.toggle('hidden', filas.length > 0);
 }
 async function mantAbrirDesdeSemana(tenantId, name){
@@ -5736,6 +5859,79 @@ function plan360PageHeader(title, subtitle){
    (gastrogoan/coachConfig/programaPlantilla, solo admin) y se aplican a otro cliente. Aplicar NO pisa nada: añade solo las
    tareas que ese día todavía no tiene (mismo título). Se guardan título, descripción y «Se hace en…»; nunca el estado,
    las notas ni los archivos del cliente de origen. */
+/* ---- Plantilla BASE de GastroGoan (25/11) ----
+   El programa nacía con 26 días VACÍOS: el coach tenía que inventar cada tarea con cada cliente y la plantilla propia
+   (coachConfig/programaPlantilla) empezaba sin nada. Esta es la lista de partida: el recorrido típico de un restaurante
+   que arranca con la app, ordenado de lo que da orden (datos y costes) a lo que da dinero (carta y clientes) y por
+   último lo que se mantiene (equipo y rutinas). Cada tarea dice QUÉ hacer, POR QUÉ y CÓMO SABER QUE ESTÁ HECHA, y lleva
+   su «Ir a…» a la pantalla de la app donde se hace. Se reparten por los días laborables (lun-vie) de los días 3-28:
+   un restaurante no trabaja el plan en sábado ni domingo. El coach la ajusta a cada cliente (quitar, añadir, mover);
+   no es un guion cerrado, es el suelo. Aplicarla NO pisa nada: solo añade lo que falta (mismo criterio que
+   plantillaAplicar). */
+const PLAN360_PLANTILLA_BASE = [
+  // — Semana de arranque: que los datos del negocio estén bien puestos
+  {t: 'Revisar los datos de tu negocio', d: 'Por qué: todo lo que sale impreso (tickets, facturas, web de reservas) lleva estos datos. Cómo: abre Mi Negocio y comprueba nombre, dirección, teléfono, horario y días cerrados. Hecho cuando: el horario de la web de reservas coincide con el real.', e: 'minegocio'},
+  {t: 'Dar de alta a todo el equipo', d: 'Por qué: sin empleados no hay turnos, ni «Mi puesto», ni fichajes. Cómo: en Personal crea una ficha por persona con su área, teléfono y PIN. Hecho cuando: todos pueden fichar con su PIN.', e: 'horarios'},
+  {t: 'Cargar los proveedores', d: 'Por qué: cada precio de compra depende de a quién se lo compras. Cómo: en Proveedores añade los 5-8 que más compras, con teléfono de pedidos y día de reparto. Hecho cuando: están los que suman el 80 % de tus compras.', e: 'proveedores'},
+  {t: 'Poner precio a tus 30 productos más comprados', d: 'Por qué: si el precio de compra está mal, todo el food cost está mal. Cómo: en Mega Lista pon el precio SIN IVA de lo que más compras y su IVA. Hecho cuando: no queda ningún producto de los más usados con la etiqueta «por revisar».', e: 'megalista'},
+  {t: 'Pasar la carta entera a Oferta Gastronómica', d: 'Por qué: el TPV, la web de reservas y los pedidos leen de aquí. Cómo: crea la carta con sus secciones y cada plato con su precio y su IVA. Hecho cuando: lo que ve el cliente en la web es exactamente tu carta de papel.', e: 'carta'},
+  // — Costes: saber cuánto cuesta cada plato
+  {t: 'Escandallar los 10 platos que más vendes', d: 'Por qué: son los que mueven tu margen. Cómo: en Escandallo carga los ingredientes y gramos de cada plato. Hecho cuando: los 10 tienen coste por ración y food cost visibles.', e: 'escandallo'},
+  {t: 'Detectar los 3 platos con peor food cost', d: 'Por qué: ahí se te va el dinero sin que lo notes. Cómo: ordena el Escandallo por food cost y apunta los tres peores con su coste y su precio. Hecho cuando: tienes por escrito qué vas a hacer con cada uno (subir precio, bajar ración, cambiar ingrediente o quitar).', e: 'escandallo'},
+  {t: 'Escandallar el resto de la carta', d: 'Por qué: una carta a medias no permite comparar. Cómo: completa los platos que faltan; los de poca venta pueden ir con aproximaciones. Hecho cuando: ningún plato de la carta sale sin coste.', e: 'escandallo'},
+  {t: 'Hacer las fichas técnicas de los 5 platos estrella', d: 'Por qué: que cualquiera del equipo saque el mismo plato, igual, siempre. Cómo: en Fichas técnicas añade pasos, tiempos y foto. Hecho cuando: un compañero nuevo podría emplatarlos sin preguntarte.', e: 'fichas'},
+  {t: 'Poner el stock mínimo de lo que no puede faltar', d: 'Por qué: quedarte sin algo un sábado cuesta ventas. Cómo: en Stock fija el mínimo de lo imprescindible y haz un recuento. Hecho cuando: la app avisa de lo que está bajo mínimo.', e: 'stock'},
+  // — Compras y mermas
+  {t: 'Hacer tu primer pedido desde la app', d: 'Por qué: el pedido sale del déficit de stock y deja el historial de precios. Cómo: en Pedidos usa «Sugerir por déficit» y envíalo por WhatsApp. Hecho cuando: el pedido está enviado y apuntado.', e: 'pedidos'},
+  {t: 'Recibir el pedido comprobando línea a línea', d: 'Por qué: lo que no se comprueba se paga igual. Cómo: al llegar la mercancía apunta la cantidad recibida de cada línea y el precio del albarán. Hecho cuando: el pedido queda recibido y el stock actualizado.', e: 'pedidos'},
+  {t: 'Empezar a anotar mermas', d: 'Por qué: lo que no se mide no se corrige. Cómo: cada vez que se tire algo, anótalo en Stock con su motivo. Hecho cuando: llevas una semana apuntando todas las mermas.', e: 'stock'},
+  {t: 'Revisar las subidas de precio de proveedores', d: 'Por qué: una subida del 5 % que no repercutes se come tu margen. Cómo: abre «Cambios de precio» y mira qué platos afectan las subidas. Hecho cuando: has decidido qué platos subes o ajustas.', e: 'megalista'},
+  // — Equipo y orden diario
+  {t: 'Crear los turnos de las próximas 4 semanas', d: 'Por qué: un horario fijo evita discusiones y cambios de última hora. Cómo: en Personal asigna turnos a cada persona. Hecho cuando: todos saben cuándo entran y salen el mes que viene.', e: 'horarios'},
+  {t: 'Repartir el trabajo en «Mi puesto»', d: 'Por qué: cada uno tiene que saber qué se espera de él sin que se lo digas. Cómo: en Distribución del Trabajo asigna tareas y platos a su cargo. Hecho cuando: cada empleado ve su lista del día.', e: 'horarios'},
+  {t: 'Escribir el manual del puesto de cada área', d: 'Por qué: una norma que solo está en tu cabeza no existe. Cómo: añade obligaciones y normas en el manual de cada puesto (cocina y sala). Hecho cuando: el equipo lo ha leído y confirmado.', e: 'horarios'},
+  {t: 'Poner en marcha el plan de limpieza y APPCC', d: 'Por qué: es obligatorio y protege tu licencia. Cómo: activa los protocolos, las temperaturas de los equipos y las tareas diarias. Hecho cuando: el equipo registra las temperaturas cada día.', e: 'limpieza'},
+  {t: 'Dar de alta los alérgenos de toda la carta', d: 'Por qué: es obligatorio y un error es grave. Cómo: marca los alérgenos de cada plato en su ficha. Hecho cuando: Limpieza › Alérgenos no muestra ningún plato sin revisar.', e: 'limpieza'},
+  // — Sala y atención al cliente
+  {t: 'Configurar el plano de sala y las mesas', d: 'Por qué: el TPV y las reservas dependen de que las mesas existan. Cómo: en Mi Negocio crea zonas y mesas con sus plazas. Hecho cuando: el plano del TPV es igual que tu sala.', e: 'minegocio'},
+  {t: 'Probar un servicio completo con el TPV', d: 'Por qué: el primer servicio real no debe ser el viernes. Cómo: abre una mesa, toma nota, marcha a cocina, cobra y cierra la caja. Hecho cuando: todo el equipo de sala ha cobrado al menos una mesa.', e: 'tpv'},
+  {t: 'Activar la web de reservas y pedidos', d: 'Por qué: quien no te encuentra, no reserva. Cómo: en Mi Negocio activa los servicios, pon el enlace en Google y en redes. Hecho cuando: has hecho una reserva de prueba desde tu móvil.', e: 'minegocio'},
+  {t: 'Gestionar las reservas con la hoja del día', d: 'Por qué: una reserva sin mesa asignada es un problema esperando. Cómo: usa Reservas cada día antes del servicio. Hecho cuando: las reservas de la semana tienen mesa y están confirmadas.', e: 'reservas'},
+  // — Números: saber si ganas dinero
+  {t: 'Cargar los gastos fijos', d: 'Por qué: sin ellos no sabes cuánto tienes que vender para no perder. Cómo: en Gestión Económica añade alquiler, suministros, seguros, cuotas y nóminas. Hecho cuando: el total mensual coincide con lo que de verdad pagas.', e: 'economia'},
+  {t: 'Registrar los gastos variables de la semana', d: 'Por qué: sin gastos reales, la Cuenta de Resultados es ficción. Cómo: apunta las facturas de compra con su IVA. Hecho cuando: no queda ninguna factura de la semana sin registrar.', e: 'economia'},
+  {t: 'Calcular tu punto de equilibrio', d: 'Por qué: es la cifra que separa perder de ganar. Cómo: en Gestión Económica › Punto de equilibrio mira cuántos cubiertos al día necesitas. Hecho cuando: la cifra está apuntada y la conoce quien dirige la sala.', e: 'economia'},
+  {t: 'Fijar el reparto objetivo de cada euro', d: 'Por qué: sin objetivo, cualquier cifra parece normal. Cómo: en Tesorería pon el % objetivo de personal, fijos, variables y beneficio. Hecho cuando: ves en verde o en rojo si cumples cada uno.', e: 'economia'},
+  {t: 'Revisar tu Cuenta de Resultados del mes', d: 'Por qué: es lo que mira tu gestor y lo que te dice la verdad. Cómo: léela de arriba abajo y apunta tres cosas que no esperabas. Hecho cuando: has comentado esas tres con tu coach.', e: 'economia'},
+  // — Crecer: clientes y promoción
+  {t: 'Revisar la ficha de tus mejores clientes', d: 'Por qué: el 20 % de tus clientes suele traerte la mitad de la venta. Cómo: en Clientes filtra por VIP y recurrentes y revisa alergias y notas. Hecho cuando: sabes quiénes son y cómo agradecérselo.', e: 'clientes'},
+  {t: 'Lanzar una acción de promoción medible', d: 'Por qué: sin promoción medida no se aprende. Cómo: crea una acción en Promoción con día, condición y objetivo. Hecho cuando: la acción está activa y el objetivo apuntado.', e: 'promocion'},
+  {t: 'Enviar una novedad a tus clientes', d: 'Por qué: un cliente que no sabe qué hay de nuevo no vuelve. Cómo: en Promoción › Novedades prepara el mensaje y envíalo por WhatsApp o email. Hecho cuando: ha salido el primer envío.', e: 'promocion'},
+  {t: 'Pedir reseñas a quien ha tenido buena experiencia', d: 'Por qué: las reseñas deciden dónde come el que no te conoce. Cómo: usa el QR del ticket y pídelo en mesa. Hecho cuando: has conseguido al menos 5 reseñas nuevas esta semana.', e: 'minegocio'},
+  // — Cierre: lo que se queda funcionando
+  {t: 'Revisar los objetivos del plan con tus números', d: 'Por qué: ya hay dos semanas de datos para ver si vas bien. Cómo: abre el marcador del Plan 360 y compara con el Día 1. Hecho cuando: sabes qué objetivos van bien y cuáles no.', e: 'economia'},
+  {t: 'Definir tus 3 rutinas semanales', d: 'Por qué: lo que se hace una vez se olvida; lo que se hace cada semana se queda. Cómo: elige tres revisiones (mermas, precios, números) y ponles día y hora. Hecho cuando: están en tu agenda.', e: 'economia'},
+];
+function plantillaBaseParaPrograma(prog, startDate){
+  // Días de trabajo en lunes-viernes; si el programa no tiene fecha se asume que el día 1 es lunes.
+  const laborables = (prog || []).filter(d => d && d.phase === 'trabajo').map(d => {
+    let dow = 1;
+    if(startDate){
+      const [y, m, dd] = startDate.split('-').map(Number);
+      dow = new Date(y, m - 1, dd + d.day - 1).getDay();
+    }else dow = ((d.day - 1) % 7) + 1;
+    return {day: d.day, dow};
+  }).filter(x => x.dow !== 0 && x.dow !== 6).map(x => x.day);
+  const n = PLAN360_PLANTILLA_BASE.length;
+  const out = {};
+  PLAN360_PLANTILLA_BASE.forEach((x, i) => {
+    const dia = laborables[Math.min(laborables.length - 1, Math.floor(i * laborables.length / n))];
+    const t = {day: dia, title: x.t, description: x.d};
+    if(x.e) t.enlace = x.e;
+    out['t' + i] = t;
+  });
+  return out;
+}
 function plantillaDesdePrograma(prog){
   const out = {};
   (prog || []).filter(d => d && d.phase === 'trabajo').forEach(d => {
@@ -5767,6 +5963,7 @@ function renderPlantillaPage(){
       <p style="margin:0;flex-basis:100%">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
       <button class="btn btn-sm" onclick="plantillaGuardar()"><i class="ti ti-device-floppy"></i> Guardar este plan como plantilla</button>
       <button class="btn btn-sm btn-primary" onclick="plantillaPonerAEsteCliente()"><i class="ti ti-copy"></i> Aplicar mi plantilla a este cliente</button>
+      <button class="btn btn-sm" onclick="plantillaPonerBase()"><i class="ti ti-list-check"></i> Aplicar la plantilla base de GastroGoan (${PLAN360_PLANTILLA_BASE.length} tareas)</button>
       <p class="muted" id="plantilla-estado" style="margin:0;flex-basis:100%;font-size:13px"></p>
     </div>`;
 }
@@ -5776,6 +5973,14 @@ async function plantillaGuardar(){
   if(!Object.keys(tpl).length){ est.textContent = 'Este cliente no tiene tareas que guardar.'; return; }
   try{ await plantillaRef().set(tpl); est.textContent = 'Plantilla guardada (' + Object.keys(tpl).length + ' tareas).'; }
   catch(e){ est.textContent = 'No se pudo guardar en la plataforma (¿reglas de coachConfig publicadas?): ' + (e.message || e.code || 'error'); }
+}
+async function plantillaPonerBase(){
+  // Se llama también desde la guía de primeros pasos, donde no existe #plantilla-estado.
+  const est = document.getElementById('plantilla-estado') || {};
+  const tpl = plantillaBaseParaPrograma(remoteBiz.plan360Program, remoteBiz.plan360StartDate);
+  const n = plantillaAplicar(remoteBiz.plan360Program, tpl);
+  if(n){ saveRemoteBiz(); }
+  est.textContent = n ? 'Añadidas ' + n + ' tareas repartidas por los días laborables. Revísalas y ajústalas a este cliente.' : 'Nada que añadir: este plan ya tiene todas las tareas de la plantilla base.';
 }
 async function plantillaPonerAEsteCliente(){
   const est = document.getElementById('plantilla-estado');
@@ -5880,6 +6085,35 @@ function cobros360Exportar(){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+/* Menú «⋯» de acciones de una fila (equivalente a ggMenuAcciones de la app). Editar y eliminar no van como dos botones
+   sueltos en cada fila: van dentro de UN «⋯» que despliega un menú flotante fuera de la fila (así ningún overflow lo recorta).
+   Se cierra con un toque fuera, Escape o al hacer scroll. acciones = [{icono:'ti-trash', texto, fn:'js a ejecutar', peligro}] */
+function p360MenuAcciones(acciones, etiqueta){
+  return `<button type="button" class="btn btn-sm btn-icon p360-mas" aria-haspopup="menu" aria-label="${esc(etiqueta || 'Acciones')}" title="${esc(etiqueta || 'Acciones')}" data-acc="${esc(JSON.stringify(acciones))}" onclick="p360AbrirMenu(this, event)"><i class="ti ti-dots"></i></button>`;
+}
+function p360CerrarMenu(){ const m = document.getElementById('p360-menu'); if(m) m.remove(); }
+function p360AbrirMenu(btn, ev){
+  if(ev) ev.stopPropagation();
+  const abierto = document.getElementById('p360-menu');
+  const mismo = abierto && abierto._btn === btn;
+  p360CerrarMenu(); if(mismo) return;
+  let acc = []; try{ acc = JSON.parse(btn.dataset.acc || '[]'); }catch(e){}
+  if(!acc.length) return;
+  const m = document.createElement('div'); m._btn = btn;
+  m.id = 'p360-menu'; m.setAttribute('role', 'menu');
+  m.innerHTML = acc.map((a, i) => `<button type="button" role="menuitem" class="${a.peligro ? 'peligro' : ''}" data-i="${i}"><i class="ti ${esc(a.icono || 'ti-point')}"></i> ${esc(a.texto)}</button>`).join('');
+  m.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const a = acc[Number(b.dataset.i)]; p360CerrarMenu(); try{ new Function(a.fn)(); }catch(err){ console.error(err); } });
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+  const abajo = r.bottom + 4 + h <= window.innerHeight - 8;
+  m.style.top = (abajo ? r.bottom + 4 : Math.max(8, r.top - h - 4)) + 'px';
+  const primero = m.querySelector('button'); if(primero) primero.focus();
+}
+document.addEventListener('click', p360CerrarMenu);
+document.addEventListener('scroll', p360CerrarMenu, true);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') p360CerrarMenu(); });
+
 /* ---- Acta en vivo (17/11) ----
    Pantalla pensada para tenerla abierta delante del cliente (letra grande, una cosa cada vez). Cada decisión se apunta con
    un toque: «tarea» (al día que toca del programa), «objetivo» (al Día 2) o «nota» (solo queda en el acta). «Enviar el acta»
@@ -5887,14 +6121,42 @@ function cobros360Exportar(){
    fusión no se pisa por posición). El borrador vive en memoria hasta enviarlo. */
 let actaBorrador = [];
 function actaSanitizar(t){ return String(t == null ? '' : t).trim().slice(0, 600); }
+// Fecha ISO → «23 de noviembre de 2026». El panel enseñaba «2026-11-23» en crudo (el equivalente de fechaImpresaLegible de la app).
+function fechaLegible(f){
+  if(!f || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return f || '—';
+  const [y, m, d] = f.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-ES', {day: 'numeric', month: 'long', year: 'numeric'});
+}
+function plural(n, uno, varios){ return n + ' ' + (n === 1 ? uno : varios); }
+// Solo los días de trabajo de hoy en adelante: «Para el día» arrancaba en el Día 3, ya pasado, y una tarea apuntada en
+// directo caía en un día que el negocio ya no iba a mirar. El primero de la lista es el que sale elegido.
+function actaDiasFuturos(){
+  const hoy = todayStr();
+  return (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo' && plan360DateForDay(d.day) >= hoy);
+}
 function actaDiasOpciones(){
-  return (remoteBiz.plan360Program || []).filter(d => d.phase === 'trabajo').map(d => {
+  const dias = actaDiasFuturos();
+  if(!dias.length) return '<option value="">No quedan días de trabajo por delante</option>';
+  return dias.map(d => {
     const f = plan360FormatDate(d.day);
     return `<option value="${d.day}">Día ${d.day} · ${esc(f.weekday)} ${esc(f.dayMonth)}</option>`;
   }).join('');
 }
+// Quién lo hace. El panel no lee la plantilla de empleados del negocio (solo claves plan360*), así que el nombre del
+// empleado se escribe; así la tarea sale con nombre y apellido en su descripción.
+function actaResponsableTexto(x){
+  if(x.responsable === 'coach') return 'Tu coach';
+  if(x.responsable === 'empleado') return x.responsableNombre || 'Un empleado';
+  if(x.responsable === 'negocio') return 'El negocio';
+  return '';
+}
+function actaResponsableChange(){
+  const v = document.getElementById('acta-resp').value;
+  document.getElementById('acta-resp-nombre').style.display = v === 'empleado' ? '' : 'none';
+}
 function renderActaPage(){
   const act = (remoteBiz.plan360Actas && typeof remoteBiz.plan360Actas === 'object') ? Object.values(remoteBiz.plan360Actas).sort((a, b) => (b.enviadoEn || 0) - (a.enviadoEn || 0)) : [];
+  const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader('Acta en vivo', 'Lo que se decide en la reunión, apuntado al momento')}
     <div class="card" style="font-size:16px">
@@ -5902,27 +6164,54 @@ function renderActaPage(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
         <div class="field" style="margin:0"><label>Se convierte en</label><select id="acta-tipo" onchange="document.getElementById('acta-dia-box').style.display = this.value === 'tarea' ? '' : 'none'"><option value="tarea">Tarea</option><option value="objetivo">Objetivo</option><option value="nota">Solo nota</option></select></div>
         <div class="field" style="margin:0" id="acta-dia-box"><label>Para el día</label><select id="acta-dia">${actaDiasOpciones()}</select></div>
+        <div class="field" style="margin:0"><label>Quién lo hace</label><select id="acta-resp" onchange="actaResponsableChange()"><option value="negocio">El negocio</option><option value="empleado">Un empleado</option><option value="coach">Tu coach</option></select></div>
+        <div class="field" style="margin:0;display:none" id="acta-resp-nombre"><label>Nombre del empleado</label><input id="acta-resp-nombre-in" placeholder="Por ejemplo, Marta"></div>
+        <div class="field" style="margin:0"><label>Fecha límite (opcional)</label><input type="date" id="acta-fecha"></div>
         <button class="btn btn-primary" onclick="actaAnadir()">Añadir decisión</button>
       </div>
     </div>
     <div id="acta-lista">${actaListaHtml()}</div>
-    ${act.length ? `<h3 style="margin:18px 0 6px">Actas ya enviadas</h3>${act.map(a => `<div class="card" style="margin-bottom:8px;font-size:13px"><strong>${esc(a.fecha || '')}</strong> · ${(a.decisiones || []).length} decisiones</div>`).join('')}` : ''}`;
+    ${act.length ? `<h3 style="margin:18px 0 6px">Actas ya enviadas</h3>${act.map(a => `<details class="card" style="margin-bottom:8px;font-size:14px"><summary style="cursor:pointer;min-height:36px;display:flex;align-items:center"><strong>${esc(fechaLegible(a.fecha))}</strong>&nbsp;· ${esc(plural((a.decisiones || []).length, 'decisión', 'decisiones'))}</summary>
+      ${(a.decisiones || []).map(x => `<div style="padding:6px 0;border-top:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo] || 'Nota'}${x.tipo === 'tarea' && x.dia ? ' · día ' + esc(String(x.dia)) : ''}</span> ${esc(x.texto || '')}${actaResponsableTexto(x) || x.fecha ? `<div class="muted txt-xs">${[actaResponsableTexto(x), x.fecha ? 'para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>`).join('')}
+      <div style="margin-top:8px"><button class="btn btn-sm" onclick="actaImprimir('${esc(String(a.id))}')"><i class="ti ti-printer"></i> Imprimir el acta</button></div></details>`).join('')}` : ''}`;
+}
+// Ventana de impresión del acta. Ahí NO hay fuente de iconos: solo texto y estilos propios.
+function actaImprimir(id){
+  const a = remoteBiz && remoteBiz.plan360Actas && remoteBiz.plan360Actas[id];
+  if(!a) return;
+  const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
+  const filas = (a.decisiones || []).map(x => `<tr><td class="t">${tipos[x.tipo] || 'Nota'}</td><td>${esc(x.texto || '')}${x.tipo === 'tarea' && x.dia ? `<div class="m">Día ${esc(String(x.dia))}</div>` : ''}${actaResponsableTexto(x) || x.fecha ? `<div class="m">${[actaResponsableTexto(x), x.fecha ? 'para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</td></tr>`).join('');
+  const win = window.open('', '_blank');
+  if(!win){ alert('El navegador ha bloqueado la ventana emergente — permite pop-ups para imprimir el acta.'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Acta · ${esc(fechaLegible(a.fecha))}</title>
+  <style>@page{size:A4;margin:14mm}body{font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#1C1A17}h1{font-size:22px;margin:0 0 2px}.s{color:#716C65;font-size:13px;margin-bottom:14px}table{width:100%;border-collapse:collapse}td{padding:8px 10px 8px 0;border-bottom:1px solid #E7E2D9;font-size:14px;vertical-align:top}td.t{width:90px;font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px;margin-top:2px}</style></head><body>
+  <h1>Acta de la reunión</h1><div class="s">${esc(remoteBiz.name || '')} · ${esc(fechaLegible(a.fecha))}</div><table>${filas}</table>
+  <script>window.onload=function(){window.print();}<\/script></body></html>`);
+  win.document.close();
 }
 function actaListaHtml(){
   if(!actaBorrador.length) return '<p class="muted" style="margin:14px 0">Todavía no hay decisiones en esta acta.</p>';
   const tipos = {tarea: 'Tarea', objetivo: 'Objetivo', nota: 'Nota'};
-  return `<div class="card" style="margin-top:12px">${actaBorrador.map((x, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo]}${x.tipo === 'tarea' ? ' · día ' + x.dia : ''}</span><div style="flex:1;font-size:15px">${esc(x.texto)}</div><button class="btn btn-sm" onclick="actaQuitar(${i})">Quitar</button></div>`).join('')}
+  return `<div class="card" style="margin-top:12px">${actaBorrador.map((x, i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)"><span class="p360-day-tag" style="margin:0">${tipos[x.tipo]}${x.tipo === 'tarea' ? ' · día ' + x.dia : ''}</span><div style="flex:1;font-size:15px">${esc(x.texto)}${actaResponsableTexto(x) || x.fecha ? `<div class="muted txt-xs">${[actaResponsableTexto(x), x.fecha ? 'para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar esta decisión', fn: `actaQuitar(${i})`, peligro: true}], 'Acciones de la decisión')}</div>`).join('')}
     <div style="margin-top:12px"><button class="btn btn-primary" onclick="actaEnviar()">Enviar el acta al negocio</button> <span class="muted" style="font-size:12px">Crea las tareas y los objetivos y deja el acta en su app.</span></div></div>`;
 }
 function actaAnadir(){
   const texto = actaSanitizar(document.getElementById('acta-texto').value);
   if(!texto){ alert('Escribe la decisión.'); return; }
   const tipo = document.getElementById('acta-tipo').value;
-  actaBorrador.push({tipo, texto, dia: tipo === 'tarea' ? Number(document.getElementById('acta-dia').value) : null});
+  const dia = tipo === 'tarea' ? Number(document.getElementById('acta-dia').value) : null;
+  if(tipo === 'tarea' && !dia){ alert('No quedan días de trabajo por delante: apúntala como nota o como objetivo.'); return; }
+  const responsable = document.getElementById('acta-resp').value;
+  const nombre = actaSanitizar(document.getElementById('acta-resp-nombre-in').value).slice(0, 60);
+  if(responsable === 'empleado' && !nombre){ alert('Escribe el nombre del empleado.'); return; }
+  actaApuntar({tipo, texto, dia, responsable, responsableNombre: responsable === 'empleado' ? nombre : '', fecha: document.getElementById('acta-fecha').value || ''});
   document.getElementById('acta-texto').value = '';
-  document.getElementById('acta-lista').innerHTML = actaListaHtml();
 }
-function actaQuitar(i){ actaBorrador.splice(i, 1); document.getElementById('acta-lista').innerHTML = actaListaHtml(); }
+function actaQuitar(i){
+  actaBorrador.splice(i, 1);
+  // También se pinta desde el orden del día (#od-acuerdos): se refrescan los dos sitios si existen.
+  ['acta-lista', 'od-acuerdos'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = actaListaHtml(); });
+}
 function actaAplicar(){
   // Devuelve cuántas tareas y objetivos creó. Separada de la pantalla para poder probarla.
   const prog = remoteBiz.plan360Program || [];
@@ -5931,7 +6220,10 @@ function actaAplicar(){
     if(x.tipo === 'tarea'){
       const d = prog.find(y => y.day === x.dia && y.phase === 'trabajo'); if(!d) return;
       if(!Array.isArray(d.tasks)) d.tasks = [];
-      d.tasks.push({id: plan360GenId(), objectiveId: null, title: x.texto.slice(0, 140), description: x.texto.length > 140 ? x.texto : '', status: 'pendiente', note: '', fileData: null, fileName: null});
+      // Responsable y fecha viajan en la descripción: es lo único del modelo de tarea que el negocio ya pinta.
+      const extra = [actaResponsableTexto(x) && x.responsable !== 'negocio' ? 'Responsable: ' + actaResponsableTexto(x) : '', x.fecha ? 'Para el ' + fechaLegible(x.fecha) : ''].filter(Boolean).join(' · ');
+      const descr = [x.texto.length > 140 ? x.texto : '', extra].filter(Boolean).join('\n\n');
+      d.tasks.push({id: plan360GenId(), objectiveId: null, title: x.texto.slice(0, 140), description: descr, status: 'pendiente', note: '', fileData: null, fileName: null});
       tareas++;
     }else if(x.tipo === 'objetivo'){
       const d2 = prog.find(y => y.day === 2); if(!d2) return;
@@ -5942,7 +6234,7 @@ function actaAplicar(){
   });
   if(!remoteBiz.plan360Actas || typeof remoteBiz.plan360Actas !== 'object' || Array.isArray(remoteBiz.plan360Actas)) remoteBiz.plan360Actas = {};
   const id = String(plan360GenId());
-  remoteBiz.plan360Actas[id] = {id, fecha: todayStr(), enviadoEn: Date.now(), decisiones: actaBorrador.map(x => ({tipo: x.tipo, texto: x.texto, dia: x.dia}))};
+  remoteBiz.plan360Actas[id] = {id, fecha: todayStr(), enviadoEn: Date.now(), decisiones: actaBorrador.map(x => ({tipo: x.tipo, texto: x.texto, dia: x.dia, responsable: x.responsable || '', responsableNombre: x.responsableNombre || '', fecha: x.fecha || ''}))};
   return {tareas, objetivos, id};
 }
 function actaEnviar(){
@@ -5952,7 +6244,728 @@ function actaEnviar(){
   actaBorrador = [];
   saveRemoteBiz();
   renderActaPage();
-  alert('Acta enviada: ' + r.tareas + ' tareas y ' + r.objetivos + ' objetivos creados.');
+  alert('Acta enviada: ' + plural(r.tareas, 'tarea', 'tareas') + ' y ' + plural(r.objetivos, 'objetivo', 'objetivos') + ' creados.');
+}
+
+/* ============================================================
+   PLAN 360 · HERRAMIENTAS DEL COACH (25/11)
+   Todo lo de aquí es del COACH y no viaja al negocio salvo lo que se dice expresamente:
+   · «Mis datos» (contrato) → gastrogoan/coachConfig/datosCoach (solo admin) y, copiado por diferencias, business.plan360Coach.
+   · Archivados → gastrogoan/coachConfig/archivados (índice, para que «Mi agenda» no lea sus nubes) + plan360Servicio.archivado.
+   · Pendientes (las alertas se convierten en llamadas/tareas TUYAS) → gastrogoan/coachConfig/pendientes. Se guardan ahí y no en el
+     programa del negocio: una «llamada a Casa Paco» en su lista de tareas la vería el propio Paco.
+   · Guion de la reunión → db/coachPrivate (el nodo que la app del negocio nunca lee).
+   Si las reglas de coachConfig aún no están publicadas, todo se guarda en el navegador y la pantalla lo AVISA (como la plantilla).
+   ============================================================ */
+
+/* ---------- Mis datos de coach ---------- */
+const COACH_DATOS_LS = 'gg_p360_datos_coach';
+const COACH_CAMPOS = [
+  {k: 'nombre', lbl: 'Nombre completo', obl: true, ac: 'name'},
+  {k: 'dni', lbl: 'DNI / NIF', obl: true, ac: 'off'},
+  {k: 'domicilio', lbl: 'Domicilio', obl: true, ac: 'street-address'},
+  {k: 'iban', lbl: 'IBAN (donde te transfieren)', obl: true, ac: 'off'},
+  {k: 'email', lbl: 'Email', obl: false, ac: 'email', tipo: 'email'},
+  {k: 'telefono', lbl: 'Teléfono', obl: false, ac: 'tel', tipo: 'tel'},
+];
+let coachDatos = null;          // lo último leído o guardado (null = no hay nada)
+let coachDatosOrigen = '';      // 'nube' | 'navegador' | ''
+let coachVistaPrevia = 'list';
+function coachDatosRef(){ return getApp().database().ref('gastrogoan/coachConfig/datosCoach'); }
+// Solo texto, sin espacios sobrantes; el IBAN y el DNI en mayúsculas (así se comparan y se leen bien en el contrato).
+function coachDatosLimpios(d){
+  const o = {};
+  COACH_CAMPOS.forEach(c => {
+    let v = String((d && d[c.k]) == null ? '' : d[c.k]).replace(/\s+/g, ' ').trim().slice(0, 200);
+    if(c.k === 'iban' || c.k === 'dni') v = v.toUpperCase();
+    if(v) o[c.k] = v;
+  });
+  return o;
+}
+function coachDatosFaltan(d, soloContrato){
+  const l = coachDatosLimpios(d || {});
+  return COACH_CAMPOS.filter(c => (!soloContrato || c.obl) && !l[c.k]).map(c => c.lbl);
+}
+// Comprobaciones de forma (no de existencia): un IBAN con el dígito de control mal o un DNI sin letra casi siempre es un error de tecleo.
+function coachIbanValido(v){
+  const s = String(v || '').replace(/\s+/g, '').toUpperCase();
+  if(!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)) return false;
+  const r = (s.slice(4) + s.slice(0, 4)).replace(/[A-Z]/g, ch => String(ch.charCodeAt(0) - 55));
+  let resto = 0;
+  for(let i = 0; i < r.length; i += 7) resto = Number(String(resto) + r.slice(i, i + 7)) % 97;
+  return resto === 1;
+}
+function coachDniValido(v){
+  const s = String(v || '').replace(/[\s.-]/g, '').toUpperCase();
+  return /^\d{8}[A-Z]$/.test(s) || /^[XYZ]\d{7}[A-Z]$/.test(s) || /^[A-HJNPQRSUVW]\d{7}[0-9A-J]$/.test(s);
+}
+async function coachDatosCargar(){
+  let ls = null;
+  try{ ls = JSON.parse(localStorage.getItem(COACH_DATOS_LS) || 'null'); }catch(e){}
+  try{
+    const v = (await coachDatosRef().once('value')).val();
+    if(v && typeof v === 'object'){
+      coachDatos = coachDatosLimpios(v); coachDatosOrigen = 'nube';
+      try{ localStorage.setItem(COACH_DATOS_LS, JSON.stringify(coachDatos)); }catch(e){}
+      return coachDatos;
+    }
+  }catch(e){ console.warn('Mis datos de coach: sin nube, uso la copia de este navegador', e); }
+  if(ls && typeof ls === 'object'){ coachDatos = coachDatosLimpios(ls); coachDatosOrigen = 'navegador'; }
+  return coachDatos;
+}
+async function coachDatosGuardar(datos){
+  const limpio = coachDatosLimpios(datos);
+  coachDatos = limpio;
+  try{ localStorage.setItem(COACH_DATOS_LS, JSON.stringify(limpio)); }catch(e){}
+  let enNube = true;
+  try{ await coachDatosRef().set(limpio); coachDatosOrigen = 'nube'; }
+  catch(e){ enNube = false; coachDatosOrigen = 'navegador'; console.warn('Mis datos de coach: no se pudo guardar en la plataforma', e); }
+  coachDatosSincronizar();
+  return enNube;
+}
+// Lo que se copia al negocio: solo lo que hay escrito, y nada si no hay nada.
+function coachParaNegocio(){
+  const d = coachDatos ? coachDatosLimpios(coachDatos) : null;
+  return d && Object.keys(d).length ? d : null;
+}
+/* Copia los datos del coach al negocio (business.plan360Coach) SOLO si cambian, con un update de esa única clave: es una clave
+   plan360*, así que entra en esClavePlan360 y el eco de este guardado se reconoce por la huella (no redibuja nada). */
+function coachDatosSincronizar(){
+  if(!currentBizRef || !remoteBiz || !currentTenantId) return false;
+  const d = coachParaNegocio();
+  if(!d) return false;
+  const actual = comoFirebase(remoteBiz.plan360Coach) || {};
+  if(stableJson(actual) === stableJson(comoFirebase(d))) return false;
+  remoteBiz.plan360Coach = JSON.parse(JSON.stringify(d));
+  lastPushedJson = plan360Huella(remoteBiz);
+  currentBizRef.update({plan360Coach: d}).catch(e => {
+    console.error('No se pudieron copiar tus datos al negocio', e);
+    const st = document.getElementById('client-status');
+    if(st) st.textContent = 'No se pudieron copiar tus datos de coach al negocio: ' + (e.message || e.code || 'error');
+  });
+  return true;
+}
+// El contrato (y la firma en persona) lleva tu nombre, DNI, domicilio e IBAN: sin ellos no sale. Devuelve true si BLOQUEA.
+function coachBloqueaContrato(){
+  const f = coachDatosFaltan(coachDatos, true);
+  if(!f.length) return false;
+  alert('No se puede enviar el contrato: faltan tus datos de coach (' + f.join(', ') + '). Complétalos en «Mis datos».');
+  renderCoachDatosPage();
+  return true;
+}
+// Informes y diagnósticos: aviso, no bloqueo (llevan tu contacto, pero no son un documento legal). true = seguir.
+function coachAvisoDatos(que){
+  const f = coachDatosFaltan(coachDatos, false);
+  if(!f.length) return true;
+  return confirm('Faltan tus datos de coach (' + f.join(', ') + ') y ' + que + ' saldrá sin ellos. ¿Enviarlo igualmente?');
+}
+function coachDatosBannerHtml(){
+  const f = coachDatosFaltan(coachDatos, true);
+  return f.length ? `<div class="card" id="coach-aviso" style="margin:10px 0;border-color:var(--red)"><strong style="color:var(--red)">Faltan tus datos de coach para el contrato:</strong> ${esc(f.join(', '))}. <button class="btn btn-sm" style="margin-left:6px" onclick="renderCoachDatosPage()">Completar «Mis datos»</button></div>` : '';
+}
+function renderCoachDatosPage(){
+  const antes = !document.getElementById('view-client').classList.contains('hidden') ? 'client' : 'list';
+  if(document.getElementById('view-coach').classList.contains('hidden')) coachVistaPrevia = antes;
+  document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-client').classList.add('hidden');
+  document.getElementById('view-coach').classList.remove('hidden');
+  const d = coachDatos || {};
+  document.getElementById('view-coach').innerHTML = `
+    <button class="btn btn-sm" onclick="cerrarCoachDatos()">← Volver</button>
+    <h2 style="margin:10px 0 4px">Mis datos de coach</h2>
+    <p class="muted" style="margin-bottom:12px">Salen en el contrato que firma cada negocio. Se guardan en tu cuenta de administrador y se copian a cada negocio que abres (solo si cambian).</p>
+    <div class="card">
+      ${COACH_CAMPOS.map(c => `<div class="field"><label for="coach-${c.k}">${esc(c.lbl)}${c.obl ? ' *' : ''}</label><input id="coach-${c.k}" type="${c.tipo || 'text'}" autocomplete="${c.ac}" value="${esc(d[c.k] || '')}"></div>`).join('')}
+      <button class="btn btn-primary" onclick="coachDatosGuardarPantalla()">Guardar</button>
+      <p id="coach-estado" class="muted" style="margin-top:8px;font-size:13px">${coachDatosOrigen === 'navegador' ? 'Guardados solo en este navegador: la plataforma no los ha aceptado (¿reglas de coachConfig publicadas?).' : coachDatosOrigen === 'nube' ? 'Guardados en tu cuenta de la plataforma.' : 'Todavía no hay nada guardado.'}</p>
+    </div>`;
+}
+function cerrarCoachDatos(){
+  document.getElementById('view-coach').classList.add('hidden');
+  document.getElementById('view-' + (coachVistaPrevia === 'client' && currentTenantId ? 'client' : 'list')).classList.remove('hidden');
+  if(coachVistaPrevia === 'client' && currentTenantId && remoteBiz && document.getElementById('p360-coach-calendario')) renderClientGrid();
+}
+async function coachDatosGuardarPantalla(){
+  const datos = {};
+  COACH_CAMPOS.forEach(c => { datos[c.k] = document.getElementById('coach-' + c.k).value; });
+  const l = coachDatosLimpios(datos);
+  const dudas = [];
+  if(l.iban && !coachIbanValido(l.iban)) dudas.push('el IBAN no parece válido');
+  if(l.dni && !coachDniValido(l.dni)) dudas.push('el DNI/NIF no parece válido');
+  if(dudas.length && !confirm('Ojo: ' + dudas.join(' y ') + '. ¿Guardar igualmente?')) return;
+  const est = document.getElementById('coach-estado');
+  est.textContent = 'Guardando…';
+  const enNube = await coachDatosGuardar(datos);
+  est.textContent = enNube ? 'Guardado en tu cuenta de la plataforma.' : 'Guardado SOLO en este navegador: la plataforma no los ha aceptado (¿reglas de coachConfig publicadas?). En otro ordenador no aparecerán.';
+}
+
+/* ---------- Archivar clientes terminados ---------- */
+const COACH_ARCH_LS = 'gg_p360_archivados';
+let p360Archivados = {};        // {tenantId: {ts, name}}
+let p360ArchivadosEnNube = true;
+function p360ArchivadosRef(){ return getApp().database().ref('gastrogoan/coachConfig/archivados'); }
+async function p360ArchivadosCargar(){
+  let ls = {};
+  try{ ls = JSON.parse(localStorage.getItem(COACH_ARCH_LS) || '{}') || {}; }catch(e){}
+  try{
+    const v = (await p360ArchivadosRef().once('value')).val() || {};
+    p360Archivados = Object.assign({}, v); p360ArchivadosEnNube = true;
+    // Lo que quedó solo en este navegador (reglas sin publicar entonces) se conserva.
+    Object.keys(ls).forEach(k => { if(!p360Archivados[k]) p360Archivados[k] = ls[k]; });
+  }catch(e){ console.warn('Archivados: sin nube, uso la copia de este navegador', e); p360Archivados = ls; p360ArchivadosEnNube = false; }
+  return p360Archivados;
+}
+function p360EstaArchivado(tenantId){ return !!p360Archivados[tenantId]; }
+async function p360ArchivadoEscribir(tenantId, valor){
+  if(valor) p360Archivados[tenantId] = valor; else delete p360Archivados[tenantId];
+  try{ localStorage.setItem(COACH_ARCH_LS, JSON.stringify(p360Archivados)); }catch(e){}
+  try{ await p360ArchivadosRef().child(tenantId).set(valor || null); p360ArchivadosEnNube = true; }
+  catch(e){ p360ArchivadosEnNube = false; console.warn('Archivados: no se pudo escribir en la plataforma', e); }
+}
+// La misma conexión que usa «Mi agenda»: la nube de ese negocio, sin abrir su ficha.
+async function p360DbDeNegocio(tenantId){
+  const cfg = (await getApp().database().ref('gastrogoan/tenantLookup/' + tenantId).once('value')).val();
+  if(!cfg || !cfg.apiKey || !cfg.databaseURL) return null;
+  const appName = 'biz-' + tenantId;
+  let bizApp;
+  try{ bizApp = firebase.app(appName); }catch(e){ bizApp = firebase.initializeApp(cfg, appName); }
+  if(!bizApp.auth().currentUser) await bizApp.auth().signInAnonymously();
+  const db = bizApp.database(); db.goOnline();
+  return db;
+}
+/* Marca (o desmarca) plan360Servicio.archivado en el negocio con un set de esa única clave, y en el índice del coach.
+   Con la ficha abierta se actualiza también lo que hay en memoria (y la huella, para no tomar su propio eco por un cambio ajeno). */
+async function p360Archivar(tenantId, nombre, archivar){
+  const ts = archivar ? Date.now() : null;
+  if(tenantId === currentTenantId && currentBizRef && remoteBiz){
+    remoteBiz.plan360Servicio = Object.assign({}, remoteBiz.plan360Servicio || {});
+    if(archivar) remoteBiz.plan360Servicio.archivado = ts; else delete remoteBiz.plan360Servicio.archivado;
+    lastPushedJson = plan360Huella(remoteBiz);
+    try{ await currentBizRef.child('plan360Servicio/archivado').set(ts); }catch(e){ console.warn('No se pudo marcar el archivo en el negocio', e); }
+  }else{
+    try{ const db = await p360DbDeNegocio(tenantId); if(db){ await db.ref('gastrogoan/tenants/' + tenantId + '/db/business/plan360Servicio/archivado').set(ts); if(currentTenantId !== tenantId) db.goOffline(); } }
+    catch(e){ console.warn('No se pudo marcar el archivo en el negocio', e); }
+  }
+  await p360ArchivadoEscribir(tenantId, archivar ? {ts, name: nombre || ''} : null);
+  return ts;
+}
+async function p360ArchivarActual(){
+  if(!currentTenantId) return;
+  const nombre = (document.getElementById('client-name') || {}).textContent || '';
+  const ya = p360EstaArchivado(currentTenantId);
+  if(!confirm(ya ? '¿Reactivar a ' + nombre + '? Volverá a tu lista y a «Mi agenda».' : '¿Archivar a ' + nombre + '? Sale de tu lista y de «Mi agenda» (queda en «Terminados» y se puede reactivar).')) return;
+  await p360Archivar(currentTenantId, nombre, !ya);
+  closeClient();
+}
+async function p360ArchivarDesdeLista(tenantId, nombre, archivar){
+  await p360Archivar(tenantId, nombre, archivar);
+  await loadClientList();
+  renderMiSemana();
+}
+// «⋯» de cada tarjeta de la agenda: archivar sin tener que abrir la ficha. Un toque en el ⋯ no abre el cliente (p360AbrirMenu corta la propagación).
+function p360MenuArchivar(f){
+  return p360MenuAcciones([{icono: 'ti-archive', texto: 'Archivar (terminado)', fn: `p360ArchivarDesdeLista(${JSON.stringify(f.tenantId)}, ${JSON.stringify(f.name || '')}, true)`}], 'Acciones de ' + (f.name || 'este cliente'));
+}
+function p360ArchivadosHtml(){
+  const ids = Object.keys(p360Archivados).sort((a, b) => String((p360Archivados[a] || {}).name || '').localeCompare(String((p360Archivados[b] || {}).name || '')));
+  if(!ids.length) return '';
+  return `<details id="p360-terminados" class="card" style="margin-top:16px"><summary style="cursor:pointer;min-height:36px;display:flex;align-items:center;font-weight:700">Terminados (${ids.length})</summary>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 8px">Archivados: no salen en «Mi agenda» ni se lee su nube. Ábrelos para consultar, o reactívalos.${p360ArchivadosEnNube ? '' : ' (Esta lista está solo en este navegador: la plataforma no ha aceptado el índice.)'}</p>
+    ${ids.map(id => { const a = p360Archivados[id] || {}; return `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--border)">
+      <button class="btn btn-sm" style="flex:1;justify-content:flex-start;min-width:0;overflow-wrap:anywhere" data-t="${esc(id)}" data-n="${esc(a.name || id)}" onclick="openClient(this.dataset.t, this.dataset.n)">${esc(a.name || id)}</button>
+      <button class="btn btn-sm" style="flex:none;width:auto" data-t="${esc(id)}" data-n="${esc(a.name || '')}" onclick="p360ArchivarDesdeLista(this.dataset.t, this.dataset.n, false)"><i class="ti ti-arrow-back-up"></i> Reactivar</button>
+    </div>`; }).join('')}
+  </details>`;
+}
+function renderArchivados(){
+  const el = document.getElementById('client-archivados');
+  if(el) el.innerHTML = p360ArchivadosHtml();
+}
+
+/* ---------- Pendientes del coach (lo que crean las alertas) ---------- */
+const COACH_PEND_LS = 'gg_p360_pendientes';
+let p360Pendientes = {};        // {tenantId: {alertaId: {tipo, titulo, detalle, name, creadoEn}}}
+let p360PendientesEnNube = true;
+function p360PendientesRef(){ return getApp().database().ref('gastrogoan/coachConfig/pendientes'); }
+async function p360PendientesCargar(){
+  let ls = {};
+  try{ ls = JSON.parse(localStorage.getItem(COACH_PEND_LS) || '{}') || {}; }catch(e){}
+  try{
+    p360Pendientes = (await p360PendientesRef().once('value')).val() || {}; p360PendientesEnNube = true;
+    Object.keys(ls).forEach(t => Object.keys(ls[t] || {}).forEach(a => { p360Pendientes[t] = p360Pendientes[t] || {}; if(!p360Pendientes[t][a]) p360Pendientes[t][a] = ls[t][a]; }));
+  }catch(e){ console.warn('Pendientes: sin nube, uso la copia de este navegador', e); p360Pendientes = ls; p360PendientesEnNube = false; }
+  return p360Pendientes;
+}
+async function p360PendienteEscribir(tenantId, id, valor){
+  p360Pendientes[tenantId] = p360Pendientes[tenantId] || {};
+  if(valor) p360Pendientes[tenantId][id] = valor; else delete p360Pendientes[tenantId][id];
+  if(!Object.keys(p360Pendientes[tenantId]).length) delete p360Pendientes[tenantId];
+  try{ localStorage.setItem(COACH_PEND_LS, JSON.stringify(p360Pendientes)); }catch(e){}
+  try{ await p360PendientesRef().child(tenantId).child(id).set(valor || null); p360PendientesEnNube = true; }
+  catch(e){ p360PendientesEnNube = false; console.warn('Pendientes: no se pudo escribir en la plataforma', e); }
+}
+function p360HayPendiente(tenantId, id){ return !!(p360Pendientes[tenantId] && p360Pendientes[tenantId][id]); }
+async function p360CrearPendiente(tenantId, id){
+  const reg = p360AlertasVivas[tenantId + '|' + id];
+  if(!reg) return;
+  const a = reg.alerta;
+  await p360PendienteEscribir(tenantId, id, {tipo: a.accion.tipo, titulo: a.accion.titulo, detalle: a.accion.detalle || '', name: reg.name, creadoEn: Date.now()});
+  p360RepintarAlertas();
+}
+async function p360PendienteHecho(tenantId, id){
+  await p360PendienteEscribir(tenantId, id, null);
+  p360RepintarAlertas();
+}
+
+/* ---------- Alertas al coach ---------- */
+// Umbrales juntos y con nombre: cambiar un criterio es cambiar una línea, y la prueba los lee de aquí.
+const P360_UMBRALES = {diasSinMarcar: 7, foodCostPts: 3, ventasCaidaPct: 15, npsCaidaPts: 0.5, objetivoTolerancia: 0.2};
+// «8 %», «3,5», «1.250,50 €» → número. Sin número, null: un valor que no se puede leer no genera alerta.
+function p360Num(v){
+  if(v == null) return null;
+  let s = String(v).replace(/[^\d.,-]/g, '');
+  if(!s) return null;
+  if(s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
+/* Estado de un objetivo con meta: avance real (último valor medido entre el de partida y la meta) frente al avance ESPERADO por
+   calendario (de la fecha de inicio a la fecha objetivo). Más de 20 puntos por detrás → desviado. Sin valor inicial, meta o
+   mediciones no se inventa nada: «sin_datos». Pasada la fecha sin llegar a la meta → desviado. */
+function p360ObjetivoEstado(o, hoyStr, inicioStr){
+  const ini = p360Num(o.valorInicial), meta = p360Num(o.valorObjetivo);
+  const ms = (o.mediciones || []).filter(m => m && m.valor !== '' && m.valor != null && p360Num(m.valor) != null);
+  const ult = ms.length ? ms[ms.length - 1] : null;
+  const act = ult ? p360Num(ult.valor) : null;
+  const fin = /^\d{4}-\d{2}-\d{2}$/.test(o.fechaObjetivo || '') ? o.fechaObjetivo : null;
+  const base = {ini, meta, act, fin, ult};
+  if(ini == null || meta == null || ini === meta) return Object.assign(base, {estado: 'sin_datos', texto: ''});
+  if(act == null){
+    if(fin && fin < hoyStr) return Object.assign(base, {estado: 'desviado', progreso: 0, esperado: 100, texto: 'La fecha ya pasó y no hay ninguna medición.'});
+    return Object.assign(base, {estado: 'sin_datos', texto: 'Todavía sin ninguna medición.'});
+  }
+  const progreso = Math.round(((act - ini) / (meta - ini)) * 100);
+  if(progreso >= 100) return Object.assign(base, {estado: 'cumplido', progreso, texto: 'Meta alcanzada.'});
+  let esperado = null;
+  const desde = /^\d{4}-\d{2}-\d{2}$/.test(o.fechaInicio || '') ? o.fechaInicio : (inicioStr || (ms[0] && ms[0].fecha) || null);
+  if(fin && desde && fin > desde){
+    const t = (new Date(hoyStr + 'T12:00:00') - new Date(desde + 'T12:00:00')) / (new Date(fin + 'T12:00:00') - new Date(desde + 'T12:00:00'));
+    esperado = Math.round(Math.max(0, Math.min(1, t)) * 100);
+  }
+  if(fin && fin < hoyStr) return Object.assign(base, {estado: 'desviado', progreso, esperado: 100, texto: 'La fecha ya pasó y la meta no se ha alcanzado (' + progreso + ' % del camino).'});
+  const desviado = esperado != null ? (esperado - progreso) / 100 > P360_UMBRALES.objetivoTolerancia : progreso < 0;
+  return Object.assign(base, {estado: desviado ? 'desviado' : 'en_camino', progreso, esperado, texto: 'Lleva el ' + progreso + ' % del camino' + (esperado != null ? ' y por fecha tocaría el ' + esperado + ' %' : '') + '.'});
+}
+const P360_OBJ_ESTADO = {
+  cumplido: {lbl: 'Cumplido', color: 'var(--green)'},
+  en_camino: {lbl: 'En camino', color: 'var(--green)'},
+  desviado: {lbl: 'Desviado', color: 'var(--red)'},
+  sin_datos: {lbl: 'Sin datos', color: 'var(--muted)'},
+};
+function p360KpisUltimoMes(K, hoyClave){
+  const cl = Object.keys((K && K.meses) || {}).sort().filter(x => x < hoyClave);
+  const clave = cl[cl.length - 1];
+  if(!clave) return null;
+  return {clave, k: K.meses[clave], ant: K.meses[kpiClaveMes(clave, -1)]};
+}
+// ¿Cuota del mes de mantenimiento sin cobrar desde el día 5? Una sola definición para la agenda de hoy y para las alertas.
+function p360CuotaSinCobrar(f, fechaStr){
+  const sv = (f.biz || {}).plan360Servicio || {};
+  return f.fase === 'mant' && Number(fechaStr.slice(8)) >= 5 && !((sv.cobros || {})[fechaStr.slice(0, 7)]);
+}
+/* Las alertas de UN cliente, solo con datos reales: si falta el dato (mes anterior, medición, NPS…) no hay alerta.
+   f = {tenantId, name, fase, biz, kpis, lastActivityAt, ultimaMarca, atrasadas, tareasTotal, prog}. */
+function p360AlertasCliente(f, hoyStr){
+  const out = [];
+  if(!f || f.error || f.sinNube || (f.fase !== '360' && f.fase !== 'mant')) return out;
+  const b = f.biz || {}, U = P360_UMBRALES, nombre = f.name || '';
+  // 1) Sin marcar tareas. Mismo criterio para los dos servicios: tiene tareas ATRASADAS y lleva 7+ días sin actividad suya.
+  const atras = f.fase === '360' ? ((f.prog && f.prog.atrasadas) || []).length : ((f.tareasTotal && f.atrasadas) || []).length;
+  if(atras){
+    const ultima = Math.max(f.lastActivityAt || 0, f.ultimaMarca || 0);
+    const dias = ultima ? Math.floor((Date.now() - ultima) / 86400000) : null;
+    const dia = p360DiaDelPrograma(b);
+    const nunca = dias === null && (f.fase === 'mant' || (dia !== null && dia >= U.diasSinMarcar));
+    if(nunca || (dias !== null && dias >= U.diasSinMarcar)){
+      out.push({id: 'sin_marcar', nivel: dias !== null && dias >= 14 || nunca ? 'alta' : 'media', icono: 'ti-phone-call',
+        texto: (nunca ? 'No ha marcado ninguna tarea todavía' : 'Lleva ' + dias + ' días sin marcar nada') + ' y tiene ' + atras + (atras === 1 ? ' tarea atrasada' : ' tareas atrasadas') + ': llámale.',
+        accion: {tipo: 'llamada', titulo: 'Llamar a ' + nombre + ': ' + (nunca ? 'no ha marcado ninguna tarea' : dias + ' días sin marcar tareas'), detalle: atras + ' tareas atrasadas.'}});
+    }
+  }
+  // 2-4) Números del mes completo más reciente frente al anterior.
+  const m = p360KpisUltimoMes(f.kpis || b.plan360Kpis, hoyStr.slice(0, 7));
+  if(m && m.k && m.ant){
+    const nm = kpiNombreMes(m.clave).toLowerCase();
+    if(m.k.foodCostPct != null && m.ant.foodCostPct != null && m.k.foodCostPct - m.ant.foodCostPct >= U.foodCostPts){
+      const d = m.k.foodCostPct - m.ant.foodCostPct;
+      out.push({id: 'foodcost_sube', nivel: 'alta', icono: 'ti-trending-up',
+        texto: 'El food cost sube ' + d.toLocaleString('es-ES', {maximumFractionDigits: 1}) + ' puntos en ' + nm + ' (' + kpiFmt(m.ant.foodCostPct, 'pct') + ' → ' + kpiFmt(m.k.foodCostPct, 'pct') + ').',
+        accion: {tipo: 'tarea', titulo: 'Revisar el food cost de ' + nombre + ' (sube ' + d.toLocaleString('es-ES', {maximumFractionDigits: 1}) + ' puntos en ' + nm + ')', detalle: 'Mirar subidas de proveedor y el plato con peor food cost.'}});
+    }
+    if(m.k.netas != null && m.ant.netas > 0 && (m.k.netas - m.ant.netas) / m.ant.netas * 100 <= -U.ventasCaidaPct){
+      const pc = Math.round((m.k.netas - m.ant.netas) / m.ant.netas * 100);
+      out.push({id: 'ventas_caen', nivel: 'alta', icono: 'ti-trending-down',
+        texto: 'Las ventas caen un ' + Math.abs(pc) + ' % en ' + nm + ' (' + kpiFmt(m.ant.netas, 'eur') + ' → ' + kpiFmt(m.k.netas, 'eur') + ').',
+        accion: {tipo: 'llamada', titulo: 'Llamar a ' + nombre + ': las ventas caen un ' + Math.abs(pc) + ' % en ' + nm, detalle: 'Ver el día más flojo y los canales.'}});
+    }
+    if(m.k.nps != null && m.ant.nps != null && m.ant.nps - m.k.nps >= U.npsCaidaPts){
+      out.push({id: 'nps_cae', nivel: 'media', icono: 'ti-mood-sad',
+        texto: 'La valoración de clientes baja de ' + kpiFmt(m.ant.nps, 'num1') + ' a ' + kpiFmt(m.k.nps, 'num1') + ' en ' + nm + '.',
+        accion: {tipo: 'tarea', titulo: 'Mirar con ' + nombre + ' por qué baja la valoración de clientes', detalle: 'Reseñas y encuestas de ' + nm + '.'}});
+    }
+  }
+  // 5) Objetivos desviados (con valor inicial, meta y medición reales).
+  const d2 = (Array.isArray(b.plan360Program) ? b.plan360Program : []).find(x => x && x.day === 2);
+  ((d2 && d2.objectives) || []).filter(o => o && o.titulo).forEach(o => {
+    const e = p360ObjetivoEstado(o, hoyStr, b.plan360StartDate);
+    if(e.estado !== 'desviado') return;
+    out.push({id: 'objetivo_' + (o.id != null ? o.id : out.length), nivel: 'media', icono: 'ti-target-off',
+      texto: 'Objetivo desviado: «' + o.titulo + '». ' + e.texto,
+      accion: {tipo: 'tarea', titulo: 'Revisar con ' + nombre + ' el objetivo «' + o.titulo + '»', detalle: e.texto}});
+  });
+  // 6) Cuota sin cobrar.
+  if(p360CuotaSinCobrar(f, hoyStr)){
+    out.push({id: 'cuota_sin_cobrar', nivel: 'media', icono: 'ti-receipt',
+      texto: 'La cuota de ' + kpiNombreMes(hoyStr.slice(0, 7)).toLowerCase() + ' está sin cobrar.',
+      accion: {tipo: 'tarea', titulo: 'Cobrar la cuota de ' + kpiNombreMes(hoyStr.slice(0, 7)).toLowerCase() + ' a ' + nombre, detalle: ''}});
+  }
+  return out;
+}
+let p360AlertasVivas = {};      // 'tenantId|alertaId' → {name, alerta}
+function p360AlertasCardHtml(filas){
+  p360AlertasVivas = {};
+  const bloques = [];
+  filas.forEach(f => (f.alertas || []).forEach(a => { p360AlertasVivas[f.tenantId + '|' + a.id] = {name: f.name, alerta: a}; }));
+  filas.filter(f => (f.alertas || []).length).forEach(f => {
+    bloques.push(`<div style="padding:8px 0;border-top:1px solid var(--border)">
+      <div style="font-weight:700;cursor:pointer" data-t="${esc(f.tenantId)}" data-n="${esc(f.name)}" onclick="openClient(this.dataset.t, this.dataset.n)">${esc(f.name)}</div>
+      ${f.alertas.map(a => { const hay = p360HayPendiente(f.tenantId, a.id); return `<div class="p360-alerta" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:13.5px">
+        <span style="flex:1 1 260px;min-width:0;color:${a.nivel === 'alta' ? 'var(--red)' : 'var(--body)'}"><i class="ti ${esc(a.icono)}"></i> ${esc(a.texto)}</span>
+        ${hay ? '<span class="muted" style="font-size:12.5px"><i class="ti ti-check"></i> En tus pendientes</span>'
+          : `<button class="btn btn-sm" style="flex:none;width:auto" data-t="${esc(f.tenantId)}" data-a="${esc(a.id)}" onclick="p360CrearPendiente(this.dataset.t, this.dataset.a)"><i class="ti ${a.accion.tipo === 'llamada' ? 'ti-phone-plus' : 'ti-checkbox'}"></i> ${a.accion.tipo === 'llamada' ? 'Anotar llamada' : 'Crear tarea'}</button>`}
+      </div>`; }).join('')}
+    </div>`);
+  });
+  if(!bloques.length) return '';
+  const n = Object.keys(p360AlertasVivas).length;
+  return `<div class="card" id="p360-alertas" style="margin-bottom:10px;border-color:var(--red)">
+    <div style="font-weight:700;margin-bottom:2px"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> Alertas de tus clientes (${n})</div>
+    <p class="muted" style="font-size:12.5px;margin:0 0 4px">Salen solas con sus números y sus tareas; sin dato, no hay alerta.</p>
+    ${bloques.join('')}</div>`;
+}
+function p360PendientesCardHtml(){
+  const filas = [];
+  Object.keys(p360Pendientes).forEach(t => Object.keys(p360Pendientes[t] || {}).forEach(id => filas.push(Object.assign({tenantId: t, id}, p360Pendientes[t][id]))));
+  if(!filas.length) return '';
+  filas.sort((a, b) => (a.creadoEn || 0) - (b.creadoEn || 0));
+  return `<div class="card" id="p360-pendientes" style="margin-bottom:10px">
+    <div style="font-weight:700;margin-bottom:4px"><i class="ti ti-list-check"></i> Mis pendientes (${filas.length})</div>
+    ${p360PendientesEnNube ? '' : '<p class="muted" style="font-size:12.5px;margin:0 0 4px">Guardados solo en este navegador: la plataforma no los ha aceptado (¿reglas de coachConfig publicadas?).</p>'}
+    ${filas.map(p => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px">
+      <i class="ti ${p.tipo === 'llamada' ? 'ti-phone-call' : 'ti-checkbox'}"></i>
+      <span style="flex:1;min-width:0;cursor:pointer" data-t="${esc(p.tenantId)}" data-n="${esc(p.name || '')}" onclick="openClient(this.dataset.t, this.dataset.n)">${esc(p.titulo)}${p.detalle ? `<span class="muted"> · ${esc(p.detalle)}</span>` : ''}</span>
+      <button class="btn btn-sm" style="flex:none;width:auto" data-t="${esc(p.tenantId)}" data-a="${esc(p.id)}" onclick="p360PendienteHecho(this.dataset.t, this.dataset.a)"><i class="ti ti-check"></i> Hecho</button>
+    </div>`).join('')}</div>`;
+}
+let p360UltimasFilas = [];
+function p360RepintarAlertas(){
+  const a = document.getElementById('p360-alertas-caja');
+  if(a) a.innerHTML = p360PendientesCardHtml() + p360AlertasCardHtml(p360UltimasFilas);
+}
+
+/* ---------- Pruebas que adjunta el negocio (solo lectura) ---------- */
+// Viajan aparte, en db/plan360Pruebas = {tareaId: {data, nombre, ts}}: dentro de business hacían pesadísimo cada guardado.
+// Se leen UNA a una, al pedirlas: bajar el nodo entero sería bajar todas las fotos del cliente.
+let currentPruebasRef = null;
+let pruebasCache = {};
+function pruebaDataSegura(data){
+  return typeof data === 'string' && /^data:(image\/(png|jpe?g|webp|gif)|application\/pdf);base64,/.test(data.slice(0, 64));
+}
+async function p360CargarPrueba(tk){
+  if(!tk || tk.id == null) return null;
+  const id = String(tk.id);
+  if(pruebasCache[id] !== undefined) return pruebasCache[id];
+  let v = null;
+  if(currentPruebasRef){
+    try{ v = (await currentPruebasRef.child(id).once('value')).val(); }catch(e){ console.warn('No se pudo leer la prueba', e); }
+  }
+  // De antes del cambio la prueba iba dentro de la propia tarea: se sigue viendo.
+  if(!v && tk.pruebaData) v = {data: tk.pruebaData, nombre: tk.pruebaNombre || '', ts: tk.pruebaTs || null};
+  pruebasCache[id] = v || null;
+  return pruebasCache[id];
+}
+async function p360MostrarPrueba(i){
+  const box = document.getElementById('prueba-box-' + i);
+  const d = plan360TrabajoDiaActivo;
+  if(!box || !d) return;
+  const tk = d.tasks[i];
+  box.innerHTML = '<span class="muted" style="font-size:13px">Buscando la prueba…</span>';
+  const p = await p360CargarPrueba(tk);
+  if(!p || !pruebaDataSegura(p.data)){
+    box.innerHTML = '<span class="muted" style="font-size:13px">El negocio no ha adjuntado ninguna prueba a esta tarea.</span>';
+    return;
+  }
+  const nombre = esc(p.nombre || 'prueba');
+  const cuando = p.ts ? ' · ' + esc(new Date(p.ts).toLocaleString('es-ES', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})) : '';
+  box.innerHTML = /^data:image\//.test(p.data)
+    ? `<a href="${esc(p.data)}" target="_blank" rel="noopener"><img alt="Prueba: ${nombre}" src="${esc(p.data)}" style="display:block;max-width:100%;max-height:320px;border:1px solid var(--border)"></a><div class="muted" style="font-size:12px;margin-top:2px">${nombre}${cuando}</div>`
+    : `<a class="btn btn-sm" style="width:auto" href="${esc(p.data)}" download="${nombre}"><i class="ti ti-file-type-pdf"></i> ${nombre}</a><span class="muted" style="font-size:12px">${cuando.replace(' · ', ' ')}</span>`;
+}
+function p360PruebaBotonHtml(tk, i){
+  if(tk == null || tk.id == null) return '';
+  return `<div style="margin-top:8px"><div id="prueba-box-${i}"><button type="button" class="btn btn-sm" style="width:auto" onclick="p360MostrarPrueba(${i})"><i class="ti ti-camera"></i> Ver la prueba del negocio</button></div></div>`;
+}
+// Valor inicial / meta / fecha / origen que el negocio (o tú) pone a un objetivo: aquí solo se LEEN.
+function plan360ObjetivoMetaHtml(o){
+  if(!o) return '';
+  const hay = o.valorInicial || o.valorObjetivo || o.fechaObjetivo || o.origen;
+  if(!hay) return '';
+  const e = p360ObjetivoEstado(o, todayStr(), remoteBiz && remoteBiz.plan360StartDate);
+  const st = P360_OBJ_ESTADO[e.estado];
+  const ult = e.ult ? ` · última medición <strong>${esc(e.ult.valor)}</strong>${e.ult.fecha ? ' (' + esc(fechaLegible(e.ult.fecha)) + ')' : ''}` : '';
+  return `<div class="p360-obj-meta" style="font-size:13px;margin:0 0 8px;padding:8px;background:var(--brand-cream)">
+    ${o.origen ? `<span class="p360-day-tag" style="margin:0 6px 0 0">${o.origen === 'negocio' ? 'Lo puso el negocio' : 'Lo puso el coach'}</span>` : ''}
+    ${o.valorInicial ? `Parte de <strong>${esc(o.valorInicial)}</strong>` : ''}${o.valorObjetivo ? ` · objetivo <strong>${esc(o.valorObjetivo)}</strong>` : ''}${o.fechaObjetivo ? ` · para el ${esc(fechaLegible(o.fechaObjetivo))}` : ''}${ult}
+    ${e.estado !== 'sin_datos' ? ` <span style="font-weight:700;color:${st.color}">${st.lbl}</span>` : ''}${e.texto && e.estado !== 'sin_datos' ? `<div class="muted" style="font-size:12.5px">${esc(e.texto)}</div>` : ''}
+  </div>`;
+}
+
+/* ---------- Orden del día de la reunión ---------- */
+const PLAN360_GUION_SEMANA = {
+  1: {titulo: 'Semana 1 · Arranque y datos', preguntas: [
+    '¿Qué es lo que más te preocupa hoy del negocio, en una frase?',
+    '¿Has podido cargar en la app tus ventas, proveedores y empleados? ¿Qué te ha frenado?',
+    '¿Qué números miras cada semana y cuáles no sabes cuánto valen (ventas, tickets, food cost, personal)?',
+    '¿Qué tareas de esta semana se han quedado sin hacer y por qué?',
+    '¿Quién del equipo conoce el plan y quién todavía no?',
+    '¿Qué necesitas de mí esta semana para avanzar?']},
+  2: {titulo: 'Semana 2 · Costes', preguntas: [
+    '¿Cuál es tu food cost real y cuál es el objetivo? ¿Qué platos lo disparan?',
+    '¿Qué proveedor ha subido precios y qué has hecho al respecto?',
+    '¿Tienes escandallo de los platos que más se venden?',
+    '¿Qué se tira (mermas) y por qué?',
+    '¿Quién hace los pedidos, cuándo y con qué mínimos?',
+    '¿Qué decisión de precios o de carta tomamos hoy?']},
+  3: {titulo: 'Semana 3 · Equipo y servicio', preguntas: [
+    '¿Cuadran las horas de personal con las franjas en que más se vende?',
+    '¿Cada persona sabe qué se espera de su puesto? ¿Hay manual o hace falta?',
+    '¿Qué quejas o incidencias de clientes han salido estas semanas?',
+    '¿Cuánto se tarda en tomar nota, servir y cobrar en hora punta?',
+    '¿Qué cambio de organización probamos la semana que viene?',
+    '¿Hay briefing antes del servicio? ¿Qué formación falta?']},
+  4: {titulo: 'Semana 4 · Números y cierre', preguntas: [
+    '¿Qué ha cambiado en los números desde el Día 1?',
+    '¿Qué objetivos damos por cumplidos, cuáles parcialmente y cuáles no?',
+    '¿Qué se queda como rutina fija desde mañana y quién la lleva?',
+    '¿Qué inversiones quedan pendientes y en qué orden?',
+    '¿Cómo ves el mantenimiento mensual? ¿Qué te gustaría que vigilara cada mes?',
+    '¿Qué logro quieres contar a tu equipo?']},
+};
+function p360SemanaDeDia(day){ return Math.min(4, Math.max(1, Math.ceil(day / 7))); }
+function ordenDiaClave(day){ return 'od' + day; }
+// Las preguntas de ESTA reunión: lo guardado (editado) o, si nada se ha tocado, el guion de su semana.
+function ordenDiaGuion(day){
+  const g = coachPrivate && coachPrivate[ordenDiaClave(day)] && coachPrivate[ordenDiaClave(day)].guion;
+  if(g && typeof g === 'object' && Object.keys(g).length){
+    return Object.keys(g).map(id => Object.assign({id}, g[id])).sort((a, b) => (a.o || 0) - (b.o || 0));
+  }
+  return PLAN360_GUION_SEMANA[p360SemanaDeDia(day)].preguntas.map((q, i) => ({id: 'g' + (i + 1), o: i + 1, q, a: ''}));
+}
+function ordenDiaSiguientesDias(){
+  const hoy = todayStr();
+  return ((remoteBiz && remoteBiz.plan360Program) || []).filter(d => d.phase === 'trabajo' && plan360DateForDay(d.day) >= hoy);
+}
+/* Los datos del orden del día, calculados (nada se guarda): atrasadas con su porqué, bloqueadas/con nota, objetivos con su estado,
+   cifras frente al Día 1 y lo que quedó pendiente de la reunión anterior. Función pura sobre remoteBiz: la prueba la ejecuta sola. */
+function ordenDiaDatos(day){
+  const prog = (remoteBiz && remoteBiz.plan360Program) || [];
+  const hoy = todayStr(), fecha = plan360DateForDay(day);
+  const corte = hoy < fecha ? hoy : fecha;
+  const trabajo = prog.filter(x => x && x.phase === 'trabajo');
+  const todas = [];
+  trabajo.forEach(d => plan360TareasReales(d).forEach(tk => todas.push({tk, day: d.day, fecha: plan360DateForDay(d.day)})));
+  const porque = tk => tk.note ? tk.note : (tk.status === 'no_hecha' ? 'La marcó «no hecha» sin decir por qué.' : 'Sin respuesta del negocio.');
+  const atrasadas = todas.filter(x => x.fecha < corte && x.tk.status !== 'hecha').map(x => ({titulo: x.tk.title, dia: x.day, fecha: x.fecha, porque: porque(x.tk)}));
+  const idsAtras = new Set(todas.filter(x => x.fecha < corte && x.tk.status !== 'hecha').map(x => String(x.tk.id)));
+  const bloqueadas = todas.filter(x => x.tk.status !== 'hecha' && !idsAtras.has(String(x.tk.id)) && (x.tk.status === 'no_hecha' || x.tk.note))
+    .map(x => ({titulo: x.tk.title, dia: x.day, fecha: x.fecha, porque: porque(x.tk)}));
+  const objetivos = plan360ObjetivosDelDia2().map(o => {
+    const e = p360ObjetivoEstado(o, hoy, remoteBiz.plan360StartDate);
+    return {titulo: o.titulo, prioridad: o.prioridad, inicial: o.valorInicial || '', meta: o.valorObjetivo || '', fechaMeta: o.fechaObjetivo || '', ultima: e.ult ? e.ult.valor : '', ultimaFecha: e.ult ? e.ult.fecha : '', estado: e.estado, texto: e.texto};
+  });
+  // Cifras: Día 1 frente al último mes completo (nunca el mes en curso, que está a medias).
+  const K = (remoteBiz && remoteBiz.plan360Kpis) || {};
+  const ult = p360KpisUltimoMes(K, hoy.slice(0, 7));
+  let cifras = [];
+  if(K.dia1 && ult && ult.k && ult.k !== K.dia1){
+    cifras = KPI_FILAS.filter(f => K.dia1[f.k] != null && ult.k[f.k] != null).map(f => {
+      const dlt = ult.k[f.k] - K.dia1[f.k];
+      const txt = Math.abs(dlt) < 0.05 ? 'igual' : (dlt > 0 ? '+' : '') + (f.fmt === 'eur' ? Math.round(dlt).toLocaleString('es-ES') + ' €' : f.fmt === 'pct' ? dlt.toLocaleString('es-ES', {maximumFractionDigits: 1}) + ' pt' : dlt.toLocaleString('es-ES', {maximumFractionDigits: 1}));
+      const bien = Math.abs(dlt) < 0.05 ? null : (f.mejor === 'sube' ? dlt > 0 : dlt < 0);
+      return {lbl: f.lbl, antes: kpiFmt(K.dia1[f.k], f.fmt), hoy: kpiFmt(ult.k[f.k], f.fmt), delta: txt, bien};
+    });
+  }
+  // Lo pendiente de la reunión anterior: sus notas y lo que se acordó en la última acta y sigue sin hacerse.
+  const previas = prog.filter(x => x && x.reunion && x.day < day).sort((a, b) => b.day - a.day);
+  const prev = previas[0] || null;
+  const actas = (remoteBiz.plan360Actas && typeof remoteBiz.plan360Actas === 'object') ? Object.values(remoteBiz.plan360Actas).sort((a, b) => (b.enviadoEn || 0) - (a.enviadoEn || 0)) : [];
+  const acta = actas.find(a => a.fecha && a.fecha <= (hoy > fecha ? fecha : hoy)) || null;
+  const acuerdos = acta ? (acta.decisiones || []).map(x => {
+    if(x.tipo !== 'tarea') return {texto: x.texto, tipo: x.tipo, estado: 'nota'};
+    const tk = todas.find(y => y.tk.title === String(x.texto).slice(0, 140));
+    return {texto: x.texto, tipo: x.tipo, estado: tk && tk.tk.status === 'hecha' ? 'hecha' : 'pendiente'};
+  }) : [];
+  return {day, fecha, atrasadas, bloqueadas, objetivos, cifras,
+    anterior: {hay: !!prev, fecha: prev ? plan360DateForDay(prev.day) : '', hecha: !!(prev && prev.reunion.hecha), notas: prev && prev.reunion.notas || '', actaFecha: acta ? acta.fecha : '', acuerdos}};
+}
+function ordenDiaSeccionesHtml(o){
+  const ul = (arr, f) => '<ul style="margin:4px 0 0;padding-left:18px">' + arr.map(f).join('') + '</ul>';
+  const sec = (t, cuerpo) => `<div class="card od-sec" style="margin-bottom:10px"><div style="font-weight:700;margin-bottom:2px">${esc(t)}</div>${cuerpo}</div>`;
+  const vacio = t => `<p class="muted" style="margin:2px 0 0;font-size:13px">${esc(t)}</p>`;
+  const s = [];
+  s.push(sec('Tareas atrasadas y por qué (' + o.atrasadas.length + ')', o.atrasadas.length
+    ? ul(o.atrasadas, x => `<li style="margin-bottom:4px"><strong>${esc(x.titulo)}</strong> <span class="muted">· día ${x.dia}, ${esc(fechaLegible(x.fecha))}</span><div style="font-size:13px">Porqué: ${esc(x.porque)}</div></li>`)
+    : vacio('Nada atrasado.')));
+  s.push(sec('Bloqueadas o con nota del negocio (' + o.bloqueadas.length + ')', o.bloqueadas.length
+    ? ul(o.bloqueadas, x => `<li style="margin-bottom:4px"><strong>${esc(x.titulo)}</strong> <span class="muted">· día ${x.dia}</span><div style="font-size:13px">${esc(x.porque)}</div></li>`)
+    : vacio('Ninguna.')));
+  s.push(sec('Objetivos (' + o.objetivos.length + ')', o.objetivos.length
+    ? ul(o.objetivos, x => { const st = P360_OBJ_ESTADO[x.estado]; return `<li style="margin-bottom:4px"><strong>${esc(x.titulo)}</strong> <span style="font-weight:700;color:${st.color}">${st.lbl}</span>
+        <div style="font-size:13px">${x.inicial ? 'Parte de ' + esc(x.inicial) : ''}${x.meta ? ' · objetivo ' + esc(x.meta) : ''}${x.fechaMeta ? ' · para el ' + esc(fechaLegible(x.fechaMeta)) : ''}${x.ultima !== '' ? ' · última medición ' + esc(x.ultima) + (x.ultimaFecha ? ' (' + esc(fechaLegible(x.ultimaFecha)) + ')' : '') : ' · sin medir'}</div>${x.texto ? `<div class="muted" style="font-size:12.5px">${esc(x.texto)}</div>` : ''}</li>`; })
+    : vacio('Todavía no hay objetivos en el Día 2.')));
+  if(o.cifras.length) s.push(sec('Números frente al Día 1', `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:360px"><tr style="color:var(--muted);font-size:12px"><td></td><td style="text-align:right;padding:4px 6px">Día 1</td><td style="text-align:right;padding:4px 6px">Último mes</td><td style="text-align:right;padding:4px 6px">Cambio</td></tr>
+    ${o.cifras.map(c => `<tr style="border-top:1px solid var(--border)"><td style="padding:5px 6px 5px 0">${esc(c.lbl)}</td><td style="text-align:right;padding:5px 6px;white-space:nowrap">${esc(c.antes)}</td><td style="text-align:right;padding:5px 6px;white-space:nowrap">${esc(c.hoy)}</td><td style="text-align:right;padding:5px 6px;white-space:nowrap;font-weight:600;color:${c.bien === null ? 'var(--muted)' : c.bien ? 'var(--green)' : 'var(--red)'}">${esc(c.delta)}</td></tr>`).join('')}</table></div>`));
+  const an = o.anterior;
+  s.push(sec('Pendiente de la reunión anterior', !an.hay && !an.acuerdos.length ? vacio('No hay una reunión anterior.')
+    : `${an.hay ? `<p style="margin:2px 0;font-size:13.5px">Reunión del ${esc(fechaLegible(an.fecha))}: ${an.hecha ? 'hecha' : 'no consta como hecha'}.${an.notas ? ' Notas: ' + esc(an.notas) : ''}</p>` : ''}
+       ${an.acuerdos.length ? `<div style="font-size:13px;margin-top:4px">Acuerdos del acta del ${esc(fechaLegible(an.actaFecha))}:</div>` + ul(an.acuerdos, x => `<li>${esc(x.texto)} <span class="muted">· ${x.estado === 'hecha' ? 'hecha' : x.estado === 'pendiente' ? '<b style="color:var(--red)">sin hacer</b>' : x.tipo === 'objetivo' ? 'objetivo' : 'nota'}</span></li>`) : ''}`));
+  return s.join('');
+}
+function ordenDiaGuionHtml(day){
+  const pre = ordenDiaGuion(day);
+  return pre.map((p, i) => `<div class="od-q" id="od-fila-${i}" data-id="${esc(p.id)}" style="padding:8px 0;border-top:1px solid var(--border)">
+    <div style="display:flex;gap:6px;align-items:flex-start">
+      <div class="field" style="flex:1;margin:0;min-width:0"><label for="od-q-${i}">Pregunta ${i + 1}</label><textarea id="od-q-${i}" rows="3">${esc(p.q || '')}</textarea></div>
+      ${p360MenuAcciones([{icono: 'ti-checkbox', texto: 'Pasar a acuerdo del acta', fn: `ordenDiaPasarAAcuerdo(${i})`}, {icono: 'ti-trash', texto: 'Quitar la pregunta', fn: `ordenDiaQuitarPregunta(${day},${i})`, peligro: true}], 'Acciones de la pregunta')}
+    </div>
+    <div class="field" style="margin:6px 0 0"><label for="od-a-${i}">Lo que contesta / lo que apuntas</label><textarea id="od-a-${i}" rows="2">${esc(p.a || '')}</textarea></div>
+  </div>`).join('');
+}
+let ordenDiaActivo = null;
+function renderOrdenDiaPage(day){
+  const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  if(!d || !d.reunion) return;
+  ordenDiaActivo = day;
+  const o = ordenDiaDatos(day);
+  const f = plan360FormatDate(day), sem = PLAN360_GUION_SEMANA[p360SemanaDeDia(day)];
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
+    <h2 style="margin:10px 0 4px">Orden del día</h2>
+    <p class="muted" style="margin-bottom:12px">Reunión ${d.reunion.tipo === 'presencial' ? 'presencial' : 'online'} · ${esc(f.weekday)} ${esc(f.dayMonth)} · se rellena sola con los datos de ${esc(remoteBiz.name || 'este negocio')}.</p>
+    ${ordenDiaSeccionesHtml(o)}
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-weight:700">Guion de preguntas · ${esc(sem.titulo)}</div>
+      <p class="muted" style="font-size:12.5px;margin:2px 0 6px">Edítalo y apunta lo que contesta. Se guarda solo para esta reunión y el negocio no lo ve.</p>
+      <div id="od-guion">${ordenDiaGuionHtml(day)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-sm" style="width:auto" onclick="ordenDiaAnadirPregunta(${day})"><i class="ti ti-plus"></i> Añadir pregunta</button>
+        <button class="btn btn-primary btn-sm" style="width:auto" onclick="ordenDiaGuardar(${day})">Guardar el guion</button>
+        <button class="btn btn-sm" style="width:auto" onclick="ordenDiaImprimir(${day})"><i class="ti ti-printer"></i> Imprimir</button>
+      </div>
+      <p id="od-estado" class="muted" style="font-size:12.5px;margin:6px 0 0"></p>
+    </div>
+    <div class="card">
+      <div style="font-weight:700">Acuerdos de la reunión</div>
+      <p class="muted" style="font-size:12.5px;margin:2px 0 6px">Se apuntan en el acta en vivo: al enviarla se convierten en tareas y objetivos.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="flex:1 1 260px;margin:0"><label for="od-acuerdo">Acuerdo</label><input id="od-acuerdo" placeholder="Qué se ha acordado" onkeydown="if(event.key==='Enter')ordenDiaAcuerdo()"></div>
+        <button class="btn btn-sm" style="width:auto" onclick="ordenDiaAcuerdo()">Añadir al acta</button>
+      </div>
+      <div id="od-acuerdos">${actaListaHtml()}</div>
+      <div style="margin-top:8px"><button class="btn btn-sm" style="width:auto" onclick="renderActaPage()"><i class="ti ti-notes"></i> Abrir el acta en vivo</button></div>
+    </div>`;
+}
+function ordenDiaLeerForm(day){
+  const filas = [...document.querySelectorAll('#od-guion .od-q')];
+  const g = {};
+  filas.forEach((fila, i) => {
+    const q = (document.getElementById('od-q-' + i).value || '').trim().slice(0, 300), a = (document.getElementById('od-a-' + i).value || '').trim().slice(0, 2000);
+    if(!q && !a) return;
+    g['g' + (i + 1)] = {o: i + 1, q, a};
+  });
+  return g;
+}
+function ordenDiaGuardar(day){
+  const est = document.getElementById('od-estado');
+  if(coachPrivate === null || !currentCoachPrivateRef){ if(est) est.textContent = 'Espera un momento: todavía se está conectando con su nube.'; return false; }
+  const g = ordenDiaLeerForm(day);
+  coachPrivate[ordenDiaClave(day)] = {guion: g, ts: Date.now()};
+  saveCoachPrivate();
+  if(est) est.textContent = 'Guion guardado.';
+  return true;
+}
+function ordenDiaAnadirPregunta(day){
+  const g = ordenDiaLeerForm(day);
+  const n = Object.keys(g).length + 1;
+  g['g' + n] = {o: n, q: 'Nueva pregunta', a: ''};
+  if(coachPrivate){ coachPrivate[ordenDiaClave(day)] = {guion: g, ts: Date.now()}; }
+  document.getElementById('od-guion').innerHTML = ordenDiaGuionHtml(day);
+  const t = document.getElementById('od-q-' + (n - 1)); if(t){ t.focus(); t.select(); }
+}
+function ordenDiaQuitarPregunta(day, i){
+  const g = ordenDiaLeerForm(day), ids = Object.keys(g);
+  const lista = ids.map(k => g[k]); lista.splice(i, 1);
+  const nuevo = {}; lista.forEach((x, j) => { nuevo['g' + (j + 1)] = Object.assign({}, x, {o: j + 1}); });
+  if(coachPrivate){ coachPrivate[ordenDiaClave(day)] = {guion: nuevo, ts: Date.now()}; }
+  document.getElementById('od-guion').innerHTML = ordenDiaGuionHtml(day);
+  const est = document.getElementById('od-estado'); if(est) est.textContent = 'Pregunta quitada: pulsa «Guardar el guion» para dejarlo así.';
+}
+// El acta en vivo es el único sitio donde los acuerdos se convierten en tareas: aquí solo se APUNTAN en su borrador.
+function actaApuntar(x){
+  actaBorrador.push(x);
+  const l = document.getElementById('acta-lista'); if(l) l.innerHTML = actaListaHtml();
+}
+function ordenDiaAcuerdo(texto){
+  const inp = document.getElementById('od-acuerdo');
+  const t = actaSanitizar(texto != null ? texto : (inp ? inp.value : ''));
+  if(!t){ alert('Escribe el acuerdo.'); return false; }
+  const dias = ordenDiaSiguientesDias();
+  // Sin días de trabajo por delante no hay dónde poner una tarea: queda como nota del acta.
+  actaApuntar(dias.length ? {tipo: 'tarea', texto: t, dia: dias[0].day, responsable: 'negocio', responsableNombre: '', fecha: ''} : {tipo: 'nota', texto: t, dia: null, responsable: '', responsableNombre: '', fecha: ''});
+  if(inp) inp.value = '';
+  const box = document.getElementById('od-acuerdos'); if(box) box.innerHTML = actaListaHtml();
+  return true;
+}
+function ordenDiaPasarAAcuerdo(i){
+  const q = document.getElementById('od-q-' + i), a = document.getElementById('od-a-' + i);
+  const t = ((a && a.value.trim()) || (q && q.value.trim()) || '');
+  ordenDiaAcuerdo(t);
+}
+function ordenDiaImprimir(day){
+  const o = ordenDiaDatos(day), d = (remoteBiz.plan360Program || []).find(x => x.day === day);
+  const g = ordenDiaLeerForm(day), guion = Object.keys(g).length ? Object.keys(g).map(k => g[k]) : ordenDiaGuion(day);
+  const tit = t => `<h2>${esc(t)}</h2>`;
+  const li = (arr, f, vacio) => arr.length ? '<ul>' + arr.map(f).join('') + '</ul>' : `<p class="m">${esc(vacio)}</p>`;
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Orden del día · ${esc(remoteBiz.name || '')} · ${esc(fechaLegible(o.fecha))}</title>
+  <style>@page{size:A4;margin:14mm}body{font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#1C1A17;font-size:13px;line-height:1.45}h1{font-size:22px;margin:0 0 2px}h2{font-size:14px;margin:16px 0 4px;padding-bottom:3px;border-bottom:1px solid #1C1A17}.s{color:#716C65;font-size:13px;margin-bottom:8px}.m{color:#716C65;margin:2px 0}ul{margin:4px 0;padding-left:18px}li{margin-bottom:3px}table{border-collapse:collapse;width:100%}td{padding:3px 6px 3px 0;border-top:1px solid #E7E2D9}td.n{text-align:right;white-space:nowrap}.q{break-inside:avoid;margin-bottom:10px}.l{border-bottom:1px solid #999;height:20px}</style></head><body>
+  <h1>Orden del día · reunión ${d && d.reunion && d.reunion.tipo === 'presencial' ? 'presencial' : 'online'}</h1><div class="s">${esc(remoteBiz.name || '')} · ${esc(fechaLegible(o.fecha))}</div>
+  ${tit('Tareas atrasadas y por qué')}${li(o.atrasadas, x => `<li><b>${esc(x.titulo)}</b> (día ${x.dia}). Porqué: ${esc(x.porque)}</li>`, 'Nada atrasado.')}
+  ${tit('Bloqueadas o con nota del negocio')}${li(o.bloqueadas, x => `<li><b>${esc(x.titulo)}</b>. ${esc(x.porque)}</li>`, 'Ninguna.')}
+  ${tit('Objetivos')}${li(o.objetivos, x => `<li><b>${esc(x.titulo)}</b> · ${esc(P360_OBJ_ESTADO[x.estado].lbl)}${x.inicial ? ' · parte de ' + esc(x.inicial) : ''}${x.meta ? ' · objetivo ' + esc(x.meta) : ''}${x.fechaMeta ? ' · para el ' + esc(fechaLegible(x.fechaMeta)) : ''}${x.ultima !== '' ? ' · última medición ' + esc(x.ultima) : ' · sin medir'}</li>`, 'Todavía no hay objetivos.')}
+  ${o.cifras.length ? tit('Números frente al Día 1') + '<table>' + o.cifras.map(c => `<tr><td>${esc(c.lbl)}</td><td class="n">${esc(c.antes)}</td><td class="n">${esc(c.hoy)}</td><td class="n"><b>${esc(c.delta)}</b></td></tr>`).join('') + '</table>' : ''}
+  ${tit('Pendiente de la reunión anterior')}${o.anterior.hay || o.anterior.acuerdos.length ? (o.anterior.hay ? `<p class="m">Reunión del ${esc(fechaLegible(o.anterior.fecha))}: ${o.anterior.hecha ? 'hecha' : 'no consta como hecha'}.${o.anterior.notas ? ' ' + esc(o.anterior.notas) : ''}</p>` : '') + li(o.anterior.acuerdos, x => `<li>${esc(x.texto)} (${x.estado === 'hecha' ? 'hecha' : x.estado === 'pendiente' ? 'sin hacer' : 'nota'})</li>`, '') : '<p class="m">No hay una reunión anterior.</p>'}
+  ${tit('Guion de preguntas')}${guion.map((p, i) => `<div class="q"><b>${i + 1}. ${esc(p.q)}</b>${p.a ? `<div>${esc(p.a)}</div>` : '<div class="l"></div><div class="l"></div>'}</div>`).join('')}
+  ${tit('Acuerdos')}<div class="l"></div><div class="l"></div><div class="l"></div>
+  <script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const win = window.open('', '_blank');
+  if(!win){ alert('El navegador ha bloqueado la ventana emergente: permite pop-ups para imprimir el orden del día.'); return; }
+  win.document.write(html); win.document.close();
+}
+function ordenDiaCardHtml(d){
+  if(!d || !d.reunion) return '';
+  return `<div class="card" style="margin-bottom:10px;background:var(--brand-cream)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <div style="flex:1 1 220px;min-width:0"><strong>Orden del día de la reunión</strong><div class="muted" style="font-size:12.5px">Atrasadas, objetivos, cifras y guion de preguntas, listos.</div></div>
+    <button type="button" class="btn btn-primary btn-sm" style="width:auto" onclick="renderOrdenDiaPage(${d.day})"><i class="ti ti-list-details"></i> Abrir el orden del día</button></div></div>`;
 }
 
 /* ---- Documentación inicial ---- */
@@ -6015,17 +7028,19 @@ function renderContractPage(){
   document.getElementById('client-grid').innerHTML = `
     <button class="btn btn-sm" onclick="renderIntakePage()">← Documentación inicial</button>
     <h2 style="margin:10px 0 4px">Contrato y RGPD</h2>
+    ${coachDatosBannerHtml()}
     ${plan360ContractSectionHtml()}
   `;
 }
 function plan360ContractSectionHtml(){
   const c = remoteBiz.plan360Contract || {};
-  const texto = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  // Un contrato ya firmado se enseña con el texto EXACTO que se aceptó (c.signedText, lo guarda la app), no con el de hoy.
+  const texto = (c.signedAt && c.signedText) || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
   if(c.signedAt){
     return `<div class="card" style="margin-top:14px">
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:10px">${esc(texto)}</div>
       <div class="card" style="background:var(--green-l);border-color:var(--green)">
-        ✓ Firmado por <strong>${esc(c.signedName)}</strong> (${esc(c.signedDNI)}) — ${esc(new Date(c.signedAt).toLocaleString('es-ES'))}
+        <i class="ti ti-check"></i> Firmado por <strong>${esc(c.signedName)}</strong> (${esc(c.signedDNI)}) — ${esc(new Date(c.signedAt).toLocaleString('es-ES'))}
       </div>
     </div>`;
   }
@@ -6051,6 +7066,9 @@ function plan360ContractSectionHtml(){
   </div>`;
 }
 function plan360SaveContractFields(){
+  // «Actualizar datos del contrato» es lo que deja el contrato listo para que el negocio lo vea y lo firme: sin tus datos no sale.
+  if(coachBloqueaContrato()) return false;
+  coachDatosSincronizar();
   const c = remoteBiz.plan360Contract;
   c.clienteNombre = (document.getElementById('c-nombre').value || '').trim();
   c.clienteNIF = (document.getElementById('c-nif').value || '').trim();
@@ -6060,6 +7078,7 @@ function plan360SaveContractFields(){
   saveRemoteBiz();
 }
 function plan360SignContract(){
+  if(coachBloqueaContrato()) return;
   const name = (document.getElementById('sign-name').value || '').trim();
   const dni = (document.getElementById('sign-dni').value || '').trim();
   if(!name || !dni){ alert('Escribe el nombre completo y el DNI para firmar.'); return; }
@@ -6164,9 +7183,7 @@ function plan360BlockToMarkup(b){
 }
 function plan360BlockToHtml(b, idx){
   const tools = `<div class="p360-block-tools">
-    <button type="button" title="Subir" onclick="plan360MoveBlock(${idx},-1)"><i class="ti ti-chevron-up"></i></button>
-    <button type="button" title="Bajar" onclick="plan360MoveBlock(${idx},1)"><i class="ti ti-chevron-down"></i></button>
-    <button type="button" title="Borrar" onclick="plan360DeleteBlock(${idx})"><i class="ti ti-trash"></i></button>
+    ${p360MenuAcciones([{icono: 'ti-chevron-up', texto: 'Subir el bloque', fn: `plan360MoveBlock(${idx},-1)`}, {icono: 'ti-chevron-down', texto: 'Bajar el bloque', fn: `plan360MoveBlock(${idx},1)`}, {icono: 'ti-trash', texto: 'Borrar el bloque', fn: `plan360DeleteBlock(${idx})`, peligro: true}], 'Acciones del bloque')}
   </div>`;
   let inner = '';
   if(b.type === 'h2') inner = `<h3 class="p360-doc-h2" contenteditable="true">${esc(b.text)}</h3>`;
@@ -6311,7 +7328,7 @@ function renderDocRicoPage(i){
     ${plan360DocRicoHtml(pl, doc.campos, 'editar', esc, remoteBiz.name || '', plan360DocTextoAnterior(doc))}
     <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0;margin-top:12px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center">
       <button class="btn btn-primary" onclick="saveDocRico(${i})">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-      <span id="dr-ok" class="muted" style="display:none">✓ Guardado — el negocio ya lo ve</span>
+      <span id="dr-ok" class="muted" style="display:none">Guardado — el negocio ya lo ve</span>
     </div>
   `;
 }
@@ -6348,7 +7365,7 @@ function renderDocSimplePage(i){
       </div>
       <div id="doc-editor" class="p360-doc-editor"></div>
       <button class="btn btn-primary" onclick="saveDocSimple(${i})" style="margin-top:16px">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-      <span id="doc-save-ok" class="muted" style="margin-left:10px;display:none">✓ Guardado y enviado</span>
+      <span id="doc-save-ok" class="muted" style="margin-left:10px;display:none">Guardado y enviado</span>
     </div>
   `;
   plan360RenderDocEditor();
@@ -6654,7 +7671,7 @@ function renderLibroMarcaHub(){
             <div class="muted" style="font-size:12px">${(doc.pdfSize / (1024 * 1024)).toFixed(1)} MB</div>
           </div>
           <button class="btn btn-sm" onclick="verLibroPdf()">Ver</button>
-          <button class="btn btn-sm" onclick="quitarLibroMarcaPdf()">Quitar</button>
+          ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar el PDF', fn: 'quitarLibroMarcaPdf()', peligro: true}], 'Acciones del PDF')}
         </div>
       ` : ''}
       <label class="btn btn-sm" style="display:inline-block;cursor:pointer">
@@ -6668,7 +7685,7 @@ function renderLibroMarcaHub(){
           ? `<button class="btn btn-primary" onclick="publicarLibroMarca()">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
              <p class="muted" style="margin-top:8px">Se envía el PDF que has subido.</p>`
           : `<button class="btn btn-sm" onclick="publicarLibroMarca()">Volver a enviar (con el PDF actual)</button>
-             <p class="muted" style="margin-top:8px">✓ Enviado — el negocio ya lo ve.</p>`}
+             <p class="muted" style="margin-top:8px">Enviado — el negocio ya lo ve.</p>`}
       </div>
     ` : `
       <p class="muted" style="margin:14px 0">Hasta que no subas un PDF, el negocio no ve nada en Libro de marca. Herramienta para ir montando el contenido mientras tanto (esto NO lo ve el negocio):</p>
@@ -6682,6 +7699,7 @@ function renderLibroMarcaHub(){
   `;
 }
 function publicarLibroMarca(){
+  if(!coachAvisoDatos('el libro de marca')) return;
   const doc = (remoteBiz.plan360Docs || []).find(d => d.id === 'identidad');
   if(!doc) return;
   if(!confirm('¿Enviar el documento al negocio con lo que hay ahora mismo?')) return;
@@ -6703,6 +7721,7 @@ function renderDayDetail(day){
 function objRow(o, i){
   const col = plan360ObjPriorityColor(o.prioridad);
   return `<div class="card" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
+    ${plan360ObjetivoMetaHtml(o)}
     <div class="field" style="margin-bottom:8px">
       <label>Título</label>
       <input id="obj-titulo-${i}" value="${esc(o.titulo || '')}">
@@ -6853,7 +7872,7 @@ function renderNegocioExport(day){
     <div class="card">
       <textarea id="neg-export-text" rows="20" readonly style="font-family:'IBM Plex Mono',monospace;font-size:12px">${esc(texto)}</textarea>
       <button class="btn btn-primary" onclick="copiarNegocioTexto()" style="margin-top:10px"><i class="ti ti-copy"></i> Copiar todo</button>
-      <span id="neg-copy-ok" class="muted" style="margin-left:10px;display:none">Copiado ✓</span>
+      <span id="neg-copy-ok" class="muted" style="margin-left:10px;display:none">Copiado</span>
     </div>
   `;
 }
@@ -6902,7 +7921,7 @@ function renderNegocioBlockPage(day, areaIdx, subIdx){
               ${q.fileData ? `
                 <div style="display:flex;align-items:center;gap:8px;font-size:13px">
                   <i class="ti ti-paperclip"></i> ${esc(q.fileName || 'archivo')}
-                  <button type="button" class="btn btn-sm" onclick="quitarArchivoNegocio(${day},${areaIdx},${subIdx},${i})">Quitar</button>
+                  ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar el archivo', fn: `quitarArchivoNegocio(${day},${areaIdx},${subIdx},${i})`, peligro: true}], 'Acciones del archivo')}
                 </div>
               ` : `
                 <input type="file" accept="image/*,.pdf" onchange="subirArchivoNegocio(this,${day},${areaIdx},${subIdx},${i})">
@@ -7106,6 +8125,7 @@ function renderPlanAccionPage(day){
             <strong style="flex:1">${esc(o.titulo)}</strong>
           </div>
           ${o.explicacion ? `<p class="muted" style="margin:4px 0 0 17px;font-size:13px">${esc(o.explicacion)}</p>` : ''}
+          <div style="margin:6px 0 0 17px">${plan360ObjetivoMetaHtml(o)}</div>
         </div>
       `).join('') : '<p class="muted">Todavía no se han fijado objetivos.</p>'}
     </div>
@@ -7126,7 +8146,7 @@ function renderInversionesPage(day){
       <input id="inv-nombre-${i}" value="${esc(x.nombre || '')}" placeholder="Inversión / material" style="flex:2;min-width:180px">
       <input id="inv-zona-${i}" value="${esc(x.zona || '')}" placeholder="Zona" style="flex:1;min-width:110px">
       <input id="inv-coste-${i}" type="number" min="0" value="${x.coste || ''}" placeholder="Coste €" style="flex:none;width:110px">
-      <button class="btn btn-sm" onclick="borrarInversion(${day},${i})" title="Quitar">✕</button>
+      ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar la inversión', fn: `borrarInversion(${day},${i})`, peligro: true}], 'Acciones de la inversión')}
     </div>
     <textarea id="inv-porque-${i}" rows="2" placeholder="Por qué / qué resuelve" style="width:100%;margin-top:8px">${esc(x.porque || '')}</textarea>
   </div>`;
@@ -7156,7 +8176,7 @@ function renderInversionesPage(day){
     </div>
     <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0;margin-top:12px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="saveInversiones(${day})">Guardar y enviar a ${esc(remoteBiz.name || 'este negocio')}</button>
-      <span id="inv-ok" class="muted" style="display:none">✓ Guardado — el negocio ya lo ve</span>
+      <span id="inv-ok" class="muted" style="display:none">Guardado — el negocio ya lo ve</span>
     </div>
     <p class="muted" style="margin:18px 0 6px">Así lo ve el negocio:</p>
     <div id="inv-preview">${plan360InversionesHtml(d, esc, remoteBiz.name || '')}</div>
@@ -7452,7 +8472,7 @@ function tbRenderIntro(box, day, tb){
       ${tbPruebaCard(1, 'ti-brain', 'Test', 'Preguntas de hostelería. Responde primero el equipo que sepa la respuesta — un acierto, un punto.')}
       ${tbPruebaCard(2, 'ti-eye', 'Los 5 sentidos', 'Vista (sopa de letras), Oído, Olfato, Gusto y Tacto — un punto por cada acierto en cada uno.')}
       ${tbPruebaCard(3, 'ti-chef-hat', 'Creatividad', `${tb.creatividad.presupuesto}€ y ${tb.creatividad.tiempoMin} min para ir al súper, comprar, preparar y servir algo propio.`)}
-      ${tbPruebaCard('🏆', '', 'Marcador final', 'Se suman las 3 pruebas. El equipo con más puntos se lleva el premio.')}
+      ${tbPruebaCard('<i class="ti ti-trophy"></i>', '', 'Marcador final', 'Se suman las 3 pruebas. El equipo con más puntos se lleva el premio.')}
       <p class="muted" style="margin-bottom:0">Dos equipos MEZCLADOS a propósito — cocina y sala repartidos entre los dos, nunca "cocina contra sala". El objetivo es que se conozcan entre puestos, no que gane un departamento.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -7636,7 +8656,7 @@ function tbRenderKahoot(box, day, tb){
       </div>
       ${!q ? '<p class="muted">No hay preguntas todavía — añade alguna en el editor de abajo.</p>' : `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TB_DIFICULTAD_COLOR[q.dificultad]||'var(--muted)'}">${esc(PLAN360_TB_DIFICULTAD_LABEL[q.dificultad] || '')}</span>
+          <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TB_DIFICULTAD_COLOR[q.dificultad]||'var(--muted)'}">${esc(PLAN360_TB_DIFICULTAD_LABEL[q.dificultad] || '')}</span>
           <div style="flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
             <div id="tb-kahoot-barra" style="height:100%;background:var(--ink);width:${corriendo ? (tbTimerRestante/k.tiempoSeg*100) : (k.revelada?0:100)}%;transition:width 1s linear"></div>
           </div>
@@ -7668,8 +8688,8 @@ function tbRenderKahoot(box, day, tb){
         ` : `
           <p class="muted" style="font-size:12px">¿Qué equipos la acertaron? Los dos pueden llevarse el punto si los dos la dijeron bien.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button class="btn ${marc.A?'btn-primary':''}" onclick="tbKahootPunto(${day},'A')">${marc.A?'✓ ':''}Acertó ${esc(tb.equipoA)}</button>
-            <button class="btn ${marc.B?'btn-primary':''}" onclick="tbKahootPunto(${day},'B')">${marc.B?'✓ ':''}Acertó ${esc(tb.equipoB)}</button>
+            <button class="btn ${marc.A?'btn-primary':''}" onclick="tbKahootPunto(${day},'A')">${marc.A?'<i class="ti ti-check"></i> ':''}Acertó ${esc(tb.equipoA)}</button>
+            <button class="btn ${marc.B?'btn-primary':''}" onclick="tbKahootPunto(${day},'B')">${marc.B?'<i class="ti ti-check"></i> ':''}Acertó ${esc(tb.equipoB)}</button>
           </div>
           <button class="btn btn-sm" onclick="tbKahootSiguiente(${day})">${i < total - 1 ? 'Siguiente pregunta →' : 'Ver resultado del Test →'}</button>
         `}
@@ -7686,7 +8706,7 @@ function tbRenderKahoot(box, day, tb){
           <div class="card" style="background:var(--bg)">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <span class="muted">Pregunta ${qi + 1} · ${esc(PLAN360_TB_DIFICULTAD_LABEL[qq.dificultad] || '')}</span>
-              <button class="btn btn-sm btn-danger" onclick="tbKahootBorrar(${day},${qi})"><i class="ti ti-trash"></i></button>
+              ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar la pregunta', fn: `tbKahootBorrar(${day},${qi})`, peligro: true}], 'Acciones de la pregunta')}
             </div>
             <select onchange="tbKahootDificultad(${day},${qi},this.value)" style="margin-bottom:10px;min-height:40px">
               ${['facil','media','dificil'].map(d => `<option value="${d}" ${qq.dificultad===d?'selected':''}>${PLAN360_TB_DIFICULTAD_LABEL[d]}</option>`).join('')}
@@ -7732,9 +8752,9 @@ function tbRenderKahootResultado(box, day, tb){
           <div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${k.puntos.B}</div>
         </div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en el Test' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana el Test`}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? 'Empate en el Test' : `${esc(ganaA?tb.equipoA:tb.equipoB)} gana el Test`}</div>
     </div>
-    <button class="btn btn-sm" onclick="tbKahootRepetir(${day})">↺ Repetir el Test desde la pregunta 1</button>
+    <button class="btn btn-sm" onclick="tbKahootRepetir(${day})"><i class="ti ti-rotate"></i> Repetir el Test desde la pregunta 1</button>
     <button class="btn btn-primary" onclick="tbIr(${day},'${PLAN360_TB_SENTIDOS[0].id}')">Siguiente prueba: ${esc(PLAN360_TB_SENTIDOS[0].label)} →</button>
   `;
 }
@@ -7902,9 +8922,9 @@ function tbRenderBanco(day, tb, sen){
           ${it.revelado
             ? `<span style="flex:1;min-width:100px">${esc(it.nombre) || '<span class=\"muted\">(sin nombre)</span>'}</span>`
             : `<button class="btn btn-sm" onclick="tbBancoRevelar(${day},'${sen.id}',${idx})" style="flex:1;min-width:100px" title="Revelar qué era">? ¿Qué era?</button>`}
-          <button class="btn btn-sm ${it.aciertoA?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'A')">${it.aciertoA?'✓ ':''}${esc(tb.equipoA)}</button>
-          <button class="btn btn-sm ${it.aciertoB?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'B')">${it.aciertoB?'✓ ':''}${esc(tb.equipoB)}</button>
-          <button class="btn btn-sm btn-icon" onclick="tbBancoBorrar(${day},'${sen.id}',${idx})" title="Quitar"><i class="ti ti-trash"></i></button>
+          <button class="btn btn-sm ${it.aciertoA?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'A')">${it.aciertoA?'<i class="ti ti-check"></i> ':''}${esc(tb.equipoA)}</button>
+          <button class="btn btn-sm ${it.aciertoB?'btn-primary':''}" onclick="tbBancoAcierto(${day},'${sen.id}',${idx},'B')">${it.aciertoB?'<i class="ti ti-check"></i> ':''}${esc(tb.equipoB)}</button>
+          ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar el sonido', fn: `tbBancoBorrar(${day},'${sen.id}',${idx})`, peligro: true}], 'Acciones del sonido')}
         </div>
         ${!it.revelado ? `<div style="padding:0 0 6px ${sen.necesitaAudio?'30':'0'}px"><input placeholder="¿Qué es? (oculto hasta revelar)" value="${esc(it.nombre)}" onchange="tbBancoNombre(${day},'${sen.id}',${idx},this.value)" style="width:100%;max-width:320px"></div>` : ''}
       `).join('')}
@@ -7935,7 +8955,7 @@ function tbRenderBancoResultado(day, tb, sen, banco){
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? `🤝 Empate en ${esc(sen.label)}` : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana ${esc(sen.label)}`}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? `Empate en ${esc(sen.label)}` : `${esc(ganaA?tb.equipoA:tb.equipoB)} gana ${esc(sen.label)}`}</div>
     </div>
     <button class="btn btn-sm" onclick="tbBancoVolver(${day},'${sen.id}')">← Volver a los sonidos</button>
     ${tbSiguienteSentidoBtn(day, sen.id)}
@@ -8189,9 +9209,9 @@ function tbRenderVistaResultado(day, tb, v){
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1"><div style="font-weight:700">${esc(tb.equipoB)}</div><div style="font-size:44px;font-weight:800;${ganaB?'color:var(--brand-orange,#F0A868)':''}">${totalB}</div></div>
       </div>
-      <div style="margin-top:12px;font-size:16px">${empate ? '🤝 Empate en Vista' : `🎉 ${esc(ganaA?tb.equipoA:tb.equipoB)} gana Vista`}</div>
+      <div style="margin-top:12px;font-size:16px">${empate ? 'Empate en Vista' : `${esc(ganaA?tb.equipoA:tb.equipoB)} gana Vista`}</div>
     </div>
-    <button class="btn btn-sm" onclick="tbVistaRepetir(${day})">↺ Repetir Vista</button>
+    <button class="btn btn-sm" onclick="tbVistaRepetir(${day})"><i class="ti ti-rotate"></i> Repetir Vista</button>
     ${tbSiguienteSentidoBtn(day, 'vista')}
   `;
 }
@@ -8340,14 +9360,14 @@ function tbRenderCreatividadIntro(box, day, tb){
       <div style="margin-top:14px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Cómo se va a evaluar cada plato:</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${c.criterios.map((cr, ci) => `<span class="badge" style="display:inline-flex;align-items:center;gap:5px">${esc(cr)} <button onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar" style="border:none;background:none;cursor:pointer;color:inherit;padding:0;font-size:12px;line-height:1">✕</button></span>`).join('')}
+          ${c.criterios.map((cr, ci) => `<span class="badge" style="display:inline-flex;align-items:center;gap:5px">${esc(cr)} <button onclick="tbCreatividadCriterioBorrar(${day},${ci})" title="Quitar" aria-label="Quitar" style="border:none;background:none;cursor:pointer;color:inherit;padding:0;font-size:12px;line-height:1"><i class="ti ti-x"></i></button></span>`).join('')}
         </div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <input id="tb-nuevo-criterio" placeholder="Añadir criterio (ej. Aprovechamiento del presupuesto)" style="flex:1">
           <button class="btn btn-sm" onclick="tbCreatividadCriterioAnadir(${day})">Añadir</button>
         </div>
       </div>
-      <button class="btn btn-primary" style="margin-top:18px" onclick="tbCreatividadEmpezar(${day})">▶️ Empezar (${c.tiempoMin} min)</button>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="tbCreatividadEmpezar(${day})">Empezar (${c.tiempoMin} min)</button>
     </div>
   `;
 }
@@ -8378,7 +9398,7 @@ function tbRenderCreatividadPreparando(box, day, tb){
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">
         <button class="btn btn-sm" onclick="tbCreatividadAjustarTiempo(${day},5)">+5 min</button>
         <button class="btn btn-sm" onclick="tbCreatividadAjustarTiempo(${day},-5)">-5 min</button>
-        <button class="btn btn-primary" onclick="tbCreatividadTerminarTiempo(${day})">🍽️ Terminar y pasar a evaluar</button>
+        <button class="btn btn-primary" onclick="tbCreatividadTerminarTiempo(${day})">Terminar y pasar a evaluar</button>
       </div>
     </div>
   `;
@@ -8446,7 +9466,7 @@ function tbRenderCreatividadEvaluando(box, day, tb){
         <div style="text-align:center;font-weight:800;font-size:18px">${subA}</div>
         <div style="text-align:center;font-weight:800;font-size:18px">${subB}</div>
       </div>
-      <button class="btn btn-primary" style="margin-top:16px" onclick="tbCreatividadResolver(${day})">🍽️ Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="tbCreatividadResolver(${day})">Decidir ganador de la prueba (${subA > subB ? esc(tb.equipoA) : (subB > subA ? esc(tb.equipoB) : 'empate ahora mismo')})</button>
     </div>
   `;
 }
@@ -8532,18 +9552,18 @@ function tbRenderCreatividadResultado(box, day, tb){
       <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#999)">Resultado de Creatividad</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px">
         <div style="flex:1;${ganaA ? 'transform:scale(1.08)' : ''}">
-          <div style="font-weight:700">${esc(tb.equipoA)}${ganaA ? ' 🏆' : ''}</div>
+          <div style="font-weight:700">${esc(tb.equipoA)}</div>
           <div style="font-size:44px;font-weight:800;${ganaA ? 'color:var(--brand-orange,#F0A868)' : ''}">${subA}</div>
           <div style="font-size:12px;opacity:.7">${c.puntos.A} pto${c.puntos.A === 1 ? '' : 's'} de la prueba</div>
         </div>
         <div style="opacity:.5;font-size:20px">—</div>
         <div style="flex:1;${ganaB ? 'transform:scale(1.08)' : ''}">
-          <div style="font-weight:700">${esc(tb.equipoB)}${ganaB ? ' 🏆' : ''}</div>
+          <div style="font-weight:700">${esc(tb.equipoB)}</div>
           <div style="font-size:44px;font-weight:800;${ganaB ? 'color:var(--brand-orange,#F0A868)' : ''}">${subB}</div>
           <div style="font-size:12px;opacity:.7">${c.puntos.B} pto${c.puntos.B === 1 ? '' : 's'} de la prueba</div>
         </div>
       </div>
-      <div style="margin-top:14px;font-size:16px">${empate ? '🤝 Empate en Creatividad' : `🎉 ${esc(ganaA ? tb.equipoA : tb.equipoB)} gana la prueba de Creatividad`}</div>
+      <div style="margin-top:14px;font-size:16px">${empate ? 'Empate en Creatividad' : `${esc(ganaA ? tb.equipoA : tb.equipoB)} gana la prueba de Creatividad`}</div>
     </div>
     ${(c.fotoA || c.fotoB) ? `
     <div class="card">
@@ -8552,7 +9572,7 @@ function tbRenderCreatividadResultado(box, day, tb){
         ${c.fotoB ? `<div style="text-align:center"><img src="${esc(c.fotoB)}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;border:${ganaB ? '3px solid var(--brand-orange,#F0A868)' : '1px solid var(--border)'}"><div style="font-size:12px;margin-top:4px">${esc(tb.equipoB)}</div></div>` : ''}
       </div>
     </div>` : ''}
-    <button class="btn btn-sm" onclick="tbCreatividadRepetir(${day})">↺ Repetir Creatividad desde el principio</button>
+    <button class="btn btn-sm" onclick="tbCreatividadRepetir(${day})"><i class="ti ti-rotate"></i> Repetir Creatividad desde el principio</button>
     <button class="btn btn-primary" onclick="tbIr(${day},'final')">Ver marcador final →</button>
   `;
 }
@@ -8586,8 +9606,8 @@ function tbRenderFinal(box, day, tb){
       </div>
       <div id="tb-final-ganador" style="margin-top:14px;font-size:18px;min-height:26px"></div>
       ${empate
-        ? `<div style="margin-top:6px;font-size:14px;opacity:.8">🤝 Empate — no hay equipo ganador</div>`
-        : `<button id="tb-final-btn-ganador" class="btn btn-primary" style="margin-top:6px" onclick="tbMostrarGanadorFinal(${day})">🏆 Mostrar equipo ganador</button>`}
+        ? `<div style="margin-top:6px;font-size:14px;opacity:.8">Empate — no hay equipo ganador</div>`
+        : `<button id="tb-final-btn-ganador" class="btn btn-primary" style="margin-top:6px" onclick="tbMostrarGanadorFinal(${day})"><i class="ti ti-trophy"></i> Mostrar equipo ganador</button>`}
     </div>
     ${(tb.integrantesA || tb.integrantesB) ? `
     <div class="card" style="display:flex;gap:10px">
@@ -8618,10 +9638,10 @@ function tbRenderFinal(box, day, tb){
         ${PLAN360_TB_PREMIOS.map(p => `<button class="btn btn-sm" data-v="${esc(p)}" onclick="tbElegirPremio(${day},this.dataset.v)">${esc(p)}</button>`).join('')}
       </div>
       <button class="btn btn-sm" onclick="tbGuardarPremio(${day})">Guardar premio</button>
-      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} data-g="${esc(ganador||'')}" data-p="${esc(tb.premio||'')}" data-f="${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}" onclick="tbRevelarPremio(this.dataset.g, this.dataset.p, this.dataset.f)" style="margin-left:6px">🎁 Premios</button>
+      <button class="btn btn-primary" ${empate?'disabled title="Hay empate, no se puede revelar un ganador"':''} data-g="${esc(ganador||'')}" data-p="${esc(tb.premio||'')}" data-f="${esc((ganaA?tb.creatividad.fotoA:tb.creatividad.fotoB)||'')}" onclick="tbRevelarPremio(this.dataset.g, this.dataset.p, this.dataset.f)" style="margin-left:6px">Premios</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="tbReiniciar(${day})">↺ Reiniciar las 3 pruebas</button>
+      <button class="btn btn-sm" onclick="tbReiniciar(${day})"><i class="ti ti-rotate"></i> Reiniciar las 3 pruebas</button>
       ${!tb.completadoAt ? `<button class="btn btn-primary" onclick="marcarTeamBuildingHecha(${day})">Marcar como hecha</button>` : '<p class="muted" style="margin:0">Marcada como hecha — el marcador se puede seguir tocando.</p>'}
     </div>
   `;
@@ -8643,7 +9663,7 @@ function tbMostrarGanadorFinal(day){
   const btn = document.getElementById('tb-final-btn-ganador');
   if(elA && ganaA) elA.style.color = 'var(--brand-orange,#F0A868)';
   if(elB && ganaB) elB.style.color = 'var(--brand-orange,#F0A868)';
-  if(elG) elG.textContent = `🏆 Gana ${ganaA ? tb.equipoA : tb.equipoB}`;
+  if(elG) elG.textContent = `Gana ${ganaA ? tb.equipoA : tb.equipoB}`;
   if(btn) btn.style.display = 'none';
   tbAcorde();
 }
@@ -8681,7 +9701,7 @@ function tbRevelarPremio(ganador, premio, foto){
     <div id="tb-rev-confeti" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
     <div id="tb-rev-suspense" style="font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--muted,#999);animation:tbPulso 1s infinite">Calculando resultados…</div>
     <div id="tb-rev-final" style="display:none">
-      <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite">🏆</div>
+      <div style="font-size:64px;animation:tbFlota 2s ease-in-out infinite"><i class="ti ti-trophy"></i></div>
       <div style="font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--brand-orange,#F0A868);margin-top:10px">¡Habéis ganado!</div>
       <div style="font-size:44px;font-weight:800;margin-top:6px">${esc(ganador)}</div>
       ${foto ? `<img src="${esc(foto)}" style="width:140px;height:140px;object-fit:cover;border-radius:14px;margin-top:18px;border:3px solid var(--brand-orange,#F0A868)">` : ''}
@@ -8946,7 +9966,7 @@ function renderMisteryHub(day){
     <button class="btn btn-sm" onclick="renderDayDetail(${day})">← Día ${day}</button>
     <h2 style="margin:10px 0 4px">Cliente misterioso</h2>
     <p class="muted" style="margin-bottom:14px">Puntúa cada bloque; la nota del bloque y la nota final se calculan solas.</p>
-    ${mc.sentAt ? `<div class="card" style="background:var(--green-l);border-color:var(--green);margin-bottom:14px">✓ Enviado al negocio el ${esc(new Date(mc.sentAt).toLocaleString('es-ES'))}</div>` : ''}
+    ${mc.sentAt ? `<div class="card" style="background:var(--green-l);border-color:var(--green);margin-bottom:14px">Enviado al negocio el ${esc(new Date(mc.sentAt).toLocaleString('es-ES'))}</div>` : ''}
     ${mc.blocks.map((b, bi) => {
       const avg = plan360MisteryBlockAvg(b);
       const col = plan360ScoreColor(avg);
@@ -9003,6 +10023,7 @@ function saveMisteryBlock(day, blockIdx){
   renderMisteryHub(day);
 }
 function sendMisteryCheck(day){
+  if(!coachAvisoDatos('el diagnóstico')) return;
   if(!confirm('¿Enviar el diagnóstico? El negocio verá el informe entero, con todas las notas, en su propia app.')) return;
   const d = (remoteBiz.plan360Program || []).find(x => x.day === day);
   d.misteryCheck.sentAt = Date.now();
@@ -9125,10 +10146,26 @@ const PLAN360_CONTENT_BANK = [
   {categoria: 'Delivery', titulo: 'Margen real del delivery', descripcion: 'Lo que se queda la plataforma más el envase frente al precio del plato. Subir precios de la carta de delivery si no deja margen.', metrica: 'Margen por pedido de delivery'},
   {categoria: 'Delivery', titulo: 'Empujar el pedido directo', descripcion: 'Pedido online propio (sin comisión) en la bolsa, en redes y en la ficha de Google.', metrica: '% de pedidos directos frente a plataforma'},
   {categoria: 'Finanzas', titulo: 'Plan de 90 días', descripcion: 'Las tres prioridades de los próximos tres meses, con responsable, fecha y cifra.', metrica: 'Nº de acciones cumplidas a los 90 días'},
-  {categoria: 'Cliente', titulo: 'Mistery check interno', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
+  {categoria: 'Cliente', titulo: 'Cliente misterioso', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
 ];
+// Orden lógico de la operativa de un restaurante (cocina → sala → carta → compras → equipo → números → mercado). Antes salían
+// en el orden en que se fueron añadiendo módulos, y «Todas» por defecto soltaba 61 botones sin orden.
+const PLAN360_BANCO_ORDEN = ['Cocina', 'Sala', 'Carta', 'Compras', 'Personal', 'Números', 'Finanzas', 'Marketing', 'Cliente', 'Delivery'];
 function plan360BancoCategorias(){
-  return [...new Set(PLAN360_CONTENT_BANK.map(m => m.categoria))];
+  const hay = [...new Set(PLAN360_CONTENT_BANK.map(m => m.categoria))];
+  return hay.sort((a, b) => {
+    const ia = PLAN360_BANCO_ORDEN.indexOf(a), ib = PLAN360_BANCO_ORDEN.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+}
+// El banco va plegado: son ~60 botones que empujaban las tareas reales casi 1.000 px abajo. Se abre con un botón y
+// arranca ya en la primera categoría, no en «Todas».
+let plan360BancoAbierto = false;
+function plan360BancoToggle(){
+  plan360BancoAbierto = !plan360BancoAbierto;
+  const box = document.getElementById('banco-caja'), btn = document.getElementById('banco-toggle');
+  if(box) box.style.display = plan360BancoAbierto ? '' : 'none';
+  if(btn){ btn.setAttribute('aria-expanded', plan360BancoAbierto ? 'true' : 'false'); btn.innerHTML = plan360BancoAbierto ? '<i class="ti ti-chevron-up"></i> Ocultar el banco de tareas' : '<i class="ti ti-plus"></i> Añadir del banco de tareas'; }
 }
 function plan360BancoModulosHtml(categoria){
   const usados = new Set((plan360TrabajoDiaActivo.tasks || []).map(tk => tk.title));
@@ -9178,8 +10215,8 @@ function taskRow(tk, i){
         <option value="">— Sin objetivo —</option>
         ${objetivos.map(o => `<option value="${o.id}" ${tk.objectiveId === o.id ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}
       </select>
-      <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[estado]};white-space:nowrap">${PLAN360_TASK_ESTADO_LABEL[estado]}</span>
-      <button class="btn btn-sm btn-icon" onclick="borrarTask(${i})" title="Quitar tarea"><i class="ti ti-trash"></i></button>
+      <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[estado]};white-space:nowrap">${PLAN360_TASK_ESTADO_LABEL[estado]}</span>
+      ${p360MenuAcciones([{icono: 'ti-trash', texto: 'Quitar tarea', fn: `borrarTask(${i})`, peligro: true}], 'Acciones de la tarea')}
     </div>
     <div class="field" style="margin-bottom:8px"><label>Título</label><input id="task-title-${i}" value="${esc(tk.title)}" placeholder="Qué hay que hacer"></div>
     <div class="field" style="margin-bottom:8px"><label>Descripción</label><textarea id="task-desc-${i}" rows="3" placeholder="Por qué / cómo se hace">${esc(tk.description || '')}</textarea></div>
@@ -9187,14 +10224,16 @@ function taskRow(tk, i){
       <select id="task-enlace-${i}"><option value="">— sin enlace —</option>${Object.entries(PLAN360_ENLACES_PANEL).map(([k, n]) => `<option value="${k}" ${tk.enlace===k?'selected':''}>${esc(n)}</option>`).join('')}</select>
       <div class="txt-xs" style="color:var(--muted)">El negocio verá un botón «Ir a…» que le lleva directo a esa pantalla de su app.</div></div>
     ${tk.note ? `<div class="field" style="margin-bottom:8px"><label>Nota del negocio</label><p style="font-size:13px;margin:0;padding:8px;background:var(--brand-cream);border-radius:6px">${esc(tk.note)}</p></div>` : ''}
+    ${p360PruebaBotonHtml(tk, i)}
     <div style="font-size:12px;color:var(--muted)">
-      <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto">
+      <input type="file" id="task-file-${i}" accept="image/*,.pdf" style="width:auto;max-width:100%">
       ${tk.fileName ? esc(tk.fileName) + ' <a href="#" onclick="event.preventDefault();document.getElementById(\'task-file-clear-' + i + '\').value=\'1\'">Eliminar</a><input type="hidden" id="task-file-clear-' + i + '">' : ''}
     </div>
   </div>`;
 }
 function renderTrabajoPage(d){
   plan360TrabajoDiaActivo = d;
+  plan360BancoAbierto = false;
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
@@ -9217,6 +10256,7 @@ function renderTrabajoPage(d){
           <option value="online" ${d.reunion && d.reunion.tipo==='online'?'selected':''}>Online</option>
         </select>
       </div>
+      ${ordenDiaCardHtml(d)}
       ${d.reunion ? `
         <div class="card" style="margin-bottom:10px;background:var(--brand-cream)">
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Agenda — qué objetivos se revisan</div>
@@ -9227,20 +10267,21 @@ function renderTrabajoPage(d){
             </label>
           `).join('') : '<p class="muted" style="margin:0">Todavía no hay objetivos en el Día 2.</p>'}
           <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${d.reunion.hecha?'var(--green)':'var(--muted)'}">${d.reunion.hecha?'Hecha':'Pendiente'}</span>
+            <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;color:#fff;background:${d.reunion.hecha?'var(--green)':'var(--muted)'}">${d.reunion.hecha?'Hecha':'Pendiente'}</span>
             ${d.reunion.notas ? `<p style="font-size:13px;margin:8px 0 0">${esc(d.reunion.notas)}</p>` : '<p class="muted" style="font-size:12px;margin:8px 0 0">Todavía sin notas del negocio.</p>'}
           </div>
         </div>
       ` : ''}
       <div style="font-weight:600;margin-bottom:6px">Tareas</div>
       ${!plan360ObjetivosDelDia2().length ? `<p class="muted" style="margin-bottom:10px">Todavía no hay objetivos fijados en el Día 2 — las tareas se pueden crear igual, pero sin enganchar a ninguno hasta que el negocio los ponga.</p>` : ''}
-      <div class="card" style="margin-bottom:10px;background:var(--brand-cream)">
+      <button class="btn btn-sm" id="banco-toggle" aria-expanded="${plan360BancoAbierto}" onclick="plan360BancoToggle()" style="margin-bottom:10px">${plan360BancoAbierto ? '<i class="ti ti-chevron-up"></i> Ocultar el banco de tareas' : '<i class="ti ti-plus"></i> Añadir del banco de tareas'}</button>
+      <div class="card" id="banco-caja" style="margin-bottom:10px;background:var(--brand-cream);${plan360BancoAbierto ? '' : 'display:none'}">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Banco de contenido — un toque para añadirla a este día (luego se puede editar como cualquier otra)</div>
         <select id="banco-categoria" onchange="cambiarBancoCategoria()" style="margin-bottom:8px">
           <option value="">Todas las categorías</option>
-          ${plan360BancoCategorias().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          ${plan360BancoCategorias().map((c, i) => `<option value="${esc(c)}" ${i === 0 ? 'selected' : ''}>${esc(c)}</option>`).join('')}
         </select>
-        <div id="banco-modulos" style="display:flex;flex-wrap:wrap;gap:6px">${plan360BancoModulosHtml('')}</div>
+        <div id="banco-modulos" style="display:flex;flex-wrap:wrap;gap:6px">${plan360BancoModulosHtml(plan360BancoCategorias()[0] || '')}</div>
       </div>
       <div id="task-list">${d.tasks.map((tk, i) => taskRow(tk, i)).join('')}</div>
       <button class="btn btn-sm" onclick="addTask(${d.day})" style="margin:6px 0 16px">+ Añadir tarea (especial de este local)</button>
@@ -9359,10 +10400,10 @@ function renderSummaryPage(){
   const tareaLinea = tk => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">
     <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;color:#fff;background:${PLAN360_TASK_ESTADO_COLOR[tk.status || 'pendiente']};flex:none">${PLAN360_TASK_ESTADO_LABEL[tk.status || 'pendiente']}</span>
     <span class="muted" style="flex:none">${esc(plan360FormatDate(tk.day).dayMonth)}</span>
-    <span style="flex:1">${esc(tk.title)}</span>
+    <span style="flex:1;min-width:0;overflow-wrap:break-word">${esc(tk.title)}</span>
   </div>`;
   document.getElementById('client-grid').innerHTML = `
-    ${plan360PageHeader('★ Resumen del programa')}
+    ${plan360PageHeader('Resumen del programa')}
     <div class="card" style="margin-top:14px">
       <div style="font-weight:600">Tareas completadas</div>
       <div style="font-size:28px;font-weight:800;margin-top:4px">${hechas.length}<span style="font-size:16px;color:var(--muted);font-weight:600"> / ${tareas.length}</span></div>
@@ -9372,12 +10413,12 @@ function renderSummaryPage(){
       <div class="card" style="margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="width:9px;height:9px;border-radius:50%;background:${plan360ObjPriorityColor(g.obj.prioridad)};flex:none"></span>
-          <strong style="flex:1">${esc(g.obj.titulo)}</strong>
-          <span class="muted" style="font-size:12px">${g.tareas.length} tarea${g.tareas.length === 1 ? '' : 's'}</span>
+          <strong style="flex:1;min-width:0;overflow-wrap:break-word">${esc(g.obj.titulo)}</strong>
+          <span class="muted" style="font-size:12px">${plural(g.tareas.length, 'tarea', 'tareas')}</span>
         </div>
         ${plan360MedicionesResumenHtml(g.obj)}
         ${g.tareas.length ? g.tareas.map(tareaLinea).join('')
-          : '<p style="margin:0;font-size:13px;color:var(--red)">⚠ Sin ninguna tarea asignada todavía en los 26 días de trabajo.</p>'}
+          : '<p style="margin:0;font-size:13px;color:var(--red)">Sin ninguna tarea asignada todavía en los ' + plural(trabajo.length, 'día', 'días') + ' de trabajo.</p>'}
       </div>`).join('')}
     ${sinObjetivo.length ? `
       <div class="card" style="margin-bottom:10px;border-color:var(--amber)">

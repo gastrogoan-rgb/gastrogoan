@@ -7281,6 +7281,63 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
 .p360-estados .btn{justify-content:center;min-height:44px;padding-left:4px;padding-right:4px;letter-spacing:0}
 .p360-tarea-nota{margin:10px 0 0}
 .p360-tarea-nota textarea{resize:none}
+/* Tarea del Plan 360º plegable en móvil (norma «lo denso se pliega», 25/11): a la vista título + estado; el resto, tras un toque. */
+.p360-tarea-cab{display:flex;align-items:center;gap:8px;min-height:44px}
+.p360-tarea-cab .p360-tarea-tit{flex:1;min-width:0}
+.p360-tarea-est{flex:none;font:600 11px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted);background:#fff}
+.p360-tarea-est.is-hecha{color:var(--green);border-color:var(--green);background:var(--green-l)}
+.p360-tarea-est.is-no_hecha{color:var(--red);border-color:var(--red);background:var(--red-l)}
+.p360-tarea .pl-extra{margin-top:6px}
+.p360-tarea-area{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--olive,#4A5D4E);margin-bottom:2px}
+/* Prueba (foto o archivo) de la tarea */
+.p360-prueba{margin-top:10px}
+.p360-prueba-et{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.p360-prueba-fila{display:flex;align-items:center;gap:10px}
+.p360-prueba-nom{flex:1;min-width:0;font-size:13px;overflow-wrap:break-word}
+.p360-prueba-mini{flex:none;width:56px;height:56px;padding:0;border:1px solid var(--border);background:#fff;cursor:pointer;border-radius:3px;overflow:hidden}
+.p360-prueba-mini img{width:100%;height:100%;object-fit:cover;display:block}
+/* Servicio terminado: todo se ve, nada se edita (25/11). */
+.p360-solo-lectura{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;background:var(--cream,#F1EFE9);border-color:var(--ink)}
+.p360-solo-lectura > i{font-size:22px;flex:none;margin-top:1px}
+.p360-solo-lectura strong{display:block;margin-bottom:2px}
+.p360-tarea-nota-fija p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:break-word}
+/* Marcador semanal frente al Día 1 y radar antes/después (25/11). La flecha lleva texto oculto: el color solo no basta. */
+.p360-semanal{margin-bottom:14px}
+.p360-semanal-t{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.p360-sem-fila{display:grid;grid-template-columns:minmax(0,1fr) auto 26px;align-items:center;gap:4px 10px;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px}
+.p360-sem-nom{min-width:0;overflow-wrap:break-word}
+.p360-sem-cifras{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+/* En PC el radar y sus cifras van lado a lado: apilados dejaban medio ancho vacío (norma de espacios muertos). */
+@media(min-width:900px){.p360-radar-cuerpo{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);column-gap:28px;align-items:center}}
+.p360-flecha{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;flex:none;font-size:16px;align-self:center}
+.p360-flecha.is-mejor{color:var(--green);background:var(--green-l,#E4EDE6)}
+.p360-flecha.is-peor{color:var(--red);background:var(--red-l,#F3DDD7)}
+.p360-flecha.is-igual{color:var(--muted);background:var(--cream,#F1EFE9)}
+.p360-sem-ganado{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:8px;padding:10px 12px;border-left:3px solid var(--green);background:var(--cream,#F1EFE9)}
+.p360-sem-ganado.is-peor{border-left-color:var(--red)}
+.p360-sem-ganado strong{font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.p360-radar-bloque{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.p360-radar-t{margin:0 0 4px;font-size:14px;font-weight:600}
+.p360-radar-ley{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted);margin-bottom:6px}
+.p360-radar-ley span{display:inline-flex;align-items:center;gap:6px}
+.p360-ley-linea{display:inline-block;width:22px;height:0;border-top:2px solid #4A5D4E}
+.p360-ley-linea.is-antes{border-top:2px dashed #716C65}
+/* Casilla de las tareas del mantenimiento: la casilla se ve de 22 px pero la zona de toque es de 44 */
+.p360-chk44{flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-8px 0 -8px -11px;cursor:pointer}
+/* Objetivos del negocio */
+.p360-obj-cab-fila{display:flex;align-items:flex-start;gap:6px}
+.p360-obj-cab-fila .p360-obj-tit{flex:1;min-width:0}
+.p360-obj-valores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px}
+.p360-obj-valores .field{margin-bottom:0}
+.p360-obj-urg-fija{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:44px}
+.p360-obj-urg-chip{font:600 12px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border:2px solid var(--border);border-radius:999px}
+.p360-med{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;flex-wrap:wrap}
+.p360-med-nota{min-width:0;overflow-wrap:break-word;flex:1}
+.p360-med .mn-btn{margin-left:auto}
+@media (max-width:760px){
+  .p360-tarea:not(.is-abierta) .pl-extra{display:none}
+  .p360-tarea.plegable{cursor:pointer}
+}
 @media (max-width:720px){
   /* Sin raya gruesa de acento sobre cada tarjeta (norma del barrido del 7/11) */
   #plan360-content .card{border-top:1px solid var(--border)}
@@ -7288,6 +7345,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--olive)}
   .p360-hero{border-top:1px solid var(--olive)}
   .p360-hero-stat-num{font-size:24px}
   .p360-hero-stat-label{font-size:11px;letter-spacing:.02em;overflow-wrap:break-word}
+  /* En 360 px «COMPLETADAS» no cabía en un tercio de la franja y se partía a media palabra («COMPLETADA / S»): menos aire a los lados
+     y sin espaciado de letras para que la palabra entera quepa (norma: una palabra nunca se parte). */
+  .p360-hero{padding-left:14px;padding-right:14px}
+  .p360-hero-stat{padding:0 6px}
+  .p360-hero-stat-label{letter-spacing:0}
   .p360-atr-fila{grid-template-columns:minmax(0,1fr);gap:4px;min-height:0;padding:10px 0}
   .p360-atr-chip{justify-self:start;min-width:140px}
   .p360-day-progress{font-size:12px}

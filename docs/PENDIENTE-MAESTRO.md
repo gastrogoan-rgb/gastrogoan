@@ -1,0 +1,68 @@
+# Pendiente maestro de GastroGoan
+
+**Un solo sitio para todo lo que queda por hacer.** Actualizado el 25/11/2026 (miércoles). Meta inmediata: poder empezar a vender el lunes 30/11 con tranquilidad.
+Quién: **Yo** = Claude · **Juntos** = hacen falta tus cuentas · **Tú** = solo tú puedes. Marca `[x]` al terminar y ponle la fecha.
+Los demás pendientes antiguos siguen en `docs/PENDIENTES.md`, `docs/PENDIENTE.md` y `reports/`; este manda cuando haya duda.
+
+## 1. En curso ahora mismo
+- [ ] **Yo** · Plan 360º, tanda 2 (dos agentes en paralelo):
+  - Panel: guion y orden del día de las reuniones, alertas al coach, «Mis datos de coach», archivar clientes terminados, mostrar fotos y objetivos nuevos, menú ⋯ en todas las filas.
+  - App: fotos de prueba a un bloque aparte (riesgo de peso), prueba de sincronización con dos aparatos, datos del coach fuera del código, marcador semanal frente al Día 1, radar con más ejes si hay datos, informe de cierre pulido, solo lectura al terminar, manual y ayuda en es/ca/en.
+- [ ] **Yo** · Batería completa (`bash test/todo.sh`), publicar con sello de versión y decirte qué mirar y dónde.
+  Estado previo: tanda 1 (auditoría) ya pasó la batería: 237 en verde y solo el fallo aceptado de Comandas Cocina.
+
+## 2. Antes del lunes (para vender tranquilos)
+Detalle en `docs/CHECKLIST-LUNES.md`.
+- [ ] **Yo** · Revisión de seguridad con mentalidad de atacante, con un objetivo cada vez: leer reservas de otro negocio · usar la app sin pagar · entrar como dueño ajeno · bloquear la web de reservas de otro. Cada hallazgo con prueba.
+- [ ] **Yo** · Herramientas automáticas: gitleaks, Semgrep, `npm audit`, cabeceras de los tres dominios.
+- [ ] **Yo** · Cambiar el cifrado débil del PIN (con migración).
+- [ ] **Tú** · Segunda IA (Gemini o ChatGPT) revisando el repositorio con los mismos objetivos de atacante.
+- [ ] **Juntos** · **Cobro automático del Plan 360** con Stripe (950 € + IVA, o 475 € al firmar y 475 € el día 15): enlace de pago, confirmación en `plan360Servicio.cobros360`, aviso en la agenda. Hace falta tu Stripe y pegar el Worker en Cloudflare.
+- [ ] **Juntos** · Prueba de alta completa de un cliente nuevo en el dominio real.
+- [ ] **Juntos** · Decidir LaLiga (ver 4).
+- [ ] **Tú** · Escribir tu DNI e IBAN en «Mis datos de coach» del panel (sin eso el contrato no se envía).
+- [ ] **Tú** · Comprobar el enlace de Stripe de la App y que la web diga 300 € + IVA el primer año.
+- [ ] **Tú** · Abogado: condiciones de compra, privacidad y contrato del Plan 360 (también su traducción al catalán y al inglés).
+- [ ] **Tú** · Soporte: WhatsApp, horario y qué hacer si un cliente pierde el PIN.
+- [ ] **Tú** · Elegir 2 o 3 primeros clientes a los que puedas llamar cada día.
+- [ ] **Tú** · Verificación en dos pasos en todas tus cuentas, códigos de recuperación impresos y una segunda persona con acceso de emergencia (`docs/GUIA-PARA-EL-DUENO.md`).
+- [ ] **Yo** · Responder al informático: enviar el email y el dossier. **Tú** lo envías; ya está redactado y en PDF. Antes, que diga si el análisis tiene coste.
+
+## 3. Después del lunes (por orden)
+- [ ] **Juntos** · **Plan de continuidad: que la app no se caiga y no dependamos de nadie.** Un solo punto con cinco partes: (1) copias fuera de nuestras cuentas, del código y del registro de licencias (`issuedCodes`, `ownerNames`, `codeClaims`, `adminSalesLog`), con una restauración probada de verdad; (2) accesos de respaldo, o sea verificación en dos pasos, códigos impresos y una segunda persona con acceso de emergencia en GitHub, Cloudflare, Firebase y Stripe; (3) volver a la versión anterior en dos clics, practicado una vez; (4) vigilancia gratuita que avise si cae `app.`, `reservas.` o `admin.`; (5) guías al día (`CLAUDE.md`, `docs/GUIA-PARA-EL-DUENO.md`) y un procedimiento para que otra persona o IA pueda retomar el proyecto sin nosotros. Detalle en `docs/GUIA-PARA-EL-DUENO.md`, secciones 3 a 5 y 9.
+- [ ] **Yo** · **Repasado global de fallos de copias viejas** (lo que pidió el 25/11 tras el bug de la contraseña): empleados (bajas, permisos, sesiones abiertas), nombre y licencia del negocio, web pública frente a la app, ajustes por aparato (claves de IA, VeriFactu, idioma, QR de mesa). Un agente a la vez, con una prueba por hallazgo.
+- [ ] **Yo** · Partir `sales` por meses en la nube. Es lo que probablemente hace que la app se cuelgue unos segundos al cobrar. Pide emulador de dos aparatos y tu visto bueno.
+- [ ] **Yo** · Cobro que se cuelga: sigue sin causa confirmada. Cuando lo notes, dime cuántas ventas llevas en el día y qué pulsas.
+- [ ] **Yo** · `tenantLookup` se puede sobrescribir desde cualquier sesión (regla de la plataforma): decidir si se corrige y publicar reglas.
+- [ ] **Yo** · Política de contenido (CSP) de las tres webs, con cuidado de no romper nada.
+- [ ] **Juntos** · Retirar el «secreto heredado de Firebase» del Worker de pagos: yo preparo los pasos y tú lo cambias en Firebase y Cloudflare.
+- [ ] **Yo** · Barredor de ventanas a 360 px (`test/ventanas-todas.mjs`) se queda sin tiempo en inicio, Mega Lista e I+D. Arreglar el test o la causa.
+- [ ] **Yo** · Cinco pruebas antiguas del emulador (QR y espejo) que ya fallaban antes. Revisar.
+- [ ] **Yo** · Importar la liquidación de Glovo, Uber Eats y Just Eat cuando tengamos ficheros reales (ventas, comisión e IVA).
+- [ ] **Tú** · Mensajes a Glovo, Uber Eats, Just Eat y Deliverect para pedir acceso a su API (textos preparados antes). Credenciales de pruebas siempre por `request_credential`, nunca en el chat.
+- [ ] **Juntos** · Servidores para LaLiga (ver 4).
+- [ ] **Tú** · Probar con una clave real de IA el módulo de I+D (Gemini, Claude o ChatGPT). Sin eso no sabemos si el módulo vale.
+- [ ] **Tú** · Probar con el hardware delante: impresora térmica, cajón, iPhone y iPad.
+- [ ] **Tú** · Primer servicio real con un cliente: es lo que más fallos encuentra.
+
+## 4. LaLiga (bloqueos de Cloudflare en partidos)
+- Causa: operadores bloquean por IP; Cloudflare no da IP dedicada en el plan gratuito.
+- Plan: dos servidores con IP propia en proveedores distintos (por ejemplo Hetzner y otro), con Caddy, `unattended-upgrades` y despliegue automático desde GitHub. Primero la web de reservas y la comercial; la app después. Kit preparado en `servidor/`, sin usar.
+- Coste previsto: unos 5 a 10 € al mes por servidor. Es la excepción a tu norma de cero cuotas, ya aceptada.
+- [ ] **Tú** · Elegir proveedores y crear las cuentas. **Yo** · comprobar antes que las IP no estén en la lista de bloqueo (hayahora.futbol), preparar el kit y probarlo en un partido.
+
+## 5. Decisiones que dependen de ti
+- [ ] ¿Repositorio privado? Oculta el generador de licencias, pero GitHub Actions pasa a 2.000 minutos al mes y la batería completa en cada push los gastaría.
+- [ ] ¿Se corrige `tenantLookup` ahora o se deja como riesgo documentado?
+- [ ] ¿Partir `sales` por meses antes o después del lunes?
+- [ ] ¿Traducir el contrato del Plan 360 al catalán y al inglés con revisión legal, o dejarlo solo en castellano?
+- [ ] ¿Cuándo se migra todo (app, comercial y admin) al servidor propio?
+
+## 6. No prometer todavía
+VeriFactu como funcional · pedidos de Glovo/Uber/Just Eat dentro de la app · Bizum con Stripe Connect v2 · cobro automático del Plan 360 (hasta que esté hecho) · que no habrá fallos.
+
+## 7. Hechos hoy (25/11)
+- Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador manda la nube. Publicado con sello 25/11/2026 11:44.
+- Dossier técnico para el informático (PDF y Word) y borrador de respuesta.
+- Plan 360º: auditoría completa, plantilla base de 34 tareas, arreglos de la tanda 1 en app y panel.
+- Documentos: `docs/CHECKLIST-LUNES.md`, `docs/GUIA-PARA-EL-DUENO.md` y este.

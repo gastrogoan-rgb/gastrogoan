@@ -21,6 +21,7 @@ vm.runInContext([
   trozo('function mantFechaItem', '\nfunction'),
   trozo('const P360_FASES', 'function p360CambiarFase'),
   trozo('function p360Fecha(', 'async function renderMiSemana'),
+  trozo('function p360CuotaSinCobrar', '\n/*'),   // definida DESPUÉS de renderMiSemana (la agenda y las alertas la comparten)
   trozo('function stableJson', '\nfunction'),
   trozo('const MANT_NIVELES', 'function saveRemoteBiz'),
   'const MANT_CUOTA = 75;',

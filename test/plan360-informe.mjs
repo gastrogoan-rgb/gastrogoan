@@ -45,7 +45,7 @@ await caso('El informe lleva las cifras de antes y ahora con su diferencia en eu
   assert.ok(/\+/.test(r.html), 'sin diferencia en euros');
 });
 await caso('El informe lleva los objetivos con su medición y su resultado, y los textos del coach', async () => {
-  assert.ok(/Bajar el food cost/.test(r.html) && /35 % → 31 %/.test(r.html) && /Cumplido/.test(r.html));
+  assert.ok(/Bajar el food cost/.test(r.html) && /Inicio 35 %/.test(r.html) && /Ahora 31 %/.test(r.html) && /Cumplido/.test(r.html));
   assert.ok(/La cocina trabaja con fichas/.test(r.html) && /La subida del aceite/.test(r.html) && /Carta nueva/.test(r.html));
 });
 await caso('El informe NO lleva la oferta de mantenimiento', async () => {

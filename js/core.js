@@ -4480,6 +4480,17 @@ const PLAN360_INV_NIVELES = [
   {id: 'esencial', color: 'amarillo', nombre: 'Esencial', resumen: 'Mejora experiencia, eficiencia y rentabilidad.', incluye: 'Mejora experiencia, eficiencia y rentabilidad. Recepción del cliente, vajilla/cristalería, pintura y luz, herramientas de gestión (TPV, reservas).', ejemplo: 'Ej: renovar vajilla/cristalería, pintura, luz cálida, plantas, atril/cartelería, TPV y software de reservas, carta QR.'},
   {id: 'complementario', color: 'verde', nombre: 'Complementario', resumen: 'Marca y ticket medio. Lo que pule.', incluye: 'Marca y ticket medio. Mobiliario y decoración, acústica, fotografía profesional, packaging propio, branding y señalética.', ejemplo: 'Ej: mobiliario y decoración, acústica y música, fotografía profesional, packaging propio, branding y señalética nueva.'},
 ];
+// Los textos de los tres niveles son del propio programa (no del coach): se traducen al PINTAR, el dato guardado es solo la clave `nivel`.
+const PLAN360_INV_NIVELES_TR = {
+  prioritario: {ca:{nombre:'Prioritari', resumen:'Estabilitza i evita pèrdues. S\'inverteix primer.', incluye:'Estabilitza i evita pèrdues. Maquinària crítica avariada, seguretat, higiene greu, alguna cosa trencada que impedeix operar. S\'inverteix primer.'}, en:{nombre:'Priority', resumen:'Stabilises and prevents losses. Invest first.', incluye:'Stabilises and prevents losses. Broken critical machinery, safety, serious hygiene issues, anything broken that stops you operating. Invest first.'}},
+  esencial: {ca:{nombre:'Essencial', resumen:'Millora l\'experiència, l\'eficiència i la rendibilitat.', incluye:'Millora l\'experiència, l\'eficiència i la rendibilitat. Recepció del client, vaixella/cristalleria, pintura i llum, eines de gestió (TPV, reserves).'}, en:{nombre:'Essential', resumen:'Improves experience, efficiency and profitability.', incluye:'Improves experience, efficiency and profitability. Guest reception, tableware/glassware, paint and lighting, management tools (POS, bookings).'}},
+  complementario: {ca:{nombre:'Complementari', resumen:'Marca i tiquet mitjà. El que polix.', incluye:'Marca i tiquet mitjà. Mobiliari i decoració, acústica, fotografia professional, packaging propi, branding i retolació.'}, en:{nombre:'Complementary', resumen:'Brand and average ticket. The finishing touches.', incluye:'Brand and average ticket. Furniture and decor, acoustics, professional photography, own packaging, branding and signage.'}},
+};
+function plan360InvNivelTxt(n){
+  const idioma = typeof getLang === 'function' ? getLang() : 'es';
+  const tr = PLAN360_INV_NIVELES_TR[n.id] && PLAN360_INV_NIVELES_TR[n.id][idioma];
+  return tr ? Object.assign({}, n, tr) : n;
+}
 function plan360InvEuros(n){
   // Punto de miles siempre: toLocaleString('es-ES') no lo pone con cuatro
   // cifras, y en la misma tabla salían «9000 €» junto a «13.200 €».
@@ -4493,9 +4504,10 @@ function plan360InversionesHtml(d, esc, negocio){
   const presu = Number(d.presupuestoMaximo) || 0;
   const dif = presu - total;
   const escala = Math.max(total, presu) || 1;
-  const barra = `<div class="dr-inv-bar">${PLAN360_INV_NIVELES.map(n => sub[n.id] ? `<i class="dr-inv-${n.color}" style="width:${(sub[n.id] / escala * 100).toFixed(2)}%"></i>` : '').join('')}${presu ? `<b style="left:${(presu / escala * 100).toFixed(2)}%"><span style="${presu / escala > 0.7 ? 'right:6px' : 'left:6px'}">Presupuesto ${plan360InvEuros(presu)}</span></b>` : ''}</div>
-    <div class="dr-inv-ley">${PLAN360_INV_NIVELES.map(n => `<span><i class="dr-inv-${n.color}"></i>${n.nombre} · ${plan360InvEuros(sub[n.id])}</span>`).join('')}</div>`;
-  const bloque = n => {
+  const barra = `<div class="dr-inv-bar">${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => sub[n.id] ? `<i class="dr-inv-${n.color}" style="width:${(sub[n.id] / escala * 100).toFixed(2)}%"></i>` : '').join('')}${presu ? `<b style="left:${(presu / escala * 100).toFixed(2)}%"><span style="${presu / escala > 0.7 ? 'right:6px' : 'left:6px'}">Presupuesto ${plan360InvEuros(presu)}</span></b>` : ''}</div>
+    <div class="dr-inv-ley">${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => `<span><i class="dr-inv-${n.color}"></i>${n.nombre} · ${plan360InvEuros(sub[n.id])}</span>`).join('')}</div>`;
+  const bloque = n0 => {
+    const n = plan360InvNivelTxt(n0);
     const lista = items.filter(x => (x.nivel || 'esencial') === n.id);
     if(!lista.length) return '';
     return `<div class="dr-inv-n dr-inv-n-${n.color}">
@@ -4508,35 +4520,35 @@ function plan360InversionesHtml(d, esc, negocio){
     </div>`;
   };
   return `<div class="dr-doc">
-    <div class="dr-portada"><div class="dr-portada-e">GastroGoan · Plan 360° · Plan exprés</div><div class="dr-portada-t">Plan de inversiones</div><div class="dr-portada-s">Qué necesita comprar o reformar el local, y en qué orden.</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}${d.inversionesFecha ? ` · ${esc(d.inversionesFecha)}` : ''}</div>` : ''}</div>
+    <div class="dr-portada"><div class="dr-portada-e">${gl({es:'GastroGoan · Plan 360° · Plan exprés', ca:'GastroGoan · Pla 360° · Pla exprés', en:'GastroGoan · 360° Plan · Express plan'})}</div><div class="dr-portada-t">${gl({es:'Plan de inversiones</div><div class="dr-portada-s">Qué necesita comprar o reformar el local, y en qué orden.', ca:'Pla d\'inversions</div><div class="dr-portada-s">Què necessita comprar o reformar el local, i en quin ordre.', en:'Investment plan</div><div class="dr-portada-s">What the venue needs to buy or refurbish, and in what order.'})}</div>${negocio ? `<div class="dr-portada-n">${esc(negocio)}${d.inversionesFecha ? ` · ${esc(d.inversionesFecha)}` : ''}</div>` : ''}</div>
     <div class="dr-cuerpo">
       <div class="dr-datos">
-        <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">inversión total necesaria</div></div>
-        <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">presupuesto máximo que asume el negocio</div></div>
-        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? 'diferencia' : dif < 0 ? 'de exceso sobre el presupuesto' : 'de margen dentro del presupuesto'}</div></div>
-        <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">inversiones detectadas</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${plan360InvEuros(total)}</div><div class="dr-dato-l">${gl({es:'inversión total necesaria</div></div>', ca:'inversió total necessària</div></div>', en:'total investment needed</div></div>'})}
+        <div class="dr-dato"><div class="dr-dato-v">${presu ? plan360InvEuros(presu) : '—'}</div><div class="dr-dato-l">${gl({es:'presupuesto máximo que asume el negocio', ca:'pressupost màxim que assumeix el negoci', en:'maximum budget the business takes on'})}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v" style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</div><div class="dr-dato-l">${!presu ? gl({es:'diferencia', ca:'diferència', en:'difference'}) : dif < 0 ? gl({es:'de exceso sobre el presupuesto', ca:'d\'excés sobre el pressupost', en:'over the budget'}) : gl({es:'de margen dentro del presupuesto', ca:'de marge dins del pressupost', en:'of room within the budget'})}</div></div>
+        <div class="dr-dato"><div class="dr-dato-v">${items.length}</div><div class="dr-dato-l">${gl({es:'inversiones detectadas', ca:'inversions detectades', en:'investments identified'})}</div></div>
       </div>
       ${total ? barra : ''}
-      <p class="dr-p">Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.</p>
-      <div class="dr-regla"><span>★ Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.</div>
-      <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">Listado por prioridad</div><div class="dr-cap-t">Inversiones necesarias</div><div class="dr-cap-s">Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).</div></div>
-      ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : '<p class="dr-p">Tu coach todavía no ha añadido inversiones.</p>'}
-      <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">Resumen económico</div><div class="dr-cap-t">Con el dinero delante</div><div class="dr-cap-s">Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.</div></div>
+      <p class="dr-p">${gl({es:'Esta plantilla acompaña al Plan de Acción, pero separa lo que hay que COMPRAR o REFORMAR de lo que hay que hacer. Se clasifica con los mismos 3 colores y se pone un coste estimado a cada inversión, para que el dueño decida con el dinero delante.', ca:'Aquesta plantilla acompanya el Pla d\'Acció, però separa el que cal COMPRAR o REFORMAR del que cal fer. Es classifica amb els mateixos 3 colors i es posa un cost estimat a cada inversió, perquè el propietari decideixi amb els diners al davant.', en:'This template goes with the Action Plan, but separates what has to be BOUGHT or REFURBISHED from what has to be done. It uses the same 3 colours and gives each investment an estimated cost, so the owner decides with the money in front of them.'})}</p>
+      <div class="dr-regla"><span>${gl({es:'Clave</span>La jerarquía del gasto inteligente: primero lo que evita perder dinero o cerrar (maquinaria crítica, seguridad), luego lo que hace ganar (imagen, herramientas de venta) y por último lo que diferencia (marca, detalles). Limpieza + luz + pintura dan el 70% de la mejora percibida por menos del 30% del gasto.', ca:'Clau</span>La jerarquia de la despesa intel·ligent: primer el que evita perdre diners o tancar (maquinària crítica, seguretat), després el que fa guanyar (imatge, eines de venda) i per últim el que diferencia (marca, detalls). Neteja + llum + pintura donen el 70% de la millora percebuda per menys del 30% de la despesa.', en:'Key</span>The hierarchy of smart spending: first what stops you losing money or closing (critical machinery, safety), then what makes you earn (image, sales tools) and last what sets you apart (brand, details). Cleaning + lighting + paint give 70% of the perceived improvement for under 30% of the spend.'})}</div>
+      <div class="dr-cap"><span class="dr-cap-n">01</span><div class="dr-cap-e">${gl({es:'Listado por prioridad', ca:'Llistat per prioritat', en:'List by priority'})}</div><div class="dr-cap-t">${gl({es:'Inversiones necesarias', ca:'Inversions necessàries', en:'Investments needed'})}</div><div class="dr-cap-s">${gl({es:'Los colores marcan el orden de gasto: rojo primero (lo que estabiliza), verde al final (lo que pule).', ca:'Els colors marquen l\'ordre de despesa: vermell primer (el que estabilitza), verd al final (el que polix).', en:'The colours set the order of spending: red first (what stabilises), green last (what polishes).'})}</div></div>
+      ${items.length ? PLAN360_INV_NIVELES.map(bloque).join('') : `<p class="dr-p">${gl({es:'Tu coach todavía no ha añadido inversiones.', ca:'El teu coach encara no ha afegit inversions.', en:'Your coach has not added any investments yet.'})}</p>`}
+      <div class="dr-cap"><span class="dr-cap-n">02</span><div class="dr-cap-e">${gl({es:'Resumen económico', ca:'Resum econòmic', en:'Financial summary'})}</div><div class="dr-cap-t">${gl({es:'Con el dinero delante', ca:'Amb els diners al davant', en:'With the money in front of you'})}</div><div class="dr-cap-s">${gl({es:'Cada bloque suma su subtotal, y al final se compara el total con el presupuesto disponible.', ca:'Cada bloc suma el seu subtotal, i al final es compara el total amb el pressupost disponible.', en:'Each block adds its subtotal, and at the end the total is compared with the available budget.'})}</div></div>
       <div class="dr-tabla-w"><table class="dr-tabla dr-inv-res"><tbody>
-        ${PLAN360_INV_NIVELES.map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>Subtotal ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
-        <tr class="dr-inv-tot"><td>Inversión total necesaria</td><td>${plan360InvEuros(total)}</td></tr>
-        <tr><td>Presupuesto máximo del negocio</td><td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
-        <tr class="dr-inv-tot"><td>Diferencia (margen o exceso)</td><td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
+        ${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => `<tr><td><span class="dr-inv-dot dr-inv-${n.color}"></span>${gl({es:'Subtotal', ca:'Subtotal', en:'Subtotal'})} ${n.nombre}</td><td>${plan360InvEuros(sub[n.id])}</td></tr>`).join('')}
+        <tr class="dr-inv-tot"><td>${gl({es:'Inversión total necesaria</td>', ca:'Inversió total necessària</td>', en:'Total investment needed</td>'})}<td>${plan360InvEuros(total)}</td></tr>
+        <tr><td>${gl({es:'Presupuesto máximo del negocio</td>', ca:'Pressupost màxim del negoci</td>', en:'Maximum budget of the business</td>'})}<td>${presu ? plan360InvEuros(presu) : '—'}</td></tr>
+        <tr class="dr-inv-tot"><td>${gl({es:'Diferencia (margen o exceso)</td>', ca:'Diferència (marge o excés)</td>', en:'Difference (room or excess)</td>'})}<td style="color:${!presu ? 'inherit' : dif < 0 ? '#8A4A3B' : '#4A5D4E'}">${presu ? (dif < 0 ? '−' : '+') + plan360InvEuros(Math.abs(dif)) : '—'}</td></tr>
       </tbody></table></div>
-      <div class="dr-regla"><span>★ Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.</div>
-      ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">Decisión y notas: qué se aprueba en esta fase y qué se aplaza</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
-      <div class="dr-h">Los 3 niveles de inversión</div>
-      <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>Color</th><th>Nivel</th><th>Qué incluye</th></tr></thead><tbody>
-        ${PLAN360_INV_NIVELES.map(n => `<tr><td data-l="Color"><span class="dr-inv-dot dr-inv-${n.color}"></span>${n.color === 'rojo' ? 'Rojo' : n.color === 'amarillo' ? 'Amarillo' : 'Verde'}</td><td data-l="Nivel">${n.nombre.toUpperCase()}</td><td data-l="Qué incluye">${esc(n.incluye)}</td></tr>`).join('')}
+      <div class="dr-regla"><span>${gl({es:'Clave</span>Si el total supera el presupuesto, no se recorta a ciegas: se ejecuta el rojo entero sí o sí, el amarillo hasta donde llegue, y el verde se aplaza. Nunca al revés.', ca:'Clau</span>Si el total supera el pressupost, no es retalla a cegues: s\'executa tot el vermell sí o sí, el groc fins on arribi, i el verd s\'ajorna. Mai al revés.', en:'Key</span>If the total exceeds the budget, do not cut blindly: the red is done in full no matter what, the yellow as far as it goes, and the green is postponed. Never the other way round.'})}</div>
+      ${d.inversionesDecision ? `<div class="dr-campo dr-campo-g"><div class="dr-campo-l">${gl({es:'Decisión y notas: qué se aprueba en esta fase y qué se aplaza', ca:'Decisió i notes: què s\'aprova en aquesta fase i què s\'ajorna', en:'Decision and notes: what is approved in this phase and what is postponed'})}</div><div class="dr-campo-v">${esc(d.inversionesDecision).replace(/\n/g, '<br>')}</div></div>` : ''}
+      <div class="dr-h">${gl({es:'Los 3 niveles de inversión', ca:'Els 3 nivells d\'inversió', en:'The 3 investment levels'})}</div>
+      <div class="dr-tabla-w"><table class="dr-tabla dr-tabla-ancha"><thead><tr><th>${gl({es:'Color', ca:'Color', en:'Colour'})}</th><th>${gl({es:'Nivel', ca:'Nivell', en:'Level'})}</th><th>${gl({es:'Qué incluye', ca:'Què inclou', en:'What it includes'})}</th></tr></thead><tbody>
+        ${PLAN360_INV_NIVELES.map(plan360InvNivelTxt).map(n => `<tr><td data-l="${gl({es:'Color', ca:'Color', en:'Colour'})}"><span class="dr-inv-dot dr-inv-${n.color}"></span>${n.color === 'rojo' ? gl({es:'Rojo', ca:'Vermell', en:'Red'}) : n.color === 'amarillo' ? gl({es:'Amarillo', ca:'Groc', en:'Yellow'}) : gl({es:'Verde', ca:'Verd', en:'Green'})}</td><td data-l="${gl({es:'Nivel', ca:'Nivell', en:'Level'})}">${n.nombre.toUpperCase()}</td><td data-l="${gl({es:'Qué incluye', ca:'Què inclou', en:'What it includes'})}">${esc(n.incluye)}</td></tr>`).join('')}
       </tbody></table></div>
-      <div class="dr-inv-lema">Primero lo que estabiliza. Luego lo que rentabiliza. Después lo que diferencia.</div>
+      <div class="dr-inv-lema">${gl({es:'Primero lo que estabiliza. Luego lo que rentabiliza. Después lo que diferencia.', ca:'Primer el que estabilitza. Després el que rendibilitza. Després el que diferencia.', en:'First what stabilises. Then what pays off. Then what sets you apart.'})}</div>
     </div>
-    <div class="dr-pie">GastroGoan · Plan 360° — Plan de inversiones</div>
+    <div class="dr-pie">${gl({es:'GastroGoan · Plan 360° — Plan de inversiones', ca:'GastroGoan · Pla 360° — Pla d\'inversions', en:'GastroGoan · 360° Plan — Investment plan'})}</div>
   </div>`;
 }
 function plan360DocRicoLeerCampos(){
@@ -4578,6 +4590,46 @@ const PLAN360_INTAKE_TEMPLATE = [
     ],
   },
 ];
+/* El cuestionario inicial se GUARDA en castellano (la pregunta es la clave con la que se casan las respuestas al actualizar la
+   plantilla), y se traduce al mostrarlo. Una pregunta que el coach añada o cambie a mano no está aquí y se ve tal cual. */
+const PLAN360_INTAKE_TR = {
+  'Datos de la empresa': {ca:'Dades de l\'empresa', en:'Company details'},
+  'Información básica del negocio': {ca:'Informació bàsica del negoci', en:'Basic business information'},
+  'Situación actual': {ca:'Situació actual', en:'Current situation'},
+  'Nombre comercial': {ca:'Nom comercial', en:'Trading name'},
+  'Razón social': {ca:'Raó social', en:'Registered company name'},
+  'CIF/NIF': {ca:'CIF/NIF', en:'Tax ID (CIF/NIF)'},
+  'Estructura societaria (nombres, apellidos y %)': {ca:'Estructura societària (noms, cognoms i %)', en:'Ownership structure (names, surnames and %)'},
+  'Dirección completa': {ca:'Adreça completa', en:'Full address'},
+  'Localidad y provincia': {ca:'Localitat i província', en:'Town and province'},
+  'Teléfono': {ca:'Telèfon', en:'Phone'},
+  'Email': {ca:'Email', en:'Email'},
+  'Página web': {ca:'Pàgina web', en:'Website'},
+  'Redes sociales (Instagram, Facebook, TikTok…)': {ca:'Xarxes socials (Instagram, Facebook, TikTok…)', en:'Social media (Instagram, Facebook, TikTok…)'},
+  'Tipo de establecimiento (restaurante / bar / cafetería / catering / foodtruck / obrador…)': {ca:'Tipus d\'establiment (restaurant / bar / cafeteria / càtering / foodtruck / obrador…)', en:'Type of venue (restaurant / bar / café / catering / food truck / production kitchen…)'},
+  'Año de apertura': {ca:'Any d\'obertura', en:'Opening year'},
+  'Nº de empleados (desglosar por categorías)': {ca:'Nº d\'empleats (desglossar per categories)', en:'No. of employees (broken down by category)'},
+  'Horario de apertura': {ca:'Horari d\'obertura', en:'Opening hours'},
+  'Nº total de plazas': {ca:'Nº total de places', en:'Total number of seats'},
+  'Modalidades de servicio (carta / menú del día / delivery…)': {ca:'Modalitats de servei (carta / menú del dia / delivery…)', en:'Service types (à la carte / set menu / delivery…)'},
+  'Ticket medio estimado (por persona)': {ca:'Tiquet mitjà estimat (per persona)', en:'Estimated average ticket (per person)'},
+  'Nº de comensales/día promedio': {ca:'Nº de comensals/dia de mitjana', en:'Average number of diners per day'},
+  'Gastos fijos mensuales (detallados)': {ca:'Despeses fixes mensuals (detallades)', en:'Monthly fixed costs (itemised)'},
+  'Gastos variables (detallados)': {ca:'Despeses variables (detallades)', en:'Variable costs (itemised)'},
+  'Gasto mensual en materia prima': {ca:'Despesa mensual en matèria primera', en:'Monthly spend on raw materials'},
+  'Coste de trabajadores': {ca:'Cost de treballadors', en:'Staff cost'},
+  'Facturación anual aproximada': {ca:'Facturació anual aproximada', en:'Approximate annual revenue'},
+  'EBITDA': {ca:'EBITDA', en:'EBITDA'},
+  'Principales 3 problemas urgentes a resolver': {ca:'3 problemes urgents principals a resoldre', en:'Top 3 urgent problems to solve'},
+  'Objetivos principales a 3 meses': {ca:'Objectius principals a 3 mesos', en:'Main goals for 3 months'},
+  'Objetivos principales a 12 meses': {ca:'Objectius principals a 12 mesos', en:'Main goals for 12 months'},
+  'Capacidad de inversión material (hornos, pintura, rótulo…)': {ca:'Capacitat d\'inversió material (forns, pintura, rètol…)', en:'Capacity to invest in equipment (ovens, paint, signage…)'},
+};
+function plan360IntakeTxt(txt){
+  const idioma = typeof getLang === 'function' ? getLang() : 'es';
+  const x = PLAN360_INTAKE_TR[txt];
+  return (x && x[idioma]) || txt;
+}
 // Carta de bienvenida real (1- CARTA DE BIENVENIDA NUEVOS CLIENTES.docx).
 // {{cliente}} se sustituye por el nombre que se rellena en el contrato.
 const PLAN360_WELCOME_TEXT =
@@ -4597,7 +4649,7 @@ FASES DEL PROCESO
 
 — Día 1: diagnóstico completo (cliente misterioso, inspección física y reunión presencial).
 — Día 2: presentación y entrega del plan de acción.
-— 4 semanas de implementación (26 días): ejecución guiada de las iniciativas acordadas.
+— 4 semanas de programa en total (28 días, con los dos días presenciales dentro): ejecución guiada de las iniciativas acordadas.
 — Seguimiento y ajustes (opcional): revisión de métricas y optimizaciones continuas.
 
 RESPONSABILIDADES COMPARTIDAS
@@ -4625,12 +4677,107 @@ Quedo a su disposición para cualquier duda o comentario.
 
 Un cordial saludo,
 Marcos González Anguiano — GastroGoan`;
+// La carta en catalán y en inglés (auditoría QA del 25/11): un cliente con la app en otro idioma recibía la
+// bienvenida entera en castellano. Mismo contenido, mismo orden de apartados (las líneas en MAYÚSCULAS son títulos).
+// ⚠️ El CONTRATO no se traduce aquí a propósito: es un texto legal firmado en castellano y una traducción sin
+// revisar por un abogado podría contradecirlo; el contrato sigue en castellano en los tres idiomas.
+const PLAN360_WELCOME_TEXT_CA =
+`Estimat/da {{cliente}}:
+
+Us dono la més cordial benvinguda al programa 360º de GastroGoan. Agraeixo la confiança dipositada per acompanyar-vos en el creixement del vostre negoci.
+
+EL NOSTRE ENFOCAMENT DE TREBALL
+
+A GastroGoan apliquem un mètode 360° que abasta:
+— Anàlisi de la situació actual i definició d'objectius.
+— Disseny d'estratègies a mida.
+— Implementació i optimització d'accions.
+— Seguiment i mesura de resultats.
+
+FASES DEL PROCÉS
+
+— Dia 1: diagnòstic complet (client misteriós, inspecció física i reunió presencial).
+— Dia 2: presentació i lliurament del pla d'acció.
+— 4 setmanes de programa en total (28 dies, amb els dos dies presencials a dins): execució guiada de les iniciatives acordades.
+— Seguiment i ajustos (opcional): revisió de mètriques i optimitzacions contínues.
+
+RESPONSABILITATS COMPARTIDES
+
+GastroGoan es compromet a:
+— Aportar la seva experiència i eines especialitzades.
+— Mantenir una comunicació fluida i informes periòdics.
+— Adaptar les estratègies segons les necessitats.
+— Tractar el vostre negoci com si fos el seu propi.
+
+Vós, com a client, us comprometeu a:
+— Proporcionar informació precisa i oportuna.
+— Aplicar les mesures correctives indicades.
+— Participar activament en reunions i validacions.
+— Compartir feedback per millorar contínuament.
+
+PROPERS PASSOS
+
+— Confirmar la recepció d'aquest document i completar el qüestionari inicial.
+— Fer el pagament corresponent pels serveis GastroGoan.
+— Llegir i signar l'Acord de Serveis i el RGPD, aquí mateix.
+— Agendar la reunió presencial d'arrencada.
+
+Quedo a la vostra disposició per a qualsevol dubte o comentari.
+
+Una cordial salutació,
+Marcos González Anguiano — GastroGoan`;
+const PLAN360_WELCOME_TEXT_EN =
+`Dear {{cliente}},
+
+A warm welcome to GastroGoan's 360º programme. Thank you for trusting us to accompany you as your business grows.
+
+OUR WAY OF WORKING
+
+At GastroGoan we apply a 360° method that covers:
+— Analysis of the current situation and goal setting.
+— Tailor-made strategies.
+— Implementation and optimisation of actions.
+— Follow-up and measurement of results.
+
+STAGES OF THE PROCESS
+
+— Day 1: full diagnosis (mystery guest, on-site inspection and in-person meeting).
+— Day 2: presentation and delivery of the action plan.
+— 4 weeks of programme in total (28 days, including the two on-site days): guided execution of the agreed initiatives.
+— Follow-up and adjustments (optional): metrics review and ongoing optimisation.
+
+SHARED RESPONSIBILITIES
+
+GastroGoan commits to:
+— Bring its experience and specialised tools.
+— Keep communication fluid and send regular reports.
+— Adapt strategies to your needs.
+— Treat your business as if it were its own.
+
+You, as the client, commit to:
+— Provide accurate and timely information.
+— Apply the corrective measures indicated.
+— Take an active part in meetings and validations.
+— Share feedback so we can keep improving.
+
+NEXT STEPS
+
+— Confirm you have received this document and complete the initial questionnaire.
+— Make the payment for the GastroGoan services.
+— Read and sign the Service Agreement and the GDPR agreement, right here.
+— Schedule the on-site kick-off meeting.
+
+I remain at your disposal for any question or comment.
+
+Kind regards,
+Marcos González Anguiano — GastroGoan`;
+function plan360WelcomeTexto(){ return gl({es: PLAN360_WELCOME_TEXT, ca: PLAN360_WELCOME_TEXT_CA, en: PLAN360_WELCOME_TEXT_EN}); }
 // Contrato real (2. CONTRATO_RGPD.docx). {{cliente}}, {{nif}}, {{direccion}},
 // {{precio}} y {{formaPago}} se sustituyen por lo que se rellene antes de firmar.
 const PLAN360_CONTRACT_TEXT =
 `ACUERDO DE PRESTACIÓN DE SERVICIOS
 
-Partes: de una parte, Marcos González Anguiano (GastroGoan), con DNI 47668150Y y domicilio en Vilafranca del Penedès. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+Partes: de una parte, {{coachNombre}} (GastroGoan), con DNI {{coachDni}} y domicilio en {{coachDomicilio}}. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
 
 1. Objeto y alcance
 GastroGoan se compromete a prestar servicios de asesoría gastronómica integral 360°, consistentes en diagnóstico y análisis operativo, financiero y de marketing; diseño e implementación de estrategias a medida; formación de equipo y optimización de procesos; y seguimiento y reporting de resultados con indicadores clave.
@@ -4641,7 +4788,7 @@ Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del inf
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
 Modalidad de pago: {{formaPago}}.
-Transferencia bancaria a la cuenta BE24 9677 3509 2638 — Concepto: Programa 360 GastroGoan.
+Transferencia bancaria a la cuenta {{coachIban}} — Concepto: Programa 360 GastroGoan.
 
 4. Responsabilidades
 GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
@@ -4690,8 +4837,24 @@ El incumplimiento da derecho a la parte reveladora a reclamar daños y perjuicio
 
 7. Legislación y jurisdicción
 Ley española. Juzgados y Tribunales de Barcelona.`;
+/* Los datos personales del coach (nombre, DNI, domicilio, IBAN, email y teléfono) NO viven en el código: la app va en un repositorio
+   público y se vendía con ellos escritos dentro del contrato. Los escribe el coach en su panel (`DB.business.plan360Coach`, clave
+   plan360*) y llegan por la nube del negocio como cualquier otro dato suyo. Sin ellos completos el contrato no se puede firmar
+   (ver plan360ContractSectionHtml): un contrato con «________» donde va el nombre de una de las partes no vale. */
+function plan360CoachDatos(){
+  const c = (DB.business && DB.business.plan360Coach) || null;
+  if(!c || typeof c !== 'object') return null;
+  const lim = k => String(c[k] == null ? '' : c[k]).trim();
+  const d = {nombre: lim('nombre'), dni: lim('dni'), domicilio: lim('domicilio'), iban: lim('iban'), email: lim('email'), telefono: lim('telefono')};
+  return d.nombre && d.dni && d.domicilio && d.iban ? d : null;
+}
 function plan360FillTemplate(text, c){
+  const co = plan360CoachDatos() || {};
   return text
+    .replace(/\{\{coachNombre\}\}/g, co.nombre || '________')
+    .replace(/\{\{coachDni\}\}/g, co.dni || '________')
+    .replace(/\{\{coachDomicilio\}\}/g, co.domicilio || '________')
+    .replace(/\{\{coachIban\}\}/g, co.iban || '________')
     .replace(/\{\{cliente\}\}/g, (c && c.clienteNombre) || '________')
     .replace(/\{\{nif\}\}/g, (c && c.clienteNIF) || '________')
     .replace(/\{\{direccion\}\}/g, (c && c.clienteDireccion) || '________')
@@ -4758,6 +4921,7 @@ function plan360FreshDoc(d){
 function ensurePlan360Program(){
   if(!DB.business.plan360) return;
   plan360RepararVacios(DB.business);
+  if(typeof plan360MigrarPruebas === 'function') plan360MigrarPruebas(DB.business);
   if(!Array.isArray(DB.business.plan360Docs) || !DB.business.plan360Docs.length){
     DB.business.plan360Docs = PLAN360_DOCS_TEMPLATE.map(plan360FreshDoc);
   }
@@ -6819,7 +6983,17 @@ const PREFER_LOCAL_ARRAYS = MERGEABLE_ARRAYS;
 // Objetos de nivel superior que son mapas planos {clave: valor} sin id ni
 // array dentro (mismo problema que DB.stock, fusionable con mergeStockField
 // campo a campo) — ver el comentario junto a su uso en applyRemoteBlock.
-const FLAT_MAP_FIELDS = new Set(['shifts', 'workDistribution', 'chatPinned', 'shiftHandoffNotes']);
+// plan360Pruebas (fotos de prueba de las tareas del Plan 360º, {tareaId: {data, nombre, ts}}) es un mapa plano como los demás: dos aparatos
+// que adjuntan la prueba de DOS tareas distintas a la vez no se pisan, y quitar una aquí no la resucita la nube. No está en defaultData
+// a propósito (igual que plan360LibroPdf): nace al guardar la primera foto y un `{}` por defecto solo daría trabajo a la sincronización.
+const FLAT_MAP_FIELDS = new Set(['shifts', 'workDistribution', 'chatPinned', 'shiftHandoffNotes', 'plan360Pruebas']);
+/* Firebase devuelve como LISTA un mapa cuyas claves son números seguidos ({"1":…,"2":…} → [null, …, …]). Los ids de tarea del
+   Plan 360º son números, y con una plantilla de 34 tareas pasa justo eso. Se vuelve a dejar como mapa antes de fusionar, o la
+   fusión por clave y la subida por clave verían índices de lista en vez de ids. */
+function plan360PruebasNormalizar(v){
+  if(Array.isArray(v)){ const o = {}; v.forEach((x, i) => { if(x != null) o[String(i)] = x; }); return o; }
+  return (v && typeof v === 'object') ? v : {};
+}
 
 // Hash simple para PINs (4 dígitos) — no almacenar en texto plano.
 // La sal incluye el código de licencia del propio negocio (DB.license.code):
@@ -9976,6 +10150,7 @@ function plan360RepararVacios(biz){
   });
 }
 function applyRemoteBlock(key, remoteValue){
+  if(key === 'plan360Pruebas') remoteValue = plan360PruebasNormalizar(remoteValue);
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
   // Lo que la nube tiene de verdad ahora mismo, ANTES de fusionar con nada
@@ -10057,6 +10232,8 @@ function applyRemoteBlock(key, remoteValue){
     try{ base = lastSyncedSnapshot && lastSyncedSnapshot.business ? JSON.parse(lastSyncedSnapshot.business) : null; }catch(e){ base = null; }
     if(base) merged = fusion3(base, DB.business, merged);
     plan360RepararVacios(merged);
+    // Una tablet con la versión antigua pudo subir las fotos de prueba DENTRO de la tarea: se mueven a su bloque (ver plan360MigrarPruebas).
+    if(typeof plan360MigrarPruebas === 'function') plan360MigrarPruebas(merged);
   }
   if(key === 'idr' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['creaciones','carpetas']);
@@ -10255,6 +10432,9 @@ function attachCloudChildListeners(){
   cloudRef.on('child_added', onOk, onErr);
   cloudRef.on('child_changed', onOk, onErr);
   cloudRef.on('child_removed', snap => {
+    // Quitada la ÚLTIMA foto de prueba en otro aparato, el bloque desaparece entero: aquí hay que tratarlo como «vacío», o la foto
+    // se quedaría viva en este aparato y al siguiente guardado volvería a subirse a la nube.
+    if(snap.key === 'plan360Pruebas'){ applyRemoteBlock(snap.key, {}); return; }
     const def = defaultData();
     if(!def.hasOwnProperty(snap.key)) return;
     applyRemoteBlock(snap.key, def[snap.key]);
@@ -10267,6 +10447,7 @@ function attachCloudChildListeners(){
 // activación (ver startCloudSync).
 function mergeRemoteIntoLocal(val){
   const merged = withDefaults(defaultData(), val);
+  if(merged.plan360Pruebas !== undefined) merged.plan360Pruebas = plan360PruebasNormalizar(merged.plan360Pruebas);
   let changedLocally = false;
   let needsReupload = false;
   const newSnapshot = {};
@@ -12631,6 +12812,17 @@ function marcarNubeAlDia(opciones){
    SIN token y se lo lleva por delante → el QR que se acaba de mostrar queda «no válido». Si lo que llega es exactamente lo que se
    mandó, no es de nadie más: se ignora. */
 const subidaEnVuelo = {};
+/* Rutas de lo que cambió entre dos versiones de un mismo árbol: baja por objetos y por listas de IGUAL largo hasta la hoja que
+   cambió; si una lista cambia de largo o un tipo cambia, esa rama se sube entera (Firebase no admite huecos en una lista). */
+function diffProfundoRutas(antes, ahora, ruta, out){
+  const esObj = x => x && typeof x === 'object' && !Array.isArray(x);
+  if((esObj(antes) && esObj(ahora)) || (Array.isArray(antes) && Array.isArray(ahora) && antes.length === ahora.length)){
+    const claves = new Set([...Object.keys(antes), ...Object.keys(ahora)]);
+    claves.forEach(k => diffProfundoRutas(antes[k], ahora[k], ruta + '/' + k, out));
+    return;
+  }
+  if(canonicalStringify(antes) !== canonicalStringify(ahora)) out[ruta] = ahora === undefined ? null : ahora;
+}
 function flushCloudSync(){
   cloudSyncTimer = null;
   if(!cloudRef || !lastSyncedSnapshot) return;
@@ -12654,11 +12846,32 @@ function flushCloudSync(){
   if(updates.business && lastSyncedSnapshot.business){
     try{
       const antes = JSON.parse(lastSyncedSnapshot.business), ahora = DB.business, sub = {};
-      Object.keys(ahora).forEach(k => { if(canonicalStringify(ahora[k]) !== canonicalStringify(antes[k])) sub['business/' + k] = ahora[k]; });
+      Object.keys(ahora).forEach(k => {
+        if(canonicalStringify(ahora[k]) === canonicalStringify(antes[k])) return;
+        /* El cuestionario del Plan 360º lo contestan a ratos el móvil y la tablet. Subido entero, el último en llegar a la nube
+           se llevaba por delante las respuestas del otro (lo cazó el emulador de dos aparatos: una sección entera de respuestas
+           desaparecía en los dos). Se sube pregunta a pregunta: dos aparatos que contestan preguntas distintas no se pisan. */
+        if(k === 'plan360Intake' && antes[k] && typeof antes[k] === 'object' && ahora[k] && typeof ahora[k] === 'object'){
+          const hojas = {}; diffProfundoRutas(antes[k], ahora[k], 'business/' + k, hojas);
+          Object.assign(sub, hojas); return;
+        }
+        sub['business/' + k] = ahora[k];
+      });
       Object.keys(antes).forEach(k => { if(!(k in ahora)) sub['business/' + k] = null; });
       delete updates.business;
       Object.assign(updates, sub);
     }catch(e){ /* si el snapshot no se puede leer, se sube entero como siempre */ }
+  }
+  /* Las fotos de prueba (hasta 4 MB en total) tampoco suben en bloque: cada foto nueva o quitada viaja sola
+     (`plan360Pruebas/<tarea>`), y las demás no se reescriben. Sin foto anterior conocida se sube el mapa entero, que es la primera vez. */
+  if(updates.plan360Pruebas && lastSyncedSnapshot.plan360Pruebas){
+    try{
+      const antes = plan360PruebasNormalizar(JSON.parse(lastSyncedSnapshot.plan360Pruebas)), ahora = plan360PruebasNormalizar(DB.plan360Pruebas), sub = {};
+      Object.keys(ahora).forEach(k => { if(canonicalStringify(ahora[k]) !== canonicalStringify(antes[k])) sub['plan360Pruebas/' + k] = ahora[k]; });
+      Object.keys(antes).forEach(k => { if(!(k in ahora)) sub['plan360Pruebas/' + k] = null; });
+      delete updates.plan360Pruebas;
+      Object.assign(updates, sub);
+    }catch(e){ /* si el snapshot no se puede leer, se sube entero */ }
   }
   const keys = Object.keys(updates);
   if(keys.length === 0){ marcarNubeAlDia(); return; }
@@ -12672,10 +12885,16 @@ function flushCloudSync(){
     scheduleCloudSyncRetry();
   };
   try{
-    cloudRef.update(sinIndefinidos(updates)).then(() => {
+    /* ⚠️ Las claves de `updates` pueden ser RUTAS (`business/plan360Program`, `plan360Pruebas/12`). sinIndefinidos limpia las claves de
+       un objeto reemplazando «/» por «_» (claveSeguraFirebase), así que pasarle `updates` entero convertía la ruta en una clave suelta
+       `business_plan360Program`: el negocio escribía en un nodo inventado y NADA de lo que cambiaba en `business` llegaba a la nube
+       ni a los demás aparatos. Se limpia el VALOR de cada ruta, no el nombre de la ruta. */
+    const aSubir = {};
+    Object.keys(updates).forEach(k => { aSubir[k] = sinIndefinidos(updates[k]); });
+    cloudRef.update(aSubir).then(() => {
       soltarEnVuelo();
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
-      keys.forEach(key => { if(key.startsWith('business/')) lastSyncedSnapshot.business = pendingJson.business; else lastSyncedSnapshot[key] = pendingJson[key]; });
+      keys.forEach(key => { const bloque = key.split('/')[0]; lastSyncedSnapshot[bloque] = pendingJson[bloque]; });
       lastSyncOkAt = Date.now();
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio

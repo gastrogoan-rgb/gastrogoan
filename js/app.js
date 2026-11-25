@@ -5691,7 +5691,50 @@ function plan360FormatDate(day){
     dayMonth: dt.toLocaleDateString(localeActual(), {day: 'numeric', month: 'short'}),
   };
 }
+/* ── Solo lectura al terminar el servicio (25/11) ──
+   Cuando el Plan 360º se acaba (fase «fin» que fija el coach, o la baja del mantenimiento ya efectiva: a fin del mes en que se pidió)
+   el negocio sigue VIENDO su libro de marca, el contrato firmado, los informes y las actas, pero ya no puede marcar tareas, anotar
+   mediciones ni responder: lo que figura es lo que se hizo, y un coach que ya no acompaña no debe ver cambiar su programa. Se dice
+   por qué en un aviso arriba y al intentar tocar algo, para que no parezca una app rota (un permiso que se niega en silencio se lee
+   como un fallo). No bloquea nada mientras el servicio siga vivo. */
+function plan360SoloLectura(){
+  const sv = (DB.business && DB.business.plan360Servicio) || {};
+  if(sv.fase === 'fin') return true;
+  if(sv.baja && sv.baja.ts){
+    const d = new Date(sv.baja.ts);
+    if(Date.now() >= new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime()) return true;
+  }
+  return false;
+}
+function plan360SoloLecturaTexto(){
+  return gl({es:'Tu servicio con el coach ha terminado: puedes ver y descargar todo lo que se hizo, pero ya no se puede marcar ni editar nada.', ca:'El teu servei amb el coach ha acabat: pots veure i descarregar tot el que es va fer, però ja no es pot marcar ni editar res.', en:'Your service with the coach has ended: you can view and download everything that was done, but nothing can be ticked or edited any more.'});
+}
+function plan360SoloLecturaAviso(){
+  if(!plan360SoloLectura()) return false;
+  showToast(plan360SoloLecturaTexto());
+  return true;
+}
+function plan360SoloLecturaBannerHtml(){
+  if(!plan360SoloLectura()) return '';
+  return `<div class="card p360-solo-lectura" role="status"><i class="ti ti-lock"></i><div><strong>${escapeHtml(gl({es:'Plan 360º terminado', ca:'Pla 360º acabat', en:'360º Plan finished'}))}</strong><div>${escapeHtml(plan360SoloLecturaTexto())}</div></div></div>`;
+}
+/* Cualquier pantalla del Plan 360º (el detalle de un día, los objetivos, el cuestionario…) se pinta con innerHTML sobre este
+   mismo contenedor, así que el aviso y el bloqueo de campos de «solo lectura» se aplican aquí, una sola vez, en vez de en
+   veinte pantallas: un campo editable que no guarda nada, o que protesta al guardar, se lee como una app rota. */
+function plan360AplicarSoloLectura(){
+  const c = document.getElementById('plan360-content');
+  if(!c || !plan360SoloLectura()) return;
+  c.querySelectorAll('textarea, select, input:not([type=search])').forEach(el => { if(!el.disabled) el.disabled = true; });
+  if(!c.querySelector('.p360-solo-lectura')) c.insertAdjacentHTML('afterbegin', plan360SoloLecturaBannerHtml());
+}
+function plan360IniciarSoloLectura(){
+  const c = document.getElementById('plan360-content');
+  if(!c || c.__soloLec) return;
+  c.__soloLec = true;
+  new MutationObserver(plan360AplicarSoloLectura).observe(c, {childList: true, subtree: true});
+}
 function renderPlan360(){
+  plan360IniciarSoloLectura();
   if(isGestionLocked('plan360')){ denyGestionAccess(); return; }
   ensurePlan360Program();
   if(!DB.business.plan360WelcomeShown){ renderPlan360Welcome(false); return; }
@@ -5718,7 +5761,7 @@ function plan360TextoHtml(texto){
 // queda siempre accesible después desde Documentación inicial (fromIntake).
 function renderPlan360Welcome(fromIntake){
   const nombre = (DB.business.plan360Contract && DB.business.plan360Contract.clienteNombre) || DB.business.name || '';
-  const texto = plan360FillTemplate(PLAN360_WELCOME_TEXT, {clienteNombre: nombre});
+  const texto = plan360FillTemplate(plan360WelcomeTexto(), {clienteNombre: nombre});
   const volver = fromIntake ? `<button class="btn btn-sm btn-back" onclick="renderPlan360Intake()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>` : '';
   document.getElementById('plan360-content').innerHTML = `
     ${volver}
@@ -5755,7 +5798,7 @@ function plan360DiaDeHoy(){
 // posponer: lo que no se hizo no desaparece, se acumula y se ve.
 // ⚠️ Una tarea sin contenido real NO se enseña al negocio, ni cuenta como hecha,
 // pendiente o atrasada. Los programas creados con la versión antigua generaban,
-// para cada uno de los 26 días, una tarea cuyo título era el aviso interno
+// para cada uno de los 26 días de trabajo (28 con los dos presenciales), una tarea cuyo título era el aviso interno
 // «(Contenido pendiente de definir)»: el generador ya no la crea (tasks nace
 // vacío), pero esas tareas siguen guardadas en los negocios que ya tenían el
 // programa y un cliente veía 25 «atrasadas» de relleno. No se borran del dato
@@ -5835,6 +5878,81 @@ function plan360HoyCardHtml(){
         `).join('')}
         ${atrasadas.length > PLAN360_ATRASADAS_VISIBLES ? `<button class="btn btn-sm p360-atr-mas" onclick="plan360VerTodasAtrasadas()" aria-expanded="${plan360AtrasadasTodas}">${escapeHtml(plan360AtrasadasTodas ? t('plan360.overdueLess') : t('plan360.overdueMore').replace('${n}', String(ocultas)))}</button>` : ''}
       </div>` : ''}
+  </div>`;
+}
+/* ── Marcador semanal frente al Día 1 (25/11): la semana del negocio contra el punto de partida, con flecha de mejora o empeora
+   (food cost, personal y mermas MEJORAN al bajar; ventas, ticket y nota de clientes al subir) y, si ya hay meses completos desde
+   que se empezó, los euros ganados. Sin Día 1 válido lo dice. Las cifras son las de plan360MarcadorSemanal (js/finance.js). */
+function plan360FmtCifra(tipo, v){
+  if(v == null) return '—';
+  const loc = localeActual();
+  if(tipo === 'eur') return Math.round(v).toLocaleString(loc) + ' €';
+  if(tipo === 'eur2') return v.toLocaleString(loc, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+  if(tipo === 'pct') return v.toLocaleString(loc, {maximumFractionDigits: 1}) + ' %';
+  return v.toLocaleString(loc, {maximumFractionDigits: 1});
+}
+function plan360FlechaHtml(antes, hoy, mejor){
+  if(mejor === null) return `<span class="p360-flecha is-igual"><i class="ti ti-equal"></i><span class="visually-hidden">${escapeHtml(gl({es:'igual', ca:'igual', en:'unchanged'}))}</span></span>`;
+  const txt = mejor ? gl({es:'mejora', ca:'millora', en:'better'}) : gl({es:'empeora', ca:'empitjora', en:'worse'});
+  return `<span class="p360-flecha ${mejor ? 'is-mejor' : 'is-peor'}"><i class="ti ${hoy > antes ? 'ti-arrow-up-right' : 'ti-arrow-down-right'}"></i><span class="visually-hidden">${escapeHtml(txt)}</span></span>`;
+}
+function plan360MarcadorSemanalHtml(){
+  let m = null;
+  try{ m = plan360MarcadorSemanal(); }catch(e){ m = null; }
+  if(!m) return '';
+  const L = o => gl(o);
+  const titulo = L({es:'Tu semana frente al Día 1', ca:'La teva setmana davant del Dia 1', en:'Your week against Day 1'});
+  if(m.sinDia1) return `<div class="card p360-semanal"><h3 class="p360-semanal-t">${escapeHtml(titulo)}</h3><p class="muted" style="margin:6px 0 0">${escapeHtml(L({es:'Sin datos del Día 1: hace falta un mes completo de ventas anterior al inicio del plan para poder comparar. Tu coach lo revisará contigo.', ca:'Sense dades del Dia 1: cal un mes complet de vendes anterior a l\'inici del pla per poder comparar. El teu coach ho revisarà amb tu.', en:'No Day 1 data: a full month of sales before the plan started is needed to compare. Your coach will go over it with you.'}))}</p></div>`;
+  if(!m.filas.length) return `<div class="card p360-semanal"><h3 class="p360-semanal-t">${escapeHtml(titulo)}</h3><p class="muted" style="margin:6px 0 0">${escapeHtml(L({es:'Todavía no hay suficientes ventas esta semana para compararla con el Día 1.', ca:'Encara no hi ha prou vendes aquesta setmana per comparar-la amb el Dia 1.', en:'There are not enough sales this week yet to compare with Day 1.'}))}</p></div>`;
+  const fecha = f => plan360FechaLegible(f).replace(/ de \d{4}$/, '');
+  const filas = m.filas.map(f => `<div class="p360-sem-fila">
+      <span class="p360-sem-nom">${escapeHtml(L(f.def))}${f.ventana === 28 ? ` <span class="txt-xs txt-muted">${escapeHtml(L({es:'(28 días)', ca:'(28 dies)', en:'(28 days)'}))}</span>` : ''}</span>
+      <span class="p360-sem-cifras">${escapeHtml(plan360FmtCifra(f.def.tipo, f.antes))} → <strong>${escapeHtml(plan360FmtCifra(f.def.tipo, f.hoy))}</strong></span>
+      ${plan360FlechaHtml(f.antes, f.hoy, f.mejor)}
+    </div>`).join('');
+  const g = m.ganado;
+  const ganado = g ? `<div class="p360-sem-ganado ${g.total >= 0 ? 'is-mejor' : 'is-peor'}"><span>${escapeHtml(L({es:'€ ganados desde que empezamos', ca:'€ guanyats des que vam començar', en:'€ gained since we started'}))}</span><strong>${g.total >= 0 ? '+' : '−'}${escapeHtml(Math.round(Math.abs(g.total)).toLocaleString(localeActual()))} €</strong></div>` : '';
+  return `<div class="card p360-semanal">
+    <h3 class="p360-semanal-t">${escapeHtml(titulo)}</h3>
+    <div class="txt-xs txt-muted" style="margin:2px 0 6px">${escapeHtml(fecha(m.desde))} – ${escapeHtml(fecha(m.hasta))} · ${escapeHtml(L({es:'frente al mes completo anterior al inicio', ca:'davant del mes complet anterior a l\'inici', en:'against the full month before the start'}))}</div>
+    ${filas}
+    ${ganado}
+    ${plan360RadarCardHtml()}
+  </div>`;
+}
+/* Radar con DOS polígonos: Día 1 (gris, discontinuo) y hoy (oliva). Con menos de 3 ejes con dato en los dos momentos no es un radar:
+   se enseñan las barras en lista. Mismo SVG en pantalla y en el informe impreso (por eso los colores van fijos, no por variables CSS). */
+function plan360RadarComparadoSvg(ejes){
+  const L = o => gl(o);
+  const n = ejes.length, cx = 150, cy = 120, r = 78;
+  const pt = (i, f) => { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(ang) * r * f, cy + Math.sin(ang) * r * f]; };
+  const poli = fn => ejes.map((e, i) => pt(i, fn(e)).map(v => v.toFixed(1)).join(',')).join(' ');
+  const anillos = [.25, .5, .75, 1].map(f => `<polygon points="${poli(() => f)}" fill="none" stroke="#E7E2D9" stroke-width="1"/>`).join('');
+  const rayos = ejes.map((_, i) => { const [x, y] = pt(i, 1); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E7E2D9" stroke-width="1"/>`; }).join('');
+  const antes = `<polygon points="${poli(e => e.antes / 100)}" fill="#716C65" fill-opacity=".10" stroke="#716C65" stroke-width="1.6" stroke-dasharray="4 3" stroke-linejoin="round"/>`;
+  const hoy = `<polygon points="${poli(e => e.hoy / 100)}" fill="#4A5D4E" fill-opacity=".22" stroke="#4A5D4E" stroke-width="2" stroke-linejoin="round"/>`;
+  const puntos = ejes.map((e, i) => { const [px, py] = pt(i, e.hoy / 100); return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.5" fill="#4A5D4E"/>`; }).join('');
+  const rot = ejes.map((e, i) => {
+    const [tx, ty] = pt(i, 1.2);
+    const anc = tx < cx - 8 ? 'end' : tx > cx + 8 ? 'start' : 'middle';
+    return `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="${anc}" font-family="Schibsted Grotesk,sans-serif" font-size="12" fill="#3D3A34">${escapeHtml(L(e.nombre))}</text>`;
+  }).join('');
+  return `<svg viewBox="-70 0 440 240" role="img" aria-label="${escapeHtml(L({es:'Radar: Día 1 frente a hoy', ca:'Radar: Dia 1 davant d\'avui', en:'Radar: Day 1 against today'}))}" style="width:100%;max-width:440px;height:auto;display:block;margin:6px auto">${anillos}${rayos}${antes}${hoy}${puntos}${rot}</svg>`;
+}
+function plan360RadarLeyendaHtml(){
+  const L = o => gl(o);
+  return `<div class="p360-radar-ley"><span><i class="p360-ley-linea is-antes"></i>${escapeHtml(L({es:'Día 1', ca:'Dia 1', en:'Day 1'}))}</span><span><i class="p360-ley-linea is-hoy"></i>${escapeHtml(L({es:'Hoy (últimos 28 días)', ca:'Avui (últims 28 dies)', en:'Today (last 28 days)'}))}</span></div>`;
+}
+function plan360RadarCardHtml(){
+  let r = null;
+  try{ r = plan360RadarComparado(); }catch(e){ r = null; }
+  if(!r || r.ejes.length < 3) return '';
+  const L = o => gl(o);
+  const filas = r.ejes.map(e => `<div class="p360-sem-fila"><span class="p360-sem-nom">${escapeHtml(L(e.nombre))}</span><span class="p360-sem-cifras">${e.antes} → <strong>${e.hoy}</strong></span>${plan360FlechaHtml(e.antes, e.hoy, e.hoy === e.antes ? null : e.hoy > e.antes)}</div>`).join('');
+  return `<div class="gg-plegable p360-radar-bloque">
+    <h4 class="p360-radar-t">${escapeHtml(L({es:'Tu radar: Día 1 frente a hoy', ca:'El teu radar: Dia 1 davant d\'avui', en:'Your radar: Day 1 against today'}))}</h4>
+    <div class="p360-radar-cuerpo"><div>${plan360RadarComparadoSvg(r.ejes)}${plan360RadarLeyendaHtml()}</div><div>${filas}</div></div>
+    <p class="txt-xs txt-muted" style="margin:8px 0 0">${escapeHtml(L({es:'Costes, equipo, mermas y satisfacción: 100 = cumples el objetivo que fijaste. Ticket y ventas: 50 = como el Día 1. Solo salen los ejes con dato real en los dos momentos.', ca:'Costos, equip, minves i satisfacció: 100 = compleixes l\'objectiu que vas fixar. Tiquet i vendes: 50 = com el Dia 1. Només surten els eixos amb dada real en els dos moments.', en:'Costs, team, waste and satisfaction: 100 = you meet the target you set. Ticket and sales: 50 = same as Day 1. Only axes with real data at both moments are shown.'}))}</p>
   </div>`;
 }
 // La cabecera de todo Plan 360º: día del programa, tareas hechas y
@@ -5927,7 +6045,9 @@ function renderPlan360Grid(){
   };
 
   document.getElementById('plan360-content').innerHTML = `
+    ${plan360SoloLecturaBannerHtml()}
     ${plan360HeroHtml(diaHoy, hechos, totalTareas)}
+    ${plan360MarcadorSemanalHtml()}
     ${plan360HoyCardHtml()}
     <div class="p360-toprow">
       <div class="p360-card" onclick="renderPlan360Intake()">
@@ -6077,7 +6197,7 @@ function plan360CierreHtml(){
           <div style="padding:8px 0;border-bottom:1px solid var(--border)">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
               <strong style="flex:1">${escapeHtml(o.titulo)}</strong>
-              ${o.estadoFinal ? `<span class="p360-day-tag" style="margin:0;background:${PLAN360_ESTADO_FINAL_COLOR[o.estadoFinal]};color:#fff">${escapeHtml(t(PLAN360_ESTADO_FINAL_LABEL[o.estadoFinal]))}</span>` : `<span class="p360-day-tag" style="margin:0">${escapeHtml(t('plan360.estadoFinal.pending'))}</span>`}
+              ${o.estadoFinal ? `<span class="p360-day-tag" style="margin:0;flex:none;white-space:nowrap;background:${PLAN360_ESTADO_FINAL_COLOR[o.estadoFinal]};color:#fff">${escapeHtml(t(PLAN360_ESTADO_FINAL_LABEL[o.estadoFinal]))}</span>` : `<span class="p360-day-tag" style="margin:0;flex:none;white-space:nowrap">${escapeHtml(t('plan360.estadoFinal.pending'))}</span>`}
             </div>
             ${plan360MedicionesResumenHtml(o)}
           </div>`).join('')}
@@ -6207,7 +6327,9 @@ function plan360Puntuaciones(k){
   const objPer = dp.per != null ? Number(dp.per) : 30;
   const out = [];
   if(k.foodCostPct != null) out.push({id:'foodcost', nombre:{es:'Costes de cocina', ca:'Costos de cuina', en:'Kitchen costs'}, puntos: clamp(100 - Math.max(0, k.foodCostPct - objFc) * 10), dato: `${k.foodCostPct} % / ${objFc} %`});
-  if(k.personalPct != null) out.push({id:'personal', nombre:{es:'Equipo', ca:'Equip', en:'Team'}, puntos: clamp(100 - Math.max(0, k.personalPct - objPer) * 10), dato: `${k.personalPct} % / ${objPer} %`});
+  // Un % de personal en 0 no es «cumplir el objetivo»: es que no hay nóminas cargadas (no se puede medir). Puntuarlo 100 lo hacía
+  // pasar por un logro en el impreso (auditoría QA del 25/11). Como cualquier dato no medible, simplemente no sale.
+  if(k.personalPct != null && k.personalPct > 0) out.push({id:'personal', nombre:{es:'Equipo', ca:'Equip', en:'Team'}, puntos: clamp(100 - Math.max(0, k.personalPct - objPer) * 10), dato: `${k.personalPct} % / ${objPer} %`});
   if(k.mermasPct != null) out.push({id:'mermas', nombre:{es:'Control de mermas', ca:'Control de minves', en:'Waste control'}, puntos: clamp(100 - k.mermasPct * 20), dato: `${k.mermasPct} %`});
   if(k.nps != null && k.npsN >= 3) out.push({id:'nps', nombre:{es:'Satisfacción de clientes', ca:'Satisfacció de clients', en:'Customer satisfaction'}, puntos: clamp(k.nps * 10), dato: `${k.nps} / 10`});
   return out;
@@ -6226,9 +6348,11 @@ function plan360RadarSvg(ps){
   const rot = ps.map((x, i) => {
     const [tx, ty] = pt(i, 1.2);
     const anc = tx < cx - 8 ? 'end' : tx > cx + 8 ? 'start' : 'middle';
-    return `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="${anc}" font-family="Schibsted Grotesk,sans-serif" font-size="11" fill="#3D3A34">${escapeHtml(L(x.nombre))}</text>`;
+    return `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="${anc}" font-family="Schibsted Grotesk,sans-serif" font-size="12" fill="#3D3A34">${escapeHtml(L(x.nombre))}</text>`;
   }).join('');
-  return `<svg viewBox="0 0 300 240" role="img" aria-label="${escapeHtml(L({es:'Radar de áreas', ca:'Radar d\'àrees', en:'Area radar'}))}" style="width:100%;max-width:420px;height:auto;display:block;margin:6px auto">${anillos}${ejes}${area}${puntos}${rot}</svg>`;
+  // El viewBox es más ancho que el dibujo (radio 78 en 300) a propósito: las etiquetas largas de los ejes laterales («Control de
+  // mermas», «Satisfacción de clientes») se salían por el borde y salían cortadas («rol de mermas»).
+  return `<svg viewBox="-70 0 440 240" role="img" aria-label="${escapeHtml(L({es:'Radar de áreas', ca:'Radar d\'àrees', en:'Area radar'}))}" style="width:100%;max-width:440px;height:auto;display:block;margin:6px auto">${anillos}${ejes}${area}${puntos}${rot}</svg>`;
 }
 function plan360PuntuacionesHtml(k){
   const ps = plan360Puntuaciones(k);
@@ -6289,17 +6413,23 @@ function plan360SemanaTexto(){
   const d2 = prog.find(x => x.day === 2);
   const objs = ((d2 && d2.objectives) || []).filter(o => o.titulo);
   const ultima = o => { const ms = (o.mediciones || []).filter(m => m && m.valor !== '' && m.valor != null); return ms.length ? String(ms[ms.length - 1].valor) : null; };
-  const mar = typeof plan360MarcadorEuros === 'function' ? plan360MarcadorEuros() : null;
-  const ganado = mar ? mar.filas.filter(f => f.euros != null && f.k !== 'resultado').reduce((n, f) => n + f.euros, 0) : null;
   const eur = v => Math.round(v).toLocaleString(localeActual()) + ' €';
   const f = d => plan360FechaLegible(d).replace(/ de \d{4}$/, '');
   const lineas = [
     `*${L({es:'Plan 360º · semana del ', ca:'Pla 360º · setmana del ', en:'360º Plan · week of '})}${f(lunes)} ${L({es:'al', ca:'al', en:'to'})} ${f(domingo)}*${b.businessName || b.name ? ' · ' + (b.businessName || b.name) : ''}`,
     '',
-    tareas.length ? `✅ ${L({es:'Tareas', ca:'Tasques', en:'Tasks'})}: ${hechas} ${L({es:'de', ca:'de', en:'of'})} ${tareas.length} ${L({es:'hechas', ca:'fetes', en:'done'})}` : `✅ ${L({es:'Sin tareas esta semana', ca:'Sense tasques aquesta setmana', en:'No tasks this week'})}`,
+    tareas.length ? `${L({es:'Tareas', ca:'Tasques', en:'Tasks'})}: ${hechas} ${L({es:'de', ca:'de', en:'of'})} ${tareas.length} ${L({es:'hechas', ca:'fetes', en:'done'})}` : `${L({es:'Sin tareas esta semana', ca:'Sense tasques aquesta setmana', en:'No tasks this week'})}`,
   ];
-  if(objs.length){ lineas.push('', '🎯 ' + L({es:'Objetivos', ca:'Objectius', en:'Goals'})); objs.slice(0, 6).forEach(o => { const u = ultima(o); lineas.push(`• ${o.titulo}${u ? ': ' + u : ''}`); }); }
-  if(ganado != null && Math.abs(ganado) >= 1) lineas.push('', `💶 ${L({es:'Desde que empezamos', ca:'Des que vam començar', en:'Since we started'})}: ${ganado >= 0 ? '+' : '−'}${eur(Math.abs(ganado))}${L({es:' al mes', ca:' al mes', en:' per month'})}`);
+  if(objs.length){ lineas.push('', '*' + L({es:'Objetivos', ca:'Objectius', en:'Goals'}) + '*'); objs.slice(0, 6).forEach(o => { const u = ultima(o); lineas.push(`• ${o.titulo}${u ? ': ' + u : ''}`); }); }
+  // Frente al Día 1 (solo con datos reales; sin Día 1 válido no se escribe nada inventado): una línea por cifra con su veredicto en palabras.
+  let sem = null;
+  try{ sem = plan360MarcadorSemanal(); }catch(e){ sem = null; }
+  if(sem && sem.sinDia1) lineas.push('', L({es:'Frente al Día 1: sin datos del Día 1 todavía.', ca:'Davant del Dia 1: sense dades del Dia 1 encara.', en:'Against Day 1: no Day 1 data yet.'}));
+  else if(sem && sem.filas.length){
+    lineas.push('', '*' + L({es:'Frente al Día 1', ca:'Davant del Dia 1', en:'Against Day 1'}) + '*');
+    sem.filas.forEach(fl => lineas.push(`• ${L(fl.def)}: ${plan360FmtCifra(fl.def.tipo, fl.antes)} → ${plan360FmtCifra(fl.def.tipo, fl.hoy)} (${fl.mejor === null ? L({es:'igual', ca:'igual', en:'same'}) : fl.mejor ? L({es:'mejora', ca:'millora', en:'better'}) : L({es:'empeora', ca:'empitjora', en:'worse'})})`));
+    if(sem.ganado && Math.abs(sem.ganado.total) >= 1) lineas.push('', `${L({es:'€ ganados desde que empezamos', ca:'€ guanyats des que vam començar', en:'€ gained since we started'})}: ${sem.ganado.total >= 0 ? '+' : '−'}${eur(Math.abs(sem.ganado.total))}`);
+  }
   return lineas.join('\n');
 }
 function plan360CompartirSemana(){
@@ -6321,7 +6451,7 @@ function plan360ActasHtml(){
   const tipo = {tarea: {es:'Tarea', ca:'Tasca', en:'Task'}, objetivo: {es:'Objetivo', ca:'Objectiu', en:'Goal'}, nota: {es:'Nota', ca:'Nota', en:'Note'}};
   const lista = plan360ActasLista();
   if(!lista.length) return `<p class="m">${escapeHtml(L({es:'Todavía no hay actas.', ca:'Encara no hi ha actes.', en:'There are no minutes yet.'}))}</p>`;
-  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.t{width:90px;font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px}</style>
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.t{width:90px;font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E}.m{color:#716C65;font-size:12px}</style>
     ${lista.map(a => `<h2>${escapeHtml(L({es:'Reunión del ', ca:'Reunió del ', en:'Meeting of '}))}${escapeHtml(plan360FechaLegible(a.fecha))}</h2>
       <table>${a.decisiones.map(x => `<tr><td class="t">${escapeHtml(L(tipo[x.tipo] || tipo.nota))}</td><td>${escapeHtml(x.texto || '')}${x.tipo === 'tarea' && x.dia ? `<div class="m">${escapeHtml(L({es:'Día ', ca:'Dia ', en:'Day '}))}${escapeHtml(String(x.dia))}</div>` : ''}</td></tr>`).join('')}</table>`).join('')}`;
 }
@@ -6357,7 +6487,7 @@ function plan360PlanAccionHtml(){
   }).join('');
   const sueltas = tareas.filter(x => !ids.has(x.tk.objectiveId));
   const otras = sueltas.length ? `<h2>${escapeHtml(L({es:'Otras acciones', ca:'Altres accions', en:'Other actions'}))}</h2><table>${sueltas.map(fila).join('')}</table>` : '';
-  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px;letter-spacing:-.01em}h2 .n{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E;margin-left:8px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.c{width:26px;font-size:18px;line-height:1}td.f{width:120px;color:#716C65;font:12px 'IBM Plex Mono',monospace}.m{color:#716C65;font-size:12px;margin:2px 0}</style>
+  return `<style>h2{font:600 16px 'Schibsted Grotesk',sans-serif;margin:20px 0 4px;letter-spacing:-.01em}h2 .n{font:600 11px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A5D4E;margin-left:8px}table{width:100%;border-collapse:collapse}td{padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top}td.c{width:26px;font-size:18px;line-height:1}td.f{width:120px;color:#716C65;font:12px 'IBM Plex Mono',monospace}.m{color:#716C65;font-size:12px;margin:2px 0}</style>
     <p class="m">${escapeHtml(L({es:'Programa de 4 semanas con tu coach', ca:'Programa de 4 setmanes amb el teu coach', en:'4-week programme with your coach'}))} · ${escapeHtml(plan360FechaLegible(b.plan360StartDate))}</p>
     ${bloques}${otras}`;
 }
@@ -6386,45 +6516,117 @@ const PLAN360_INFORME_FILAS = {
 };
 function plan360InformeCierreHtml(){
   const b = DB.business || {};
-  const eur = v => v == null ? '—' : Math.round(v).toLocaleString(localeActual()) + ' €';
-  const pct = v => v == null ? '—' : String(Math.round(v * 10) / 10).replace('.', ',') + ' %';
   const L = o => gl(o);
+  const eur = v => v == null ? '—' : Math.round(v).toLocaleString(localeActual()) + ' €';
+  const pct = v => v == null ? '—' : v.toLocaleString(localeActual(), {maximumFractionDigits: 1}) + ' %';
   const mar = typeof plan360MarcadorEuros === 'function' ? plan360MarcadorEuros() : null;
   const dia2 = (b.plan360Program || []).find(x => x.day === 2);
   const objetivos = ((dia2 && dia2.objectives) || []).filter(o => o.titulo);
   const cierre = b.plan360Cierre || {};
-  const acciones = plan360AccionesPorNivel().filter(n => n.total > 0);
-  const hechas = acciones.reduce((n, x) => n + x.hechas, 0), total = acciones.reduce((n, x) => n + x.total, 0);
-  const th = 'text-align:left;font:600 11px var(--mono,monospace);text-transform:uppercase;letter-spacing:.06em;color:#716C65;border-bottom:1.5px solid #1C1A17;padding:6px 8px 6px 0';
-  const td = 'padding:7px 8px 7px 0;border-bottom:1px solid #E7E2D9;font-size:13px;vertical-align:top';
-  const filas = mar ? mar.filas.map(f => {
-    const def = PLAN360_INFORME_FILAS[f.k] || {es:f.k, ca:f.k, en:f.k};
+  const nombreNegocio = b.name || b.businessName || '';
+  const f = d => plan360FechaLegible(d);
+  const inicio = b.plan360StartDate || '';
+  const fin = inicio ? plan360DateForDay(PLAN360_DIAS_PROGRAMA) : '';
+  // Todo el informe lleva la misma maquetación: etiquetas mono, filetes finos, aire por los cuatro lados y nada de iconos de fuente (la
+  // ventana de impresión no los carga). Sin emojis ni símbolos raros: ni las flechas del radar van como carácter, son texto.
+  const css = `<style>
+    .cv{min-height:236mm;display:flex;flex-direction:column;justify-content:space-between;break-after:page;padding:6mm 0 4mm}
+    .cv-et{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#4A5D4E;border-top:3px solid #1C1A17;padding-top:10px}
+    .cv-t{font:600 46px/1.04 'Schibsted Grotesk',sans-serif;letter-spacing:-.035em;margin:0 0 14px;border:0}
+    .cv-s{font:500 15px 'IBM Plex Mono',monospace;color:#3D3A34;margin:0}
+    .cv-lema{font:400 15px/1.55 'Schibsted Grotesk',sans-serif;color:#3D3A34;max-width:120mm;margin:0}
+    .cv-logo{max-height:22mm;max-width:60mm;object-fit:contain;display:block;margin-bottom:10mm}
+    .cv-pie{font:500 11px 'IBM Plex Mono',monospace;color:#716C65;letter-spacing:.06em;border-top:1px solid #E7E2D9;padding-top:8px}
+    .ic-sec{break-inside:avoid-page}
+    .ic-sec h2{margin-top:26px}
+    .ic-m{color:#716C65;font-size:12px;margin:2px 0 8px}
+    .ic-tab th{font:500 10px 'IBM Plex Mono',monospace}
+    .ic-pos{color:#3F6B4A;font-weight:700}.ic-neg{color:#A33F2E;font-weight:700}
+    .ic-obj{padding:9px 0;border-bottom:1px solid #EFEBE3;break-inside:avoid}
+    .ic-obj b{font-size:13.5px}.ic-obj .ic-ev{font:12px 'IBM Plex Mono',monospace;color:#3D3A34;margin-top:3px}
+    .ic-est{display:inline-block;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;border:1px solid #1C1A17;padding:1px 6px;margin-left:8px}
+    .ic-area{padding:8px 0;border-bottom:1px solid #EFEBE3;break-inside:avoid}
+    .ic-area ul{margin:4px 0 0 18px;padding:0;font-size:12.5px}
+    .ic-leyenda{display:flex;gap:18px;justify-content:center;font-size:11px;color:#716C65;margin:0 0 6px}
+    .ic-leyenda i{display:inline-block;width:20px;border-top:2px solid #4A5D4E;vertical-align:middle;margin-right:6px}
+    .ic-leyenda i.a{border-top:2px dashed #716C65}
+    .ic-texto{white-space:pre-wrap;font-size:13.5px;margin:2px 0 10px}
+  </style>`;
+  // ── Portada
+  const portada = `<section class="cv">
+    <div>${b.logo ? `<img class="cv-logo" src="${escapeHtml(b.logo)}" alt="">` : ''}
+      <div class="cv-et">${escapeHtml(L({es:'Plan 360º · Informe de cierre', ca:'Pla 360º · Informe de tancament', en:'360º Plan · Closing report'}))}</div></div>
+    <div>
+      <h1 class="cv-t">${escapeHtml(nombreNegocio || L({es:'Tu negocio', ca:'El teu negoci', en:'Your business'}))}</h1>
+      <p class="cv-s">${inicio ? escapeHtml(f(inicio)) + ' — ' + escapeHtml(f(fin)) : ''}</p>
+    </div>
+    <div>
+      <p class="cv-lema">${escapeHtml(L({es:'Cuatro semanas de trabajo con tu coach: de dónde partías, qué se ha hecho, qué ha cambiado en tus cifras y qué conviene vigilar a partir de ahora.', ca:'Quatre setmanes de feina amb el teu coach: d\'on parties, què s\'ha fet, què ha canviat a les teves xifres i què convé vigilar a partir d\'ara.', en:'Four weeks of work with your coach: where you started, what was done, what changed in your figures and what to keep an eye on from now on.'}))}</p>
+      <div class="cv-pie">GastroGoan · ${escapeHtml(fechaImpresaLegible(todayStr()))}</div>
+    </div></section>`;
+  // ── Radar antes/después
+  let radarHtml = '';
+  try{
+    const r = plan360RadarComparado();
+    if(r && r.ejes.length >= 3){
+      radarHtml = `<div class="ic-sec"><h2>${escapeHtml(L({es:'Dónde estabas y dónde estás', ca:'On eres i on ets', en:'Where you were and where you are'}))}</h2>
+        <div class="ic-leyenda"><span><i class="a"></i>${escapeHtml(L({es:'Día 1', ca:'Dia 1', en:'Day 1'}))}</span><span><i></i>${escapeHtml(L({es:'Hoy (últimos 28 días)', ca:'Avui (últims 28 dies)', en:'Today (last 28 days)'}))}</span></div>
+        ${plan360RadarComparadoSvg(r.ejes)}
+        <table class="ic-tab"><tr><th>${escapeHtml(L({es:'Área', ca:'Àrea', en:'Area'}))}</th><th class="pr-num">${escapeHtml(L({es:'Día 1', ca:'Dia 1', en:'Day 1'}))}</th><th class="pr-num">${escapeHtml(L({es:'Hoy', ca:'Avui', en:'Today'}))}</th></tr>
+        ${r.ejes.map(e => `<tr><td>${escapeHtml(L(e.nombre))}</td><td class="pr-num">${e.antes}</td><td class="pr-num ${e.hoy > e.antes ? 'ic-pos' : e.hoy < e.antes ? 'ic-neg' : ''}">${e.hoy}</td></tr>`).join('')}</table>
+        <p class="ic-m">${escapeHtml(L({es:'Costes, equipo, mermas y satisfacción: 100 = cumples el objetivo que fijaste. Ticket y ventas: 50 = como el Día 1. Solo salen las áreas con dato real en los dos momentos.', ca:'Costos, equip, minves i satisfacció: 100 = compleixes l\'objectiu que vas fixar. Tiquet i vendes: 50 = com el Dia 1. Només surten les àrees amb dada real en els dos moments.', en:'Costs, team, waste and satisfaction: 100 = you meet the target you set. Ticket and sales: 50 = same as Day 1. Only areas with real data at both moments are shown.'}))}</p></div>`;
+    }
+  }catch(e){ radarHtml = ''; }
+  // ── Cifras antes / ahora
+  const filasMes = mar ? mar.filas.map(fl => {
+    const def = PLAN360_INFORME_FILAS[fl.k] || {es:fl.k, ca:fl.k, en:fl.k};
     const fmt = def.pct ? pct : eur;
-    const euros = f.euros != null && Math.abs(f.euros) >= 1 ? `<span style="color:${f.euros >= 0 ? '#3F6B4A' : '#A33F2E'};font-weight:700">${f.euros >= 0 ? '+' : '−'}${eur(Math.abs(f.euros))}${L({es:'/mes', ca:'/mes', en:'/mo'})}</span>` : '';
-    return `<tr><td style="${td}">${escapeHtml(L(def))}</td><td style="${td}">${fmt(f.antes)}</td><td style="${td};font-weight:700">${fmt(f.hoy)}</td><td style="${td}">${euros}</td></tr>`;
+    const e = fl.euros != null && Math.abs(fl.euros) >= 1 ? `<span class="${fl.euros >= 0 ? 'ic-pos' : 'ic-neg'}">${fl.euros >= 0 ? '+' : '−'}${eur(Math.abs(fl.euros))}${L({es:' al mes', ca:' al mes', en:' per month'})}</span>` : '';
+    return `<tr><td>${escapeHtml(L(def))}</td><td class="pr-num">${fmt(fl.antes)}</td><td class="pr-num"><strong>${fmt(fl.hoy)}</strong></td><td class="pr-num">${e}</td></tr>`;
   }).join('') : '';
-  const cifras = mar ? `
-    <h2>${escapeHtml(L({es:'Tus cifras: antes y ahora', ca:'Les teves xifres: abans i ara', en:'Your figures: before and now'}))}</h2>
-    <p class="muted">${escapeHtml(L({es:'«Antes» es el mes completo previo al inicio del plan; «ahora», el último mes completo. Mismas cuentas que tu Cuenta de Resultados.', ca:'«Abans» és el mes complet previ a l\'inici del pla; «ara», l\'últim mes complet. Els mateixos comptes que el teu Compte de Resultats.', en:'“Before” is the full month prior to the plan start; “now”, the last full month. Same figures as your Profit & Loss.'}))}</p>
-    <table style="width:100%;border-collapse:collapse"><tr><th style="${th}"></th><th style="${th}">${escapeHtml(plan360FechaLegible(mar.desde + '-01').replace(/^\d+ de /, ''))}</th><th style="${th}">${escapeHtml(plan360FechaLegible(mar.mes + '-01').replace(/^\d+ de /, ''))}</th><th style="${th}">${escapeHtml(L({es:'Diferencia', ca:'Diferència', en:'Difference'}))}</th></tr>${filas}</table>`
-    : `<h2>${escapeHtml(L({es:'Tus cifras', ca:'Les teves xifres', en:'Your figures'}))}</h2><p class="muted">${escapeHtml(L({es:'Todavía no hay un mes completo de antes y de ahora con datos suficientes para compararlos. Tu coach los revisará contigo.', ca:'Encara no hi ha un mes complet d\'abans i d\'ara amb dades suficients per comparar-los. El teu coach els revisarà amb tu.', en:'There is not yet a full before and now month with enough data to compare. Your coach will go over them with you.'}))}</p>`;
+  const ganado = (() => { try{ return plan360GanadoAcumulado(); }catch(e){ return null; } })();
+  const cifras = `<div class="ic-sec"><h2>${escapeHtml(L({es:'Tus cifras: antes y ahora', ca:'Les teves xifres: abans i ara', en:'Your figures: before and now'}))}</h2>` + (mar ? `
+    <p class="ic-m">${escapeHtml(L({es:'«Antes» es el mes completo previo al inicio del plan; «ahora», el último mes completo. Mismas cuentas que tu Cuenta de Resultados.', ca:'«Abans» és el mes complet previ a l\'inici del pla; «ara», l\'últim mes complet. Els mateixos comptes que el teu Compte de Resultats.', en:'“Before” is the full month prior to the plan start; “now”, the last full month. Same figures as your Profit & Loss.'}))}</p>
+    <table class="ic-tab"><tr><th></th><th class="pr-num">${escapeHtml(plan360FechaLegible(mar.desde + '-01').replace(/^\d+ de /, ''))}</th><th class="pr-num">${escapeHtml(plan360FechaLegible(mar.mes + '-01').replace(/^\d+ de /, ''))}</th><th class="pr-num">${escapeHtml(L({es:'Diferencia', ca:'Diferència', en:'Difference'}))}</th></tr>${filasMes}</table>
+    ${ganado && Math.abs(ganado.total) >= 1 ? `<p style="margin:10px 0 0"><strong class="${ganado.total >= 0 ? 'ic-pos' : 'ic-neg'}">${ganado.total >= 0 ? '+' : '−'}${eur(Math.abs(ganado.total))}</strong> ${escapeHtml(L({es:'ganados desde que empezamos (suma de los meses completos).', ca:'guanyats des que vam començar (suma dels mesos complets).', en:'gained since we started (sum of full months).'}))}</p>` : ''}`
+    : `<p class="ic-m">${escapeHtml(L({es:'Todavía no hay un mes completo de antes y de ahora con datos suficientes para compararlos. Tu coach los revisará contigo.', ca:'Encara no hi ha un mes complet d\'abans i d\'ara amb dades suficients per comparar-los. El teu coach els revisarà amb tu.', en:'There is not yet a full before and now month with enough data to compare. Your coach will go over them with you.'}))}</p>`) + `</div>`;
+  // ── Objetivos con su evolución
   const estado = o => o.estadoFinal ? L({cumplido:{es:'Cumplido', ca:'Complert', en:'Achieved'}, parcial:{es:'Parcial', ca:'Parcial', en:'Partial'}, no_cumplido:{es:'No cumplido', ca:'No complert', en:'Not achieved'}}[o.estadoFinal] || {es:'', ca:'', en:''}) : L({es:'Sin cierre', ca:'Sense tancament', en:'Not closed'});
-  const med = o => { const ms = (o.mediciones || []).filter(x => x && x.valor !== '' && x.valor != null); if(!ms.length) return ''; return ms.length === 1 ? escapeHtml(String(ms[0].valor)) : escapeHtml(String(ms[0].valor)) + ' → ' + escapeHtml(String(ms[ms.length - 1].valor)); };
-  const objs = objetivos.length ? `
-    <h2>${escapeHtml(L({es:'Tus objetivos', ca:'Els teus objectius', en:'Your goals'}))}</h2>
-    <table style="width:100%;border-collapse:collapse"><tr><th style="${th}">${escapeHtml(L({es:'Objetivo', ca:'Objectiu', en:'Goal'}))}</th><th style="${th}">${escapeHtml(L({es:'Medición', ca:'Mesura', en:'Measure'}))}</th><th style="${th}">${escapeHtml(L({es:'Resultado', ca:'Resultat', en:'Outcome'}))}</th></tr>
-    ${objetivos.map(o => `<tr><td style="${td}"><strong>${escapeHtml(o.titulo)}</strong>${o.metrica ? `<div class="muted">${escapeHtml(o.metrica)}</div>` : ''}</td><td style="${td}">${med(o)}</td><td style="${td};font-weight:700">${escapeHtml(estado(o))}</td></tr>`).join('')}</table>` : '';
-  const acc = total ? `<h2>${escapeHtml(L({es:'Lo que se ha hecho', ca:'El que s\'ha fet', en:'What has been done'}))}</h2><p>${escapeHtml(L({es:`${hechas} de ${total} acciones del plan hechas.`, ca:`${hechas} de ${total} accions del pla fetes.`, en:`${hechas} of ${total} plan actions done.`}))}</p>
-    <table style="width:100%;border-collapse:collapse">${acciones.map(n => `<tr><td style="${td}">${escapeHtml(t(PLAN360_NIVEL_LABEL[n.nivel]))}</td><td style="${td}">${n.hechas} / ${n.total}</td></tr>`).join('')}</table>` : '';
-  const bloque = (titulo, texto) => texto ? `<h3>${escapeHtml(titulo)}</h3><p style="white-space:pre-wrap">${escapeHtml(texto)}</p>` : '';
-  const cierreTxt = bloque(L({es:'Mejoras que ya se ven', ca:'Millores que ja es veuen', en:'Improvements already visible'}), cierre.mejorasVisibles) + bloque(L({es:'Qué vigilar', ca:'Què vigilar', en:'What to watch'}), cierre.queVigilar) + bloque(L({es:'Siguiente nivel', ca:'Següent nivell', en:'Next level'}), cierre.siguienteNivel);
-  return `<style>h2{font:600 17px 'Schibsted Grotesk',sans-serif;margin:22px 0 6px;letter-spacing:-.01em}h3{font:600 14px 'Schibsted Grotesk',sans-serif;margin:14px 0 2px}.muted{color:#716C65;font-size:12px;margin:2px 0 8px}</style>
-    <p class="muted" style="font-size:13px">${escapeHtml(L({es:'Programa de 4 semanas con tu coach', ca:'Programa de 4 setmanes amb el teu coach', en:'4-week programme with your coach'}))}${b.plan360StartDate ? ' · ' + escapeHtml(L({es:'inicio ', ca:'inici ', en:'start '})) + escapeHtml(plan360FechaLegible(b.plan360StartDate)) : ''}</p>
-    ${cifras}${objs}${acc}${cierreTxt}`;
+  const evolucion = o => {
+    const ms = (o.mediciones || []).filter(x => x && x.valor !== '' && x.valor != null);
+    const ini = o.valorInicial || (ms.length ? ms[0].valor : '');
+    const ult = ms.length ? ms[ms.length - 1].valor : '';
+    const partes = [];
+    if(ini) partes.push(escapeHtml(L({es:'Inicio ', ca:'Inici ', en:'Start '}) + ini));
+    if(ult && String(ult) !== String(ini)) partes.push(escapeHtml(L({es:'Ahora ', ca:'Ara ', en:'Now '}) + ult));
+    if(o.valorObjetivo) partes.push(escapeHtml(L({es:'Objetivo ', ca:'Objectiu ', en:'Target '}) + o.valorObjetivo + (o.fechaObjetivo ? ' (' + plan360FechaLegible(o.fechaObjetivo) + ')' : '')));
+    if(ms.length > 2) partes.push(escapeHtml(ms.slice(-5).map(x => x.valor).join(' → ')));
+    return partes.join(' · ');
+  };
+  const objs = objetivos.length ? `<div class="ic-sec"><h2>${escapeHtml(L({es:'Tus objetivos', ca:'Els teus objectius', en:'Your goals'}))}</h2>
+    ${objetivos.map(o => `<div class="ic-obj"><b>${escapeHtml(o.titulo)}</b><span class="ic-est">${escapeHtml(estado(o))}</span>${o.metrica ? `<div class="ic-m" style="margin:2px 0 0">${escapeHtml(o.metrica)}</div>` : ''}${evolucion(o) ? `<div class="ic-ev">${evolucion(o)}</div>` : ''}</div>`).join('')}</div>` : '';
+  // ── Lo implantado, por área
+  const tareas = [];
+  (b.plan360Program || []).filter(d => d.phase === 'trabajo').forEach(d => plan360TareasReales(d).forEach(tk => tareas.push(tk)));
+  const grupos = [['cocina', PLAN360_AREAS.cocina], ['sala', PLAN360_AREAS.sala], ['gestion', PLAN360_AREAS.gestion], ['otras', {es:'Otras acciones', ca:'Altres accions', en:'Other actions'}]];
+  const deArea = k => tareas.filter(tk => { const a = plan360AreaDeTarea(tk); return (a ? a.k : 'otras') === k; });
+  const areasHtml = grupos.map(([k, nom]) => {
+    const ts = deArea(k); if(!ts.length) return '';
+    const hechas = ts.filter(tk => tk.status === 'hecha');
+    return `<div class="ic-area"><b>${escapeHtml(L(nom))}</b> <span class="ic-m">· ${hechas.length} ${escapeHtml(L({es:'de', ca:'de', en:'of'}))} ${ts.length} ${escapeHtml(L({es:'hechas', ca:'fetes', en:'done'}))}</span>
+      ${hechas.length ? `<ul>${hechas.slice(0, 8).map(tk => `<li>${escapeHtml(tk.title)}</li>`).join('')}${hechas.length > 8 ? `<li>${escapeHtml(L({es:`y ${hechas.length - 8} más`, ca:`i ${hechas.length - 8} més`, en:`and ${hechas.length - 8} more`}))}</li>` : ''}</ul>` : ''}</div>`;
+  }).join('');
+  const implantado = areasHtml ? `<div class="ic-sec"><h2>${escapeHtml(L({es:'Lo que se ha implantado', ca:'El que s\'ha implantat', en:'What has been put in place'}))}</h2>${areasHtml}</div>` : '';
+  // ── Texto del coach: lo que ya se ve, qué vigilar y siguiente nivel (sin oferta de mantenimiento: es el paso siguiente, aparte)
+  const sinCerrar = objetivos.filter(o => o.estadoFinal !== 'cumplido').map(o => o.titulo);
+  const vigilar = cierre.queVigilar || (sinCerrar.length ? L({es:'Objetivos que siguen abiertos: ', ca:'Objectius que segueixen oberts: ', en:'Goals still open: '}) + sinCerrar.join('; ') + '.' : '');
+  const bloque = (titulo, txt) => txt ? `<h3>${escapeHtml(titulo)}</h3><p class="ic-texto">${escapeHtml(txt)}</p>` : '';
+  const texto = bloque(L({es:'Mejoras que ya se ven', ca:'Millores que ja es veuen', en:'Improvements already visible'}), cierre.mejorasVisibles) + bloque(L({es:'Qué vigilar', ca:'Què vigilar', en:'What to watch'}), vigilar) + bloque(L({es:'Siguiente nivel', ca:'Següent nivell', en:'Next level'}), cierre.siguienteNivel);
+  return css + portada + radarHtml + cifras + objs + implantado + (texto ? `<div class="ic-sec"><h2>${escapeHtml(L({es:'Y ahora, ¿qué?', ca:'I ara, què?', en:'And now what?'}))}</h2>${texto}</div>` : '');
 }
 function plan360InformeCierre(){
   const cierre = DB.business.plan360Cierre;
-  if(cierre && !cierre.informeVistoEn){ cierre.informeVistoEn = Date.now(); saveDB(); plan360PingActivity(); }
+  if(cierre && !cierre.informeVistoEn && !plan360SoloLectura()){ cierre.informeVistoEn = Date.now(); saveDB(); plan360PingActivity(); }
   printReportWindow(gl({es:'Informe de cierre · Plan 360º', ca:'Informe de tancament · Pla 360º', en:'Closing report · 360º Plan'}), plan360InformeCierreHtml());
   renderPlan360Grid();
 }
@@ -6435,6 +6637,7 @@ function plan360FechaLegible(f){
   return new Date(y, mo - 1, d).toLocaleDateString(localeActual(), {day: 'numeric', month: 'long', year: 'numeric'});
 }
 function plan360MantenimientoAceptar(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const nombre = (document.getElementById('p360-mant-firma').value || '').trim();
   if(!nombre){ showToast(t('plan360.signMissing')); return; }
@@ -6452,6 +6655,7 @@ function plan360MantenimientoAceptar(){
   renderPlan360Grid();
 }
 function plan360MantenimientoPensar(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const c = DB.business.plan360Cierre;
   if(!c || !c.mantenimiento) return;
@@ -6554,10 +6758,11 @@ function plan360MantMarcadorHtml(){
   if(!m.desde) return '';
   const [y, mo] = m.desde.split('-').map(Number);
   const desdeTxt = new Date(y, mo - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'});
+  // «1 reporte», no «1 reportes»: la etiqueta tiene singular propio (clave + «1»).
   const celda = (n, icono, clave) => `<div style="flex:1;min-width:92px;text-align:center;padding:6px 4px">
       <i class="ti ${icono}" style="font-size:20px;opacity:.85"></i>
       <div style="font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums">${n}</div>
-      <div class="txt-xs" style="opacity:.85">${escapeHtml(t(clave))}</div>
+      <div class="txt-xs" style="opacity:.85">${escapeHtml(t(n === 1 ? clave + '1' : clave))}</div>
     </div>`;
   return `<div class="card" style="background:var(--ink);color:#fff;margin-bottom:12px">
     <div style="font-weight:700;margin-bottom:2px">${escapeHtml(t('plan360.mant.scoreTitle'))}</div>
@@ -6608,18 +6813,22 @@ function plan360MantServicioHtml(){
     </div>
     ${ult.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${ult.map(k => `<span class="badge" style="background:var(--green-bg,#E4EDE6);color:var(--green,#3F6B4A)"><i class="ti ti-check"></i> ${escapeHtml(mesTxt(k))}</span>`).join('')}</div>` : `<p class="txt-xs txt-muted" style="margin:4px 0 8px">${escapeHtml(L({es:'Todavía no hay cobros apuntados.', ca:'Encara no hi ha cobraments apuntats.', en:'No payments recorded yet.'}))}</p>`}
     ${baja ? `<div style="background:var(--amber-bg,#F6EBD0);padding:10px;border-radius:6px;font-size:13px">${escapeHtml(L({es:'Has pedido la baja el ', ca:'Has demanat la baixa el ', en:'You asked to cancel on '}))}<b>${escapeHtml(new Date(baja.ts).toLocaleDateString(localeActual()))}</b>${escapeHtml(L({es:': será efectiva a fin de mes.', ca:': serà efectiva a final de mes.', en:': effective at the end of the month.'}))}
-        ${esOwner ? ` <button class="btn btn-sm btn-toque" onclick="plan360RetirarBaja()">${escapeHtml(L({es:'Retirar la solicitud', ca:'Retirar la sol·licitud', en:'Withdraw the request'}))}</button>` : ''}</div>`
-      : (esOwner ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
+        ${esOwner && !plan360SoloLectura() ? ` <button class="btn btn-sm btn-toque" onclick="plan360RetirarBaja()">${escapeHtml(L({es:'Retirar la solicitud', ca:'Retirar la sol·licitud', en:'Withdraw the request'}))}</button>` : ''}</div>`
+      : (esOwner && !plan360SoloLectura() ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
   </div>`;
 }
-function plan360SolicitarBaja(){
+// La confirmación va con la ventana propia de la app (confirmModal), no con el confirm() nativo del navegador: fuera de lugar
+// en una app con su diseño, y en un móvil o una tablet en modo PWA puede ni salir.
+async function plan360SolicitarBaja(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
-  if(!confirm(gl({es:'¿Pedir la baja del mantenimiento? Será efectiva a fin de este mes y tu coach la recibe al momento.', ca:'Demanar la baixa del manteniment? Serà efectiva a final d\'aquest mes i el teu coach la rep a l\'instant.', en:'Request cancellation of the maintenance? It takes effect at the end of this month and your coach gets it right away.'}))) return;
+  if(!(await confirmModal(gl({es:'¿Pedir la baja del mantenimiento? Será efectiva a fin de este mes y tu coach la recibe al momento.', ca:'Demanar la baixa del manteniment? Serà efectiva a final d\'aquest mes i el teu coach la rep a l\'instant.', en:'Request cancellation of the maintenance? It takes effect at the end of this month and your coach gets it right away.'}), {danger:true, icon:'ti-door-exit', confirmLabel: gl({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'})}))) return;
   DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {baja: {ts: Date.now(), por: 'negocio'}});
   saveDB(); plan360PingActivity(); showToast(gl({es:'Baja solicitada', ca:'Baixa sol·licitada', en:'Cancellation requested'}));
   renderPlan360Mant();
 }
 function plan360RetirarBaja(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const sv = Object.assign({}, DB.business.plan360Servicio || {}); delete sv.baja;
   DB.business.plan360Servicio = sv;
@@ -6655,7 +6864,7 @@ function renderPlan360Mant(clave){
       const atrasada = tarea && !it.hecho && fecha && fecha < hoy;
       const idSeguro = escapeHtml(it.id);
       const marca = tarea
-        ? `<input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${idSeguro}',this.checked)" style="width:22px;height:22px;flex:none;margin-top:1px" aria-label="${escapeHtml(t('plan360.mant.markDone'))}">`
+        ? `<label class="p360-chk44"><input type="checkbox" ${it.hecho ? 'checked' : ''} ${esOwner && !plan360SoloLectura() ? '' : 'disabled'} onchange="plan360MantMarcar('${sk}','${idSeguro}',this.checked)" style="width:22px;height:22px;margin:0" aria-label="${escapeHtml(t('plan360.mant.markDone'))}"></label>`
         : `<i class="ti ${it.hecho ? 'ti-circle-check' : 'ti-circle'}" style="font-size:22px;flex:none;color:${it.hecho ? 'var(--green)' : 'var(--muted)'}"></i>`;
       return `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border)">
         ${marca}
@@ -6666,7 +6875,7 @@ function renderPlan360Mant(clave){
           ${!tarea && it.hecho ? `<div class="txt-xs" style="color:var(--green);margin-top:2px">${escapeHtml(t('plan360.mant.delivered'))}</div>` : ''}
           ${atrasada ? `<div class="txt-xs" style="color:var(--red);margin-top:2px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.mant.overdue'))}</div>` : ''}
           ${it.respuesta ? `<div style="margin-top:6px;padding:7px 10px;background:var(--bg);border-left:3px solid var(--green);font-size:13px;white-space:pre-wrap">${escapeHtml(it.respuesta)}</div>` : ''}
-          ${esOwner ? `<details style="margin-top:4px">
+          ${esOwner && !plan360SoloLectura() ? `<details style="margin-top:4px">
             <summary class="txt-xs" style="cursor:pointer;color:var(--muted);min-height:32px;display:flex;align-items:center;gap:4px"><i class="ti ti-message-circle"></i> ${escapeHtml(t(it.respuesta ? 'plan360.mant.editReply' : 'plan360.mant.reply'))}</summary>
             <textarea id="p360-mant-resp-${sk}-${idSeguro}" rows="2" placeholder="${escapeHtml(t('plan360.mant.replyPh'))}" style="margin-top:4px;font-size:13px">${escapeHtml(it.respuesta || '')}</textarea>
             <button class="btn btn-sm btn-primary" style="margin-top:4px" onclick="plan360MantResponder('${sk}','${idSeguro}')">${escapeHtml(t('plan360.mant.sendReply'))}</button>
@@ -6686,6 +6895,7 @@ function renderPlan360Mant(clave){
   const cuerpo = plan360MantLunes(plan360MantMes).map(semanaHtml).join('');
   document.getElementById('plan360-content').innerHTML = `
     ${plan360PageHeader(t('plan360.mant.title'), t('plan360.mant.desc'))}
+    ${plan360SoloLecturaBannerHtml()}
     <div style="margin-top:12px">${plan360MantMarcadorHtml()}</div>
     ${plan360MantServicioHtml()}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
@@ -6728,6 +6938,7 @@ function plan360MantItem(sk, id){
   return mes && mes.semanas && mes.semanas[sk] && mes.semanas[sk].items && mes.semanas[sk].items[id];
 }
 function plan360MantMarcar(sk, id, hecho){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()){ showToast(t('plan360.mant.ownerOnly')); renderPlan360Mant(); return; }
   const it = plan360MantItem(sk, id);
   if(!it || it.tipo !== 'tarea') return;
@@ -6741,6 +6952,7 @@ function plan360MantMarcar(sk, id, hecho){
 // un 8 % más barato» o «no he podido, falta gente». Así la llamada empieza
 // sabiendo qué ha pasado. Avisa al coach como cualquier otra actividad.
 function plan360MantResponder(sk, id){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()){ showToast(t('plan360.mant.ownerOnly')); return; }
   const it = plan360MantItem(sk, id);
   const ta = document.getElementById('p360-mant-resp-' + sk + '-' + id);
@@ -6752,6 +6964,18 @@ function plan360MantResponder(sk, id){
   plan360PingActivity();
   showToast(t(texto ? 'plan360.mant.replySent' : 'plan360.saved'));
   withScrollPreserved(() => renderPlan360Mant());
+}
+// Los títulos de día que genera la app ('Día 3', 'Presentación y entrega del plan'…) se GUARDAN en castellano; se traducen al
+// mostrarlos (un dato guardado no se traduce, se traduce al pintarlo). Un título que el coach escribió a mano se respeta tal cual.
+function plan360TituloDia(d){
+  const x = String((d && d.title) || '').trim();
+  const m = /^D[ií]a (\d+)$/i.exec(x);
+  if(m) return t('plan360.day') + ' ' + m[1];
+  const fijos = {
+    'Cliente misterioso y diagnóstico': {es:'Cliente misterioso y diagnóstico', ca:'Client misteriós i diagnòstic', en:'Mystery guest and diagnosis'},
+    'Presentación y entrega del plan': {es:'Presentación y entrega del plan', ca:'Presentació i lliurament del pla', en:'Plan presentation and delivery'},
+  };
+  return fijos[x] ? gl(fijos[x]) : x;
 }
 function plan360PageHeader(title, subtitle, backFn){
   return `<button class="btn btn-sm btn-back" onclick="${backFn || 'renderPlan360Grid'}()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
@@ -6807,10 +7031,10 @@ function renderPlan360Questionnaire(){
     ${plan360PageHeader(t('plan360.questionnaire'), null, 'renderPlan360Intake')}
     <div class="card" style="margin-top:14px">
       ${sections.map((s, si) => `
-        <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(s.title)}</div>
+        <div style="font-weight:600;margin:${si ? '18' : '0'}px 0 8px">${escapeHtml(plan360IntakeTxt(s.title))}</div>
         ${s.questions.map((q, qi) => `
           <div class="field">
-            <label>${escapeHtml(q.q)}</label>
+            <label>${escapeHtml(plan360IntakeTxt(q.q))}</label>
             <textarea id="p360-intake-${si}-${qi}" rows="2">${escapeHtml(q.a)}</textarea>
           </div>
         `).join('')}
@@ -6851,25 +7075,26 @@ function plan360ContractSectionHtml(){
   // Sin precio o forma de pago (los pacta el coach, no se tocan desde
   // aquí) no se puede firmar: si no, se firma un contrato con el precio
   // en blanco, y eso no vale como acuerdo de servicios.
-  const listoParaFirmar = !!(c.precio && c.formaPago);
+  const coachListo = !!plan360CoachDatos();
+  const listoParaFirmar = !!(c.precio && c.formaPago) && coachListo && !plan360SoloLectura();
   return `<div class="card" style="margin-top:14px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}"></div>
-      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-c-nif" value="${escapeHtml(c.clienteNIF || '')}"></div>
+      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}" oninput="plan360ContratoVivo()" onchange="plan360SaveContractFields()"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-c-nif" value="${escapeHtml(c.clienteNIF || '')}" oninput="plan360ContratoVivo()" onchange="plan360SaveContractFields()"></div>
     </div>
-    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-c-direccion" value="${escapeHtml(c.clienteDireccion || '')}"></div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-c-direccion" value="${escapeHtml(c.clienteDireccion || '')}" oninput="plan360ContratoVivo()" onchange="plan360SaveContractFields()"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPrice'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.precio || '—')}</div></div>
       <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPayment'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.formaPago || '—')}</div></div>
     </div>
     <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
-    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Contract()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
-    <div class="p360-txt p360-txt-box" style="margin-bottom:14px">${plan360TextoHtml(texto)}</div>
-    ${!listoParaFirmar ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.signBlockedNoPrice'))}</div>` : ''}
+    <div id="p360-contrato-texto" class="p360-txt p360-txt-box" style="margin-bottom:14px">${plan360TextoHtml(texto)}</div>
+    ${!coachListo ? `<div class="card" id="p360-coach-pendiente" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-user-edit"></i> ${escapeHtml(gl({es:'Tu coach completará sus datos antes de la firma. Cuando lo haga, podrás firmar aquí mismo.', ca:'El teu coach completarà les seves dades abans de la signatura. Quan ho faci, podràs signar aquí mateix.', en:'Your coach will complete their details before signing. Once done, you will be able to sign right here.'}))}</div>` : ''}
+    ${!(c.precio && c.formaPago) ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.signBlockedNoPrice'))}</div>` : ''}
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name" ${listoParaFirmar ? '' : 'disabled'}></div>
-      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni" ${listoParaFirmar ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name" value="${escapeHtml(c.clienteNombre || '')}" oninput="this.dataset.tocado='1'" ${listoParaFirmar ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni" value="${escapeHtml(c.clienteNIF || '')}" oninput="this.dataset.tocado='1'" ${listoParaFirmar ? '' : 'disabled'}></div>
     </div>
     <button class="btn btn-primary" onclick="plan360SignContract()" ${listoParaFirmar ? '' : 'disabled'}>${escapeHtml(t('plan360.signSubmit'))}</button>
     <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
@@ -6892,10 +7117,25 @@ function plan360PrintContract(){
   win.document.close();
   ggEsperarYImprimir(win);
 }
+// El texto del contrato se rehace MIENTRAS se escribe (nombre, NIF, domicilio) y la firma ya sale con esos mismos datos:
+// antes había que pulsar «Actualizar datos del contrato» (si no, el texto seguía con «________») y volver a teclear nombre y
+// DNI en «Firma aquí» — lo mismo dos veces. No se guarda en cada tecla (saveDB es caro): eso lo hace el onchange.
+// Los campos de la firma solo se siguen si la persona no los ha tocado a mano (firmar con otro nombre es legítimo).
+function plan360ContratoVivo(){
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const c = Object.assign({}, DB.business.plan360Contract || {}, {clienteNombre: val('p360-c-nombre'), clienteNIF: val('p360-c-nif'), clienteDireccion: val('p360-c-direccion')});
+  const caja = document.getElementById('p360-contrato-texto');
+  if(caja) caja.innerHTML = plan360TextoHtml(plan360FillTemplate(PLAN360_CONTRACT_TEXT, c));
+  [['p360-sign-name', c.clienteNombre], ['p360-sign-dni', c.clienteNIF]].forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if(el && !el.dataset.tocado) el.value = v;
+  });
+}
 // El precio y la forma de pago NO se tocan desde aquí: los pacta el coach,
 // no se editan desde la app del negocio (solo se ven, en gris). Se cambian
 // exclusivamente desde admin-panel/plan360.html.
 function plan360SaveContractFields(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const c = DB.business.plan360Contract;
   c.clienteNombre = (document.getElementById('p360-c-nombre').value || '').trim();
   c.clienteNIF = (document.getElementById('p360-c-nif').value || '').trim();
@@ -6903,8 +7143,10 @@ function plan360SaveContractFields(){
   saveDB();
 }
 function plan360SignContract(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const c = DB.business.plan360Contract || {};
   if(!c.precio || !c.formaPago){ showToast(t('plan360.signBlockedNoPrice')); return; }
+  if(!plan360CoachDatos()){ showToast(gl({es:'Tu coach completará sus datos antes de la firma.', ca:'El teu coach completarà les seves dades abans de la signatura.', en:'Your coach will complete their details before signing.'})); return; }
   const name = (document.getElementById('p360-sign-name').value || '').trim();
   const dni = (document.getElementById('p360-sign-dni').value || '').trim();
   if(!name || !dni){ showToast(t('plan360.signMissing')); return; }
@@ -6919,6 +7161,7 @@ function plan360SignContract(){
   renderPlan360Contract();
 }
 function savePlan360Intake(){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const sections = (DB.business.plan360Intake || {}).sections || [];
   sections.forEach((s, si) => {
     s.questions.forEach((q, qi) => { q.a = (document.getElementById('p360-intake-' + si + '-' + qi).value || '').trim(); });
@@ -7113,7 +7356,7 @@ function renderPlan360PresencialDetail(d){
   if(d.day === 2){ renderPlan360Dia2Hub(d); return; }
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px">
       <div class="field"><label>${escapeHtml(t('plan360.dayTask'))}</label><textarea id="p360-notes" rows="4">${escapeHtml(d.notes || '')}</textarea></div>
       <button class="btn btn-primary" onclick="savePlan360Presencial(${d.day})">${escapeHtml(t('common.save'))}</button>
@@ -7130,7 +7373,7 @@ function renderPlan360Dia1Hub(d){
   const mc = d.misteryCheck;
   const enviado = !!(mc && mc.sentAt);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px;${enviado ? 'cursor:pointer' : 'opacity:.55'}" ${enviado ? `onclick="renderPlan360MisteryReport(${d.day})"` : ''}>
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ${enviado ? 'ti-circle-check' : 'ti-user-search'}" style="font-size:20px;${enviado ? 'color:var(--green)' : ''}"></i>
@@ -7174,7 +7417,7 @@ function renderPlan360Dia2Hub(d){
   const tb = d.teamBuilding;
   const listo = !!(tb && tb.completadoAt);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360PlanAccion(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ti-calendar-event" style="font-size:20px"></i>
@@ -7279,6 +7522,7 @@ function renderPlan360TeamBuilding(day){
 // un nombre como «J. García» habría dejado al negocio sin guardar nada.
 function plan360ClaveFirebase(txt){ return String(txt).replace(/[.#$/\[\]]/g, '_').slice(0, 120); }
 function plan360TbTogglePremio(day, idx, checked){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   const tb = d && d.teamBuilding;
   if(!tb) return;
@@ -7413,6 +7657,7 @@ function renderPlan360Objectives(day){
   `;
 }
 function savePlan360ObjectivesOnly(day){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;   // segunda barrera: la pantalla que llama aquí ya está gateada
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
@@ -7505,10 +7750,17 @@ function renderPlan360ReunionReport(day){
 function plan360ObjectiveRow(day, o, i){
   const col = plan360ObjPriorityColor(o.prioridad);
   const mediciones = o.mediciones || [];
-  return `<div class="card" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
-    <div class="field" style="margin-bottom:8px">
-      <label>${escapeHtml(t('plan360.objTitle'))}</label>
-      <input id="p360-obj-titulo-${i}" value="${escapeHtml(o.titulo || '')}">
+  // La «Urgencia» la fija el coach: un objetivo que puso él llega sin `origen`; los que añade el negocio desde aquí llevan
+  // origen:'negocio' y esos sí los puede graduar. Sin esto el negocio rebajaba a «complementario» lo que el coach marcó prioritario.
+  const propio = o.origen === 'negocio';
+  const menu = propio ? ggMenuAcciones([{icono:'ti-trash', texto: gl({es:'Borrar el objetivo', ca:'Esborrar l\'objectiu', en:'Delete the goal'}), fn:`plan360BorrarObjetivo(${day},${i})`, peligro:true}]) : '';
+  return `<div class="card p360-obj" style="margin-bottom:10px;${col ? 'border-left:4px solid ' + col : ''}">
+    <div class="field p360-obj-cab" style="margin-bottom:8px">
+      <label for="p360-obj-titulo-${i}">${escapeHtml(t('plan360.objTitle'))}</label>
+      <div class="p360-obj-cab-fila">
+        <textarea id="p360-obj-titulo-${i}" class="p360-obj-tit" rows="1">${escapeHtml(o.titulo || '')}</textarea>
+        ${menu}
+      </div>
     </div>
     <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objWhy'))}</label>
@@ -7516,23 +7768,31 @@ function plan360ObjectiveRow(day, o, i){
     </div>
     <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objUrgency'))}</label>
-      <select id="p360-obj-prioridad-${i}">
+      ${propio ? `<select id="p360-obj-prioridad-${i}">
         <option value="prioritario" ${o.prioridad === 'prioritario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.prioritario'))}</option>
         <option value="esencial" ${o.prioridad === 'esencial' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.esencial'))}</option>
         <option value="complementario" ${o.prioridad === 'complementario' ? 'selected' : ''}>${escapeHtml(t('plan360.priority.complementario'))}</option>
-      </select>
+      </select>` : `<div class="p360-obj-urg-fija"><span class="p360-obj-urg-chip" style="${col ? 'border-color:' + col : ''}">${escapeHtml(t('plan360.priority.' + (o.prioridad || 'esencial')))}</span><span class="txt-xs muted">${escapeHtml(gl({es:'La fija tu coach', ca:'La fixa el teu coach', en:'Set by your coach'}))}</span></div>`}
     </div>
-    <div class="field" style="margin-bottom:0">
+    <div class="field" style="margin-bottom:8px">
       <label>${escapeHtml(t('plan360.objMetric'))}</label>
       <input id="p360-obj-metrica-${i}" value="${escapeHtml(o.metrica || '')}" placeholder="${escapeHtml(t('plan360.objMetricPlaceholder'))}">
+    </div>
+    <div class="p360-obj-valores">
+      <div class="field"><label for="p360-obj-vini-${i}">${escapeHtml(gl({es:'Valor inicial', ca:'Valor inicial', en:'Starting value'}))}</label><input id="p360-obj-vini-${i}" value="${escapeHtml(o.valorInicial || '')}" inputmode="decimal" placeholder="${escapeHtml(gl({es:'Ej. 8 %', ca:'Ex. 8 %', en:'E.g. 8%'}))}"></div>
+      <div class="field"><label for="p360-obj-vobj-${i}">${escapeHtml(gl({es:'Objetivo', ca:'Objectiu', en:'Target'}))}</label><input id="p360-obj-vobj-${i}" value="${escapeHtml(o.valorObjetivo || '')}" inputmode="decimal" placeholder="${escapeHtml(gl({es:'Ej. 3 %', ca:'Ex. 3 %', en:'E.g. 3%'}))}"></div>
+      <div class="field"><label for="p360-obj-fecha-${i}">${escapeHtml(gl({es:'Fecha objetivo', ca:'Data objectiu', en:'Target date'}))}</label><input type="date" id="p360-obj-fecha-${i}" value="${escapeHtml(o.fechaObjetivo || '')}"></div>
     </div>
     ${o.metrica ? `
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${escapeHtml(t('plan360.objMeasurements'))}</div>
-        ${mediciones.length ? mediciones.map(m => `<div style="display:flex;gap:8px;padding:3px 0;font-size:13px"><span class="muted" style="flex:none">${escapeHtml(plan360FechaLegible(m.fecha))}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted">— ${escapeHtml(m.nota)}</span>` : ''}</div>`).join('')
+        ${mediciones.length ? mediciones.map((m, j) => `<div class="p360-med"><span class="muted" style="flex:none">${escapeHtml(plan360FechaLegible(m.fecha))}</span><span style="font-weight:600">${escapeHtml(m.valor)}</span>${m.nota ? `<span class="muted p360-med-nota">— ${escapeHtml(m.nota)}</span>` : ''}${ggMenuAcciones([
+            {icono:'ti-pencil', texto: gl({es:'Editar la medición', ca:'Editar el mesurament', en:'Edit the measurement'}), fn:`plan360EditarMedicion(${i},${j})`},
+            {icono:'ti-trash', texto: gl({es:'Borrar la medición', ca:'Esborrar el mesurament', en:'Delete the measurement'}), fn:`plan360BorrarMedicion(${i},${j})`, peligro:true},
+          ])}</div>`).join('')
           : `<p class="muted" style="margin:0;font-size:13px">${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`}
         <div style="display:flex;gap:6px;margin-top:8px">
-          <input id="p360-obj-medicion-${i}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" style="flex:1">
+          <input id="p360-obj-medicion-${i}" aria-label="${escapeHtml(t('plan360.objMeasurementValue'))}" placeholder="${escapeHtml(t('plan360.objMeasurementValue'))}" inputmode="decimal" style="flex:1">
           <button class="btn btn-sm" onclick="plan360AddMedicion(${i})">${escapeHtml(t('plan360.objMeasurementAdd'))}</button>
         </div>
       </div>` : ''}
@@ -7540,49 +7800,123 @@ function plan360ObjectiveRow(day, o, i){
 }
 let plan360ObjetivosDiaActivo = null;
 function addPlan360Objective(day){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;   // segunda barrera: la pantalla que llama aquí ya está gateada
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !Array.isArray(d.objectives)) return;
   plan360SyncObjectivesFromForm(d);
-  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null});
-  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(day, o, i)).join('');
+  d.objectives.push({id: genId(), titulo: '', explicacion: '', prioridad: 'esencial', metrica: '', mediciones: [], estadoFinal: null, origen: 'negocio'});
+  plan360ObjRepintar(d);
+}
+function plan360ObjRepintar(d){
+  const lista = document.getElementById('p360-obj-list');
+  if(lista) lista.innerHTML = d.objectives.map((o, i) => plan360ObjectiveRow(d.day, o, i)).join('');
+}
+// Se vuelve a buscar el día en DB (la nube pudo sustituir el objeto) y se recoge lo escrito antes de repintar.
+function plan360ObjDiaVivo(){
+  if(!plan360EsOwner() || !plan360ObjetivosDiaActivo) return null;
+  const d = (DB.business.plan360Program || []).find(x => x.day === plan360ObjetivosDiaActivo.day);
+  if(!d || !Array.isArray(d.objectives)) return null;
+  plan360ObjetivosDiaActivo = d;
+  plan360SyncObjectivesFromForm(d);
+  return d;
+}
+// Solo los objetivos que añadió el negocio se pueden borrar: los del coach son el plan pactado. Las tareas que apuntaban a él
+// no se borran, solo dejan de mostrar el objetivo.
+async function plan360BorrarObjetivo(day, i){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const o = d.objectives[i];
+  if(!o || o.origen !== 'negocio') return;
+  const enlazadas = (DB.business.plan360Program || []).reduce((n, x) => n + (x.tasks || []).filter(tk => tk.objectiveId != null && tk.objectiveId === o.id).length, 0);
+  const aviso = gl({es:'¿Borrar este objetivo?', ca:'Esborrar aquest objectiu?', en:'Delete this goal?'})
+    + (enlazadas ? '\n' + gl({es:`Tiene ${enlazadas} tarea(s) enlazada(s): se quedarán sin objetivo.`, ca:`Té ${enlazadas} tasca/ques enllaçada/des: es quedaran sense objectiu.`, en:`It has ${enlazadas} linked task(s): they will be left without a goal.`}) : '');
+  if(!(await confirmModal(aviso, {danger:true, icon:'ti-trash', confirmLabel: gl({es:'Borrar', ca:'Esborrar', en:'Delete'})}))) return;
+  const d2 = plan360ObjDiaVivo(); if(!d2) return;
+  d2.objectives = d2.objectives.filter(x => x.id !== o.id);
+  saveDB(); plan360PingActivity();
+  plan360ObjRepintar(d2);
 }
 // La medición se guarda al momento (no espera al botón Guardar general de
 // la pantalla) porque es un hecho puntual — "hoy tocaba anotar el número"
 // — no un borrador de texto que tenga sentido dejar a medias.
 function plan360AddMedicion(i){
-  if(!plan360EsOwner() || !plan360ObjetivosDiaActivo) return;
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   // Se vuelve a buscar el día en DB: si mientras tanto llegó el bloque de la
   // nube, el objeto guardado ya no es el de DB y la medición se perdía (la
   // misma trampa que el cVivo del I+D). Y antes de repintar se recoge lo
   // escrito en el formulario: repintar sin eso borraba lo no guardado.
-  const d = (DB.business.plan360Program || []).find(x => x.day === plan360ObjetivosDiaActivo.day);
-  if(!d || !Array.isArray(d.objectives)) return;
-  plan360ObjetivosDiaActivo = d;
-  plan360SyncObjectivesFromForm(d);
+  const d = plan360ObjDiaVivo(); if(!d) return;
   const o = d.objectives[i];
   const input = document.getElementById('p360-obj-medicion-' + i);
   if(!o || !input || !input.value.trim()) return;
   if(!Array.isArray(o.mediciones)) o.mediciones = [];
   o.mediciones.push({fecha: todayStr(), valor: input.value.trim(), nota: ''});
   saveDB();
-  document.getElementById('p360-obj-list').innerHTML = d.objectives.map((ob, j) => plan360ObjectiveRow(d.day, ob, j)).join('');
+  plan360ObjRepintar(d);
+}
+// Una medición mal tecleada ya no obliga a vivir con ella: se edita (valor, nota, fecha) o se borra, siempre con ventana propia.
+function plan360EditarMedicion(i, j){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const m = ((d.objectives[i] || {}).mediciones || [])[j];
+  if(!m) return;
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-pencil"></i> ${escapeHtml(gl({es:'Editar la medición', ca:'Editar el mesurament', en:'Edit the measurement'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field"><label for="p360-med-valor">${escapeHtml(t('plan360.objMeasurementValue'))}</label><input id="p360-med-valor" value="${escapeHtml(m.valor || '')}" inputmode="decimal"></div>
+    <div class="field"><label for="p360-med-fecha">${escapeHtml(gl({es:'Fecha', ca:'Data', en:'Date'}))}</label><input type="date" id="p360-med-fecha" value="${escapeHtml(m.fecha || todayStr())}"></div>
+    <div class="field"><label for="p360-med-nota">${escapeHtml(gl({es:'Nota (opcional)', ca:'Nota (opcional)', en:'Note (optional)'}))}</label><textarea id="p360-med-nota" rows="2">${escapeHtml(m.nota || '')}</textarea></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">${escapeHtml(t('common.cancel'))}</button><button class="btn btn-primary" onclick="plan360GuardarMedicionEditada(${i},${j})">${escapeHtml(t('common.save'))}</button></div>
+  `);
+}
+function plan360GuardarMedicionEditada(i, j){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const m = ((d.objectives[i] || {}).mediciones || [])[j];
+  const valor = (document.getElementById('p360-med-valor') || {}).value;
+  if(!m || !valor || !valor.trim()){ showToast(gl({es:'Escribe el valor de la medición.', ca:'Escriu el valor del mesurament.', en:'Enter the measurement value.'})); return; }
+  m.valor = valor.trim();
+  m.fecha = (document.getElementById('p360-med-fecha') || {}).value || m.fecha;
+  m.nota = ((document.getElementById('p360-med-nota') || {}).value || '').trim();
+  saveDB(); plan360PingActivity();
+  closeModal();
+  plan360ObjRepintar(d);
+}
+async function plan360BorrarMedicion(i, j){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
+  const d = plan360ObjDiaVivo(); if(!d) return;
+  const lista = (d.objectives[i] || {}).mediciones || [];
+  const m = lista[j];
+  if(!m) return;
+  if(!(await confirmModal(gl({es:'¿Borrar esta medición?', ca:'Esborrar aquest mesurament?', en:'Delete this measurement?'}), {danger:true, icon:'ti-trash', confirmLabel: gl({es:'Borrar', ca:'Esborrar', en:'Delete'})}))) return;
+  const d2 = plan360ObjDiaVivo(); if(!d2) return;
+  const l2 = (d2.objectives[i] || {}).mediciones || [];
+  const k = l2.indexOf(m) >= 0 ? l2.indexOf(m) : l2.findIndex(x => x.fecha === m.fecha && x.valor === m.valor);
+  if(k >= 0) l2.splice(k, 1);
+  saveDB(); plan360PingActivity();
+  plan360ObjRepintar(d2);
 }
 function plan360SyncObjectivesFromForm(d){
   d.objectives.forEach((o, i) => {
-    const tituloEl = document.getElementById('p360-obj-titulo-' + i);
-    const explEl = document.getElementById('p360-obj-explicacion-' + i);
+    const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : null; };
+    const tit = val('p360-obj-titulo-' + i), expl = val('p360-obj-explicacion-' + i), met = val('p360-obj-metrica-' + i);
+    if(met !== null) o.metrica = met;
+    if(tit !== null) o.titulo = tit;
+    if(expl !== null) o.explicacion = expl;
+    // La urgencia solo se lee si el campo existe: en un objetivo del coach no hay select (la fija él).
     const prioEl = document.getElementById('p360-obj-prioridad-' + i);
-    const metricaEl = document.getElementById('p360-obj-metrica-' + i);
-    if(metricaEl) o.metrica = metricaEl.value.trim();
-    if(tituloEl) o.titulo = tituloEl.value.trim();
-    if(explEl) o.explicacion = explEl.value.trim();
-    if(prioEl) o.prioridad = prioEl.value;
+    if(prioEl && o.origen === 'negocio') o.prioridad = prioEl.value;
+    [['valorInicial', 'p360-obj-vini-'], ['valorObjetivo', 'p360-obj-vobj-'], ['fechaObjetivo', 'p360-obj-fecha-']].forEach(([campo, pre]) => {
+      const v = val(pre + i);
+      if(v === null) return;
+      if(v) o[campo] = v; else delete o[campo];
+    });
   });
 }
 // Solo para el día 2 (presentación): el día 1 tiene su propio hub con tres
 // sitios separados, ver renderPlan360Dia1Hub.
 function savePlan360Presencial(day){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d) return;
   d.notes = (document.getElementById('p360-notes').value || '').trim();
@@ -7592,7 +7926,7 @@ function savePlan360Presencial(day){
 }
 
 /* ---- Días de trabajo ---- */
-// Las tareas de los 26 días de trabajo ya no las escribe libremente el
+// Las tareas de los 26 días de trabajo (días 3 a 28) ya no las escribe libremente el
 // negocio: título, descripción y a qué objetivo del Día 2 responden los
 // plantea el coach (mismo criterio que el resto del programa — ver el
 // comentario junto a renderPlan360Docs). Lo que SÍ es del negocio es
@@ -7615,7 +7949,7 @@ function plan360ObjetivoDeTarea(tk){
 function renderPlan360TrabajoDetail(d){
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     ${plan360ReunionCardHtml(d.day, d.reunion)}
     <div class="card" style="margin-top:14px">
       <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.tasks'))}</div>
@@ -7664,6 +7998,7 @@ function plan360ReunionCardHtml(day, reunion){
   </div>`;
 }
 function plan360MarcarReunionHecha(day){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunion) return;
@@ -7673,6 +8008,7 @@ function plan360MarcarReunionHecha(day){
   renderPlan360TrabajoDetail(d);
 }
 function plan360SaveReunionNotas(day, valor){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   if(!d || !d.reunion) return;
@@ -7680,6 +8016,7 @@ function plan360SaveReunionNotas(day, valor){
   saveDB();
 }
 function plan360AddMedicionDesdeReunion(day, objId){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const dia2 = (DB.business.plan360Program || []).find(x => x.day === 2);
   if(!dia2) return;
@@ -7695,23 +8032,190 @@ function plan360AddMedicionDesdeReunion(day, objId){
 function plan360TaskRow(day, tk, i){
   const obj = plan360ObjetivoDeTarea(tk);
   const estado = tk.status || 'pendiente';
-  return `<div class="card p360-tarea">
+  // Plegable en móvil (norma «lo denso se pliega»): a la vista solo el título y cómo va (dos tareas desplegadas eran ~800 px
+  // en 390 de ancho). Colgando de un toque: el objetivo, la descripción, el empleado, los tres botones, la prueba y la nota.
+  // En PC todo sigue a la vista. La clave es por tarea (id) para que el estado abierto sobreviva al repintar.
+  const clave = 'p360t-' + day + '-' + (tk.id != null ? tk.id : i);
+  const abierta = ggPlegableAbierta(clave);
+  const area = plan360AreaDeTarea(tk);
+  const soloLec = plan360SoloLectura();
+  return `<div class="card p360-tarea plegable${abierta ? ' is-abierta' : ''}" data-pl="${escapeHtml(clave)}" onclick="ggTogglePlegable(event, this)">
+    <div class="p360-tarea-cab">
+      <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
+      <span class="p360-tarea-est is-${estado}">${escapeHtml(plan360TaskEstadoLabel(estado))}</span>
+      <button type="button" class="pl-chev" aria-expanded="${abierta}" aria-label="${escapeHtml(gl({es:'Ver el resto', ca:'Veure la resta', en:'Show more'}))}" onclick="event.stopPropagation();ggTogglePlegable(event, this.closest('.plegable'))"><i class="ti ti-chevron-down"></i></button>
+    </div>
+    <div class="pl-extra">
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
-    ${plan360AreaDeTarea(tk) ? `<div class="p360-tarea-area txt-xs" style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--olive,#4A5D4E);margin-bottom:2px">${escapeHtml(gl(plan360AreaDeTarea(tk).nombre))}</div>` : ''}
-    <div class="p360-tarea-tit">${escapeHtml(tk.title)}</div>
+    ${area ? `<div class="p360-tarea-area">${escapeHtml(gl(area.nombre))}</div>` : ''}
     ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
-    ${plan360EsOwner() && (DB.employees || []).length ? `<div class="field" style="margin:4px 0 8px"><label>${escapeHtml(gl({es:'Pasar a un empleado', ca:'Passar a un empleat', en:'Hand to an employee'}))}</label>
+    ${!soloLec && plan360EsOwner() && (DB.employees || []).length ? `<div class="field" style="margin:4px 0 8px"><label>${escapeHtml(gl({es:'Pasar a un empleado', ca:'Passar a un empleat', en:'Hand to an employee'}))}</label>
       <select onchange="plan360AsignarTarea(${day},${i},this.value,${Number(tk.id) || 0})"><option value="">${escapeHtml(gl({es:'— la hago yo —', ca:'— la faig jo —', en:'— I do it —'}))}</option>${(DB.employees || []).filter(e => e.activo !== false).map(e => `<option value="${escapeHtml(String(e.id))}" ${String(tk.asignadoA || '') === String(e.id) ? 'selected' : ''}>${escapeHtml(e.name)}</option>`).join('')}</select></div>` : ''}
-    <div class="p360-estados" role="group">
+    ${soloLec ? '' : `<div class="p360-estados" role="group">
       ${PLAN360_TASK_ESTADOS.map(e => `<button class="btn btn-sm ${estado === e ? ({pendiente:'is-lim', hecha:'is-on', no_hecha:'is-off'}[e]) : ''}" aria-pressed="${estado === e}" onclick="plan360SetTaskEstado(${day},${i},'${e}',${Number(tk.id) || 0})">${escapeHtml(plan360TaskEstadoLabel(e))}</button>`).join('')}
     </div>
     <div class="field p360-tarea-nota">
       <label>${escapeHtml(t('plan360.taskNote'))}</label>
       <textarea id="p360-task-note-${i}" rows="2" onchange="plan360SaveTaskNote(${day},${i},this.value,${Number(tk.id) || 0})">${escapeHtml(tk.note || '')}</textarea>
+    </div>`}
+    ${soloLec && tk.note ? `<div class="p360-tarea-nota-fija"><span class="txt-xs txt-muted">${escapeHtml(t('plan360.taskNote'))}</span><p>${escapeHtml(tk.note)}</p></div>` : ''}
+    ${plan360PruebaHtml(day, i, tk)}
     </div>
   </div>`;
+}
+/* ---- Prueba de la tarea: foto o archivo (25/11) ----
+   El diseño prometía «cada tarea admite comentario Y foto/archivo de prueba» y la app solo tenía la nota.
+   ⚠️ La foto NO vive en la tarea. Lo primero que se hizo fue guardarla dentro (`pruebaData`), o sea dentro del bloque `business`, que
+   viaja entero con cada cambio: pasado cierto peso Firebase rechaza TODOS los guardados del negocio (ya pasó con el PDF del libro de
+   marca, que por eso tiene su propio nodo). Ahora cada prueba va a `DB.plan360Pruebas[idDeTarea] = {data, nombre, ts}` (un bloque
+   propio de la nube, `db/plan360Pruebas/<tarea>`, que el panel del coach lee bajo demanda) y en la tarea solo queda el marcador
+   `tienePrueba`. Topes: foto ≤ 120 KB tras reducirla a 800 px, otro archivo ≤ 350 KB, y 4 MB entre todas las de un negocio.
+   Los campos `fileData`/`fileName` son el adjunto que sube el coach: no se tocan, uno pisaría al otro en la fusión. */
+const PLAN360_PRUEBA_FOTO_MAX = 120 * 1024;
+const PLAN360_PRUEBA_MAX_BYTES = 350 * 1024;
+const PLAN360_PRUEBAS_TOTAL_MAX = 4 * 1024 * 1024;
+function plan360PruebaBytes(data){ return Math.round(String(data || '').length * 0.75); }
+function plan360PruebaValida(p){ return !!(p && typeof p.data === 'string' && /^data:(image\/(jpeg|png|webp|gif)|application\/pdf);base64,/.test(p.data)); }
+function plan360PruebasMapa(){ return DB.plan360Pruebas && typeof DB.plan360Pruebas === 'object' && !Array.isArray(DB.plan360Pruebas) ? DB.plan360Pruebas : {}; }
+function plan360PruebaDe(tk){
+  const p = tk && tk.id != null ? plan360PruebasMapa()[String(tk.id)] : null;
+  return plan360PruebaValida(p) ? p : null;
+}
+function plan360PruebasTotalBytes(salvo){
+  const m = plan360PruebasMapa();
+  return Object.keys(m).reduce((n, k) => n + (String(k) === String(salvo) || !m[k] ? 0 : plan360PruebaBytes(m[k].data)), 0);
+}
+/* Mueve a su bloque lo que una versión anterior (o una tablet que aún la tenga) dejó dentro de la tarea. Sin tocar el tope total:
+   lo que ya estaba guardado no se tira. Devuelve true si cambió algo. Se llama al crear el programa y al llegar `business` de la nube. */
+function plan360MigrarPruebas(biz){
+  if(!biz || !Array.isArray(biz.plan360Program)) return false;
+  let cambio = false;
+  biz.plan360Program.forEach(d => (d && d.tasks || []).forEach(tk => {
+    if(!tk || tk.pruebaData === undefined) return;
+    if(tk.id != null && typeof tk.pruebaData === 'string' && plan360PruebaValida({data: tk.pruebaData})){
+      if(!DB.plan360Pruebas || typeof DB.plan360Pruebas !== 'object' || Array.isArray(DB.plan360Pruebas)) DB.plan360Pruebas = {};
+      if(!DB.plan360Pruebas[String(tk.id)]) DB.plan360Pruebas[String(tk.id)] = {data: tk.pruebaData, nombre: tk.pruebaNombre || 'archivo', ts: tk.pruebaTs || Date.now()};
+      tk.tienePrueba = true;
+    }
+    delete tk.pruebaData; delete tk.pruebaNombre; delete tk.pruebaTs;
+    cambio = true;
+  }));
+  return cambio;
+}
+// Guarda (o sustituye) la prueba de una tarea. Devuelve {ok:true} o {ok:false, motivo:'tope'|'peso'}.
+function plan360PruebaGuardar(tk, data, nombre, esFoto){
+  const bytes = plan360PruebaBytes(data);
+  if(bytes > (esFoto ? PLAN360_PRUEBA_FOTO_MAX : PLAN360_PRUEBA_MAX_BYTES)) return {ok:false, motivo:'peso'};
+  if(plan360PruebasTotalBytes(tk.id) + bytes > PLAN360_PRUEBAS_TOTAL_MAX) return {ok:false, motivo:'tope'};
+  if(!DB.plan360Pruebas || typeof DB.plan360Pruebas !== 'object' || Array.isArray(DB.plan360Pruebas)) DB.plan360Pruebas = {};
+  DB.plan360Pruebas[String(tk.id)] = {data, nombre: nombre || 'archivo', ts: Date.now()};
+  tk.tienePrueba = true;
+  return {ok:true};
+}
+function plan360PruebaHtml(day, i, tk){
+  const id = Number(tk.id) || 0;
+  const pr = plan360PruebaDe(tk);
+  if(plan360SoloLectura() && !pr && !tk.tienePrueba) return '';
+  if(pr || tk.tienePrueba){
+    const esImg = !!pr && /^data:image\//.test(pr.data);
+    // Marcada por el coach o por otro aparato pero la foto aún no ha llegado (va en su propio bloque): se dice, no se deja en blanco.
+    if(!pr) return `<div class="p360-prueba"><div class="p360-prueba-et">${escapeHtml(gl({es:'Prueba', ca:'Prova', en:'Proof'}))}</div><div class="p360-prueba-fila"><span class="p360-prueba-nom"><i class="ti ti-paperclip"></i> ${escapeHtml(gl({es:'Cargando la prueba…', ca:'Carregant la prova…', en:'Loading the proof…'}))}</span></div></div>`;
+    return `<div class="p360-prueba">
+      <div class="p360-prueba-et">${escapeHtml(gl({es:'Prueba', ca:'Prova', en:'Proof'}))}</div>
+      <div class="p360-prueba-fila">
+        ${esImg ? `<button type="button" class="p360-prueba-mini" onclick="plan360VerPrueba(${day},${i},${id})" aria-label="${escapeHtml(gl({es:'Ver la foto', ca:'Veure la foto', en:'View the photo'}))}"><img src="${escapeHtml(pr.data)}" alt=""></button>` : ''}
+        <span class="p360-prueba-nom"><i class="ti ti-paperclip"></i> ${escapeHtml(pr.nombre || gl({es:'Archivo', ca:'Fitxer', en:'File'}))}</span>
+        ${plan360SoloLectura() ? `<button type="button" class="btn btn-sm btn-fino btn-toque" onclick="plan360VerPrueba(${day},${i},${id})">${escapeHtml(gl({es:'Ver', ca:'Veure', en:'View'}))}</button>` : ggMenuAcciones([
+          {icono:'ti-eye', texto: gl({es:'Ver', ca:'Veure', en:'View'}), fn:`plan360VerPrueba(${day},${i},${id})`},
+          {icono:'ti-camera', texto: gl({es:'Cambiar la prueba', ca:'Canviar la prova', en:'Replace the proof'}), fn:`plan360AdjuntarPrueba(${day},${i},${id})`},
+          {icono:'ti-trash', texto: gl({es:'Quitar la prueba', ca:'Treure la prova', en:'Remove the proof'}), fn:`plan360QuitarPrueba(${day},${i},${id})`, peligro:true},
+        ])}
+      </div>
+    </div>`;
+  }
+  return `<div class="p360-prueba"><button type="button" class="btn btn-sm btn-fino btn-toque" onclick="plan360AdjuntarPrueba(${day},${i},${id})"><i class="ti ti-camera"></i> ${escapeHtml(gl({es:'Adjuntar foto o archivo', ca:'Adjuntar foto o fitxer', en:'Attach a photo or file'}))}</button></div>`;
+}
+function plan360AdjuntarPrueba(day, i, id){
+  if(plan360SoloLecturaAviso()) return;
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if(!f) return;
+    plan360GuardarPrueba(day, i, id, f);
+  };
+  inp.click();
+}
+// Separado del selector de archivos para poder probarlo sin abrir ningún diálogo del sistema.
+function plan360GuardarPrueba(day, i, id, f){
+  if(plan360SoloLecturaAviso()) return;
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const avisar = motivo => showToast(motivo === 'tope'
+    ? gl({es:'Has llegado al tope de pruebas (4 MB en total). Quita alguna foto antigua para añadir otra.', ca:'Has arribat al límit de proves (4 MB en total). Treu alguna foto antiga per afegir-ne una altra.', en:'You have reached the proof limit (4 MB in total). Remove an old photo to add another.'})
+    : gl({es:'El archivo pesa demasiado (máx. 350 KB). Prueba con una foto.', ca:'El fitxer pesa massa (màx. 350 KB). Prova amb una foto.', en:'The file is too big (max 350 KB). Try a photo.'}));
+  const guardar = (data, nombre, esFoto) => {
+    const tk = plan360BuscarTarea(d, i, id);   // se vuelve a buscar: mientras se leía el archivo pudo llegar la nube
+    if(!tk) return;
+    const r = plan360PruebaGuardar(tk, data, nombre, esFoto);
+    if(!r.ok){ avisar(r.motivo); return; }
+    saveDB(); plan360PingActivity();
+    showToast(gl({es:'Prueba guardada', ca:'Prova desada', en:'Proof saved'}));
+    plan360RepintarTareas(day);
+  };
+  if(/^image\//.test(f.type || '')){
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // 800 px y calidad .6; si aún pasa de ~120 KB (fotos con mucho detalle) se baja el lado y la calidad hasta que quepa.
+      let lado = 800, q = 0.6, data = '';
+      for(let intento = 0; intento < 6; intento++){
+        const k = Math.min(1, lado / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        data = c.toDataURL('image/jpeg', q);
+        if(plan360PruebaBytes(data) <= PLAN360_PRUEBA_FOTO_MAX) break;
+        lado = Math.round(lado * 0.85); q = Math.max(0.35, q - 0.06);
+      }
+      guardar(data, (f.name || 'foto').replace(/\.[a-z0-9]+$/i, '') + '.jpg', true);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); showToast(gl({es:'No se pudo leer la imagen', ca:'No s\'ha pogut llegir la imatge', en:'The image could not be read'})); };
+    img.src = url;
+    return;
+  }
+  if(f.size > PLAN360_PRUEBA_MAX_BYTES){ avisar('peso'); return; }
+  const rd = new FileReader();
+  rd.onload = () => guardar(String(rd.result || ''), f.name || 'archivo', false);
+  rd.readAsDataURL(f);
+}
+function plan360VerPrueba(day, i, id){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = plan360BuscarTarea(d, i, id);
+  const pr = plan360PruebaDe(tk);
+  if(!pr) return;
+  const esImg = /^data:image\//.test(pr.data);
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-paperclip"></i> ${escapeHtml(pr.nombre || gl({es:'Prueba', ca:'Prova', en:'Proof'}))}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    ${esImg ? `<img src="${escapeHtml(pr.data)}" alt="" style="max-width:100%;height:auto;display:block;margin:0 auto">`
+      : `<a class="btn btn-primary" href="${escapeHtml(pr.data)}" download="${escapeHtml(pr.nombre || 'archivo')}"><i class="ti ti-download"></i> ${escapeHtml(gl({es:'Descargar', ca:'Descarregar', en:'Download'}))}</a>`}
+  `);
+}
+async function plan360QuitarPrueba(day, i, id){
+  if(plan360SoloLecturaAviso()) return;
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const tk = plan360BuscarTarea(d, i, id);
+  if(!tk) return;
+  if(!(await confirmModal(gl({es:'¿Quitar la prueba adjunta a esta tarea?', ca:'Treure la prova adjunta a aquesta tasca?', en:'Remove the proof attached to this task?'}), {danger:true, icon:'ti-trash', confirmLabel: gl({es:'Quitar', ca:'Treure', en:'Remove'})}))) return;
+  if(DB.plan360Pruebas) delete DB.plan360Pruebas[String(tk.id)];
+  delete tk.tienePrueba;
+  saveDB(); plan360PingActivity();
+  plan360RepintarTareas(day);
+}
+// El detalle del día tiene su lista (#p360-task-list); la tarjeta «Hoy» de la pantalla principal no: ahí se repinta la pantalla.
+function plan360RepintarTareas(day){
+  const d = (DB.business.plan360Program || []).find(x => x.day === day);
+  const lista = document.getElementById('p360-task-list');
+  if(lista && d) lista.innerHTML = d.tasks.map((tk2, j) => plan360TareaReal(tk2) ? plan360TaskRow(day, tk2, j) : '').join('');
+  else withScrollPreserved(() => renderPlan360Grid());
 }
 // Las tareas se buscan por su id: por posición, si el coach reordenaba o
 // quitaba una con esta pantalla abierta, el estado caía en otra tarea.
@@ -7720,6 +8224,7 @@ function plan360BuscarTarea(d, i, id){
   return (id && tareas.find(tk => Number(tk.id) === Number(id))) || (!id ? tareas[i] : null);
 }
 function plan360AsignarTarea(day, i, empId, id){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   const tk = plan360BuscarTarea(d, i, id);
@@ -7730,6 +8235,7 @@ function plan360AsignarTarea(day, i, empId, id){
 }
 // Lo marca el empleado desde «Mi puesto»: la misma tarea del programa, el mismo estado que ve el coach.
 function plan360TareaDesdeMiPuesto(day, id, hecha){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   const tk = d && (d.tasks || []).find(x => Number(x.id) === Number(id));
   if(!tk) return;
@@ -7738,20 +8244,17 @@ function plan360TareaDesdeMiPuesto(day, id, hecha){
   if(typeof renderDistDetail === 'function') renderDistDetail();
 }
 function plan360SetTaskEstado(day, i, estado, id){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   const tk = plan360BuscarTarea(d, i, id);
   if(!tk) return;
   tk.status = estado;
   saveDB();
-  // El mismo botón se pinta en dos sitios distintos (el detalle del día y
-  // la tarjeta "Hoy" de la pantalla principal), y solo el primero tiene el
-  // contenedor #p360-task-list — en el segundo hay que repintar la
-  // pantalla entera para que también se actualicen los atrasados.
-  const lista = document.getElementById('p360-task-list');
-  if(lista) lista.innerHTML = d.tasks.map((tk2, j) => plan360TareaReal(tk2) ? plan360TaskRow(day, tk2, j) : '').join('');
-  else withScrollPreserved(() => renderPlan360Grid());
+  // El mismo botón se pinta en dos sitios (detalle del día y tarjeta «Hoy»): ver plan360RepintarTareas.
+  plan360RepintarTareas(day);
 }
 function plan360SaveTaskNote(day, i, valor, id){
+  if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   const d = (DB.business.plan360Program || []).find(x => x.day === day);
   const tk = plan360BuscarTarea(d, i, id);
   if(!tk) return;
@@ -7767,8 +8270,10 @@ function plan360MedicionesResumenHtml(obj){
   const m = obj.mediciones || [];
   if(!m.length) return `<p class="muted" style="margin:0 0 6px;font-size:12.5px">${escapeHtml(obj.metrica)} — ${escapeHtml(t('plan360.objNoMeasurementsYet'))}</p>`;
   const primero = m[0], ultimo = m[m.length - 1];
+  // Con valor inicial y objetivo puestos, el resumen dice a dónde se quiere llegar (no solo de dónde se parte).
+  const meta = obj.valorObjetivo ? ` · ${escapeHtml(gl({es:'objetivo', ca:'objectiu', en:'target'}))} <strong style="color:var(--text)">${escapeHtml(obj.valorObjetivo)}</strong>${obj.fechaObjetivo ? ' (' + escapeHtml(plan360FechaLegible(obj.fechaObjetivo)) + ')' : ''}` : '';
   return `<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
-    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(plan360FechaLegible(ultimo.fecha))})</span>
+    ${escapeHtml(obj.metrica)}: ${m.length > 1 ? `<strong style="color:var(--text)">${escapeHtml(primero.valor)}</strong> → ` : ''}<strong style="color:var(--text)">${escapeHtml(ultimo.valor)}</strong> <span>(${escapeHtml(plan360FechaLegible(ultimo.fecha))})</span>${meta}
   </div>`;
 }
 function renderPlan360SummaryPage(){
