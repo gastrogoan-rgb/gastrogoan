@@ -5718,7 +5718,7 @@ function plan360TextoHtml(texto){
 // queda siempre accesible después desde Documentación inicial (fromIntake).
 function renderPlan360Welcome(fromIntake){
   const nombre = (DB.business.plan360Contract && DB.business.plan360Contract.clienteNombre) || DB.business.name || '';
-  const texto = plan360FillTemplate(PLAN360_WELCOME_TEXT, {clienteNombre: nombre});
+  const texto = plan360FillTemplate(plan360WelcomeTexto(), {clienteNombre: nombre});
   const volver = fromIntake ? `<button class="btn btn-sm btn-back" onclick="renderPlan360Intake()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>` : '';
   document.getElementById('plan360-content').innerHTML = `
     ${volver}
@@ -5755,7 +5755,7 @@ function plan360DiaDeHoy(){
 // posponer: lo que no se hizo no desaparece, se acumula y se ve.
 // ⚠️ Una tarea sin contenido real NO se enseña al negocio, ni cuenta como hecha,
 // pendiente o atrasada. Los programas creados con la versión antigua generaban,
-// para cada uno de los 26 días, una tarea cuyo título era el aviso interno
+// para cada uno de los 26 días de trabajo (28 con los dos presenciales), una tarea cuyo título era el aviso interno
 // «(Contenido pendiente de definir)»: el generador ya no la crea (tasks nace
 // vacío), pero esas tareas siguen guardadas en los negocios que ya tenían el
 // programa y un cliente veía 25 «atrasadas» de relleno. No se borran del dato
@@ -6753,6 +6753,18 @@ function plan360MantResponder(sk, id){
   showToast(t(texto ? 'plan360.mant.replySent' : 'plan360.saved'));
   withScrollPreserved(() => renderPlan360Mant());
 }
+// Los títulos de día que genera la app ('Día 3', 'Presentación y entrega del plan'…) se GUARDAN en castellano; se traducen al
+// mostrarlos (un dato guardado no se traduce, se traduce al pintarlo). Un título que el coach escribió a mano se respeta tal cual.
+function plan360TituloDia(d){
+  const x = String((d && d.title) || '').trim();
+  const m = /^D[ií]a (\d+)$/i.exec(x);
+  if(m) return t('plan360.day') + ' ' + m[1];
+  const fijos = {
+    'Cliente misterioso y diagnóstico': {es:'Cliente misterioso y diagnóstico', ca:'Client misteriós i diagnòstic', en:'Mystery guest and diagnosis'},
+    'Presentación y entrega del plan': {es:'Presentación y entrega del plan', ca:'Presentació i lliurament del pla', en:'Plan presentation and delivery'},
+  };
+  return fijos[x] ? gl(fijos[x]) : x;
+}
 function plan360PageHeader(title, subtitle, backFn){
   return `<button class="btn btn-sm btn-back" onclick="${backFn || 'renderPlan360Grid'}()"><i class="ti ti-arrow-left"></i> <span>${escapeHtml(t('common.back'))}</span></button>
     <div class="view-title" style="margin-top:10px">${escapeHtml(title)}</div>
@@ -6854,22 +6866,21 @@ function plan360ContractSectionHtml(){
   const listoParaFirmar = !!(c.precio && c.formaPago);
   return `<div class="card" style="margin-top:14px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}"></div>
-      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-c-nif" value="${escapeHtml(c.clienteNIF || '')}"></div>
+      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-c-nombre" value="${escapeHtml(c.clienteNombre || '')}" oninput="plan360ContratoVivo()" onchange="plan360SaveContractFields()"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-c-nif" value="${escapeHtml(c.clienteNIF || '')}" oninput="plan360ContratoVivo()" onchange="plan360SaveContractFields()"></div>
     </div>
-    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-c-direccion" value="${escapeHtml(c.clienteDireccion || '')}"></div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-c-direccion" value="${escapeHtml(c.clienteDireccion || '')}" oninput="plan360ContratoVivo()" onchange="plan360SaveContractFields()"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPrice'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.precio || '—')}</div></div>
       <div class="field" style="flex:1;min-width:160px"><label>${escapeHtml(t('plan360.contractPayment'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(c.formaPago || '—')}</div></div>
     </div>
     <p class="view-subtitle" style="margin:-4px 0 10px">${escapeHtml(t('plan360.priceLockedHint'))}</p>
-    <button class="btn btn-sm" onclick="plan360SaveContractFields();renderPlan360Contract()" style="margin-bottom:10px">${escapeHtml(t('plan360.contractUpdate'))}</button>
-    <div class="p360-txt p360-txt-box" style="margin-bottom:14px">${plan360TextoHtml(texto)}</div>
+    <div id="p360-contrato-texto" class="p360-txt p360-txt-box" style="margin-bottom:14px">${plan360TextoHtml(texto)}</div>
     ${!listoParaFirmar ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('plan360.signBlockedNoPrice'))}</div>` : ''}
     <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name" ${listoParaFirmar ? '' : 'disabled'}></div>
-      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni" ${listoParaFirmar ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-sign-name" value="${escapeHtml(c.clienteNombre || '')}" oninput="this.dataset.tocado='1'" ${listoParaFirmar ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-sign-dni" value="${escapeHtml(c.clienteNIF || '')}" oninput="this.dataset.tocado='1'" ${listoParaFirmar ? '' : 'disabled'}></div>
     </div>
     <button class="btn btn-primary" onclick="plan360SignContract()" ${listoParaFirmar ? '' : 'disabled'}>${escapeHtml(t('plan360.signSubmit'))}</button>
     <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
@@ -6891,6 +6902,20 @@ function plan360PrintContract(){
     </body></html>`);
   win.document.close();
   ggEsperarYImprimir(win);
+}
+// El texto del contrato se rehace MIENTRAS se escribe (nombre, NIF, domicilio) y la firma ya sale con esos mismos datos:
+// antes había que pulsar «Actualizar datos del contrato» (si no, el texto seguía con «________») y volver a teclear nombre y
+// DNI en «Firma aquí» — lo mismo dos veces. No se guarda en cada tecla (saveDB es caro): eso lo hace el onchange.
+// Los campos de la firma solo se siguen si la persona no los ha tocado a mano (firmar con otro nombre es legítimo).
+function plan360ContratoVivo(){
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const c = Object.assign({}, DB.business.plan360Contract || {}, {clienteNombre: val('p360-c-nombre'), clienteNIF: val('p360-c-nif'), clienteDireccion: val('p360-c-direccion')});
+  const caja = document.getElementById('p360-contrato-texto');
+  if(caja) caja.innerHTML = plan360TextoHtml(plan360FillTemplate(PLAN360_CONTRACT_TEXT, c));
+  [['p360-sign-name', c.clienteNombre], ['p360-sign-dni', c.clienteNIF]].forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if(el && !el.dataset.tocado) el.value = v;
+  });
 }
 // El precio y la forma de pago NO se tocan desde aquí: los pacta el coach,
 // no se editan desde la app del negocio (solo se ven, en gris). Se cambian
@@ -7113,7 +7138,7 @@ function renderPlan360PresencialDetail(d){
   if(d.day === 2){ renderPlan360Dia2Hub(d); return; }
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px">
       <div class="field"><label>${escapeHtml(t('plan360.dayTask'))}</label><textarea id="p360-notes" rows="4">${escapeHtml(d.notes || '')}</textarea></div>
       <button class="btn btn-primary" onclick="savePlan360Presencial(${d.day})">${escapeHtml(t('common.save'))}</button>
@@ -7130,7 +7155,7 @@ function renderPlan360Dia1Hub(d){
   const mc = d.misteryCheck;
   const enviado = !!(mc && mc.sentAt);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px;${enviado ? 'cursor:pointer' : 'opacity:.55'}" ${enviado ? `onclick="renderPlan360MisteryReport(${d.day})"` : ''}>
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ${enviado ? 'ti-circle-check' : 'ti-user-search'}" style="font-size:20px;${enviado ? 'color:var(--green)' : ''}"></i>
@@ -7174,7 +7199,7 @@ function renderPlan360Dia2Hub(d){
   const tb = d.teamBuilding;
   const listo = !!(tb && tb.completadoAt);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderPlan360PlanAccion(${d.day})">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ti-calendar-event" style="font-size:20px"></i>
@@ -7592,7 +7617,7 @@ function savePlan360Presencial(day){
 }
 
 /* ---- Días de trabajo ---- */
-// Las tareas de los 26 días de trabajo ya no las escribe libremente el
+// Las tareas de los 26 días de trabajo (días 3 a 28) ya no las escribe libremente el
 // negocio: título, descripción y a qué objetivo del Día 2 responden los
 // plantea el coach (mismo criterio que el resto del programa — ver el
 // comentario junto a renderPlan360Docs). Lo que SÍ es del negocio es
@@ -7615,7 +7640,7 @@ function plan360ObjetivoDeTarea(tk){
 function renderPlan360TrabajoDetail(d){
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('plan360-content').innerHTML = `
-    ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
+    ${plan360PageHeader(plan360TituloDia(d), weekday + ' · ' + dayMonth)}
     ${plan360ReunionCardHtml(d.day, d.reunion)}
     <div class="card" style="margin-top:14px">
       <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.tasks'))}</div>

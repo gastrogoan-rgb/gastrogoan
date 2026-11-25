@@ -4597,7 +4597,7 @@ FASES DEL PROCESO
 
 — Día 1: diagnóstico completo (cliente misterioso, inspección física y reunión presencial).
 — Día 2: presentación y entrega del plan de acción.
-— 4 semanas de implementación (26 días): ejecución guiada de las iniciativas acordadas.
+— 4 semanas de programa en total (28 días, con los dos días presenciales dentro): ejecución guiada de las iniciativas acordadas.
 — Seguimiento y ajustes (opcional): revisión de métricas y optimizaciones continuas.
 
 RESPONSABILIDADES COMPARTIDAS
@@ -4625,6 +4625,101 @@ Quedo a su disposición para cualquier duda o comentario.
 
 Un cordial saludo,
 Marcos González Anguiano — GastroGoan`;
+// La carta en catalán y en inglés (auditoría QA del 25/11): un cliente con la app en otro idioma recibía la
+// bienvenida entera en castellano. Mismo contenido, mismo orden de apartados (las líneas en MAYÚSCULAS son títulos).
+// ⚠️ El CONTRATO no se traduce aquí a propósito: es un texto legal firmado en castellano y una traducción sin
+// revisar por un abogado podría contradecirlo; el contrato sigue en castellano en los tres idiomas.
+const PLAN360_WELCOME_TEXT_CA =
+`Estimat/da {{cliente}}:
+
+Us dono la més cordial benvinguda al programa 360º de GastroGoan. Agraeixo la confiança dipositada per acompanyar-vos en el creixement del vostre negoci.
+
+EL NOSTRE ENFOCAMENT DE TREBALL
+
+A GastroGoan apliquem un mètode 360° que abasta:
+— Anàlisi de la situació actual i definició d'objectius.
+— Disseny d'estratègies a mida.
+— Implementació i optimització d'accions.
+— Seguiment i mesura de resultats.
+
+FASES DEL PROCÉS
+
+— Dia 1: diagnòstic complet (client misteriós, inspecció física i reunió presencial).
+— Dia 2: presentació i lliurament del pla d'acció.
+— 4 setmanes de programa en total (28 dies, amb els dos dies presencials a dins): execució guiada de les iniciatives acordades.
+— Seguiment i ajustos (opcional): revisió de mètriques i optimitzacions contínues.
+
+RESPONSABILITATS COMPARTIDES
+
+GastroGoan es compromet a:
+— Aportar la seva experiència i eines especialitzades.
+— Mantenir una comunicació fluida i informes periòdics.
+— Adaptar les estratègies segons les necessitats.
+— Tractar el vostre negoci com si fos el seu propi.
+
+Vós, com a client, us comprometeu a:
+— Proporcionar informació precisa i oportuna.
+— Aplicar les mesures correctives indicades.
+— Participar activament en reunions i validacions.
+— Compartir feedback per millorar contínuament.
+
+PROPERS PASSOS
+
+— Confirmar la recepció d'aquest document i completar el qüestionari inicial.
+— Fer el pagament corresponent pels serveis GastroGoan.
+— Llegir i signar l'Acord de Serveis i el RGPD, aquí mateix.
+— Agendar la reunió presencial d'arrencada.
+
+Quedo a la vostra disposició per a qualsevol dubte o comentari.
+
+Una cordial salutació,
+Marcos González Anguiano — GastroGoan`;
+const PLAN360_WELCOME_TEXT_EN =
+`Dear {{cliente}},
+
+A warm welcome to GastroGoan's 360º programme. Thank you for trusting us to accompany you as your business grows.
+
+OUR WAY OF WORKING
+
+At GastroGoan we apply a 360° method that covers:
+— Analysis of the current situation and goal setting.
+— Tailor-made strategies.
+— Implementation and optimisation of actions.
+— Follow-up and measurement of results.
+
+STAGES OF THE PROCESS
+
+— Day 1: full diagnosis (mystery guest, on-site inspection and in-person meeting).
+— Day 2: presentation and delivery of the action plan.
+— 4 weeks of programme in total (28 days, including the two on-site days): guided execution of the agreed initiatives.
+— Follow-up and adjustments (optional): metrics review and ongoing optimisation.
+
+SHARED RESPONSIBILITIES
+
+GastroGoan commits to:
+— Bring its experience and specialised tools.
+— Keep communication fluid and send regular reports.
+— Adapt strategies to your needs.
+— Treat your business as if it were its own.
+
+You, as the client, commit to:
+— Provide accurate and timely information.
+— Apply the corrective measures indicated.
+— Take an active part in meetings and validations.
+— Share feedback so we can keep improving.
+
+NEXT STEPS
+
+— Confirm you have received this document and complete the initial questionnaire.
+— Make the payment for the GastroGoan services.
+— Read and sign the Service Agreement and the GDPR agreement, right here.
+— Schedule the on-site kick-off meeting.
+
+I remain at your disposal for any question or comment.
+
+Kind regards,
+Marcos González Anguiano — GastroGoan`;
+function plan360WelcomeTexto(){ return gl({es: PLAN360_WELCOME_TEXT, ca: PLAN360_WELCOME_TEXT_CA, en: PLAN360_WELCOME_TEXT_EN}); }
 // Contrato real (2. CONTRATO_RGPD.docx). {{cliente}}, {{nif}}, {{direccion}},
 // {{precio}} y {{formaPago}} se sustituyen por lo que se rellene antes de firmar.
 const PLAN360_CONTRACT_TEXT =

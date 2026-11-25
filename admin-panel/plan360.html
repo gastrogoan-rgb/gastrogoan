@@ -390,6 +390,19 @@ let remoteBiz = null;
 let savingRemote = false;
 let lastPushedJson = null;
 
+/* Todo el estado en memoria que pertenece a UN cliente. El borrador del acta se quedaba al cambiar de cliente: se
+   apuntaba una decisión en A, se abría B y «Enviar el acta» creaba la tarea de A en el programa de B y se la enviaba a B.
+   Se reinicia aquí, al abrir y al cerrar, para que ningún estado global cruce de un negocio a otro. */
+function reiniciarEstadoDeCliente(){
+  lastPushedJson = null; mantBase = null; programaBase = null; remoteBiz = null;
+  actaBorrador = [];
+  plan360TrabajoDiaActivo = null;
+  mantMesActivo = null;
+  startDateEditing = false;
+  migracionIdsPendiente = false;
+  lastPushedCoachPrivateJson = null;
+  try{ if(typeof tbTimerHandle !== 'undefined' && tbTimerHandle){ clearInterval(tbTimerHandle); tbTimerHandle = null; } }catch(e){}
+}
 async function openClient(tenantId, name){
   try{ localStorage.setItem(plan360SeenKey(tenantId), String(Date.now())); }catch(e){}
   document.getElementById('view-list').classList.add('hidden');
@@ -402,7 +415,7 @@ async function openClient(tenantId, name){
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
   // El SEGUNDO cliente de una sesión salía en blanco: la huella del primero seguía puesta y la primera lectura del
   // segundo se tomaba por «eco de mi propio guardado» y se descartaba. Cada cliente empieza de cero.
-  lastPushedJson = null; mantBase = null; programaBase = null; remoteBiz = null;
+  reiniciarEstadoDeCliente();
   currentTenantId = tenantId;
   migracionCoachPrivadoHecha = false;
   try{
@@ -470,7 +483,7 @@ async function openClient(tenantId, name){
 function closeClient(){
   if(currentBizRef) currentBizRef.off();
   if(currentCoachPrivateRef) currentCoachPrivateRef.off();
-  currentBizRef = null; currentTenantId = null; remoteBiz = null; mantBase = null; programaBase = null; lastPushedJson = null;
+  currentBizRef = null; currentTenantId = null; reiniciarEstadoDeCliente();
   currentCoachPrivateRef = null; coachPrivate = null;
   currentLibroPdfRef = null; libroPdfCache = null;
   document.getElementById('view-client').classList.add('hidden');
@@ -9206,10 +9219,26 @@ const PLAN360_CONTENT_BANK = [
   {categoria: 'Delivery', titulo: 'Margen real del delivery', descripcion: 'Lo que se queda la plataforma más el envase frente al precio del plato. Subir precios de la carta de delivery si no deja margen.', metrica: 'Margen por pedido de delivery'},
   {categoria: 'Delivery', titulo: 'Empujar el pedido directo', descripcion: 'Pedido online propio (sin comisión) en la bolsa, en redes y en la ficha de Google.', metrica: '% de pedidos directos frente a plataforma'},
   {categoria: 'Finanzas', titulo: 'Plan de 90 días', descripcion: 'Las tres prioridades de los próximos tres meses, con responsable, fecha y cifra.', metrica: 'Nº de acciones cumplidas a los 90 días'},
-  {categoria: 'Cliente', titulo: 'Mistery check interno', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
+  {categoria: 'Cliente', titulo: 'Cliente misterioso', descripcion: 'Que alguien del equipo (o el propio dueño) viva la experiencia como cliente un día y anote 3 cosas a mejorar.', metrica: 'Nº de mejoras detectadas'},
 ];
+// Orden lógico de la operativa de un restaurante (cocina → sala → carta → compras → equipo → números → mercado). Antes salían
+// en el orden en que se fueron añadiendo módulos, y «Todas» por defecto soltaba 61 botones sin orden.
+const PLAN360_BANCO_ORDEN = ['Cocina', 'Sala', 'Carta', 'Compras', 'Personal', 'Números', 'Finanzas', 'Marketing', 'Cliente', 'Delivery'];
 function plan360BancoCategorias(){
-  return [...new Set(PLAN360_CONTENT_BANK.map(m => m.categoria))];
+  const hay = [...new Set(PLAN360_CONTENT_BANK.map(m => m.categoria))];
+  return hay.sort((a, b) => {
+    const ia = PLAN360_BANCO_ORDEN.indexOf(a), ib = PLAN360_BANCO_ORDEN.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+}
+// El banco va plegado: son ~60 botones que empujaban las tareas reales casi 1.000 px abajo. Se abre con un botón y
+// arranca ya en la primera categoría, no en «Todas».
+let plan360BancoAbierto = false;
+function plan360BancoToggle(){
+  plan360BancoAbierto = !plan360BancoAbierto;
+  const box = document.getElementById('banco-caja'), btn = document.getElementById('banco-toggle');
+  if(box) box.style.display = plan360BancoAbierto ? '' : 'none';
+  if(btn){ btn.setAttribute('aria-expanded', plan360BancoAbierto ? 'true' : 'false'); btn.innerHTML = plan360BancoAbierto ? '<i class="ti ti-chevron-up"></i> Ocultar el banco de tareas' : '<i class="ti ti-plus"></i> Añadir del banco de tareas'; }
 }
 function plan360BancoModulosHtml(categoria){
   const usados = new Set((plan360TrabajoDiaActivo.tasks || []).map(tk => tk.title));
@@ -9276,6 +9305,7 @@ function taskRow(tk, i){
 }
 function renderTrabajoPage(d){
   plan360TrabajoDiaActivo = d;
+  plan360BancoAbierto = false;
   const {weekday, dayMonth} = plan360FormatDate(d.day);
   document.getElementById('client-grid').innerHTML = `
     ${plan360PageHeader(d.title, weekday + ' · ' + dayMonth)}
@@ -9315,13 +9345,14 @@ function renderTrabajoPage(d){
       ` : ''}
       <div style="font-weight:600;margin-bottom:6px">Tareas</div>
       ${!plan360ObjetivosDelDia2().length ? `<p class="muted" style="margin-bottom:10px">Todavía no hay objetivos fijados en el Día 2 — las tareas se pueden crear igual, pero sin enganchar a ninguno hasta que el negocio los ponga.</p>` : ''}
-      <div class="card" style="margin-bottom:10px;background:var(--brand-cream)">
+      <button class="btn btn-sm" id="banco-toggle" aria-expanded="${plan360BancoAbierto}" onclick="plan360BancoToggle()" style="margin-bottom:10px">${plan360BancoAbierto ? '<i class="ti ti-chevron-up"></i> Ocultar el banco de tareas' : '<i class="ti ti-plus"></i> Añadir del banco de tareas'}</button>
+      <div class="card" id="banco-caja" style="margin-bottom:10px;background:var(--brand-cream);${plan360BancoAbierto ? '' : 'display:none'}">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Banco de contenido — un toque para añadirla a este día (luego se puede editar como cualquier otra)</div>
         <select id="banco-categoria" onchange="cambiarBancoCategoria()" style="margin-bottom:8px">
           <option value="">Todas las categorías</option>
-          ${plan360BancoCategorias().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          ${plan360BancoCategorias().map((c, i) => `<option value="${esc(c)}" ${i === 0 ? 'selected' : ''}>${esc(c)}</option>`).join('')}
         </select>
-        <div id="banco-modulos" style="display:flex;flex-wrap:wrap;gap:6px">${plan360BancoModulosHtml('')}</div>
+        <div id="banco-modulos" style="display:flex;flex-wrap:wrap;gap:6px">${plan360BancoModulosHtml(plan360BancoCategorias()[0] || '')}</div>
       </div>
       <div id="task-list">${d.tasks.map((tk, i) => taskRow(tk, i)).join('')}</div>
       <button class="btn btn-sm" onclick="addTask(${d.day})" style="margin:6px 0 16px">+ Añadir tarea (especial de este local)</button>
