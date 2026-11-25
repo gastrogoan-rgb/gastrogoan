@@ -1,0 +1,14 @@
+# Un solo contenedor: Caddy. Arranque: docker compose up -d (desde /srv/gastrogoan)
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sitios:/srv/sitios:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+volumes:
+  caddy_datos:
+  caddy_config:

@@ -1,0 +1,45 @@
+# GastroGoan · servidor de la fase 1 (Ubuntu 24.04 LTS). Se pega en el campo
+# «user data» al crear el servidor. Antes de usarlo, sustituye SUSTITUYE_POR_TU_CLAVE_PUBLICA
+# por la clave PÚBLICA de tu equipo (ssh-ed25519 AAAA…). Nunca la privada.
+#
+# Qué deja hecho: usuario sin contraseña, solo entrada con clave, firewall (22, 80, 443),
+# actualizaciones de seguridad automáticas, Docker y las carpetas de los sitios.
+# Lo que NO hace: no pone el sitio; eso lo hace publicar.sh.
+#cloud-config
+timezone: Europe/Madrid
+package_update: true
+package_upgrade: true
+packages:
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - docker.io
+  - docker-compose-v2
+  - rsync
+users:
+  - name: gastro
+    groups: [sudo, docker]
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - SUSTITUYE_POR_TU_CLAVE_PUBLICA
+write_files:
+  - path: /etc/ssh/sshd_config.d/10-gastrogoan.conf
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+      PubkeyAuthentication yes
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+  - path: /srv/gastrogoan/sitios/.keep
+    content: ""
+runcmd:
+  - [ bash, -c, "ufw default deny incoming && ufw default allow outgoing && ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp && ufw --force enable" ]
+  - [ systemctl, enable, --now, fail2ban ]
+  - [ systemctl, enable, --now, docker ]
+  - [ systemctl, restart, ssh ]
+  - [ bash, -c, "chown -R gastro:gastro /srv/gastrogoan" ]

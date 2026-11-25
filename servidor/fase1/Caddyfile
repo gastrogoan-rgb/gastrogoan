@@ -1,0 +1,26 @@
+# GastroGoan · FASE 1 (solo la web de reservas en IP propia).
+# Motivo: los bloqueos de LaLiga caen sobre IP de Cloudflare. Esta web es lo que
+# el cliente final necesita para reservar. La app, el panel y los pagos siguen en
+# Cloudflare hasta comprobar en un partido que este servidor responde.
+# Caddy obtiene y renueva solo el certificado HTTPS.
+
+reservas.gastrogoan.com {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	# Se puede incrustar en la web del restaurante: SIN X-Frame-Options (igual que _headers).
+	@html path *.html / /sw-reservas.js
+	header @html Cache-Control "no-cache"
+	@fuentes path /fonts/*
+	header @fuentes Cache-Control "public, max-age=31536000, immutable"
+
+	root * /srv/sitios/reservas
+	# Enlace corto reservas.gastrogoan.com/casapaco: cualquier ruta que no sea un fichero
+	# devuelve la misma página, como hace el 404.html de Pages.
+	try_files {path} /index.html
+	file_server
+}

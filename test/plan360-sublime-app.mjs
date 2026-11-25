@@ -344,6 +344,16 @@ await caso('7 · Con el servicio vivo nada cambia: se puede marcar, anotar y fir
   });
   assert.ok(r.botones >= 1 && !r.banner); assert.equal(r.estado, 'hecha');
 });
+await caso('3 · El aviso «Firma el contrato» solo sale si se puede firmar (precio, forma de pago Y datos del coach) y no sale con el servicio terminado', async () => {
+  const r = await page.evaluate(() => {
+    const b = DB.business; const c = b.plan360Contract; Object.assign(c, {precio:'950 € + IVA', formaPago:'Transferencia'}); delete c.signedAt;
+    const hay = () => plan360AvisosDeHoy().some(a => a.id === 'plan360Contrato');
+    const con = hay(); const coach = b.plan360Coach; delete b.plan360Coach; const sin = hay(); b.plan360Coach = coach;
+    b.plan360Servicio = {fase:'fin'}; const fin = hay(); delete b.plan360Servicio;
+    return {con, sin, fin};
+  });
+  assert.deepEqual(r, {con:true, sin:false, fin:false});
+});
 await caso('Ningún error de JavaScript', async () => { assert.deepEqual(errs, []); });
 await browser.close();
 console.log(mal ? '\n❌ ' + mal + ' caso(s) fallaron' : '\n✅ Plan 360 · app sublime (25/11): los ' + ok + ' casos pasaron');

@@ -65,6 +65,9 @@ for(const lang of ['ca', 'en']){
   }, lang, PANTALLAS);
   await caso(`La app en «${lang}» no lleva castellano suelto en el Plan 360º (${Object.keys(textos).length} pantallas e impresos)`, async () => {
     const fallos = [];
+    // que lo que se revisa EXISTE: un impreso o un marcador vacíos no llevan castellano, pero tampoco prueban nada
+    ['informe', 'marcador', 'semana', 'plan'].forEach(k => { if(!(textos[k] && textos[k].length > 40)) fallos.push('texto vacío: ' + k); });
+    if(!/Pla 360|360º|Closing|Informe de tancament/.test(textos.informe)) fallos.push('el informe no está en el idioma');
     Object.entries(textos).forEach(([pant, txt]) => {
       if(/^ERR/.test(txt)) { fallos.push(pant + ' → ' + txt); return; }
       // Líneas con castellano (se enseña la línea, no el dato)

@@ -215,6 +215,8 @@ lanzar; node test/plan360-enlace.mjs > "$SALIDA/p360en.txt" 2>&1 & P360E=$!
 lanzar; node test/plan360-equipo.mjs > "$SALIDA/p360eq.txt" 2>&1 & P360Q=$!
 lanzar; node test/plan360-acta.mjs > "$SALIDA/p360ac.txt" 2>&1 & P360T=$!
 lanzar; node test/plan360-app-qa.mjs > "$SALIDA/p360qa.txt" 2>&1 & P360QA=$!
+lanzar; node test/plan360-sublime-app.mjs > "$SALIDA/p360sublime.txt" 2>&1 & P360SUBL=$!
+lanzar; node test/plan360-idiomas.mjs > "$SALIDA/p360idiomas.txt" 2>&1 & P360IDIO=$!
 lanzar; node test/plan360-panel-auditoria.mjs > "$SALIDA/p360pau.txt" 2>&1 & P360PA=$!
 lanzar; node test/pedidos-plataforma.mjs > "$SALIDA/platf.txt" 2>&1 & PPLAT=$!
 lanzar; node test/plan360-servicio.mjs > "$SALIDA/p360sv.txt" 2>&1 & P360S=$!
@@ -513,6 +515,8 @@ espera $P360E "Plan 360º · tareas con «Se hace en…» y botón «Ir a…»" 
 espera $P360Q "Plan 360º · tareas pasadas al equipo salen en «Mi puesto» como «Puesta por el coach»" "$SALIDA/p360eq.txt" "en orden"
 espera $P360T "Plan 360º · acta en vivo: el coach apunta decisiones y el negocio las lee" "$SALIDA/p360ac.txt" "en orden"
 espera $P360QA "Plan 360º · app del negocio: duración, contrato en vivo, prueba en tareas, avisos, tarea plegable, objetivos, mantenimiento, idiomas" "$SALIDA/p360qa.txt" "en orden"
+espera $P360SUBL "Plan 360º · app (tanda sublime): fotos de prueba en su bloque, datos del coach fuera del código, marcador semanal, radar, informe de cierre y solo lectura" "$SALIDA/p360sublime.txt" "los [0-9]+ casos pasaron"
+espera $P360IDIO "Plan 360º · la app en catalán e inglés sin castellano suelto (salvo contrato y playbooks)" "$SALIDA/p360idiomas.txt" "en orden"
 espera $P360PA "Plan 360º · panel del coach (auditoría 25/11: estado por cliente, banco plegado, guía, ⋯, 390 px)" "$SALIDA/p360pau.txt" "en orden"
 espera $PPLAT "Pedidos de plataformas (Glovo, Uber Eats…): entran por el buzón, por aceptar, sin duplicados, con su etiqueta" "$SALIDA/platf.txt" "en orden"
 espera $P360S "Plan 360º · «Mi mantenimiento» (cuota, cobros, baja) y resumen semanal para WhatsApp" "$SALIDA/p360sv.txt" "en orden"
