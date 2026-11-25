@@ -5736,6 +5736,79 @@ function plan360PageHeader(title, subtitle){
    (gastrogoan/coachConfig/programaPlantilla, solo admin) y se aplican a otro cliente. Aplicar NO pisa nada: añade solo las
    tareas que ese día todavía no tiene (mismo título). Se guardan título, descripción y «Se hace en…»; nunca el estado,
    las notas ni los archivos del cliente de origen. */
+/* ---- Plantilla BASE de GastroGoan (25/11) ----
+   El programa nacía con 26 días VACÍOS: el coach tenía que inventar cada tarea con cada cliente y la plantilla propia
+   (coachConfig/programaPlantilla) empezaba sin nada. Esta es la lista de partida: el recorrido típico de un restaurante
+   que arranca con la app, ordenado de lo que da orden (datos y costes) a lo que da dinero (carta y clientes) y por
+   último lo que se mantiene (equipo y rutinas). Cada tarea dice QUÉ hacer, POR QUÉ y CÓMO SABER QUE ESTÁ HECHA, y lleva
+   su «Ir a…» a la pantalla de la app donde se hace. Se reparten por los días laborables (lun-vie) de los días 3-28:
+   un restaurante no trabaja el plan en sábado ni domingo. El coach la ajusta a cada cliente (quitar, añadir, mover);
+   no es un guion cerrado, es el suelo. Aplicarla NO pisa nada: solo añade lo que falta (mismo criterio que
+   plantillaAplicar). */
+const PLAN360_PLANTILLA_BASE = [
+  // — Semana de arranque: que los datos del negocio estén bien puestos
+  {t: 'Revisar los datos de tu negocio', d: 'Por qué: todo lo que sale impreso (tickets, facturas, web de reservas) lleva estos datos. Cómo: abre Mi Negocio y comprueba nombre, dirección, teléfono, horario y días cerrados. Hecho cuando: el horario de la web de reservas coincide con el real.', e: 'minegocio'},
+  {t: 'Dar de alta a todo el equipo', d: 'Por qué: sin empleados no hay turnos, ni «Mi puesto», ni fichajes. Cómo: en Personal crea una ficha por persona con su área, teléfono y PIN. Hecho cuando: todos pueden fichar con su PIN.', e: 'horarios'},
+  {t: 'Cargar los proveedores', d: 'Por qué: cada precio de compra depende de a quién se lo compras. Cómo: en Proveedores añade los 5-8 que más compras, con teléfono de pedidos y día de reparto. Hecho cuando: están los que suman el 80 % de tus compras.', e: 'proveedores'},
+  {t: 'Poner precio a tus 30 productos más comprados', d: 'Por qué: si el precio de compra está mal, todo el food cost está mal. Cómo: en Mega Lista pon el precio SIN IVA de lo que más compras y su IVA. Hecho cuando: no queda ningún producto de los más usados con la etiqueta «por revisar».', e: 'megalista'},
+  {t: 'Pasar la carta entera a Oferta Gastronómica', d: 'Por qué: el TPV, la web de reservas y los pedidos leen de aquí. Cómo: crea la carta con sus secciones y cada plato con su precio y su IVA. Hecho cuando: lo que ve el cliente en la web es exactamente tu carta de papel.', e: 'carta'},
+  // — Costes: saber cuánto cuesta cada plato
+  {t: 'Escandallar los 10 platos que más vendes', d: 'Por qué: son los que mueven tu margen. Cómo: en Escandallo carga los ingredientes y gramos de cada plato. Hecho cuando: los 10 tienen coste por ración y food cost visibles.', e: 'escandallo'},
+  {t: 'Detectar los 3 platos con peor food cost', d: 'Por qué: ahí se te va el dinero sin que lo notes. Cómo: ordena el Escandallo por food cost y apunta los tres peores con su coste y su precio. Hecho cuando: tienes por escrito qué vas a hacer con cada uno (subir precio, bajar ración, cambiar ingrediente o quitar).', e: 'escandallo'},
+  {t: 'Escandallar el resto de la carta', d: 'Por qué: una carta a medias no permite comparar. Cómo: completa los platos que faltan; los de poca venta pueden ir con aproximaciones. Hecho cuando: ningún plato de la carta sale sin coste.', e: 'escandallo'},
+  {t: 'Hacer las fichas técnicas de los 5 platos estrella', d: 'Por qué: que cualquiera del equipo saque el mismo plato, igual, siempre. Cómo: en Fichas técnicas añade pasos, tiempos y foto. Hecho cuando: un compañero nuevo podría emplatarlos sin preguntarte.', e: 'fichas'},
+  {t: 'Poner el stock mínimo de lo que no puede faltar', d: 'Por qué: quedarte sin algo un sábado cuesta ventas. Cómo: en Stock fija el mínimo de lo imprescindible y haz un recuento. Hecho cuando: la app avisa de lo que está bajo mínimo.', e: 'stock'},
+  // — Compras y mermas
+  {t: 'Hacer tu primer pedido desde la app', d: 'Por qué: el pedido sale del déficit de stock y deja el historial de precios. Cómo: en Pedidos usa «Sugerir por déficit» y envíalo por WhatsApp. Hecho cuando: el pedido está enviado y apuntado.', e: 'pedidos'},
+  {t: 'Recibir el pedido comprobando línea a línea', d: 'Por qué: lo que no se comprueba se paga igual. Cómo: al llegar la mercancía apunta la cantidad recibida de cada línea y el precio del albarán. Hecho cuando: el pedido queda recibido y el stock actualizado.', e: 'pedidos'},
+  {t: 'Empezar a anotar mermas', d: 'Por qué: lo que no se mide no se corrige. Cómo: cada vez que se tire algo, anótalo en Stock con su motivo. Hecho cuando: llevas una semana apuntando todas las mermas.', e: 'stock'},
+  {t: 'Revisar las subidas de precio de proveedores', d: 'Por qué: una subida del 5 % que no repercutes se come tu margen. Cómo: abre «Cambios de precio» y mira qué platos afectan las subidas. Hecho cuando: has decidido qué platos subes o ajustas.', e: 'megalista'},
+  // — Equipo y orden diario
+  {t: 'Crear los turnos de las próximas 4 semanas', d: 'Por qué: un horario fijo evita discusiones y cambios de última hora. Cómo: en Personal asigna turnos a cada persona. Hecho cuando: todos saben cuándo entran y salen el mes que viene.', e: 'horarios'},
+  {t: 'Repartir el trabajo en «Mi puesto»', d: 'Por qué: cada uno tiene que saber qué se espera de él sin que se lo digas. Cómo: en Distribución del Trabajo asigna tareas y platos a su cargo. Hecho cuando: cada empleado ve su lista del día.', e: 'horarios'},
+  {t: 'Escribir el manual del puesto de cada área', d: 'Por qué: una norma que solo está en tu cabeza no existe. Cómo: añade obligaciones y normas en el manual de cada puesto (cocina y sala). Hecho cuando: el equipo lo ha leído y confirmado.', e: 'horarios'},
+  {t: 'Poner en marcha el plan de limpieza y APPCC', d: 'Por qué: es obligatorio y protege tu licencia. Cómo: activa los protocolos, las temperaturas de los equipos y las tareas diarias. Hecho cuando: el equipo registra las temperaturas cada día.', e: 'limpieza'},
+  {t: 'Dar de alta los alérgenos de toda la carta', d: 'Por qué: es obligatorio y un error es grave. Cómo: marca los alérgenos de cada plato en su ficha. Hecho cuando: Limpieza › Alérgenos no muestra ningún plato sin revisar.', e: 'limpieza'},
+  // — Sala y atención al cliente
+  {t: 'Configurar el plano de sala y las mesas', d: 'Por qué: el TPV y las reservas dependen de que las mesas existan. Cómo: en Mi Negocio crea zonas y mesas con sus plazas. Hecho cuando: el plano del TPV es igual que tu sala.', e: 'minegocio'},
+  {t: 'Probar un servicio completo con el TPV', d: 'Por qué: el primer servicio real no debe ser el viernes. Cómo: abre una mesa, toma nota, marcha a cocina, cobra y cierra la caja. Hecho cuando: todo el equipo de sala ha cobrado al menos una mesa.', e: 'tpv'},
+  {t: 'Activar la web de reservas y pedidos', d: 'Por qué: quien no te encuentra, no reserva. Cómo: en Mi Negocio activa los servicios, pon el enlace en Google y en redes. Hecho cuando: has hecho una reserva de prueba desde tu móvil.', e: 'minegocio'},
+  {t: 'Gestionar las reservas con la hoja del día', d: 'Por qué: una reserva sin mesa asignada es un problema esperando. Cómo: usa Reservas cada día antes del servicio. Hecho cuando: las reservas de la semana tienen mesa y están confirmadas.', e: 'reservas'},
+  // — Números: saber si ganas dinero
+  {t: 'Cargar los gastos fijos', d: 'Por qué: sin ellos no sabes cuánto tienes que vender para no perder. Cómo: en Gestión Económica añade alquiler, suministros, seguros, cuotas y nóminas. Hecho cuando: el total mensual coincide con lo que de verdad pagas.', e: 'economia'},
+  {t: 'Registrar los gastos variables de la semana', d: 'Por qué: sin gastos reales, la Cuenta de Resultados es ficción. Cómo: apunta las facturas de compra con su IVA. Hecho cuando: no queda ninguna factura de la semana sin registrar.', e: 'economia'},
+  {t: 'Calcular tu punto de equilibrio', d: 'Por qué: es la cifra que separa perder de ganar. Cómo: en Gestión Económica › Punto de equilibrio mira cuántos cubiertos al día necesitas. Hecho cuando: la cifra está apuntada y la conoce quien dirige la sala.', e: 'economia'},
+  {t: 'Fijar el reparto objetivo de cada euro', d: 'Por qué: sin objetivo, cualquier cifra parece normal. Cómo: en Tesorería pon el % objetivo de personal, fijos, variables y beneficio. Hecho cuando: ves en verde o en rojo si cumples cada uno.', e: 'economia'},
+  {t: 'Revisar tu Cuenta de Resultados del mes', d: 'Por qué: es lo que mira tu gestor y lo que te dice la verdad. Cómo: léela de arriba abajo y apunta tres cosas que no esperabas. Hecho cuando: has comentado esas tres con tu coach.', e: 'economia'},
+  // — Crecer: clientes y promoción
+  {t: 'Revisar la ficha de tus mejores clientes', d: 'Por qué: el 20 % de tus clientes suele traerte la mitad de la venta. Cómo: en Clientes filtra por VIP y recurrentes y revisa alergias y notas. Hecho cuando: sabes quiénes son y cómo agradecérselo.', e: 'clientes'},
+  {t: 'Lanzar una acción de promoción medible', d: 'Por qué: sin promoción medida no se aprende. Cómo: crea una acción en Promoción con día, condición y objetivo. Hecho cuando: la acción está activa y el objetivo apuntado.', e: 'promocion'},
+  {t: 'Enviar una novedad a tus clientes', d: 'Por qué: un cliente que no sabe qué hay de nuevo no vuelve. Cómo: en Promoción › Novedades prepara el mensaje y envíalo por WhatsApp o email. Hecho cuando: ha salido el primer envío.', e: 'promocion'},
+  {t: 'Pedir reseñas a quien ha tenido buena experiencia', d: 'Por qué: las reseñas deciden dónde come el que no te conoce. Cómo: usa el QR del ticket y pídelo en mesa. Hecho cuando: has conseguido al menos 5 reseñas nuevas esta semana.', e: 'minegocio'},
+  // — Cierre: lo que se queda funcionando
+  {t: 'Revisar los objetivos del plan con tus números', d: 'Por qué: ya hay dos semanas de datos para ver si vas bien. Cómo: abre el marcador del Plan 360 y compara con el Día 1. Hecho cuando: sabes qué objetivos van bien y cuáles no.', e: 'economia'},
+  {t: 'Definir tus 3 rutinas semanales', d: 'Por qué: lo que se hace una vez se olvida; lo que se hace cada semana se queda. Cómo: elige tres revisiones (mermas, precios, números) y ponles día y hora. Hecho cuando: están en tu agenda.', e: 'economia'},
+];
+function plantillaBaseParaPrograma(prog, startDate){
+  // Días de trabajo en lunes-viernes; si el programa no tiene fecha se asume que el día 1 es lunes.
+  const laborables = (prog || []).filter(d => d && d.phase === 'trabajo').map(d => {
+    let dow = 1;
+    if(startDate){
+      const [y, m, dd] = startDate.split('-').map(Number);
+      dow = new Date(y, m - 1, dd + d.day - 1).getDay();
+    }else dow = ((d.day - 1) % 7) + 1;
+    return {day: d.day, dow};
+  }).filter(x => x.dow !== 0 && x.dow !== 6).map(x => x.day);
+  const n = PLAN360_PLANTILLA_BASE.length;
+  const out = {};
+  PLAN360_PLANTILLA_BASE.forEach((x, i) => {
+    const dia = laborables[Math.min(laborables.length - 1, Math.floor(i * laborables.length / n))];
+    const t = {day: dia, title: x.t, description: x.d};
+    if(x.e) t.enlace = x.e;
+    out['t' + i] = t;
+  });
+  return out;
+}
 function plantillaDesdePrograma(prog){
   const out = {};
   (prog || []).filter(d => d && d.phase === 'trabajo').forEach(d => {
@@ -5767,6 +5840,7 @@ function renderPlantillaPage(){
       <p style="margin:0;flex-basis:100%">Este cliente tiene <b>${Object.keys(plantillaDesdePrograma(remoteBiz.plan360Program)).length}</b> tareas. Guardarlas sustituye tu plantilla actual.</p>
       <button class="btn btn-sm" onclick="plantillaGuardar()"><i class="ti ti-device-floppy"></i> Guardar este plan como plantilla</button>
       <button class="btn btn-sm btn-primary" onclick="plantillaPonerAEsteCliente()"><i class="ti ti-copy"></i> Aplicar mi plantilla a este cliente</button>
+      <button class="btn btn-sm" onclick="plantillaPonerBase()"><i class="ti ti-list-check"></i> Aplicar la plantilla base de GastroGoan (${PLAN360_PLANTILLA_BASE.length} tareas)</button>
       <p class="muted" id="plantilla-estado" style="margin:0;flex-basis:100%;font-size:13px"></p>
     </div>`;
 }
@@ -5776,6 +5850,13 @@ async function plantillaGuardar(){
   if(!Object.keys(tpl).length){ est.textContent = 'Este cliente no tiene tareas que guardar.'; return; }
   try{ await plantillaRef().set(tpl); est.textContent = 'Plantilla guardada (' + Object.keys(tpl).length + ' tareas).'; }
   catch(e){ est.textContent = 'No se pudo guardar en la plataforma (¿reglas de coachConfig publicadas?): ' + (e.message || e.code || 'error'); }
+}
+async function plantillaPonerBase(){
+  const est = document.getElementById('plantilla-estado');
+  const tpl = plantillaBaseParaPrograma(remoteBiz.plan360Program, remoteBiz.plan360StartDate);
+  const n = plantillaAplicar(remoteBiz.plan360Program, tpl);
+  if(n){ saveRemoteBiz(); }
+  est.textContent = n ? 'Añadidas ' + n + ' tareas repartidas por los días laborables. Revísalas y ajústalas a este cliente.' : 'Nada que añadir: este plan ya tiene todas las tareas de la plantilla base.';
 }
 async function plantillaPonerAEsteCliente(){
   const est = document.getElementById('plantilla-estado');
