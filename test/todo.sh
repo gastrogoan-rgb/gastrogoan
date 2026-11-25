@@ -221,6 +221,7 @@ lanzar; node test/plan360-servicio.mjs > "$SALIDA/p360sv.txt" 2>&1 & P360S=$!
 lanzar; node test/plan360-cobros.mjs > "$SALIDA/p360co.txt" 2>&1 & P360O=$!
 lanzar; node test/plan360-plantilla.mjs > "$SALIDA/p360pl.txt" 2>&1 & P360L=$!
 lanzar; node test/plan360-plantilla-base.mjs > "$SALIDA/p360pb.txt" 2>&1 & P360PB=$!
+lanzar; node test/plan360-panel-coach.mjs > "$SALIDA/p360pco.txt" 2>&1 & P360PCO=$!
 lanzar; node test/plan360-informe-coach.mjs > "$SALIDA/p360ic.txt" 2>&1 & P360IC=$!
 lanzar; node test/fotos-platos.mjs > "$SALIDA/fotopl.txt" 2>&1 & PFOTOPL=$!
 lanzar; node test/tpv-nota-movil.mjs > "$SALIDA/tpvnm.txt" 2>&1 & PTPVNM=$!
@@ -518,6 +519,7 @@ espera $P360S "Plan 360º · «Mi mantenimiento» (cuota, cobros, baja) y resume
 espera $P360O "Plan 360º · cobros del programa y CSV para el gestor" "$SALIDA/p360co.txt" "en orden"
 espera $P360L "Plan 360º · plantilla del programa (guardar y aplicar sin pisar nada)" "$SALIDA/p360pl.txt" "en orden"
 espera $P360PB "Plan 360º · plantilla base de GastroGoan (tareas reales, solo días laborables, sin duplicar)" "$SALIDA/p360pb.txt" "los [0-9]+ casos pasaron"
+espera $P360PCO "Plan 360º · panel del coach: orden del día, alertas, datos de coach, archivar, pruebas, ⋯ y móvil" "$SALIDA/p360pco.txt" "los [0-9]+ casos pasaron"
 espera $P360IC "Plan 360º · informe semanal del coach: hechas/sin hacer, área y objetivos" "$SALIDA/p360ic.txt" "en orden"
 espera $PFOTOPL "Fotos de platos en la web de pedidos: miniatura pequeña, solo con el interruptor encendido" "$SALIDA/fotopl.txt" "en orden"
 espera $PTPVNM "Tomar nota en móvil: botones del plato de 44 px" "$SALIDA/tpvnm.txt" "en orden"

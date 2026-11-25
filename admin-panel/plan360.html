@@ -6845,7 +6845,7 @@ function ordenDiaGuionHtml(day){
   const pre = ordenDiaGuion(day);
   return pre.map((p, i) => `<div class="od-q" id="od-fila-${i}" data-id="${esc(p.id)}" style="padding:8px 0;border-top:1px solid var(--border)">
     <div style="display:flex;gap:6px;align-items:flex-start">
-      <div class="field" style="flex:1;margin:0;min-width:0"><label for="od-q-${i}">Pregunta ${i + 1}</label><textarea id="od-q-${i}" rows="2">${esc(p.q || '')}</textarea></div>
+      <div class="field" style="flex:1;margin:0;min-width:0"><label for="od-q-${i}">Pregunta ${i + 1}</label><textarea id="od-q-${i}" rows="3">${esc(p.q || '')}</textarea></div>
       ${p360MenuAcciones([{icono: 'ti-checkbox', texto: 'Pasar a acuerdo del acta', fn: `ordenDiaPasarAAcuerdo(${i})`}, {icono: 'ti-trash', texto: 'Quitar la pregunta', fn: `ordenDiaQuitarPregunta(${day},${i})`, peligro: true}], 'Acciones de la pregunta')}
     </div>
     <div class="field" style="margin:6px 0 0"><label for="od-a-${i}">Lo que contesta / lo que apuntas</label><textarea id="od-a-${i}" rows="2">${esc(p.a || '')}</textarea></div>
