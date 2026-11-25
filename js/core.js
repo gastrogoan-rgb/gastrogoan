@@ -155,7 +155,29 @@ function setOwnerLogin(user, authKey, pinPlain){
   migrateSlotOwners();
   cerrarAdjudicacionDeNegocios();
   localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({user: u, authKey, pinHash: hashPin(pinPlain, u)}));
+  // Cambiar el PIN ESCRIBE los dos hashes: el H2 de siempre (otro aparato con la versión vieja sigue pudiendo entrar) y el H3 en cuanto se calcula.
+  // La derivación de authKey NO cambia (es la ruta de la cuenta en la nube).
+  ownerPinCortoAnotar(pinPlain);
+  pinH3Mejorar(pinPlain, getOwnerLogin(), 'pinHash', u, ownerLoginPersistirH3);
 }
+// Guarda en localStorage el H3 calculado, SOLO si el login guardado sigue siendo el mismo (no se pisa un cambio de PIN hecho mientras tanto).
+function ownerLoginPersistirH3(obj){
+  try{
+    const cur = getOwnerLogin();
+    if(!cur || cur.pinHash !== obj.pinHash) return;
+    cur.pinHash3 = obj.pinHash3; cur.pinHash3De = obj.pinHash3De;
+    localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify(cur));
+  }catch(e){}
+}
+// El PIN del dueño no se guarda en ningún sitio, así que «¿es corto?» solo se sabe en el momento de teclearlo. Se apunta por aparato para el aviso de la campana.
+const OWNER_PIN_CORTO_LS = 'gastrogoan_owner_pin_corto';
+function ownerPinCortoAnotar(pin){
+  try{
+    if(/^[0-9A-Za-z]{6,12}$/.test(String(pin))) localStorage.removeItem(OWNER_PIN_CORTO_LS);
+    else localStorage.setItem(OWNER_PIN_CORTO_LS, '1');
+  }catch(e){}
+}
+function ownerPinEsCorto(){ try{ return localStorage.getItem(OWNER_PIN_CORTO_LS) === '1'; }catch(e){ return false; } }
 // Comprobación puramente local: una vez la cuenta se validó online al
 // entrar la primera vez en este dispositivo, las siguientes veces no hace
 // falta internet (un restaurante no puede quedarse sin poder abrir la caja
@@ -164,6 +186,12 @@ function verifyOwnerLogin(user, pinPlain){
   const login = getOwnerLogin();
   if(!login) return false;
   return login.user === ggOwnerUser(user) && pinMatchesHash(pinPlain, login.pinHash, login.user);
+}
+// Igual que la anterior pero prefiriendo el H3 (PBKDF2) si esta cuenta ya lo tiene; con un H2 válido lo refuerza en segundo plano.
+async function verifyOwnerLoginAsync(user, pinPlain){
+  const login = getOwnerLogin();
+  if(!login || login.user !== ggOwnerUser(user)) return false;
+  return pinCoincideAsync(pinPlain, login, 'pinHash', login.user, p => pinMatchesHash(p, login.pinHash, login.user), ownerLoginPersistirH3);
 }
 
 // Si ha pasado más de ACCESS_INACTIVITY_OWNER_MS (o _EMPLOYEE_MS) desde el último toque
@@ -459,7 +487,8 @@ async function confirmOwnerAccess(){
   // ⚠️ Pero el PIN guardado aquí puede ser el ANTIGUO (25/11, el dueño: «al cambiar la contraseña sigue valiendo la antigua»): al cambiarlo en otro
   // aparato, este conserva su copia y la daba por buena para siempre. Con internet se comprueba que la cuenta sigue en la ruta de ese PIN; si ya no
   // está, el PIN cambió y se pide el nuevo. Sin internet (o si la nube tarda) NO se bloquea a nadie: un restaurante sin wifi tiene que poder abrir.
-  if(verifyOwnerLogin(user, pin)){
+  if(await verifyOwnerLoginAsync(user, pin)){
+    ownerPinCortoAnotar(pin);
     const vigente = await ownerLoginSigueVigente(3000);
     if(vigente === false){
       try{ localStorage.removeItem(OWNER_LOGIN_LS); }catch(e){}
@@ -609,6 +638,28 @@ function pinDeEmpleadoCoincide(pin, storedPin, licenseCode){
   // Respaldo: PIN guardado antes de unificar la sal.
   return licenseCode ? pinMatchesHash(pin, storedPin, undefined) : false;
 }
+// Versiones asíncronas (prefieren H3, ver «H3» junto a hashPin). Las síncronas de arriba se mantienen para las barreras internas que no pueden esperar.
+async function pinDeNegocioCoincideAsync(pin){
+  const cod = codigoNegocioParaPin();
+  const b = DB.business;
+  if(!b) return false;
+  return pinCoincideAsync(pin, b, 'pin', cod, p => pinDeEmpleadoCoincide(p, b.pin, cod), () => saveDB());
+}
+async function findEmployeeMatchAsync(employees, name, pin, licenseCode){
+  for(const e of (employees || [])){
+    if(e.active === false) continue;
+    if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) continue;
+    if(await pinCoincideAsync(pin, e, 'pin', licenseCode, p => pinDeEmpleadoCoincide(p, e.pin || '1234', licenseCode))) return e;
+  }
+  return undefined;
+}
+// Refuerza con H3 el PIN de UN empleado de una copia (slot o nube) donde SÍ se va a guardar después. Solo si el PIN coincide con el H2 de ESA copia.
+async function pinMejorarEmpleadoEnCopia(employees, id, pin, licenseCode){
+  const e = (employees || []).find(x => x && x.id === id);
+  if(!e || pinH3Vigente(e, 'pin')) return false;
+  if(!pinDeEmpleadoCoincide(pin, e.pin || '1234', licenseCode)) return false;
+  return pinH3Mejorar(pin, e, 'pin', licenseCode);
+}
 function codigoNegocioParaPin(){
   const lic = (typeof getLicense === 'function') ? getLicense() : null;
   return (lic && lic.code) || (DB && DB.license && DB.license.code) || undefined;
@@ -719,12 +770,16 @@ async function confirmEmployeeAccess(){
       // venta o borrar un empleado) antes de permitirlo.
       const bizPin = await promptText(t('access.ownerPinRequiredForReset'), '', {title: t('title.enterBusinessPin'), icon: 'ti-lock'});
       if(bizPin === null) return;
-      if(!pinDeEmpleadoCoincide(bizPin.trim(), slotData.business && slotData.business.pin, localSlot.code)){ showToast(t('access.badCredentials')); return; }
+      const bizSlot = slotData.business || {};
+      if(!(await pinCoincideAsync(bizPin.trim(), bizSlot, 'pin', localSlot.code, p => pinDeEmpleadoCoincide(p, bizSlot.pin, localSlot.code)))){ showToast(t('access.badCredentials')); return; }
       const newPin = await promptText(t('access.newPinPrompt'), '', {title: t('access.newPinPrompt'), icon: 'ti-lock'});
       if(!newPin || !newPin.trim()){ return; }
       if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
       owner.pin = hashPin(newPin.trim(), localSlot.code);
       owner.pinChanged = true;
+      // Se escriben los dos hashes (H2 para versiones viejas, H3 para esta); se espera al H3 porque se guarda ahora mismo.
+      pinH3Borrar(owner, 'pin');
+      await pinH3Mejorar(newPin.trim(), owner, 'pin', localSlot.code);
       // Deja rastro en el registro de actividad del propio negocio (no del
       // dispositivo que hace el reseteo, que puede no tener sesión ninguna
       // todavía) — antes esto no dejaba ninguna constancia.
@@ -738,8 +793,16 @@ async function confirmEmployeeAccess(){
     // antiguo y el nuevo daba «incorrecto» (y en un negocio que no es el abierto, para siempre: su copia solo se actualiza al abrirlo). Con internet
     // manda la nube (solo la lista de empleados, no todo el negocio); sin internet o si tarda, se usa la copia local para no dejar a nadie fuera.
     const frescos = await empleadosFrescosDeLaNube(localSlot, slotData);
-    const match = findEmployeeMatch(frescos || slotData.employees, name, pin, localSlot.code);
+    const match = await findEmployeeMatchAsync(frescos || slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
+    // Refuerzo perezoso con H3 del PIN que acaba de servir, donde de verdad se guardará: en el negocio abierto (DB) o, si se va a cambiar de negocio
+    // (recarga), en la copia local del otro antes de irnos. Con la nube conectada subirá solo.
+    if(localSlot.id === ACTIVE_SLOT){
+      const dbEmp = (DB.employees || []).find(x => x.id === match.id);
+      if(dbEmp && !pinH3Vigente(dbEmp, 'pin') && pinDeEmpleadoCoincide(pin, dbEmp.pin || '1234', localSlot.code)) pinH3Mejorar(pin, dbEmp, 'pin', localSlot.code, () => saveDB());
+    } else if(await pinMejorarEmpleadoEnCopia(slotData.employees, match.id, pin, localSlot.code)){
+      try{ await writeSlotDB(localSlot.id, slotData); }catch(e){}
+    }
     rememberBusinessCode(code, (slotData.business && slotData.business.name) || localSlot.name);
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
     if(localSlot.id !== ACTIVE_SLOT){
@@ -762,8 +825,9 @@ async function confirmEmployeeAccess(){
   try{ remoteData = await fetchRemoteTenantDB(tenantId, fbConfig); }
   catch(e){ console.error('Error conectando con el negocio remoto', e); showToast(t('access.connectFailed')); return; }
   if(!remoteData){ showToast(t('access.badCredentials')); return; }
-  const match = findEmployeeMatch(remoteData.employees, name, pin, code);
+  const match = await findEmployeeMatchAsync(remoteData.employees, name, pin, code);
   if(!match){ showToast(t('access.badCredentials')); return; }
+  await pinMejorarEmpleadoEnCopia(remoteData.employees, match.id, pin, code);   // la copia se escribe justo debajo (registerRemoteBusinessLocally)
   rememberBusinessCode(code, remoteData.business && remoteData.business.name);
   let newSlotId;
   try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
@@ -7047,6 +7111,91 @@ function pinMatchesHash(pin, storedHash, licenseCode){
   if(storedHash.startsWith('H2:')) return hashPin(pin, licenseCode) === storedHash;
   if(storedHash.startsWith('H:')) return 'H:' + hashPinRaw(pin, licenseCode) === storedHash;
   return pin === storedHash;
+}
+
+/* ============================================================
+   H3: PBKDF2-SHA256 (WebCrypto) — hallazgo 4 de la auditoría de seguridad (25/11)
+   ============================================================
+   H2 es FNV-1a de 32 bits repetido 8.000 veces: sale en milisegundos por PIN, así que quien consiga un hash (la nube del negocio guarda
+   los de los empleados y el del negocio) prueba los 10.000 PIN de 4 dígitos al instante. H3 es PBKDF2 con sal ALEATORIA por hash
+   (dos empleados con el mismo PIN ya no dan el mismo texto) y un coste que se anota dentro del propio hash (`H3:<iteraciones>:<sal>:<hash>`),
+   así que se puede subir más adelante sin romper los guardados.
+
+   ⚠️ DECISIÓN: NO se toca ggOwnerAuthKey/authKey. Esa clave es la RUTA de la cuenta del dueño en la nube; si cambiara su derivación, todos los
+   dueños dejarían de encontrar su cuenta. Aquí solo se refuerzan los hashes que se COMPARAN: `pinHash` local del dueño (localStorage), `pin` de cada
+   empleado y `pin` del negocio (DB.employees / DB.business).
+
+   ⚠️ MIGRACIÓN PEREZOSA Y COMPATIBLE (versiones mezcladas): los hashes de empleados viajan por la nube y un aparato con la versión vieja no sabe
+   leer H3. Por eso el H3 va en un campo APARTE (`pin3` junto a `pin`, `pinHash3` junto a `pinHash`) y el H2 se queda. Al validar con éxito un PIN con
+   hash antiguo se calcula también el H3. Cada H3 guarda en `…3De` el H2 con el que nació: si un aparato viejo cambia el PIN (escribe `pin` nuevo y no
+   toca `pin3`), `pin3De` ya no coincide con `pin` y ese H3 se IGNORA (haría valer el PIN antiguo y rechazaría el nuevo). Sin WebCrypto (contexto no
+   seguro, Safari viejo) se usa el camino de siempre.
+
+   ⚠️ RETIRAR EL HASH VIEJO (no se hace aún): mientras `pin` siga siendo H2, quien lea la nube sigue pudiendo romper ESE hash; la ganancia real llega
+   cuando se deje de guardarlo. Condiciones y pasos en CLAUDE.md («Hash H3»). */
+const PIN_H3_ITER = 210000;
+function pinH3Disponible(){
+  try{ return typeof crypto !== 'undefined' && !!crypto.subtle && typeof crypto.subtle.importKey === 'function' && typeof TextEncoder !== 'undefined'; }
+  catch(e){ return false; }
+}
+function pinB64(bytes){ let s = ''; bytes = new Uint8Array(bytes); for(let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function pinB64Bytes(b64){ const s = atob(String(b64).replace(/-/g,'+').replace(/_/g,'/')); const out = new Uint8Array(s.length); for(let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
+async function pinH3Derivar(pin, contexto, salAleatoria, iter){
+  const enc = new TextEncoder();
+  const ctx = enc.encode('GG3$pin:' + (contexto === undefined ? '' : contexto));
+  const sal = new Uint8Array(salAleatoria.length + ctx.length);
+  sal.set(salAleatoria, 0); sal.set(ctx, salAleatoria.length);
+  const clave = await crypto.subtle.importKey('raw', enc.encode(String(pin)), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({name: 'PBKDF2', hash: 'SHA-256', salt: sal, iterations: iter}, clave, 256));
+}
+// `contexto` = lo mismo que la sal del H2: código del negocio (empleados y PIN del negocio) o nombre de usuario (dueño).
+async function hashPinH3(pin, contexto, iter){
+  iter = iter || PIN_H3_ITER;
+  const sal = crypto.getRandomValues(new Uint8Array(16));
+  const h = await pinH3Derivar(pin, contexto, sal, iter);
+  return 'H3:' + iter + ':' + pinB64(sal) + ':' + pinB64(h);
+}
+async function pinH3Coincide(pin, h3, contexto){
+  const partes = String(h3).split(':');
+  if(partes.length !== 4 || partes[0] !== 'H3') return false;
+  const iter = parseInt(partes[1], 10);
+  if(!(iter >= 1000 && iter <= 5000000)) return false;   // un valor absurdo no puede colgar el aparato
+  const h = pinB64(await pinH3Derivar(pin, contexto, pinB64Bytes(partes[2]), iter));
+  return h === partes[3];
+}
+// ¿El H3 de este registro sigue siendo el de su H2 actual? (ver «versiones mezcladas» arriba)
+function pinH3Vigente(obj, campo){
+  return !!(obj && obj[campo] && obj[campo + '3'] && obj[campo + '3De'] === obj[campo]);
+}
+function pinH3Borrar(obj, campo){ if(obj){ delete obj[campo + '3']; delete obj[campo + '3De']; } }
+// Calcula y apunta el H3 de un PIN que YA se sabe correcto para este registro. No lanza nunca: es una mejora, no puede impedir entrar.
+async function pinH3Mejorar(pin, obj, campo, contexto, guardar){
+  try{
+    if(!obj || !pinH3Disponible()) return false;
+    const h2 = obj[campo];
+    if(typeof h2 !== 'string' || !/^H2?:/.test(h2)) return false;   // PIN de fábrica en claro u otro formato: nada que reforzar
+    const h3 = await hashPinH3(pin, contexto);
+    if(obj[campo] !== h2) return false;   // el PIN cambió mientras se calculaba: este H3 ya no es de este registro
+    obj[campo + '3'] = h3; obj[campo + '3De'] = h2;
+    if(typeof guardar === 'function') guardar(obj);
+    return true;
+  }catch(e){ return false; }
+}
+// Tras ESCRIBIR un hash H2 nuevo (cambio de PIN): quita el H3 antiguo y calcula el nuevo sin bloquear a nadie.
+function pinH3Anotar(obj, campo, pin, contexto, guardar){
+  pinH3Borrar(obj, campo);
+  return pinH3Mejorar(pin, obj, campo, contexto, guardar);
+}
+// Comprobación ASÍNCRONA que PREFIERE el H3. `legacyFn(pin)` es la comparación de siempre (H2/H:), que sigue siendo la única posible sin WebCrypto o sin H3.
+// Si hay H3 vigente decide SOLO él (un PIN equivocado no entra aunque el H2 antiguo, de 32 bits, colisionara). Si entra por el camino viejo y se pasa
+// `guardar`, se reforzará con un H3 en segundo plano. Sin `guardar` no se escribe nada (copias de la nube, otros negocios).
+async function pinCoincideAsync(pin, obj, campo, contexto, legacyFn, guardar){
+  if(pinH3Vigente(obj, campo) && pinH3Disponible()){
+    try{ return await pinH3Coincide(pin, obj[campo + '3'], contexto); }catch(e){ /* cae al camino de siempre */ }
+  }
+  const ok = !!legacyFn(pin);
+  if(ok && typeof guardar === 'function') pinH3Mejorar(pin, obj, campo, contexto, guardar);   // sin await a propósito: no retrasa la entrada
+  return ok;
 }
 
 // Recuerda el último estado real de la nube (más allá de si el badge del

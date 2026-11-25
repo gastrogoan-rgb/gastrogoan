@@ -1792,11 +1792,11 @@ function openDistEmployee(id){
   `);
   setTimeout(()=>document.getElementById('dist-pin-input')?.focus(), 50);
 }
-function confirmDistEmployeePin(){
+async function confirmDistEmployeePin(){
   const e = DB.employees.find(x=>x.id===distPendingPinEmployeeId);
   if(!e) return;
   const val = document.getElementById('dist-pin-input').value;
-  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
+  if(!(await pinMatchesEmployeeOrBusinessAsync(val, e))){ showToast(t('msg.pinIncorrect')); return; }
   closeModal();
   openDistEmployeeAuthed(e.id);
 }
@@ -9642,19 +9642,21 @@ function renderDeliveryPlatformsCard(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.delivery.desc')}</p>
       <div id="delivery-platforms-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${platforms.length ? platforms.map(p=>`
-          <div class="ge-item gg-fila dlv-fila">
-            <span class="gg-fila-nombre dlv-nombre">${escapeHtml(p.nombre)}</span>
-            <span class="gg-fila-extra dlv-extra">
+          <div class="ge-item dlv-fila">
+            <div class="dlv-cab">
+              <span class="dlv-nombre">${escapeHtml(p.nombre)}</span>
+              ${ggMenuAcciones([
+                {icono:'ti-edit', texto:t('common.edit'), fn:`editDeliveryPlatform(${p.id})`},
+                {icono:'ti-trash', texto:t('common.delete'), fn:`deleteDeliveryPlatform(${p.id})`, peligro:true}
+              ])}
+            </div>
+            <div class="dlv-chips">
               <span class="dlv-chip">${t('mn.delivery.commissionLabel')} ${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</span>
               ${p.ivaVentaPct !== undefined && p.ivaVentaPct !== null && p.ivaVentaPct !== '' ? `<span class="dlv-chip">${escapeHtml(gl({es:'Venta con IVA ', ca:'Venda amb IVA ', en:'Sales at VAT '}))}${fmtNum(p.ivaVentaPct)}%</span>` : ''}
               ${p.isp ? `<span class="dlv-chip">${escapeHtml(gl({es:'IVA autoliquidado', ca:'IVA autoliquidat', en:'Reverse-charge VAT'}))}</span>` : ''}
               ${p.facturaReal ? `<span class="dlv-chip">${escapeHtml(gl({es:'Factura real', ca:'Factura real', en:'Real invoice'}))}</span>` : ''}
               ${p.activa === false ? `<span class="dlv-chip dlv-chip-off">${escapeHtml(gl({es:'No sale en el cierre', ca:'No surt al tancament', en:'Not in the closing'}))}</span>` : ''}
-              ${ggMenuAcciones([
-                {icono:'ti-edit', texto:t('common.edit'), fn:`editDeliveryPlatform(${p.id})`},
-                {icono:'ti-trash', texto:t('common.delete'), fn:`deleteDeliveryPlatform(${p.id})`, peligro:true}
-              ])}
-            </span>
+            </div>
           </div>`).join('')
         : `<div class="empty" style="padding:12px 16px">${t('mn.delivery.empty')}</div>`}
       </div>
@@ -10434,6 +10436,7 @@ function changeOwnerPin(){
   requestBusinessPinAction(t('title.changeOwnerPin'), t('msg.confirmCurrentPin'), () => {
     DB.business.pin = hashPin(n1, codigoNegocioParaPin());
     DB.business.pinSet = true;
+    pinH3Anotar(DB.business, 'pin', n1, codigoNegocioParaPin(), () => saveDB());   // los dos hashes: H2 para versiones viejas, H3 para esta
     logBusinessSettingChange('PIN del negocio cambiado');
     saveDB();
     renderMiNegocio();

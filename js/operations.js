@@ -258,10 +258,8 @@ function cierrePlataformasHtml(platforms){
     const menu = ex ? ggMenuAcciones([{icono:'ti-receipt-refund', texto: gl({es:'Anular lo apuntado hoy', ca:'Anul·la el que has apuntat avui', en:'Cancel today\'s entry'}), fn:`cierreAnularPlataforma(${ex.id})`, peligro:true, owner:true}], {clase:'btn btn-fino mn-btn'}) : '';
     return `
       <div class="clp-fila" data-plat="${escapeHtml(String(p.id))}">
-        <div class="gg-fila clp-cab">
-          <span class="gg-fila-nombre clp-nombre">${escapeHtml(p.nombre)}</span>
-          <span class="gg-fila-extra">${chips.map(c => `<span class="clp-chip">${escapeHtml(c)}</span>`).join('')}${menu}</span>
-        </div>
+        <div class="clp-cab"><span class="clp-nombre">${escapeHtml(p.nombre)}</span>${menu}</div>
+        <div class="clp-chips">${chips.map(c => `<span class="clp-chip">${escapeHtml(c)}</span>`).join('')}</div>
         ${ex ? `<p class="txt-xs clp-ya"><i class="ti ti-check"></i> ${escapeHtml(gl({es:'Ya apuntado hoy' + (hora ? ' a las ' + hora : '') + ': escribe la cifra corregida para cambiarlo.', ca:'Ja apuntat avui' + (hora ? ' a les ' + hora : '') + ': escriu la xifra corregida per canviar-ho.', en:'Already entered today' + (hora ? ' at ' + hora : '') + ': type the corrected figure to change it.'}))}</p>` : ''}
         <div class="clp-campos">
           <div class="field"><label for="closure-platform-${escapeHtml(String(p.id))}">${gl({es:'Ventas del día (con IVA)', ca:'Vendes del dia (amb IVA)', en:'Day\'s sales (VAT incl.)'})}</label>

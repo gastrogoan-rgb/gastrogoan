@@ -1103,9 +1103,9 @@ async function requestBusinessPinAction(title, desc, actionFn){
   `);
   setTimeout(()=>document.getElementById('biz-pin-action-input')?.focus(), 50);
 }
-function confirmBusinessPinAction(){
+async function confirmBusinessPinAction(){
   const val = document.getElementById('biz-pin-action-input').value;
-  const match = pinDeNegocioCoincide(val);
+  const match = await pinDeNegocioCoincideAsync(val);
   if(!match){ showToast(t('msg.pinIncorrect')); return; }
   const fn = businessPinPendingAction;
   businessPinPendingAction = null;

@@ -2099,12 +2099,13 @@ function requestFichaGate(view){
   `);
   setTimeout(()=>document.getElementById('area-gate-pin-input')?.focus(), 50);
 }
-function confirmAreaGatePin(){
+async function confirmAreaGatePin(){
   const view = areaGatePendingView;
   const area = view === 'folder' ? currentFolder : resolveTargetFolder(view);
   const val = document.getElementById('area-gate-pin-input').value;
   const areaEmps = (DB.employees||[]).filter(e => (e.area||'cocina') === area && e.active !== false);
-  const matches = areaEmps.some(e => pinMatchesEmployeeOrBusiness(val, e));
+  let matches = false;
+  for(const e of areaEmps){ if(await pinMatchesEmployeeOrBusinessAsync(val, e)){ matches = true; break; } }
   if(!matches){ showToast(t('msg.pinIncorrect')); return; }
   areaUnlocked[area] = true;
   closeModal();

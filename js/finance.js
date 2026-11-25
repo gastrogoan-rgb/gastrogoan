@@ -1462,6 +1462,17 @@ function plan360AvisoEnvioVisto(id){
     localStorage.setItem(typeof AVISOS_VISTOS_LS !== 'undefined' ? AVISOS_VISTOS_LS : 'gastrogoan_avisos_vistos', JSON.stringify(v));
   }catch(e){}
 }
+function avisoPinCorto(){
+  try{
+    if(typeof isOwnerSession !== 'function' || !isOwnerSession()) return [];
+    if(typeof ownerPinEsCorto !== 'function' || !ownerPinEsCorto()) return [];
+    const vistos = (typeof avisosVistosLeer === 'function') ? avisosVistosLeer() : {};
+    if(vistos.pinCorto === 1) return [];
+    return [{count: 1, icon:'ti-lock-exclamation', id:'pinCorto', campana:true, soloDueno:true, ocultable:true,
+      label: gl({es:'Tu PIN es corto: cámbialo a 6-12 caracteres (letras o números)', ca:'El teu PIN és curt: canvia\'l a 6-12 caràcters (lletres o números)', en:'Your PIN is short: change it to 6-12 characters (letters or numbers)'}),
+      onclick: `promptChangeOwnerPassword()`}];
+  }catch(e){ return []; }
+}
 function avisosDeLaApp(){
   const today = new Date();
   const todayDate = todayStr();
@@ -1536,6 +1547,10 @@ function avisosDeLaApp(){
     ...((plan360MantHayAlgo() && plan360EsOwner()) ? [{count: plan360MantPendientesSemana().length, icon:'ti-calendar-repeat', label: t('dash.att.coachTasks'), onclick: `plan360IrAMantenimiento()`, warn:true}] : []),
     // Plan 360º (17/11): lo que toca hoy y lo atrasado, y el informe de cierre cuando está listo. Solo el propietario.
     ...(plan360AvisosDeHoy()),
+    // Hallazgo 4 de la auditoría (25/11): cuentas antiguas con un PIN de propietario de 4 dígitos (hoy se exigen 6-12). Informativo y NO bloqueante:
+    // solo el propietario, solo en un aparato donde acaba de teclear un PIN corto, y «Visto» lo apaga en ese aparato (el PIN no se guarda, así que
+    // la longitud solo se sabe al teclearlo: `ownerPinEsCorto`). Cambiar la contraseña a una larga lo borra solo.
+    ...(avisoPinCorto()),
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},

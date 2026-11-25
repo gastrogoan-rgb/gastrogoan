@@ -6430,6 +6430,7 @@ async function resetEmployeePin(id){
   // en el valor por defecto (1234) hasta que vuelva a cambiarlo.
   if(!(await confirmModal(t('msg.confirmResetEmployeePin').replace('${name}', e.name)))) return;
   e.pin = hashPin('1234', codigoNegocioParaPin());
+  pinH3Borrar(e, 'pin');   // el H3 del PIN anterior ya no corresponde (el de fábrica se queda solo en H2)
   e.pinChanged = false;
   logPersonalEvent('pinReset', {name: e.name});
   saveDB();
@@ -6677,13 +6678,23 @@ function pinMatchesEmployeeOrBusiness(val, employee){
   if(pinDeEmpleadoCoincide(val, storedPin, codigoNegocioParaPin())) return true;
   return pinDeNegocioCoincide(val);
 }
-function confirmEmployeePersonalPin(){
+// Versión que PREFIERE el H3 (PBKDF2) y refuerza con él los PIN que aún solo tienen H2. La síncrona se mantiene para quien no puede esperar.
+async function pinEmpleadoONegocioAsync(val, employee){
+  if(employee.active === false) return {ok: false, propio: false};
+  const cod = codigoNegocioParaPin();
+  if(await pinCoincideAsync(val, employee, 'pin', cod, p => pinDeEmpleadoCoincide(p, employee.pin || '1234', cod), () => saveDB())) return {ok: true, propio: true};
+  return {ok: await pinDeNegocioCoincideAsync(val), propio: false};
+}
+async function pinMatchesEmployeeOrBusinessAsync(val, employee){
+  return (await pinEmpleadoONegocioAsync(val, employee)).ok;
+}
+async function confirmEmployeePersonalPin(){
   const e = DB.employees.find(x=>x.id===personalPendingPinEmployeeId);
   if(!e) return;
   const val = document.getElementById('personal-pin-input').value;
-  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
-  const storedPin = e.pin || '1234';
-  const wasOwnPin = pinMatchesHash(val, storedPin);
+  const r = await pinEmpleadoONegocioAsync(val, e);
+  if(!r.ok){ showToast(t('msg.pinIncorrect')); return; }
+  const wasOwnPin = r.propio;
   personalFicharAuthMethod = wasOwnPin ? 'self' : 'business_pin';
   if(!hasAnsweredMoodThisWeek(e.id)){ promptMoodCheckin(e.id); return; }
   openEmployeeFicharModal(e.id);
@@ -7154,11 +7165,11 @@ function requestFichajeEditPin(fichajeId){
   `);
   setTimeout(()=>document.getElementById('fichaje-edit-pin-input')?.focus(), 50);
 }
-function confirmFichajeEditPin(){
+async function confirmFichajeEditPin(){
   const f = (DB.fichajes||[]).find(x=>x.id===fichajePendingEditId);
   if(!f) return;
   const val = document.getElementById('fichaje-edit-pin-input').value;
-  const match = pinDeNegocioCoincide(val);
+  const match = await pinDeNegocioCoincideAsync(val);
   if(!match){
     showToast(t('msg.pinIncorrect'));
     return;
@@ -7264,6 +7275,7 @@ function confirmNewPin(employeeId, action){
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
+  pinH3Anotar(e, 'pin', p1, codigoNegocioParaPin(), () => saveDB());   // escribe también el H3 (el H2 se queda para versiones viejas)
   doFichaje(employeeId, action);
 }
 
@@ -7306,6 +7318,7 @@ function confirmFirstPinChange(employeeId){
   e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
+  pinH3Anotar(e, 'pin', p1, codigoNegocioParaPin(), () => saveDB());
   closeModal();
   showToast(t('msg.pinUpdated'));
   maybeShowEmployeeOnboarding(employeeId);

@@ -232,6 +232,7 @@ lanzar; node test/solicitudes-cifradas.mjs > "$SALIDA/solcif.txt" 2>&1 & PSOLCIF
 lanzar; node test/fiscal-pendientes.mjs > "$SALIDA/fiscalpend.txt" 2>&1 & PFISPEN=$!
 lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
 lanzar; node test/cambio-contrasena.mjs > "$SALIDA/cambiocontra.txt" 2>&1 & PCAMPIN=$!
+lanzar; node test/pin-h3.mjs > "$SALIDA/pinh3.txt" 2>&1 & PPINH3=$!
 lanzar; node test/tpv-scroll.mjs > "$SALIDA/tpvscroll.txt" 2>&1 & PTPVSC=$!
 lanzar; node test/tpv-tomar-nota-pda.mjs > "$SALIDA/tpvpda.txt" 2>&1 & PTPVPDA=$!
 lanzar; node test/tpv-historiales-mes.mjs > "$SALIDA/tpvhist.txt" 2>&1 & PTPVHIST=$!
@@ -539,4 +540,5 @@ espera $PSOLCIF "Solicitudes públicas cifradas: la web cifra los datos personal
 espera $PFISPEN "Motor fiscal, pendientes cerrados: 5 % en el 130, mínimos autonómicos, IVA que no aplica y ejercicio 2024, con cuentas a mano" "$SALIDA/fiscalpend.txt" "todos los casos pasaron"
 espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
+espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"
 exit $FALLOS
