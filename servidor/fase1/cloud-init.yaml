@@ -106,7 +106,8 @@ write_files:
       # No depende de la versión de Ubuntu ni de Docker.
       set -u
       LOG=/var/log/gg-arranque.log
-      di(){ echo "GG-ARRANQUE: $*" | tee -a "$LOG" > /dev/console 2>/dev/null || echo "GG-ARRANQUE: $*" >> "$LOG"; }
+      # La consola de Hetzner enseña la pantalla tty1; /dev/console puede ir a otra salida (serie), así que se escribe en las dos.
+      di(){ echo "GG-ARRANQUE: $*" >> "$LOG"; echo "GG-ARRANQUE: $*" > /dev/tty1 2>/dev/null || true; echo "GG-ARRANQUE: $*" > /dev/console 2>/dev/null || true; }
       fallo(){ di "FALLO en el paso: $1. Mira /var/log/gg-arranque.log"; exit 1; }
       V=2.8.4
       case "$(dpkg --print-architecture)" in
