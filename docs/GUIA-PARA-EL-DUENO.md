@@ -64,6 +64,25 @@ Dos cosas que conviene hacer ya: activar la **verificación en dos pasos** en to
 | **El Worker de pagos** | Está en `worker/pagos-worker.js`; se pega a mano en Cloudflare | Con el código |
 | **Las claves del Worker** | En Cloudflare. Apúntalas en tu gestor de contraseñas | Una vez |
 
+### Dónde guardar las copias (regla 3-2-1)
+**Tres copias, en dos tipos de soporte, y una fuera de casa.** Todas con la misma carpeta que genera `bash tools/copia-maestra.sh` (repositorio entero con su historial, reglas de Firebase, generador de licencias, Worker de pagos, kit de servidor, panel, textos legales y guías; probado: se restaura con `git clone gastrogoan.bundle`).
+1. **GitHub** (ya existe, pero no cuenta como copia si pierdes el acceso a la cuenta).
+2. **Un disco externo o USB cifrado**, en tu casa. Una copia al mes y otra antes de cualquier cambio grande.
+3. **Una nube privada fuera de tus cuentas de trabajo** (otra cuenta de correo o de Drive, con la carpeta comprimida y cifrada con contraseña). Sin ella, un robo, un incendio o el cierre de una cuenta se llevan todo.
+
+### Lo que hay que guardar a mano (no está en el repositorio)
+| Qué | Dónde se guarda | Cada cuánto |
+|---|---|---|
+| Contraseñas, claves de Stripe y del Worker, códigos de recuperación | Gestor de contraseñas + una hoja impresa en un sitio físico seguro | Al cambiarlas |
+| **Registro de licencias** (`issuedCodes`, `ownerNames`, `codeClaims`, `adminSalesLog`) | Consola de Firebase de la plataforma → Exportar JSON; dentro de la carpeta de copia | Cada mes |
+| **Reglas de Firebase** de la plataforma y de cada negocio | Ya están en `reglas/` y salen en la copia (`reglas/…plataforma.json`, `reglas/…cada-negocio.json`, `database.rules.propuesta.json`); además anota qué versión está publicada y cuándo | Con cada cambio de reglas |
+| Configuración de Cloudflare (proyectos de Pages, dominios y DNS, variables del Worker) | Capturas de pantalla o exportación del DNS, en la carpeta de copia | Cada trimestre |
+| Configuración de Stripe (enlaces de pago, webhooks, qué productos hay) | Capturas y apuntes, nunca las claves | Al cambiar |
+| Lista de clientes y negocios | El registro de licencias y tu hoja de ventas | Cada mes |
+| El Worker de pagos publicado | `worker/pagos-worker.js` va en la copia; lo que está pegado en Cloudflare debe ser idéntico | Al cambiarlo |
+
+**Comprobación anual:** restaurar una copia en una carpeta nueva y confirmar que se abre. Una copia que no se ha probado no es una copia.
+
 ## 6. Qué no tocar nunca (aprendido a golpes)
 - `generador-licencias.html` **no se publica en la web comercial**; solo como `admin.gastrogoan.com/app.html`.
 - Nunca escribir en el Firebase de producción para probar. Hay una cuenta de prueba (`pruebamia`) para eso.
