@@ -9642,11 +9642,19 @@ function renderDeliveryPlatformsCard(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.delivery.desc')}</p>
       <div id="delivery-platforms-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${platforms.length ? platforms.map(p=>`
-          <div class="ge-item">
-            <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(p.nombre)}</span>
-            <span style="font-size:12px;color:var(--muted);margin-right:8px">${t('mn.delivery.commissionLabel')} ${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</span>
-            <button class="btn btn-sm btn-icon" onclick="editDeliveryPlatform(${p.id})"><i class="ti ti-edit"></i></button>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteDeliveryPlatform(${p.id})"><i class="ti ti-trash"></i></button>
+          <div class="ge-item gg-fila dlv-fila">
+            <span class="gg-fila-nombre dlv-nombre">${escapeHtml(p.nombre)}</span>
+            <span class="gg-fila-extra dlv-extra">
+              <span class="dlv-chip">${t('mn.delivery.commissionLabel')} ${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</span>
+              ${p.ivaVentaPct !== undefined && p.ivaVentaPct !== null && p.ivaVentaPct !== '' ? `<span class="dlv-chip">${escapeHtml(gl({es:'Venta con IVA ', ca:'Venda amb IVA ', en:'Sales at VAT '}))}${fmtNum(p.ivaVentaPct)}%</span>` : ''}
+              ${p.isp ? `<span class="dlv-chip">${escapeHtml(gl({es:'IVA autoliquidado', ca:'IVA autoliquidat', en:'Reverse-charge VAT'}))}</span>` : ''}
+              ${p.facturaReal ? `<span class="dlv-chip">${escapeHtml(gl({es:'Factura real', ca:'Factura real', en:'Real invoice'}))}</span>` : ''}
+              ${p.activa === false ? `<span class="dlv-chip dlv-chip-off">${escapeHtml(gl({es:'No sale en el cierre', ca:'No surt al tancament', en:'Not in the closing'}))}</span>` : ''}
+              ${ggMenuAcciones([
+                {icono:'ti-edit', texto:t('common.edit'), fn:`editDeliveryPlatform(${p.id})`},
+                {icono:'ti-trash', texto:t('common.delete'), fn:`deleteDeliveryPlatform(${p.id})`, peligro:true}
+              ])}
+            </span>
           </div>`).join('')
         : `<div class="empty" style="padding:12px 16px">${t('mn.delivery.empty')}</div>`}
       </div>
@@ -9744,12 +9752,27 @@ function openDeliveryPlatformModal(title, p){
       <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}" oninput="updateDeliveryPlatformExample()"></div>
       <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}" oninput="updateDeliveryPlatformExample()"></div>
     </div>
+    <div class="field">
+      <label>${escapeHtml(gl({es:'IVA de lo que vendes por esta plataforma', ca:'IVA del que vens per aquesta plataforma', en:'VAT on what you sell through this platform'}))}</label>
+      <select id="dp-f-iva-venta">
+        <option value="" ${(p.ivaVentaPct===undefined||p.ivaVentaPct===null||p.ivaVentaPct==='')?'selected':''}>${escapeHtml(gl({es:'El de tu negocio (por defecto)', ca:'El del teu negoci (per defecte)', en:'Your business default'}))}</option>
+        <option value="10" ${String(p.ivaVentaPct)==='10'?'selected':''}>10 %</option>
+        <option value="21" ${String(p.ivaVentaPct)==='21'?'selected':''}>21 %</option>
+        <option value="4" ${String(p.ivaVentaPct)==='4'?'selected':''}>4 %</option>
+        <option value="0" ${String(p.ivaVentaPct)==='0'?'selected':''}>0 %</option>
+      </select>
+      <p class="txt-xs" style="color:var(--muted);margin:4px 0 0">${escapeHtml(gl({es:'Es el IVA que cobras TÚ al cliente final (comida preparada: 10 %; bebida alcohólica: 21 %), no el de la comisión. Se usa cuando apuntas las ventas del día en el cierre de caja.', ca:'És l\'IVA que cobres TU al client final (menjar preparat: 10 %; beguda alcohòlica: 21 %), no el de la comissió. S\'usa quan apuntes les vendes del dia al tancament de caixa.', en:'This is the VAT YOU charge the end customer (prepared food: 10 %; alcoholic drinks: 21 %), not the one on the commission. It is used when you enter the day\'s sales at cash closing.'}))}</p>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="dp-f-activa" ${p.activa!==false?'checked':''} style="width:18px;height:18px;flex:none"> <span>${escapeHtml(gl({es:'Apuntar sus ventas al cerrar caja', ca:'Apuntar les seves vendes en tancar caixa', en:'Enter its sales when closing the till'}))}</span>
+    </label>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${escapeHtml(gl({es:'Desmárcalo si ya no trabajas con ella: deja de salir en el cierre, pero sus ventas anteriores se conservan.', ca:'Desmarca-ho si ja no hi treballes: deixa de sortir al tancament, però les seves vendes anteriors es conserven.', en:'Untick it if you no longer work with it: it stops appearing at closing, but past sales are kept.'}))}</p>
     <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
       <input type="checkbox" id="dp-f-comision-envio" ${p.comisionSobreEnvio!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.delivery.commissionOnShipping')}
     </label>
     <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('mn.delivery.commissionOnShippingDesc')}</p>
     <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
-      <input type="checkbox" id="dp-f-isp" ${p.isp?'checked':''} style="width:18px;height:18px;flex:none"> <span>${t('mn.delivery.isp')}</span>
+      <input type="checkbox" id="dp-f-isp" ${p.isp?'checked':''} style="width:18px;height:18px;flex:none" onchange="updateDeliveryPlatformExample()"> <span>${t('mn.delivery.isp')}</span>
     </label>
     <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('mn.delivery.ispDesc')}</p>
     <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
@@ -9772,7 +9795,9 @@ function updateDeliveryPlatformExample(){
   const el = document.getElementById('dp-example');
   if(!el) return;
   const comisionPct = parseFloat(document.getElementById('dp-f-comision').value) || 0;
-  const ivaPct = parseFloat(document.getElementById('dp-f-iva').value) || 0;
+  // Con «factura desde otra UE» el IVA de la comisión no se suma (se autoliquida): el ejemplo tiene que reflejarlo.
+  const isp = document.getElementById('dp-f-isp') && document.getElementById('dp-f-isp').checked;
+  const ivaPct = isp ? 0 : (parseFloat(document.getElementById('dp-f-iva').value) || 0);
   const ejemplo = 20;
   const comision = ejemplo * (comisionPct/100) * (1 + ivaPct/100);
   const neto = ejemplo - comision;
@@ -9792,7 +9817,10 @@ function saveDeliveryPlatform(){
   if(dupe){ showToast(t('msg.platformNameDuplicate')); return; }
   const comisionSobreEnvio = document.getElementById('dp-f-comision-envio').checked;
   const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio,
-    isp: document.getElementById('dp-f-isp').checked, facturaReal: document.getElementById('dp-f-real').checked};
+    isp: document.getElementById('dp-f-isp').checked, facturaReal: document.getElementById('dp-f-real').checked,
+    // IVA de la VENTA (no el de la comisión) y si la plataforma sale en el cierre de caja. '' = el IVA por defecto del negocio.
+    ivaVentaPct: (() => { const v = document.getElementById('dp-f-iva-venta').value; return v === '' ? '' : parseFloat(v); })(),
+    activa: document.getElementById('dp-f-activa').checked};
   if(idVal){
     const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));
     if(p){

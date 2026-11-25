@@ -280,7 +280,7 @@ function dpEquilibrioDatos(){
   const falta = Math.max(0, objetivo - S);
   const diasRest = dm - dt + 1;
   const ritmoNec = falta / diasRest;
-  const tickets = activeSales().filter(s => (s.date || '').startsWith(y + '-' + dpMes2(m))).length;
+  const tickets = activeSales().filter(s => (s.date || '').startsWith(y + '-' + dpMes2(m))).reduce((n, s) => n + ventaNTickets(s), 0);
   const ticketNeto = tickets ? S / tickets : 0;
   // Acumulado de ventas netas día a día, para la gráfica.
   const acum = []; let ac = 0;

@@ -251,6 +251,7 @@ lanzar; node test/economia-movil.mjs > "$SALIDA/economiamovil.txt" 2>&1 & P202=$
 lanzar; node test/cocina-movil-1811.mjs > "$SALIDA/cocinamovil1811.txt" 2>&1 & P203=$!
 lanzar; node test/cocina-movil-1811b.mjs > "$SALIDA/cocinamovil1811b.txt" 2>&1 & P204=$!
 lanzar; node test/buscadores-lupa.mjs > "$SALIDA/buscadoreslupa.txt" 2>&1 & P205=$!
+lanzar; node test/cierre-plataformas.mjs > "$SALIDA/cierreplataformas.txt" 2>&1 & P206=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -496,6 +497,7 @@ espera $P202 "Gestión Económica y Panel en móvil (vídeo 15/11): Tesorería s
 espera $P203 "Cocina en móvil (vídeo 18/11): «?» de ayuda junto a su rótulo, texto fuera de la lupa, lápiz y ⋯ de cada paso en la fila del número, textarea sin tirador que crece, paso largo sin desbordar" "$SALIDA/cocinamovil1811.txt" "Todo en orden"
 espera $P204 "Cocina en móvil (18/11, datos reales): ningún botón con el texto fuera de su caja, iconos de Personal dentro de la tarjeta, Higiene con las siete secciones a la vista, Proveedores con índice A–Z e historial sin solapes, ningún paso con un lápiz o ⋯ solo en su fila" "$SALIDA/cocinamovil1811b.txt" "Todo en orden"
 espera $P205 "Buscadores con lupa: el texto empieza a la derecha del icono en 7 anchos y 11 pantallas" "$SALIDA/buscadoreslupa.txt" "buscadores con lupa"
+espera $P206 "Cierre de caja con plataformas (Glovo, Uber Eats, Just Eat a mano): venta de Delivery con IVA, comisión en gastos (isp y factura real), fuera de la caja y la conciliación, sin duplicar al reabrir, anulación con rectificativa" "$SALIDA/cierreplataformas.txt" "los [0-9]+ casos pasaron"
 
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"

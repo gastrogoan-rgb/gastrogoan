@@ -3835,7 +3835,8 @@ const GE = (function(){
 
   function platosStats(){
     const {start, end} = getPlatosRange();
-    const sales = activeSales().filter(s => s.date >= start && s.date <= end);
+    // Un asiento de plataforma (ventas de Glovo apuntadas en el cierre) no es un plato: sin esto salía «Ventas Glovo» como plato sin escandallo.
+    const sales = activeSales().filter(s => s.date >= start && s.date <= end && !esVentaPlataformaManual(s));
     const map = {};
     // El coste se suma línea a línea con costoUnitarioDeLinea (el coste
     // estampado en el momento de esa venta concreta, o recalculado en vivo
@@ -4311,6 +4312,7 @@ const GE = (function(){
   function hojaEmitidas(p){
     const filas = [];
     const resumen = {};   // fecha|serie|tipo
+    const resumenPlat = {};   // fecha|plataforma|tipo
     const push = (fecha, tipoFra, serie, desde, hasta, concepto, nif, nombre, base, rate, iva, n) =>
       filas.push([parseInt(fecha.slice(0,4)), trimestreDe(fecha), fecha, tipoFra, serie, desde, hasta, concepto, nif, nombre, n2(base), rate+'%', n2(iva), n2(base+iva), n]);
     (DB.sales||[]).forEach(v => {
@@ -4328,6 +4330,15 @@ const GE = (function(){
           const f = v.facturaCompleta;
           const [serie, num] = String(f.num).split('-');
           Object.entries(grupos).forEach(([r,g]) => push(v.date, 'F1', serie, num, '', t('pg.concepto.completa').replace('${t}', v.ticketNum||''), f.nif, f.nombre, g.base, r, g.iva, 1));
+        } else if(esVentaPlataformaManual(v)){
+          // Ventas de una plataforma apuntadas en el cierre: NO son tickets del local (sin número ni serie T): un asiento
+          // resumen por día, plataforma y tipo de IVA, aparte del resumen de tickets, para que el gestor las identifique.
+          const nom = (v.plataforma && v.plataforma.nombre) || '—';
+          Object.entries(grupos).forEach(([r,g]) => {
+            const k = `${v.date}|${nom}|${r}`;
+            const e = resumenPlat[k] = resumenPlat[k] || {fecha:v.date, nom, r, base:0, iva:0, n:0};
+            e.base += g.base; e.iva += g.iva; e.n += ventaNTickets(v);
+          });
         } else {
           const [serie, num] = String(v.ticketNum || v.facturaNum || '-').split('-');
           Object.entries(grupos).forEach(([r,g]) => {
@@ -4346,6 +4357,7 @@ const GE = (function(){
       const nums = e.nums.sort();
       push(e.fecha, 'F2', e.serie, nums[0]||'', nums.length > 1 ? nums[nums.length-1] : '', t('pg.concepto.resumen'), '', '', e.base, e.r, e.iva, e.n);
     });
+    Object.values(resumenPlat).forEach(e => push(e.fecha, '—', '', '', '', gl({es:'Ventas por plataforma (asiento resumen del día): ', ca:'Vendes per plataforma (assentament resum del dia): ', en:'Platform sales (daily summary entry): '}) + e.nom, '', '', e.base, e.r, e.iva, e.n));
     // Señales cobradas (anticipos), otros ingresos y autoconsumo.
     (DB.reservations||[]).forEach(r => {
       const f = r.depositPagoFecha ? diaLocalDe(r.depositPagoFecha) : '';

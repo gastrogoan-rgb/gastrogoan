@@ -1027,7 +1027,7 @@ function plan360KpisMes(year, month){
   const ventas = activeSales().filter(v => (v.date||'').startsWith(mesStr));
   const netas = geFacturacionNetaMes(year, month);
   const brutas = ventas.reduce((s,v)=>s+(parseFloat(v.total)||0) - (parseFloat(v.propina)||0), 0);
-  const tickets = ventas.length;
+  const tickets = ventas.reduce((s,v) => s + (typeof ventaNTickets === 'function' ? ventaNTickets(v) : 1), 0);
   const comensales = ventas.reduce((s,v)=>s+(parseInt(v.pax)||0), 0);
   const compras = geTotalVariablesNetoMes(year, month) + geVariacionExistenciasMes(year, month);
   const personal = geTotalPersonalNetoForMonth(year, month);
@@ -1187,7 +1187,7 @@ function plan360KpisRango(desde, hasta){
   // Las mermas solo cuentan si el negocio las ANOTA (alguna en los últimos 90 días): sin eso un 0 % sería «no lo apunto», no «no tiro nada».
   const usaMermas = (DB.mermas || []).some(x => x.fecha >= addDaysStr(hasta, -90));
   return {
-    desde, hasta, dias: dias.size, valido: ok, tickets: ventas.length, netas: r2(netas),
+    desde, hasta, dias: dias.size, valido: ok, tickets: ventas.reduce((s,v) => s + ventaNTickets(v), 0), netas: r2(netas),
     ticketMedio: ok && ventas.length ? r2(brutas / ventas.length) : null,
     foodCostPct: ok && compras > 0 ? r1(compras / netas * 100) : null,
     personalPct: ok && personal > 0 ? r1(personal / netas * 100) : null,

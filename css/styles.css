@@ -7910,3 +7910,25 @@ textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:
 /* Comandas Cocina: cuántas hay y cuánto lleva la más antigua (19/11). */
 .kds-resumen{margin:0 0 10px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .kds-resumen b{color:var(--ink);font-weight:600}
+
+/* Plataformas de delivery (25/11): en Mi Negocio (lista) y en el cierre de caja (ventas del día de cada plataforma).
+   Una fila = nombre + chips + ⋯; en móvil el nombre ocupa la primera línea (`.gg-fila`) y los chips envuelven. Sin letra < 11 px. */
+.dlv-fila{flex-wrap:wrap;gap:6px 10px}
+.dlv-nombre{flex:1 1 140px;min-width:0;font-size:14px;font-weight:600;overflow-wrap:break-word}
+.dlv-extra{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.dlv-chip,.clp-chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);border:1px solid var(--border);padding:3px 8px;border-radius:3px;background:var(--white,#fff);white-space:normal;overflow-wrap:break-word}
+.dlv-chip-off{color:var(--red)}
+.clp-tit{font-size:14px;margin:14px 0 4px}
+.clp-hint{color:var(--muted);margin:0 0 8px}
+.clp-fila{border:1px solid var(--border);border-radius:3px;padding:10px 12px;margin-bottom:8px;min-width:0}
+.clp-cab{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-bottom:6px}
+.clp-nombre{flex:1 1 120px;min-width:0;font-weight:600;font-size:14px;overflow-wrap:break-word}
+.clp-cab .gg-fila-extra{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.clp-ya{color:var(--ok,#2e7d32);margin:0 0 6px}
+.clp-campos{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}
+.clp-campos .field{margin-bottom:0;min-width:0}
+.clp-res{color:var(--muted);margin:6px 0 0;min-height:0;overflow-wrap:break-word}
+.clp-res:empty{display:none}
+.clp-total{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;font-size:13px;margin:4px 0 14px;padding-top:8px;border-top:1px dashed var(--border)}
+.clp-total span{min-width:0;overflow-wrap:break-word}
+.clp-total b{font-family:var(--mono)}

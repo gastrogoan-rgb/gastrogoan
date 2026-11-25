@@ -421,6 +421,7 @@ const SELECTABLE_PAYMENT_METHODS = ['Efectivo','Tarjeta'];
 const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed','Online':'label.paidOnline'};
 function paymentMethodTpvLabel(value){
   if(value === 'Vale') return gl({es:'Vale regalo', ca:'Val regal', en:'Gift voucher'});
+  if(value === 'Plataforma') return gl({es:'Plataforma', ca:'Plataforma', en:'Platform'});   // ventas de Glovo/Uber… apuntadas en el cierre: ni efectivo ni tarjeta
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
@@ -5456,9 +5457,18 @@ function openTodaySalesModal(){
         <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th class="owner-strict">${t('tpv.margin.label')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
         <tbody>${sales.length ? sales.map(s => {
           const table = s.tableId ? DB.tables.find(t=>t.id===s.tableId) : null;
-          const label = table ? table.name : togoOrderLabel(s);
+          const manual = typeof esVentaPlataformaManual === 'function' && esVentaPlataformaManual(s);
+          const label = manual ? ((s.plataforma && s.plataforma.nombre) || paymentMethodTpvLabel('Plataforma')) : (table ? table.name : togoOrderLabel(s));
           const hora = s.createdAt ? new Date(s.createdAt).toTimeString().slice(0,5) : '';
           const margin = s.total - orderFoodCost(s);
+          if(manual) return `<tr>
+            <td data-label="${t('th.time')}">${escapeHtml(hora)}</td>
+            <td data-label="${t('label.tables')}">${escapeHtml(label)}${s.status==='anulada' ? ' · ' + escapeHtml(gl({es:'anulada', ca:'anul·lada', en:'cancelled'})) : ''}</td>
+            <td data-label="${t('label.total')}">${fmtMoney(s.total)}</td>
+            <td class="owner-strict" data-label="${t('tpv.margin.label')}">—</td>
+            <td data-label="${t('label.paymentMethod')}">${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
+            <td>${s.status==='anulada' ? '' : `<button class="btn btn-sm btn-icon owner-only" title="${t('ticket.cancelSaleBtn')}" onclick="requestCancelSale(${s.id})"><i class="ti ti-receipt-refund"></i></button>`}</td>
+          </tr>`;
           return `<tr>
             <td data-label="${t('th.time')}">${escapeHtml(hora)}</td>
             <td data-label="${t('label.tables')}">${escapeHtml(label)}${s.clienteNombre?` — ${escapeHtml(s.clienteNombre)}`:''}</td>

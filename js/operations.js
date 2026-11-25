@@ -36,13 +36,101 @@ function getSalesForClosure(){
   /* Por marca de cierre (sale.cierreId), no por ventana de tiempo — ver el
      porqué en performCashClosure, justo donde se pone la marca. Una venta de
      hoy sin cierre asignado entra siempre, sin importar su hora exacta: así
-     una que llega tarde por sincronización no se pierde entre dos cierres. */
+     una que llega tarde por sincronización no se pierde entre dos cierres.
+     Lo que cobra una plataforma (Glovo, Uber Eats…) NUNCA es caja del local:
+     se deja fuera por su origen, no solo por la marca de cierre, para que ni
+     el efectivo/tarjeta esperados ni el aviso de «cierre pendiente» dependan
+     de que alguien se acuerde de estampar el cierreId. */
   const today = todayStr();
   return DB.sales.filter(s => {
     if(s.status === 'anulada') return false;
     if(s.date !== today) return false;
+    if(esVentaPlataformaManual(s)) return false;
     return !s.cierreId;
   });
+}
+
+/* ============================================================
+   VENTAS DE PLATAFORMAS APUNTADAS A MANO EN EL CIERRE (25/11)
+   Hoy NO hay integración real con Glovo/Uber Eats/Just Eat: el hostelero
+   mira el total del día en el panel de la plataforma y lo apunta al cerrar
+   caja. Se guarda como UNA venta del canal Delivery (tipo:'delivery') con
+   `origen:'plataforma-manual'`, y lleva el mismo `sale.plataforma` y
+   `sale.comisionPlataforma` que un pedido de plataforma que entra por el
+   TPV (applyDeliveryCommission): así Ventas, Panel, Cuenta de Resultados,
+   IVA, Tesorería y los libros del gestor lo leen SIN cambios aguas abajo.
+
+   ⚠️ Decisiones contables, tomadas a conciencia:
+   · IVA DE LA VENTA (el que cobra el restaurante al consumidor final): es el
+     de la propia plataforma si el hostelero lo fijó en Mi Negocio
+     (`ivaVentaPct`: 10 o 21 según vaya comida o bebida alcohólica) y, si no,
+     el IVA por defecto de la comida del negocio (`ivaPorDefectoDe`, 10 %
+     de hostelería). Se estampa en la línea (`line.ivaPct`) y en la venta
+     (`ivaVentaPct`): el importe apuntado es BRUTO, con IVA. Un día con
+     comida y bebida a distinto tipo no se puede partir con una sola cifra:
+     se elige el tipo que domina (límite declarado).
+   · COMISIÓN: bruto × % × (1 + IVA de la comisión), igual que
+     applyDeliveryCommission. Con `isp` (factura desde otro país de la UE) el
+     IVA de la comisión va a 0 y se autoliquida en el 303; con `facturaReal`
+     la comisión no se estima (el negocio mete la factura real en Gastos
+     Variables) — la cifra se guarda, pero el motor la ignora.
+   · NO ES UN TICKET: el consumidor final recibe su justificante de la
+     plataforma, no de este local. Por eso no se numera como ticket ni va a
+     VeriFactu: es un asiento resumen del día que va al libro de ingresos
+     con su propia serie (hojaEmitidas, js/hr.js).
+   · UNA venta por plataforma y día: apuntar de nuevo ese día la CORRIGE en
+     el sitio (con rastro en `correcciones`), no crea otra. Anularla pasa por
+     la regla de siempre (requestCancelSale → rectificativa), nunca se borra.
+   · No cuenta como efectivo ni tarjeta (`metodoPago:'Plataforma'`) y se deja
+     fuera de getSalesForClosure y de la conciliación bancaria. */
+const ORIGEN_PLATAFORMA_MANUAL = 'plataforma-manual';
+function esVentaPlataformaManual(s){
+  // `isPlatformSettlement` es la marca de las ventas que este mismo apunte
+  // creaba antes del 25/11: se siguen reconociendo como del mismo tipo.
+  return !!s && (s.origen === ORIGEN_PLATAFORMA_MANUAL || s.isPlatformSettlement === true);
+}
+// Nº de tickets que representa una venta en las cuentas de «tickets» y ticket medio:
+// un asiento de plataforma son tantos pedidos como diga quien lo apuntó (1 si no lo dijo).
+function ventaNTickets(s){
+  if(esVentaPlataformaManual(s)){ const n = parseInt(s.pedidosN, 10); return n > 0 ? n : 1; }
+  return 1;
+}
+function plataformasActivasCierre(){
+  return (DB.business.deliveryPlatforms || []).filter(p => p && p.activa !== false);
+}
+function ivaVentaPlataforma(plat){
+  const v = plat && plat.ivaVentaPct;
+  if(v !== undefined && v !== null && v !== '' && isFinite(parseFloat(v))) return parseFloat(v);
+  return parseFloat(ivaPorDefectoDe({})) || 0;
+}
+// Comisión de la plataforma sobre un importe bruto, con el IVA de la comisión ya sumado (como applyDeliveryCommission).
+function comisionDePlataforma(plat, bruto){
+  const comisionPct = parseFloat(plat.comisionPct) || 0;
+  const platIvaPct = plat.isp ? 0 : (parseFloat(plat.ivaPct) || 0);
+  return {comisionPct, platIvaPct, comision: roundMoney((parseFloat(bruto) || 0) * (comisionPct / 100) * (1 + platIvaPct / 100))};
+}
+function ventaPlataformaDelDia(platId, fecha){
+  return (DB.sales || []).find(s => esVentaPlataformaManual(s) && s.status !== 'anulada' && s.date === fecha && s.plataforma && String(s.plataforma.id) === String(platId)) || null;
+}
+// Lee un importe tecleado a mano (acepta coma). Devuelve null si está vacío o no es un número.
+function leerImporteCierre(raw){
+  const s = String(raw == null ? '' : raw).trim().replace(/\s/g, '').replace(',', '.');
+  if(s === '') return null;
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+}
+function rellenarVentaPlataforma(sale, plat, totalBruto, pedidosN){
+  const total = roundMoney(totalBruto);
+  const ivaPct = ivaVentaPlataforma(plat);
+  const c = comisionDePlataforma(plat, total);
+  sale.total = total;
+  sale.items = [{name: t('label.platformSalesLineItem').replace('${platform}', plat.nombre), price: total, qty: 1, ivaPct}];
+  sale.ivaVentaPct = ivaPct;
+  sale.pedidosN = pedidosN > 0 ? pedidosN : undefined;
+  // Con el total agregado no hay envío desglosado que restar (ver comentario original):
+  // la comisión va siempre sobre el bruto. Se guarda la configuración real, no true a fuego.
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct: c.comisionPct, ivaPct: c.platIvaPct, comisionSobreEnvio: plat.comisionSobreEnvio !== false, isp: !!plat.isp, facturaReal: !!plat.facturaReal};
+  sale.comisionPlataforma = c.comision;
 }
 
 // Descuentos autorizados (responsable + motivo) durante el periodo de este
@@ -99,7 +187,7 @@ function openCashClosureModal(){
   const discounts = getDiscountsForClosure();
   const totalDiscounts = discounts.reduce((s,d)=>s+d.importe, 0);
   const voids = getVoidsForClosure();
-  const platforms = DB.business.deliveryPlatforms||[];
+  const platforms = plataformasActivasCierre();
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-cash-register"></i> ${t('title.cashClosure')}</h3>
@@ -133,17 +221,7 @@ function openCashClosureModal(){
         <tbody>${voids.map(v => `<tr><td data-label="${escapeHtml(t('th.time'))}">${escapeHtml(v.hora)}</td><td data-label="${escapeHtml(t('label.tables'))}">${escapeHtml(v.mesa||'—')}</td><td data-label="${escapeHtml(t('label.dishElaboration'))}">${escapeHtml(v.plato)}</td><td data-label="${escapeHtml(t('label.quantity'))}">${v.cantidad}</td><td data-label="${escapeHtml(t('label.responsible'))}">${escapeHtml(v.responsableNombre||'—')}</td><td data-label="${escapeHtml(t('label.voidReason'))}">${escapeHtml(v.motivo)}</td></tr>`).join('')}</tbody>
       </table>
     </div>` : ''}
-    ${platforms.length ? `
-    <h3 style="font-size:14px;margin-top:14px"><i class="ti ti-moped"></i> ${t('title.platformSalesThisPeriod')}</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('closure.platformSalesHint')}</p>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
-      ${platforms.map(p => `
-        <div class="field-row" style="align-items:center;margin-bottom:0">
-          <label style="flex:1;font-weight:600;font-size:13.5px">${escapeHtml(p.nombre)}</label>
-          <input type="number" id="closure-platform-${p.id}" step="0.01" min="0" placeholder="0.00" style="max-width:140px">
-        </div>
-      `).join('')}
-    </div>` : ''}
+    ${platforms.length ? cierrePlataformasHtml(platforms) : ''}
     <div class="field"><label>${t('label.initialCashFund')}</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
     <div class="field">
       <label>${t('label.cashCounted')}</label>
@@ -162,6 +240,70 @@ function openCashClosureModal(){
     </div>
   `);
   updateClosureDiffPreview();
+  cierrePlataformasPreview();
+}
+
+/* Bloque «Ventas de plataformas» del cierre. Va APARTE de la caja: es dinero que cobra la plataforma
+   (y liquida al local descontando su comisión), no efectivo ni tarjeta del local. Una fila por plataforma
+   activa: ventas del día con IVA, nº de pedidos (opcional) y, debajo, lo que la app calcula con ello. */
+function cierrePlataformasHtml(platforms){
+  const hoy = todayStr();
+  const filas = platforms.map(p => {
+    const ex = ventaPlataformaDelDia(p.id, hoy);
+    const bloqueada = !!ex && !editUnlocked;   // corregir lo ya apuntado = tocar una venta registrada: solo propietario / con edición
+    const chips = [`${fmtNum(p.comisionPct)} % + ${fmtNum(p.ivaPct)} % ${t('mn.delivery.vatLabel')}`];
+    if(p.isp) chips.push(gl({es:'IVA autoliquidado', ca:'IVA autoliquidat', en:'Reverse-charge VAT'}));
+    if(p.facturaReal) chips.push(gl({es:'Factura real', ca:'Factura real', en:'Real invoice'}));
+    const hora = ex && ex.createdAt ? new Date(ex.createdAt).toTimeString().slice(0,5) : '';
+    const menu = ex ? ggMenuAcciones([{icono:'ti-receipt-refund', texto: gl({es:'Anular lo apuntado hoy', ca:'Anul·la el que has apuntat avui', en:'Cancel today\'s entry'}), fn:`cierreAnularPlataforma(${ex.id})`, peligro:true, owner:true}], {clase:'btn btn-fino mn-btn'}) : '';
+    return `
+      <div class="clp-fila" data-plat="${escapeHtml(String(p.id))}">
+        <div class="gg-fila clp-cab">
+          <span class="gg-fila-nombre clp-nombre">${escapeHtml(p.nombre)}</span>
+          <span class="gg-fila-extra">${chips.map(c => `<span class="clp-chip">${escapeHtml(c)}</span>`).join('')}${menu}</span>
+        </div>
+        ${ex ? `<p class="txt-xs clp-ya"><i class="ti ti-check"></i> ${escapeHtml(gl({es:'Ya apuntado hoy' + (hora ? ' a las ' + hora : '') + ': escribe la cifra corregida para cambiarlo.', ca:'Ja apuntat avui' + (hora ? ' a les ' + hora : '') + ': escriu la xifra corregida per canviar-ho.', en:'Already entered today' + (hora ? ' at ' + hora : '') + ': type the corrected figure to change it.'}))}</p>` : ''}
+        <div class="clp-campos">
+          <div class="field"><label for="closure-platform-${escapeHtml(String(p.id))}">${gl({es:'Ventas del día (con IVA)', ca:'Vendes del dia (amb IVA)', en:'Day\'s sales (VAT incl.)'})}</label>
+            <input type="text" inputmode="decimal" autocomplete="off" id="closure-platform-${escapeHtml(String(p.id))}" placeholder="0,00" value="${ex ? String(ex.total).replace('.', ',') : ''}" ${bloqueada ? 'disabled' : ''} oninput="cierrePlataformasPreview()"></div>
+          <div class="field"><label for="closure-platform-n-${escapeHtml(String(p.id))}">${gl({es:'Pedidos (opcional)', ca:'Comandes (opcional)', en:'Orders (optional)'})}</label>
+            <input type="text" inputmode="numeric" autocomplete="off" id="closure-platform-n-${escapeHtml(String(p.id))}" placeholder="0" value="${ex && ex.pedidosN ? ex.pedidosN : ''}" ${bloqueada ? 'disabled' : ''} oninput="cierrePlataformasPreview()"></div>
+        </div>
+        <p class="txt-xs clp-res" id="closure-platform-res-${escapeHtml(String(p.id))}"></p>
+      </div>`;
+  }).join('');
+  return `
+    <h3 class="clp-tit"><i class="ti ti-moped"></i> ${t('title.platformSalesThisPeriod')}</h3>
+    <p class="txt-xs clp-hint">${t('closure.platformSalesHint')}</p>
+    ${filas}
+    <div class="clp-total"><span>${gl({es:'Cobrado por las plataformas, no entra en caja', ca:'Cobrat per les plataformes, no entra a caixa', en:'Collected by the platforms, not in the till'})}</span><b id="closure-platform-total">${fmtMoney(0)}</b></div>`;
+}
+// Recalcula al teclear lo que saldrá de cada plataforma (IVA de la venta, comisión y neto) sin repintar la ventana.
+function cierrePlataformasPreview(){
+  const hoy = todayStr();
+  let total = 0;
+  plataformasActivasCierre().forEach(p => {
+    const inp = document.getElementById(`closure-platform-${p.id}`);
+    const res = document.getElementById(`closure-platform-res-${p.id}`);
+    if(!inp || !res) return;
+    const ex = ventaPlataformaDelDia(p.id, hoy);
+    const v = leerImporteCierre(inp.value);
+    const bruto = v != null && v > 0 ? v : (ex && v == null ? ex.total : 0);
+    total += bruto;
+    if(!(bruto > 0)){ res.textContent = ''; return; }
+    const iva = ivaVentaPlataforma(p), c = comisionDePlataforma(p, bruto);
+    const ivaImp = roundMoney(bruto - bruto / (1 + iva / 100));
+    const comTxt = p.facturaReal
+      ? gl({es:'comisión: la tomas de la factura real (no se estima)', ca:'comissió: la prens de la factura real (no s\'estima)', en:'fee: taken from the real invoice (not estimated)'})
+      : `${gl({es:'comisión', ca:'comissió', en:'fee'})} ${fmtMoney(c.comision)}${p.isp ? ' (' + gl({es:'IVA autoliquidado', ca:'IVA autoliquidat', en:'reverse-charge VAT'}) + ')' : ''} · ${gl({es:'te quedan', ca:'et queden', en:'you keep'})} ${fmtMoney(roundMoney(bruto - c.comision))}`;
+    res.textContent = `${gl({es:'IVA de la venta', ca:'IVA de la venda', en:'Sales VAT'})} ${fmtNum(iva)} % (${fmtMoney(ivaImp)}) · ${comTxt}`;
+  });
+  const tot = document.getElementById('closure-platform-total');
+  if(tot) tot.textContent = fmtMoney(roundMoney(total));
+}
+// Anular lo apuntado: la regla de siempre (PIN, rectificativa, nada se borra). Cierra esta ventana: se vuelve a abrir el cierre.
+function cierreAnularPlataforma(saleId){
+  requestCancelSale(saleId);
 }
 
 // Monedas y billetes de curso legal en la eurozona, en céntimos (para sumar
@@ -262,46 +404,33 @@ function detectClosureWarnings(diferencia, discounts, voids){
   return warnings;
 }
 
-// Registra el total bruto de ventas que ha reportado una plataforma de
-// delivery externa (Glovo, Uber Eats...) para el periodo de este cierre,
-// como una venta más — así entra automáticamente en Facturación, se le
-// calcula el IVA correspondiente y se le descuenta la comisión de la
-// plataforma como gasto, igual que si cada pedido se hubiera registrado
-// uno a uno en el TPV. Pensado para negocios que no dan de alta cada
-// pedido de la plataforma en la app y solo tienen el total del periodo.
-function registerPlatformSettlementSale(plat, totalBruto, closureHasta){
-  const ivaPct = verifactuIvaPct();
-  // createdAt se fija al instante "hasta" del cierre (no al momento real de
-  // guardar, que puede ser unos minutos después) para que la venta quede
-  // dentro del periodo de ESTE cierre y no se cuele, sin etiquetar, en el
-  // rango del cierre siguiente del mismo día (getSalesForClosure filtra por
-  // fecha > desde y <= hasta del cierre correspondiente).
+// Apunta (o corrige) la venta del día de UNA plataforma. Ver el bloque «VENTAS DE PLATAFORMAS APUNTADAS A MANO»
+// más arriba para el porqué de cada decisión. Devuelve {sale, nueva}.
+function registerPlatformSettlementSale(plat, totalBruto, closureHasta, pedidosN){
+  const hoy = todayStr();
+  const ex = ventaPlataformaDelDia(plat.id, hoy);
+  if(ex){
+    // Corregir en el sitio, no duplicar: si el cierre se reabre o se hace el segundo del día, la cifra se SUSTITUYE.
+    // Queda rastro de lo que había (nada registrado se modifica sin dejar constancia).
+    (ex.correcciones = ex.correcciones || []).push({ts: new Date().toISOString(), de: ex.total, a: roundMoney(totalBruto), pedidosDe: ex.pedidosN || 0, pedidosA: pedidosN || 0});
+    rellenarVentaPlataforma(ex, plat, totalBruto, pedidosN);
+    ex.editadoAt = new Date().toISOString();
+    return {sale: ex, nueva: false};
+  }
+  // createdAt se fija al instante "hasta" del cierre (no al momento real de guardar) para que la hora de
+  // la venta sea la del cierre que la apuntó.
   const sale = {
-    id: genId(), date: todayStr(), createdAt: closureHasta,
-    total: roundMoney(totalBruto), tipo: 'delivery', express: false,
+    id: genId(), date: hoy, createdAt: closureHasta,
+    total: 0, tipo: 'delivery', express: false,
     clienteNombre: '', clientId: null, camareroId: null,
-    metodoPago: 'Otro',
-    items: [{name: t('label.platformSalesLineItem').replace('${platform}', plat.nombre), price: roundMoney(totalBruto), qty: 1, ivaPct}],
-    isPlatformSettlement: true,
+    // Ni efectivo ni tarjeta del local: lo cobra la plataforma. Sin datos personales ni ficha de cliente.
+    metodoPago: 'Plataforma', origen: ORIGEN_PLATAFORMA_MANUAL, sinFichaCliente: true,
+    items: [],
+    isPlatformSettlement: true,   // marca antigua: así las versiones previas siguen reconociéndola
   };
-  const comisionPct = parseFloat(plat.comisionPct) || 0;
-  const platIvaPct = plat.isp ? 0 : (parseFloat(plat.ivaPct) || 0);
-  // A diferencia de un pedido individual (applyDeliveryCommission, js/tpv.js),
-  // aquí no hay un coste de envío desglosado que restar de la base: el total
-  // introducido es una cifra agregada que la propia plataforma ya reporta
-  // así, sin separar comanda de envío. Por eso la comisión se calcula
-  // siempre sobre el bruto completo, independientemente de si la plataforma
-  // tiene marcado "comisión sobre envío" — no hay forma de aplicar ese
-  // matiz sin ese desglose. Se guarda el valor real configurado (no true a
-  // fuego) para que quede constancia fiel de la configuración del negocio.
-  const comisionSobreEnvio = plat.comisionSobreEnvio !== false;
-  const comision = sale.total * (comisionPct/100) * (1 + platIvaPct/100);
-  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio, isp: !!plat.isp, facturaReal: !!plat.facturaReal};
-  sale.comisionPlataforma = roundMoney(comision);
-  if(typeof numerarTicket === 'function') numerarTicket(sale);
+  rellenarVentaPlataforma(sale, plat, totalBruto, pedidosN);
   DB.sales.push(sale);
-  enqueueVerifactuSubmission(sale);
-  return sale;
+  return {sale, nueva: true};
 }
 
 // Dos propietarios/encargados cerrando caja casi a la vez desde dispositivos
@@ -370,16 +499,37 @@ async function performCashClosure(){
   const responsableId = authorId==='owner' ? null : authorId;
   const responsableNombre = getChatAuthorName(authorId);
 
-  const platformSales = [];
+  // Ventas de plataformas apuntadas en este cierre. Se validan ANTES de tocar nada: un importe absurdo
+  // no puede dejar el cierre a medias.
   const platformSaleObjs = [];
-  (DB.business.deliveryPlatforms||[]).forEach(p => {
+  const platOps = [];
+  for(const p of plataformasActivasCierre()){
     const input = document.getElementById(`closure-platform-${p.id}`);
-    const amount = input ? (parseFloat(input.value) || 0) : 0;
-    if(amount > 0){
-      const sale = registerPlatformSettlementSale(p, amount, hasta);
-      platformSaleObjs.push(sale);
-      platformSales.push({platformId: p.id, nombre: p.nombre, total: sale.total, comision: sale.comisionPlataforma});
+    if(!input) continue;
+    const amount = leerImporteCierre(input.value);
+    const nEl = document.getElementById(`closure-platform-n-${p.id}`);
+    const n = nEl ? (parseInt(String(nEl.value).trim(), 10) || 0) : 0;
+    const ex = ventaPlataformaDelDia(p.id, todayStr());
+    if(amount == null || amount <= 0){
+      // Vacío o 0 sobre algo ya apuntado = no tocarlo (para anular está «Anular lo apuntado»); solo cambian los pedidos.
+      if(ex && nEl && n !== (ex.pedidosN || 0) && editUnlocked) platOps.push({p, amount: ex.total, n});
+      continue;
     }
+    if(amount > 1000000){ showToast(gl({es:'Revisa el importe de ' + p.nombre + ': es demasiado grande.', ca:'Revisa l\'import de ' + p.nombre + ': és massa gran.', en:'Check the amount for ' + p.nombre + ': it is too large.'})); if(lock.lockRef) lock.lockRef.remove().catch(()=>{}); return; }
+    if(ex && !editUnlocked && roundMoney(amount) !== roundMoney(ex.total)){ showToast(t('msg.cancelNeedsEditPermission'), 6000); if(lock.lockRef) lock.lockRef.remove().catch(()=>{}); return; }
+    if(ex && roundMoney(amount) === roundMoney(ex.total) && n === (ex.pedidosN || 0)) continue;   // sin cambios
+    platOps.push({p, amount, n});
+  }
+  platOps.forEach(op => {
+    const r = registerPlatformSettlementSale(op.p, op.amount, hasta, op.n);
+    if(r.nueva) platformSaleObjs.push(r.sale);
+    else logAudit('edit', gl({es:'Venta de ' + op.p.nombre + ' corregida en el cierre: ' + fmtMoney(r.sale.correcciones[r.sale.correcciones.length-1].de) + ' → ' + fmtMoney(r.sale.total), ca:'Venda de ' + op.p.nombre + ' corregida al tancament: ' + fmtMoney(r.sale.correcciones[r.sale.correcciones.length-1].de) + ' → ' + fmtMoney(r.sale.total), en:op.p.nombre + ' sales corrected at closing: ' + fmtMoney(r.sale.correcciones[r.sale.correcciones.length-1].de) + ' → ' + fmtMoney(r.sale.total)}));
+  });
+  // Foto de TODO lo que las plataformas tienen apuntado hoy (lo de este cierre y lo de un cierre anterior del día).
+  const platformSales = [];
+  (DB.business.deliveryPlatforms || []).forEach(p => {
+    const s = ventaPlataformaDelDia(p.id, todayStr());
+    if(s) platformSales.push({platformId: p.id, saleId: s.id, nombre: p.nombre, total: s.total, comision: s.comisionPlataforma, pedidos: s.pedidosN || 0, facturaReal: !!p.facturaReal, isp: !!p.isp, ivaVentaPct: s.ivaVentaPct});
   });
 
   const closure = {
@@ -387,7 +537,7 @@ async function performCashClosure(){
     totales, total, ticketCount,
     descuentos: discounts, totalDescuentos: discounts.reduce((s,d)=>s+d.importe, 0),
     anulaciones: voids,
-    platformSales,
+    platformSales, platformTotal: roundMoney(platformSales.reduce((a,x)=>a+x.total,0)),
     fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, warnings,
     responsableId, responsableNombre,
     createdAt: new Date().toISOString()
@@ -462,8 +612,10 @@ function printCashClosure(closure){
     <tbody>${closure.anulaciones.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${v.cantidad}× ${escapeHtml(v.plato)}<div class="pr-note">${escapeHtml(v.motivo||'')}</div></td><td>${escapeHtml(v.responsableNombre||'—')}</td></tr>`).join('')}</tbody></table>` : '';
   const platformSalesHtml = (closure.platformSales||[]).length ? `
     <h2>${t('title.platformSalesThisPeriod')}</h2>
-    <table><thead><tr><th>${t('mn.delivery.platformName')}</th><th class="pr-num">${t('label.totalSales')}</th><th class="pr-num">${t('mn.delivery.commissionLabel')}</th></tr></thead>
-    <tbody>${closure.platformSales.map(p => `<tr><td>${escapeHtml(p.nombre)}</td><td class="pr-num">${fmtMoney(p.total)}</td><td class="pr-num">${fmtMoney(p.comision)}</td></tr>`).join('')}</tbody></table>` : '';
+    <p class="pr-note">${escapeHtml(gl({es:'Lo cobra la plataforma y te lo liquida descontando su comisión: no entra en la caja de arriba.', ca:'Ho cobra la plataforma i te ho liquida descomptant la seva comissió: no entra a la caixa de dalt.', en:'The platform collects it and pays you net of its fee: it is not in the till above.'}))}</p>
+    <table><thead><tr><th>${t('mn.delivery.platformName')}</th><th class="pr-num">${gl({es:'Pedidos', ca:'Comandes', en:'Orders'})}</th><th class="pr-num">${t('label.totalSales')}</th><th class="pr-num">${t('mn.delivery.commissionLabel')}</th></tr></thead>
+    <tbody>${closure.platformSales.map(p => `<tr><td>${escapeHtml(p.nombre)}</td><td class="pr-num">${p.pedidos ? p.pedidos : '—'}</td><td class="pr-num">${fmtMoney(p.total)}</td><td class="pr-num">${p.facturaReal ? '—' : fmtMoney(p.comision)}</td></tr>`).join('')}
+    <tr class="pr-total-row"><td colspan="2">${t('common.total')}</td><td class="pr-num">${fmtMoney(closure.platformTotal != null ? closure.platformTotal : closure.platformSales.reduce((a,x)=>a+(x.total||0),0))}</td><td></td></tr></tbody></table>` : '';
 
   const body = `
     ${printReportHeaderHtml(t('title.cashClosureReceipt'), `${t('label.from')} ${fmtDateTime(new Date(closure.desde))} — ${t('label.to')} ${fmtDateTime(new Date(closure.hasta))}${closure.responsableNombre ? ` · ${t('label.responsible')}: ${escapeHtml(closure.responsableNombre)}` : ''}`)}
@@ -523,7 +675,7 @@ function openCashClosureHistory(keep){
     ${closures.length ? `
     <div class="table-wrap">
       <table class="table-cards">
-        <thead><tr><th>${t('common.date')}</th><th>${t('label.closingTime')}</th><th>${t('label.responsible')}</th><th>${t('label.totalSales')}</th><th>${t('label.difference')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('common.date')}</th><th>${t('label.closingTime')}</th><th>${t('label.responsible')}</th><th>${t('label.totalSales')}</th><th>${gl({es:'Plataformas', ca:'Plataformes', en:'Platforms'})}</th><th>${t('label.difference')}</th><th></th></tr></thead>
         <tbody>
           ${closures.map(c => `
             <tr>
@@ -531,6 +683,7 @@ function openCashClosureHistory(keep){
               <td data-label="${t('label.closingTime')}">${fmtDateTime(new Date(c.hasta))}</td>
               <td data-label="${t('label.responsible')}">${escapeHtml(c.responsableNombre||'—')}</td>
               <td data-label="${t('label.totalSales')}">${fmtMoney(c.total)}</td>
+              <td data-label="${escapeHtml(gl({es:'Plataformas', ca:'Plataformes', en:'Platforms'}))}">${(c.platformSales||[]).length ? fmtMoney(c.platformTotal != null ? c.platformTotal : c.platformSales.reduce((a,x)=>a+(x.total||0),0)) : '—'}</td>
               <td data-label="${t('label.difference')}">${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
               <td><button class="btn btn-sm btn-icon" onclick="(()=>{const x=DB.cashClosures.find(z=>z.id===${c.id});if(x)printCashClosure(x);})()"><i class="ti ti-printer"></i></button>
               <button class="btn btn-sm btn-icon" title="${t('tips.splitBtn')}" onclick="openTipsSplitModal(${c.id})"><i class="ti ti-cash"></i></button></td>
@@ -568,7 +721,7 @@ function cardBreakdownInRange(fechaDesde, fechaHasta){
   const ultimoCierre = {};
   DB.cashClosures.forEach(c => { if(c.hasta && (!ultimoCierre[c.fecha] || c.hasta > ultimoCierre[c.fecha])) ultimoCierre[c.fecha] = c.hasta; });
   const abiertas = DB.sales.filter(s => {
-    if(s.status === 'anulada' || s.cierreId) return false;
+    if(s.status === 'anulada' || s.cierreId || esVentaPlataformaManual(s)) return false;
     if(!s.date || s.date < fechaDesde || s.date > fechaHasta) return false;
     const u = ultimoCierre[s.date];
     return !u || (s.createdAt && s.createdAt > u);
