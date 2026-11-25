@@ -5483,7 +5483,7 @@ const FIREBASE_RULES_JSON = `{
             "$dateStr": {
               "$turnoIdx": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= (root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').isNumber() && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() > 1 && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() <= 51 ? root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() - 1 : 50)) || (data.exists() && newData.val() <= data.val() + (root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').isNumber() && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() > 1 && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() <= 51 ? root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() - 1 : 50)))"
               }
             }
           },
@@ -5492,7 +5492,7 @@ const FIREBASE_RULES_JSON = `{
             "$dateStr": {
               "$slot": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 1) || (data.exists() && newData.val() <= data.val() + 1))"
               }
             }
           },
@@ -9651,7 +9651,17 @@ function publishTenantLookup(tenantId, config){
       apiKey: config.apiKey, databaseURL: config.databaseURL
     }).then(() => {
       try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
-    }).catch(e => console.error('Error publicando la referencia del negocio', e));
+    }).catch(e => {
+      console.error('Error publicando la referencia del negocio', e);
+      /* Desde el 25/11 las reglas de la plataforma NO dejan cambiar a qué proyecto de Firebase apunta un negocio ya
+         publicado (cualquiera con el tenantId podía desviar sus datos a una nube ajena). Un negocio que de verdad
+         migra de nube recibe aquí "permiso denegado": hay que avisarle de que lo desbloquea GastroGoan, en vez de
+         dejar que los aparatos nuevos sigan encontrando la nube vieja sin que nadie sepa por qué. */
+      try{
+        if(ggEsPermisoDenegado(e) && typeof showToast === 'function')
+          showToast(gl({es:'Cambiaste de nube: avisa a GastroGoan para que actualice la referencia de tu negocio (los aparatos nuevos aún encontrarían la antigua).', ca:'Has canviat de núvol: avisa GastroGoan perquè actualitzi la referència del teu negoci (els aparells nous encara trobarien l\'antiga).', en:'You changed cloud: tell GastroGoan so they update your business reference (new devices would still find the old one).'}));
+      }catch(e2){}
+    });
   }).catch(()=>{});
 }
 

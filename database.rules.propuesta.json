@@ -38,7 +38,7 @@
             "$dateStr": {
               "$turnoIdx": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= (root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').isNumber() && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() > 1 && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() <= 51 ? root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() - 1 : 50)) || (data.exists() && newData.val() <= data.val() + (root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').isNumber() && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() > 1 && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() <= 51 ? root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() - 1 : 50)))"
               }
             }
           },
@@ -47,7 +47,7 @@
             "$dateStr": {
               "$slot": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 1) || (data.exists() && newData.val() <= data.val() + 1))"
               }
             }
           },
@@ -105,7 +105,7 @@
       "tenantLookup": {
         "$tenantId": {
           ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
-          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60 && (!data.exists() || (newData.exists() && data.child('databaseURL').val() === newData.child('databaseURL').val()) || auth.token.email === 'gastrogoan@gmail.com')",
           ".validate": "newData.hasChildren(['apiKey', 'databaseURL']) && newData.child('apiKey').isString() && newData.child('databaseURL').isString() && newData.child('databaseURL').val().length <= 300"
         }
       },
