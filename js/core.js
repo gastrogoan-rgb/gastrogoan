@@ -456,7 +456,19 @@ async function confirmOwnerAccess(){
   }
 
   // Camino rápido y sin internet: esta cuenta ya entró en este dispositivo.
-  if(verifyOwnerLogin(user, pin)){ enterAsOwner(); return; }
+  // ⚠️ Pero el PIN guardado aquí puede ser el ANTIGUO (25/11, el dueño: «al cambiar la contraseña sigue valiendo la antigua»): al cambiarlo en otro
+  // aparato, este conserva su copia y la daba por buena para siempre. Con internet se comprueba que la cuenta sigue en la ruta de ese PIN; si ya no
+  // está, el PIN cambió y se pide el nuevo. Sin internet (o si la nube tarda) NO se bloquea a nadie: un restaurante sin wifi tiene que poder abrir.
+  if(verifyOwnerLogin(user, pin)){
+    const vigente = await ownerLoginSigueVigente(3000);
+    if(vigente === false){
+      try{ localStorage.removeItem(OWNER_LOGIN_LS); }catch(e){}
+      showErr('access.pinChangedElsewhere');
+      return;
+    }
+    enterAsOwner();
+    return;
+  }
 
   // Primera vez aquí (o PIN de la compra en un dispositivo donde ya se
   // cambió por otro): hay que comprobar la cuenta contra la plataforma.
@@ -473,6 +485,51 @@ async function confirmOwnerAccess(){
   initPublicRequestsListener();
   checkLicenseRevocation();
   enterAsOwner();
+}
+
+const OWNER_OLD_AUTHKEYS_LS = 'gastrogoan_owner_old_authkeys';   // rutas de cuenta antiguas que aún hay que borrar de la nube
+async function limpiarCuentasAntiguasPendientes(){
+  let l; try{ l = JSON.parse(localStorage.getItem(OWNER_OLD_AUTHKEYS_LS) || '[]'); }catch(e){ return; }
+  if(!Array.isArray(l) || !l.length) return;
+  const login = getOwnerLogin();
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  const app = await withTimeout(getPlatformFirebaseApp(), 8000);
+  if(!app) return;
+  const quedan = [];
+  for(const k of l){
+    if(login && k === login.authKey) continue;   // nunca borrar la ruta de la cuenta VIGENTE
+    try{
+      const r = await Promise.race([app.database().ref('gastrogoan/ownerAuth/' + k).remove().then(() => 'ok'), new Promise(res => setTimeout(() => res('tarda'), 8000))]);
+      if(r !== 'ok') quedan.push(k);
+    }catch(e){ quedan.push(k); }
+  }
+  try{ localStorage.setItem(OWNER_OLD_AUTHKEYS_LS, JSON.stringify(quedan)); }catch(e){}
+}
+/* ¿Sigue existiendo en la nube la cuenta con la que ESTE aparato guardó la entrada? Devuelve true/false, o null si no se pudo saber (sin internet,
+   plataforma lenta): en ese caso nunca se echa a nadie. Si es false, el PIN se cambió en otro aparato (el nodo se muda a la ruta nueva y se borra el viejo). */
+async function ownerLoginSigueVigente(ms){
+  const login = getOwnerLogin();
+  if(!login || !login.authKey) return null;
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+  const espera = ms || 3000;
+  try{
+    const app = await withTimeout(getPlatformFirebaseApp(), espera);
+    if(!app) return null;
+    const snap = await withTimeout(app.database().ref('gastrogoan/ownerAuth/' + login.authKey).once('value'), espera);
+    if(snap === null || snap === undefined) return null;
+    return snap.exists ? snap.exists() : (snap.val() != null);
+  }catch(e){ return null; }
+}
+/* Al abrir la app con la sesión de propietario ya iniciada: si la contraseña se cambió en otro aparato, esta sesión deja de valer y se vuelve a la
+   pantalla de acceso (con el aviso). Sin internet no hace nada. */
+async function comprobarVigenciaDelAcceso(){
+  const s = getAccessSession();
+  if(!s || s.type !== 'owner' || !getOwnerLogin()) return;
+  const vigente = await ownerLoginSigueVigente(6000);
+  if(vigente !== false) return;
+  try{ localStorage.removeItem(OWNER_LOGIN_LS); }catch(e){}
+  exitToAccessScreen();
+  setTimeout(() => showToast(t('access.pinChangedElsewhere')), 300);
 }
 
 /* Cambia el PIN de propietario EN TODAS PARTES, no solo en este aparato.
@@ -508,7 +565,16 @@ async function changeOwnerAccessPin(newPin){
     payload.pinCambiado = true;   // la cuenta ya no tiene el PIN de la compra: en un aparato nuevo no se vuelve a ofrecer cambiarlo
     await app.database().ref('gastrogoan/ownerAuth/' + newAuthKey).set(payload);
     setOwnerLogin(login.user, newAuthKey, newPin);
-    try{ await oldRef.remove(); }catch(e){ console.error('No se pudo borrar la ruta antigua de la cuenta', e); }
+    try{ await oldRef.remove(); }
+    catch(e){
+      // Si no se borra, el PIN ANTIGUO sigue valiendo en cualquier aparato nuevo. Se apunta y se reintenta al abrir la app.
+      console.error('No se pudo borrar la ruta antigua de la cuenta', e);
+      try{
+        const l = JSON.parse(localStorage.getItem(OWNER_OLD_AUTHKEYS_LS) || '[]');
+        if(Array.isArray(l) && !l.includes(login.authKey)) l.push(login.authKey);
+        localStorage.setItem(OWNER_OLD_AUTHKEYS_LS, JSON.stringify(l));
+      }catch(e2){}
+    }
     return {ok: true};
   }catch(e){
     console.error('Error cambiando el PIN de la cuenta', e);
@@ -668,7 +734,11 @@ async function confirmEmployeeAccess(){
       showToast(t('access.pinReset'));
       return;
     }
-    const match = findEmployeeMatch(slotData.employees, name, pin, localSlot.code);
+    // ⚠️ La copia de este aparato puede estar ANTICUADA (25/11): si el PIN del empleado se cambió o se reseteó en otro aparato, aquí seguía valiendo el
+    // antiguo y el nuevo daba «incorrecto» (y en un negocio que no es el abierto, para siempre: su copia solo se actualiza al abrirlo). Con internet
+    // manda la nube (solo la lista de empleados, no todo el negocio); sin internet o si tarda, se usa la copia local para no dejar a nadie fuera.
+    const frescos = await empleadosFrescosDeLaNube(localSlot, slotData);
+    const match = findEmployeeMatch(frescos || slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
     rememberBusinessCode(code, (slotData.business && slotData.business.name) || localSlot.name);
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
@@ -9307,6 +9377,32 @@ function lookupTenantFirebaseConfig(tenantId){
 // cierra al terminar) al proyecto de OTRO negocio para traerse una copia de
 // sus datos — se usa solo la primera vez que un empleado entra desde un
 // dispositivo que nunca ha tenido este negocio localmente.
+// Solo la lista de empleados de un negocio que este aparato ya conoce, directa de su nube (4 s como máximo). Devuelve el array o null si no se pudo
+// (sin internet, sin SDK, sin configuración de nube, o la nube tarda): en ese caso quien llama usa su copia local.
+async function empleadosFrescosDeLaNube(localSlot, slotData){
+  try{
+    if(typeof firebase === 'undefined') return null;
+    if(typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+    const tenantId = ggBizTenantId(localSlot.code);
+    const propia = slotData && slotData.business && slotData.business.ownFirebase;
+    const fbConfig = (propia && propia.apiKey && propia.databaseURL) ? propia : await withTimeout(lookupTenantFirebaseConfig(tenantId), 4000);
+    if(!fbConfig || !fbConfig.apiKey) return null;
+    const lectura = (async () => {
+      const appName = 'emp-' + tenantId;
+      let app;
+      try{ app = firebase.app(appName); }catch(e){ app = firebase.initializeApp(fbConfig, appName); }
+      try{
+        await app.auth().signInAnonymously();
+        const snap = await app.database().ref('gastrogoan/tenants/' + tenantId + '/db/employees').once('value');
+        return snap.val();
+      }finally{ try{ await app.delete(); }catch(e){} }
+    })();
+    const v = await withTimeout(lectura, 4000);
+    if(v == null) return null;
+    const lista = (Array.isArray(v) ? v : Object.values(v)).filter(e => e && typeof e === 'object');
+    return lista.length ? lista : null;
+  }catch(e){ return null; }
+}
 async function fetchRemoteTenantDB(tenantId, fbConfig){
   const appName = 'peek-' + tenantId;
   let app;

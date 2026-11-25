@@ -9925,6 +9925,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   initCloud();
   syncPublicMirror();
   initPublicRequestsListener();
+  // Contraseña cambiada en otro aparato: esta sesión deja de valer (solo con internet); y se borran las rutas de cuenta antiguas que no llegaron a borrarse.
+  setTimeout(() => { try{ comprobarVigenciaDelAcceso(); limpiarCuentasAntiguasPendientes(); }catch(e){} }, 2500);
   applyHelpI18n();
   updateChatBadge();
   let initial = (location.hash || '#home').replace('#','');
