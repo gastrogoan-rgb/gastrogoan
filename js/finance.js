@@ -1415,7 +1415,7 @@ function plan360AvisosDeHoy(){
     // Un cliente que ya pasó al mantenimiento (o terminó) no necesita que se le recuerde lo del arranque.
     const faseSv = (b.plan360Servicio || {}).fase;
     const enArranque = faseSv !== 'mant' && faseSv !== 'fin';
-    if(enArranque && !c.signedAt && c.precio && c.formaPago){
+    if(enArranque && !c.signedAt && c.precio && c.formaPago && typeof plan360CoachDatos === 'function' && plan360CoachDatos()){   // tampoco si el coach aún no ha completado sus datos: no se puede firmar
       out.push({count: 1, icon:'ti-signature', id:'plan360Contrato', campana:true, soloDueno:true, warn:true, label: gl({es:'Firma el contrato del Plan 360º', ca:'Signa el contracte del Pla 360º', en:'Sign the 360º Plan agreement'}), onclick: `navigate('plan360'); renderPlan360Contract()`});
     }
     const secciones = (b.plan360Intake || {}).sections || [];

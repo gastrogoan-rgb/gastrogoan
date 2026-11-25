@@ -22,7 +22,7 @@ await app.setViewport({width:1280, height:900});
 const errs = []; app.on('pageerror', e => errs.push(e.message));
 await app.setRequestInterception(true);
 app.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver|raw.githubusercontent/.test(r.url()) ? r.abort() : r.continue());
-await app.goto('http://localhost:8950/dist/index.html', {waitUntil:'domcontentloaded'});
+await app.goto('http://localhost:8950/' + (process.env.IMPRESOS_PAGINA || 'dist/index.html'), {waitUntil:'domcontentloaded'});
 await app.evaluate(() => (typeof dbReadyPromise !== 'undefined') ? dbReadyPromise : null).catch(() => {});
 await app.evaluate(async fx => {
   const code = 'IMPRESO01';
@@ -183,6 +183,26 @@ await app.evaluate(() => {
   window.__docId = ids[0];
 });
 caso('plan360-documento', () => descargarPlan360DocRico(window.__docId), null, r => assert.ok(r.paginas <= 12));
+// Informe de cierre del Plan 360º (25/11): portada + radar Día 1/hoy + cifras con € al mes + objetivos + lo implantado por área + qué vigilar.
+await app.evaluate(() => {
+  const b = DB.business, hoy = new Date(), mes = d => { const x = new Date(hoy.getFullYear(), hoy.getMonth() + d, 1); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; };
+  b.plan360 = true; ensurePlan360Program();
+  b.plan360StartDate = mes(-1) + '-10';
+  b.plan360Program.find(d => d.day === 2).objectives = [
+    {id:'o1', titulo:'Bajar el food cost del 35 % al 30 % sin tocar la calidad de la carta', prioridad:'prioritario', metrica:'Food cost', valorInicial:'35 %', valorObjetivo:'30 %', mediciones:[{fecha:todayStr(), valor:'33 %'}, {fecha:todayStr(), valor:'31 %'}], estadoFinal:'cumplido'},
+    {id:'o2', titulo:'Subir el ticket medio con una carta de postres', prioridad:'esencial', metrica:'Ticket medio', mediciones:[], estadoFinal:'parcial'}];
+  const d9 = b.plan360Program.find(d => d.day === 9);
+  d9.tasks = [{id:1, title:'Revisar los escandallos de los diez platos que más se venden', status:'hecha', enlace:'escandallo'}, {id:2, title:'Reordenar la carta por rentabilidad', status:'hecha', enlace:'carta'}, {id:3, title:'Cuadrante de turnos de fin de semana', status:'hecha', enlace:'horarios'}, {id:4, title:'Formar al equipo en venta sugerida', status:'hecha', enlace:'tpv'}, {id:5, title:'Pendiente', status:'pendiente', enlace:'stock'}];
+  b.plan360Cierre = Object.assign(b.plan360Cierre || {}, {mejorasVisibles:'La carta es más corta y se entiende mejor.', queVigilar:'La subida del aceite y la rotación de personal en sala.', siguienteNivel:'Abrir el servicio de comidas para llevar.'});
+  b.plan360Kpis = {dia1:{mes: mes(-2), desde: b.plan360StartDate, netas:10000, tickets:500, ticketMedio:18, foodCostPct:35, personalPct:36, mermasPct:4, resultado:900, dias:20},
+    meses:{[mes(-1)]:{netas:12000, tickets:600, ticketMedio:20, foodCostPct:30, personalPct:32, resultado:1500, mermasPct:2}}};
+  DB.sales = []; DB.ge.variables = []; DB.mermas = [{id:'m1', fecha: addDaysStr(todayStr(), -5), coste: 20, motivo:'caducidad'}];
+  let id = 1;
+  for(let i = 1; i <= 28; i++){ const f = addDaysStr(todayStr(), -i); for(let k = 0; k < 20; k++) DB.sales.push({id: id++, date: f, total: 22, items:[{name:'Plato', price:22, qty:1, ivaPct:10}]}); DB.ge.variables.push({id:'v'+i, fecha:f, mes: parseInt(f.slice(5,7)) - 1, 'año': parseInt(f.slice(0,4)), categoria:'Comida', importe:120, proveedor:'X'}); }
+  delete b.plan360Servicio;
+});
+caso('plan360-informe-cierre', () => plan360InformeCierre(), null, r => { assert.ok(r.paginas >= 3 && r.paginas <= 7, 'el informe sale en ' + r.paginas + ' hojas'); assert.equal(r.desborda, false); assert.ok(r.fuentes >= 2, 'no cargaron las fuentes de marca'); });
+
 
 for(const c of casos){
   try{

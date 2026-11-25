@@ -5951,9 +5951,7 @@ function plan360RadarCardHtml(){
   const filas = r.ejes.map(e => `<div class="p360-sem-fila"><span class="p360-sem-nom">${escapeHtml(L(e.nombre))}</span><span class="p360-sem-cifras">${e.antes} → <strong>${e.hoy}</strong></span>${plan360FlechaHtml(e.antes, e.hoy, e.hoy === e.antes ? null : e.hoy > e.antes)}</div>`).join('');
   return `<div class="gg-plegable p360-radar-bloque">
     <h4 class="p360-radar-t">${escapeHtml(L({es:'Tu radar: Día 1 frente a hoy', ca:'El teu radar: Dia 1 davant d\'avui', en:'Your radar: Day 1 against today'}))}</h4>
-    ${plan360RadarComparadoSvg(r.ejes)}
-    ${plan360RadarLeyendaHtml()}
-    ${filas}
+    <div class="p360-radar-cuerpo"><div>${plan360RadarComparadoSvg(r.ejes)}${plan360RadarLeyendaHtml()}</div><div>${filas}</div></div>
     <p class="txt-xs txt-muted" style="margin:8px 0 0">${escapeHtml(L({es:'Costes, equipo, mermas y satisfacción: 100 = cumples el objetivo que fijaste. Ticket y ventas: 50 = como el Día 1. Solo salen los ejes con dato real en los dos momentos.', ca:'Costos, equip, minves i satisfacció: 100 = compleixes l\'objectiu que vas fixar. Tiquet i vendes: 50 = com el Dia 1. Només surten els eixos amb dada real en els dos moments.', en:'Costs, team, waste and satisfaction: 100 = you meet the target you set. Ticket and sales: 50 = same as Day 1. Only axes with real data at both moments are shown.'}))}</p>
   </div>`;
 }
