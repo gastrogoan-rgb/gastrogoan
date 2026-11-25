@@ -1184,12 +1184,14 @@ function plan360KpisRango(desde, hasta){
   const mermas = (DB.mermas || []).filter(x => x.fecha >= desde && x.fecha <= hasta && x.motivo !== 'consumoPropio' && x.motivo !== 'comidaPersonal').reduce((s, x) => s + (parseFloat(x.coste) || 0), 0);
   const nps = (DB.npsScores || []).filter(x => x.score != null && (x.createdAt || '').slice(0, 10) >= desde && (x.createdAt || '').slice(0, 10) <= hasta);
   const ok = dias.size >= PLAN360_RANGO_MIN_DIAS && netas > 0;
+  // Las mermas solo cuentan si el negocio las ANOTA (alguna en los últimos 90 días): sin eso un 0 % sería «no lo apunto», no «no tiro nada».
+  const usaMermas = (DB.mermas || []).some(x => x.fecha >= addDaysStr(hasta, -90));
   return {
     desde, hasta, dias: dias.size, valido: ok, tickets: ventas.length, netas: r2(netas),
     ticketMedio: ok && ventas.length ? r2(brutas / ventas.length) : null,
     foodCostPct: ok && compras > 0 ? r1(compras / netas * 100) : null,
     personalPct: ok && personal > 0 ? r1(personal / netas * 100) : null,
-    mermas: r2(mermas), mermasPct: ok && compras > 0 ? r1(mermas / compras * 100) : null,
+    mermas: r2(mermas), mermasPct: ok && compras > 0 && usaMermas ? r1(mermas / compras * 100) : null,
     nps: nps.length >= 3 ? r1(nps.reduce((s, x) => s + Number(x.score), 0) / nps.length) : null, npsN: nps.length,
   };
 }
@@ -1296,7 +1298,7 @@ function plan360RadarComparado(){
   const [y1, m1] = k.dia1.mes.split('-').map(Number);
   const ns0 = plan360NoShows(k.dia1.mes + '-01', k.dia1.mes + '-' + String(daysInMonth(y1, m1 - 1)).padStart(2, '0')), ns1 = plan360NoShows(r28.desde, r28.hasta);
   const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
-  if(ns0 != null && ns1 != null){ antes.noshows = clamp(100 - ns0 * 10); ahora.noshows = clamp(100 - ns1 * 10); }
+  if(ns0 != null && ns1 != null){ antes.noshows = clamp(100 - ns0 * 5); ahora.noshows = clamp(100 - ns1 * 5); }
   // Ticket y ventas del Día 1 valen 50 por definición (son la referencia).
   if(ahora.ticket != null) antes.ticket = 50;
   if(ahora.ventas != null) antes.ventas = 50;
