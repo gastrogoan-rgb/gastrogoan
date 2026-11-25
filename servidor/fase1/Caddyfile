@@ -18,7 +18,7 @@
 	@fuentes path /fonts/*
 	header @fuentes Cache-Control "public, max-age=31536000, immutable"
 
-	root * /srv/sitios/reservas
+	root * /srv/gastrogoan/sitios/reservas
 	# Enlace corto reservas.gastrogoan.com/casapaco: cualquier ruta que no sea un fichero
 	# devuelve la misma página, como hace el 404.html de Pages.
 	try_files {path} /index.html

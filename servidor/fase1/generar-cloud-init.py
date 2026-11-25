@@ -32,52 +32,37 @@ Persistent=true
 WantedBy=timers.target
 """
 cabecera = """#cloud-config
-# GastroGoan · servidor de la FASE 1 (web de reservas en IP propia). Ubuntu 24.04 LTS.
+# GastroGoan · servidor de la FASE 1 (web de reservas en IP propia). Vale para cualquier Ubuntu reciente (probado
+# el diseño con 24.04; en 26.04 no depende de ningún paquete que cambie de nombre).
 # GENERADO por servidor/fase1/generar-cloud-init.py: no editar a mano.
 #
 # Se pega en el campo «User data» (Cloud config) al crear el servidor en Hetzner. NO lleva llaves ni contraseñas.
-# Qué deja hecho: firewall (solo 80 y 443; el puerto 22 de entrada está CERRADO), actualizaciones de seguridad
-# automáticas, Caddy con HTTPS automático y un temporizador que cada 5 minutos baja de GitHub la última web de
-# reservas. Sin acceso remoto por SSH: si algún día hiciera falta tocarlo, se borra y se vuelve a crear con este mismo
-# texto (tarda unos 3 minutos y no se pierde nada: los datos viven en Firebase, no aquí).
+# Qué deja hecho: firewall (solo 80 y 443; el 22 de entrada CERRADO), actualizaciones de seguridad automáticas,
+# Caddy (descarga oficial verificada por huella) con HTTPS automático y un temporizador que cada 5 minutos baja de
+# GitHub la última web de reservas. Va escribiendo por la consola de Hetzner (>_) lo que hace. Sin acceso remoto:
+# si hiciera falta tocarlo, se borra y se vuelve a crear con este mismo texto (3-5 minutos; los datos viven en Firebase).
 timezone: Europe/Madrid
 package_update: true
-package_upgrade: true
+package_upgrade: false
 packages:
+  - ca-certificates
+  - curl
+  - git
   - ufw
   - unattended-upgrades
-  - docker.io
-  - docker-compose-v2
-  - git
-  - curl
 ssh_pwauth: false
 write_files:
 """
-arranque = """#!/usr/bin/env bash
-# Se ejecuta UNA vez al crear el servidor: pone la dirección de prueba con la IP y arranca todo.
-set -eu
-mkdir -p /srv/gastrogoan/extra /srv/gastrogoan/sitios
-IP="$(curl -fsS --max-time 15 http://169.254.169.254/hetzner/v1/metadata/public-ipv4 || true)"
-if [ -n "$IP" ]; then
-  printf '%s\\n' "${IP//./-}.sslip.io {" "	import reservas" "}" > /srv/gastrogoan/extra/prueba.caddy
-  echo "$IP" > /srv/gastrogoan/IP.txt
-fi
-/usr/local/bin/gg-actualizar || echo "primera publicación fallida: el temporizador lo reintentará"
-cd /srv/gastrogoan && docker compose up -d
-systemctl daemon-reload
-systemctl enable --now gg-actualizar.timer
-"""
 salida = cabecera
-salida += bloque("Caddyfile", "/srv/gastrogoan/Caddyfile")
-salida += bloque("docker-compose.yml", "/srv/gastrogoan/docker-compose.yml")
+salida += bloque("Caddyfile", "/etc/caddy/Caddyfile")
 salida += bloque("gg-actualizar.sh", "/usr/local/bin/gg-actualizar", "0755")
-salida += inline("/usr/local/bin/gg-arranque", arranque, "0755")
+salida += bloque("gg-arranque.sh", "/usr/local/bin/gg-arranque", "0755")
+salida += bloque("caddy.service", "/etc/systemd/system/caddy.service")
 salida += inline("/etc/systemd/system/gg-actualizar.service", servicio)
 salida += inline("/etc/systemd/system/gg-actualizar.timer", temporizador)
 salida += inline("/etc/apt/apt.conf.d/20auto-upgrades", 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";')
 salida += """runcmd:
-  - [ bash, -c, "ufw default deny incoming && ufw default allow outgoing && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp && ufw --force enable" ]
-  - [ systemctl, enable, --now, docker ]
+  - [ bash, -c, "ufw default deny incoming; ufw default allow outgoing; ufw allow 80/tcp; ufw allow 443/tcp; ufw allow 443/udp; ufw --force enable" ]
   - [ /usr/local/bin/gg-arranque ]
 """
 (aqui / "cloud-init.yaml").write_text(salida, encoding="utf-8")
