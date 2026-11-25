@@ -45,6 +45,11 @@ Detalle en `docs/CHECKLIST-LUNES.md`.
 - [ ] **Tú** · Probar con el hardware delante: impresora térmica, cajón, iPhone y iPad.
 - [ ] **Tú** · Primer servicio real con un cliente: es lo que más fallos encuentra.
 
+## 3 bis. LaLiga: decidido el 25/11 (noche), esperar y ver
+- Fase 1 hecha: la web de reservas sale de un servidor de Hetzner (IP 5.222.2.92). **Se deja con UN solo servidor unos días y se mira cómo va** (vigilancia + un partido real) antes de más cambios.
+- **Para valorar después, por este orden:** (1) segundo servidor con dos registros A (los navegadores prueban el otro solos si uno cae); (2) versión 3 del servidor: web comercial `gastrogoan.com` y desvío de los pagos de Stripe a través del servidor (sin mover claves); (3) cambio automático a Cloudflare si el servidor cae (vigilante en GitHub + llave de Cloudflare limitada; tarda 5-15 min; ver las limitaciones en la conversación del 25/11).
+- **La app y el panel NO se mueven** (decisión razonada: quien ya tiene la app instalada no sufre bloqueos; moverla concentra el riesgo en una sola máquina).
+
 ## 4. LaLiga (bloqueos de Cloudflare en partidos)
 - Causa: operadores bloquean por IP; Cloudflare no da IP dedicada en el plan gratuito.
 - Plan: dos servidores con IP propia en proveedores distintos (por ejemplo Hetzner y otro), con Caddy, `unattended-upgrades` y despliegue automático desde GitHub. Primero la web de reservas y la comercial; la app después. Kit preparado en `servidor/`, sin usar.
