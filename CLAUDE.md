@@ -1726,6 +1726,17 @@ En los partidos algunos operadores españoles bloquean IP de Cloudflare y caen w
 - **Descartado**: VPN dentro de la app (una web no puede crearla), plan de Route 53 con failover DNS (de pago, y el dominio está registrado en Cloudflare, que obliga a su DNS), «apagar el proxy» (Pages no tiene IP propia).
 - **Pendiente, sin decidir**: probar en un partido real si la dirección `*.pages.dev` de cada proyecto se libra del bloqueo (gratis) y, si no, un servidor con IP propia (Oracle Always Free, o uno de pago). Apuntar día, hora y operador de cada fallo.
 
+## LaLiga: la web de reservas YA va desde un servidor con IP propia (25/11, noche)
+
+- **`reservas.gastrogoan.com` apunta a un servidor de Hetzner (Helsinki, CPX02, ~6 €/mes, IP `5.222.2.92`)**, registro **A en «solo DNS» (nube gris)**, TTL 1 min. Probado por el dueño desde su tablet: carga con candado y **dos reservas de prueba llegaron a la app**. NO hay segundo servidor todavía.
+- **Cómo se publica:** el servidor se baja solo, cada 5 minutos, `deploy/reservas/public` de `main` de GitHub (`gg-actualizar`, sin llaves: el repositorio es público y solo lo lee). O sea que **publicar en `main` con `deploy/actualizar.sh` actualiza a la vez Cloudflare Pages y este servidor**. Si la versión llega rota (sin `index.html`) o GitHub falla, NO se toca lo publicado; se guardan las 3 últimas versiones.
+- **No hay acceso SSH** (puerto 22 cerrado, sin llaves). Si hace falta tocarlo: borrar y crear otro con `servidor/fase1/cloud-init.yaml` (generado por `generar-cloud-init.py` desde los ficheros de esa carpeta; lo pega el dueño en «User data» con Ubuntu 24.04). La consola de Hetzner (`>_`) enseña lo que hace el arranque (`GG-ARRANQUE:`).
+- ⚠️ **El primer intento falló** (Docker + Ubuntu 26.04: un paquete con otro nombre y no instaló nada). El arranque actual NO usa Docker ni depende de nombres de paquetes: solo `curl git ufw ca-certificates unattended-upgrades` y Caddy 2.8.4 descargado con comprobación SHA-512.
+- ⚠️ **Marcha atrás:** el dominio se desconectó del proyecto de Pages (`gastrogoan-reservas`) y Cloudflare borró el CNAME. Para volver: borrar el registro A y, en Pages → Dominios personalizados, «Configurar un dominio personalizado» → `reservas.gastrogoan.com` (Cloudflare recrea el CNAME solo). Tarda unos minutos.
+- ⚠️ **El certificado de un dominio nuevo se pide al arrancar Caddy:** si el DNS aún no apuntaba, reintenta con esperas largas. Tras cambiar el DNS hay que **reiniciar el servidor** (Hetzner → Power) para que lo pida al momento.
+- **Lo que NO está resuelto:** el pago con tarjeta (Worker de Stripe) sigue en Cloudflare: en un bloqueo, un cliente nuevo ve la reserva pero no paga la señal. La app, el panel y la web comercial siguen en Cloudflare (fase 2). **Falta probarlo en un partido real** con datos móviles de una operadora que bloquee. Un único servidor es punto único de fallo: poner vigilancia gratuita (UptimeRobot) y valorar el segundo (otro proveedor).
+- Guía completa: `docs/LALIGA-PUESTA-A-PUNTO.md`.
+
 ## Web comercial: REVERTIDO el rediseño (16/11), se trabaja página a página con el dueño
 
 El 15/11 se rehízo toda la web comercial de golpe y al dueño **no le gustó en absoluto**: «es mejor cuando te superviso el trabajo». Se restauró `deploy/web/public` tal cual estaba (commit `a152bda`: las páginas empaquetadas de antes + `gracias.html`) y se quitó `test/web-comercial.mjs` de la batería.

@@ -1,5 +1,7 @@
 # LaLiga: puesta a punto de la web de reservas en IP propia (fase 1)
 
+> **Estado 25/11/2026 (noche): HECHO y funcionando.** `reservas.gastrogoan.com` ya se sirve desde un servidor de Hetzner (IP `5.222.2.92`), con candado y dos reservas de prueba que llegaron a la app. Falta: vigilancia (UptimeRobot), probarlo en un partido real y valorar un segundo servidor en otro proveedor. Los pasos de abajo son el registro de cómo se hizo y sirven para repetirlo.
+
 **Problema:** en los partidos, algunos operadores bloquean IP de Cloudflare y la web de reservas no abre a clientes que nunca la han abierto. **Remedio de la fase 1:** servir SOLO `reservas.gastrogoan.com` desde servidores con IP propia. La app, el panel y los pagos siguen en Cloudflare: no se mueve nada que cobre dinero hasta comprobar que esto funciona.
 
 Todo lo necesario está en `servidor/fase1/`. Probado aquí: la configuración de Caddy valida y sirve la web (raíz, enlace corto y cabeceras), y la actualización automática publica, actualiza y NO borra nada si falla la red o la versión viene rota. **Lo que todavía no se ha probado es el servidor real**, porque no existe.
