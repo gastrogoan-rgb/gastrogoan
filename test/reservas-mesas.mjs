@@ -92,6 +92,7 @@ await caso('La reserva enviada lleva la mesa MÁS AJUSTADA que quedaba libre (la
     window.reserveTableAtomic = () => Promise.resolve({committed:true});
     window.sendReservaRequest = (r) => res(r);
     window.sendRequest = (r) => res(r);
+    wzDesde = 0;   // un cliente que ya ha rellenado el formulario: el filtro anti-bots (tiempo mínimo) no es lo que se prueba aquí
     try{ submitReserva(); }catch(e){ res({error:e.message}); }
     setTimeout(()=>res({timeout:true}), 3000);
   }));
