@@ -5779,6 +5779,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-mal .dp-eq-rell{background:#B4432F} .dp-eq-aviso .dp-eq-rell{background:#B7791F}
 .dp-eq-marca{position:absolute;top:-6px;bottom:-6px;width:0;border-left:2px dashed var(--ink)}
 .dp-eq-marca span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);white-space:nowrap;text-transform:uppercase}
+.dp-eq-marca.is-fin span{left:auto;right:0;transform:none}
 .dp-eq-frase{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;line-height:1.45;margin:0 0 14px}
 .dp-eq-frase i{font-size:18px;color:var(--olive);flex:none;margin-top:1px}
 .dp-eq-mal .dp-eq-frase i{color:#B4432F} .dp-eq-aviso .dp-eq-frase i{color:#B7791F}
