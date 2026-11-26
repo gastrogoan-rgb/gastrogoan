@@ -26,4 +26,9 @@
 - Módulos: aviso de que el límite de exclusión lo comprueba el gestor y de que las subvenciones no entran en el rendimiento.
 
 # Sin aplicar todavía (y por qué)
-Finiquito de temporales (depende del convenio y de la indemnización del contrato; sin fuente no se inventa), autoconsumo del titular a valor de mercado, IVA por canal (bebidas para llevar al 21 %), bonificación del 50 % a fijos discontinuos, nueva creación por períodos con base positiva, gastos no deducibles y reserva de capitalización, alta en el ROI, escala autonómica del IRPF, límite de exclusión de módulos (cifra sin verificar en el BOE), subvenciones en módulos (tratamiento a confirmar), ejercicios 2022 y anteriores, País Vasco foral.
+autoconsumo del titular a valor de mercado, IVA por canal (bebidas para llevar al 21 %), bonificación del 50 % a fijos discontinuos, nueva creación por períodos con base positiva, gastos no deducibles y reserva de capitalización, alta en el ROI, escala autonómica del IRPF, límite de exclusión de módulos (cifra sin verificar en el BOE), subvenciones en módulos (tratamiento a confirmar), ejercicios 2022 y anteriores, País Vasco foral.
+
+
+## Descartado por decisión del dueño (26/11)
+
+- **Finiquito/liquidación de temporales: DESCARTADO por decisión del dueño, es trabajo de gestoría.** No se implementa en la app ni se le plantean preguntas al gestor.
