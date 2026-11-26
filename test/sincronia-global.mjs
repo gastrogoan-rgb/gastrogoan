@@ -90,7 +90,7 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
   const emp = (area, extra) => Object.assign({id: 'e1', name: 'Ana', area, active: true, pin: 'x', pinChanged: true}, extra || {});
   const montar = async () => {
     const p = await aparato({slot: 'default', sesion: {type:'employee', employeeId: 'e1', area: 'cocina'}});
-    await p.evaluate(e => { DB.employees = [e]; localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'employee', employeeId:'e1', area:'cocina', ts: Date.now()})); }, emp('cocina'));
+    await p.evaluate(e => { if(!lastSyncedSnapshot) lastSyncedSnapshot = {}; DB.employees = [e]; localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'employee', employeeId:'e1', area:'cocina', ts: Date.now()})); }, emp('cocina'));
     return p;
   };
   // Devuelve si la página se recargó al llegar el cambio.
@@ -125,6 +125,7 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
   await caso('Espejo público: lo que llega de la nube después del arranque SE PUBLICA (no se queda la copia anticuada del aparato)', async () => {
     await p.evaluate(() => {
       window.firebase = window.firebase || {};
+      if(!lastSyncedSnapshot) lastSyncedSnapshot = {};
       window.__sets = [];
       const ref = ruta => ({
         set: v => { window.__sets.push([ruta, JSON.parse(JSON.stringify(v === undefined ? null : v))]); return Promise.resolve(); },
@@ -189,14 +190,14 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
   }, nube);
   const nodo = () => p.evaluate((a, t) => __nube.arbol.gastrogoan.ownerAuth[a].businesses[t], AUTH, tid);
   await caso('Otro aparato borró el negocio (lápida); aquí aún estaba abierto y se guarda Mi Negocio con un nombre nuevo: la lápida SE QUEDA', async () => {
-    await p.evaluate(() => { document.getElementById('app-splash')?.remove(); let i = document.getElementById('business-name'); if(!i){ i = document.createElement('input'); i.id = 'business-name'; i.style.display = 'none'; document.body.appendChild(i); } i.value = 'Casa Paco Nuevo'; });
+    await p.evaluate(() => { DB.license = {code: 'NEGOCIOA', tenantId: ggBizTenantId('NEGOCIOA')}; _lastLinkedBusinessName = null; document.getElementById('app-splash')?.remove(); let i = document.getElementById('business-name'); if(!i){ i = document.createElement('input'); i.id = 'business-name'; i.style.display = 'none'; document.body.appendChild(i); } i.value = 'Casa Paco Nuevo'; });
     await p.evaluate(() => saveBusiness(true)).catch(() => {});
     await w(800);
     const n = await nodo();
     assert.equal(n && n.deleted, true, 'la lápida se pisó y el negocio resucita en todos los aparatos: ' + JSON.stringify(n));
   });
   await caso('Un negocio que SIGUE en la cuenta sí recibe su nombre nuevo (y conserva el código)', async () => {
-    await p.evaluate((a, t) => { __nube.arbol.gastrogoan.ownerAuth[a].businesses[t] = {code: 'NEGOCIOA', name: 'Casa Paco'}; document.getElementById('business-name').value = 'Casa Paco Renovada'; }, AUTH, tid);
+    await p.evaluate((a, t) => { __nube.arbol.gastrogoan.ownerAuth[a].businesses[t] = {code: 'NEGOCIOA', name: 'Casa Paco'}; document.getElementById('business-name').value = 'Casa Paco Renovada'; _lastLinkedBusinessName = null; }, AUTH, tid);
     await p.evaluate(() => saveBusiness(true)).catch(() => {});
     await w(800);
     const n = await nodo();

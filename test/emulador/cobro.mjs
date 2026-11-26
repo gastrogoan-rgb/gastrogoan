@@ -62,21 +62,25 @@ async function arrancar(d,code){
     DB.sales=[]; saveDB();
   });
   await new Promise(r=>setTimeout(r,3500));
-  // Los dos cobran esa mesa casi a la vez
+  // Los dos cobran esa mesa casi a la vez. ⚠️ Con el MISMO id (el de la venta es el del pedido: finalizeCharge hace `id: order.id`), que es lo que
+  // de verdad producen dos tablets. Con ids distintos (V-A / V-B, como estaba antes) la prueba no representaba nada: `mergeArraysById`
+  // fusiona por id, así que en la realidad las dos ventas son UNA para la nube y la detección de duplicados (que busca ids repetidos) no puede saltar.
   await Promise.all([
     A.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===7000); o.status='pagada';
-      DB.sales.push({id:'V-A',date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Efectivo',orderId:7000,items:o.items}); saveDB(); }),
+      DB.sales.push({id:7000,date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Efectivo',orderId:7000,items:o.items}); saveDB(); }),
     B.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===7000); o.status='pagada';
-      DB.sales.push({id:'V-B',date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Tarjeta',orderId:7000,items:o.items}); saveDB(); }),
+      DB.sales.push({id:7000,date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Tarjeta',orderId:7000,items:o.items}); saveDB(); }),
   ]);
   await new Promise(r=>setTimeout(r,6000));
   const r = await A.page.evaluate(()=>({
-    ventas:(DB.sales||[]).map(s=>s.id).sort(),
+    ventas:(DB.sales||[]).map(s=>s.id+':'+s.metodoPago).sort(),
     delMismoPedido:(DB.sales||[]).filter(s=>s.orderId===7000).length,
   }));
   // Lo importante: que NINGUNA de las dos ventas desaparezca. Un cobro
   // duplicado se ve y se anula; uno perdido no lo detecta nadie.
-  ok('1. Dos cobros a la vez: no se pierde ninguna venta', r.ventas.length===2, 'quedaron '+JSON.stringify(r.ventas));
+  // Cada cobro es dinero distinto (Efectivo y Tarjeta): tienen que quedar los dos métodos. Si queda uno solo, el otro cobro se perdió.
+  // ⚠️ HALLAZGO DE LA APP (26/11), no de la prueba: hoy queda UNA (la otra se pisa por tener el mismo id). Ver docs/PENDIENTE-MAESTRO.md.
+  ok('1. Dos cobros a la vez: no se pierde ninguna venta', r.ventas.length===2 && r.ventas.some(v=>/Efectivo/.test(v)) && r.ventas.some(v=>/Tarjeta/.test(v)), 'quedaron '+JSON.stringify(r.ventas));
   // Y que el duplicado quede ANOTADO: una venta de más infla facturación
   // e IVA, y si nadie lo ve se declara mal.
   const aviso = await A.page.evaluate(()=> (DB.auditLog||[]).find(e=>e.action==='cobro_duplicado'));
