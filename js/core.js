@@ -2186,7 +2186,7 @@ function guardarLocalDB(){
     const espera = Math.max(0, idbLocal.ultimo + IDB_JUNTAR_MS - Date.now());
     /* La copia estructurada de TODA la base (20.000 ventas: ~80 ms en un PC, ~325 ms en un móvil lento) bloqueaba el hilo justo
        antes de pintar el ticket. Se deja para después del siguiente fotograma; pagehide/hidden la vuelcan en el acto. */
-    idbLocal.timer = setTimeout(volcarLocalDB, Math.max(espera, 40));
+    idbLocal.timer = setTimeout(volcarLocalDB, Math.max(espera, 150));
   });
 }
 if(typeof window !== 'undefined' && typeof document !== 'undefined'){

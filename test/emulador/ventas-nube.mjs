@@ -28,6 +28,7 @@ async function dispositivo(){
 async function arrancar(d, code, bandera){
   await d.page.goto(`http://localhost:${PWEB}/index.html`, {waitUntil:'domcontentloaded'});
   await d.page.evaluate(async ({code, dburl, bandera}) => {
+    if(typeof dbReadyPromise !== 'undefined') await dbReadyPromise;   // si no, loadDB() puede reemplazar lo que se siembra
     localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)}));
     localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'jefe', authKey:'k', pinHash:'h'}));
     localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()}));
@@ -37,7 +38,7 @@ async function arrancar(d, code, bandera){
     if(bandera !== undefined) DB.business.ventasPorMes = bandera;
     await saveDB();
   }, {code, dburl:DBURL, bandera});
-  for(let intento = 0; intento < 4; intento++){   // el primer arranque tras levantar el emulador a veces no llega a conectar: se reintenta
+  for(let intento = 0; intento < 6; intento++){   // el primer arranque tras levantar el emulador a veces no llega a conectar: se reintenta
     await d.page.reload({waitUntil:'domcontentloaded'});
     await w(3500);
     const t0 = Date.now(); let conectado = false;
@@ -193,7 +194,8 @@ ok('8d. La nube tiene exactamente las ventas de los aparatos', nubeFinal.nuevo =
 
 /* ═══ 9. Negocio nuevo: nace con la bandera encendida ═══ */
 const C = await dispositivo(); await arrancar(C, 'VENTAS002', undefined);
-await w(2500);
+await w(6000);
+console.log('   ℹ️  C estado:', JSON.stringify(await C.page.evaluate(() => ({badge: lastSyncBadgeState, err: lastSyncErrorCode, own: DB.business.ownFirebase && DB.business.ownFirebase.databaseURL, lic: !!DB.license}))));
 console.log('   ℹ️  C:', JSON.stringify(await C.page.evaluate(() => ({f: DB.business.ventasPorMes, n: (DB.sales||[]).length, cloud: !!cloudRef, listo: vnListo}))));
 ok('9. Un negocio nuevo (nube vacía) nace con las ventas una a una', await C.page.evaluate(() => DB.business.ventasPorMes === true));
 

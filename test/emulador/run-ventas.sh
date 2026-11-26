@@ -7,7 +7,7 @@ BASE="${TMPDIR:-/tmp}/gg_emulador"        # firebase-tools y SDK ya instalados p
 TRABAJO="${TMPDIR:-/tmp}/gg_emulador_vn"
 export VN_DB=9100 VN_AUTH=9199 VN_WEB=8961
 SDKDIR="__sdk_vn"
-limpiar(){ [ -n "${PID_EMU:-}" ] && kill "$PID_EMU" 2>/dev/null; [ -n "${PID_WEB:-}" ] && kill "$PID_WEB" 2>/dev/null; pkill -f "port=$VN_DB" 2>/dev/null; rm -rf "$RAIZ/$SDKDIR"; }
+limpiar(){ [ -n "${PID_EMU:-}" ] && kill "$PID_EMU" 2>/dev/null; [ -n "${PID_WEB:-}" ] && kill "$PID_WEB" 2>/dev/null; pkill -f "port $VN_DB" 2>/dev/null; pkill -f "gg_emulador_vn" 2>/dev/null; for p in $(pgrep -f "firebase emulators"); do [ "$(readlink /proc/$p/cwd)" = "$TRABAJO/emu" ] && kill $p; done; rm -rf "$RAIZ/$SDKDIR"; }
 trap limpiar EXIT
 [ -x "$BASE/fbtools/node_modules/.bin/firebase" ] || { echo "❌ falta $BASE (corre una vez test/emulador/run.sh)"; exit 1; }
 SDK="$BASE/sdk/node_modules/firebase"

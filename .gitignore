@@ -27,3 +27,4 @@ test/.ux-tmp/
 
 __pycache__/
 *.pyc
+__sdk_vn/
