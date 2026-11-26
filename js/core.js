@@ -12120,7 +12120,7 @@ async function pagoOnlineLlamar(ruta, cuerpo){
   if(data && data.code === 'no_dueno'){
     try{
       const lic = getLicense();
-      if(lic && lic.code){ linkBusinessToOwnerAccount(getTenantId(), lic.code, (DB.business && DB.business.name) || ''); await vaciarOwnerListOutbox(); }
+      if(lic && lic.code){ renombrarNegocioEnCuenta(getTenantId(), lic.code, (DB.business && DB.business.name) || ''); await vaciarOwnerListOutbox();   /* no pisa una lápida de otro aparato */ }
     }catch(e){}
     res = await hacer();
     data = await res.json().catch(() => ({}));
