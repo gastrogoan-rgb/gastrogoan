@@ -5684,6 +5684,8 @@ async function reglasComprobar(auto){
   try{
     await comprobarEspejoEnNubePropia();
     if(!reglasAntiguas && espejoEnNubePropia === true) resultado = 'ok';
+    // Con el pedido en grupo activado, el asistente no puede decir «Listo» si a la nube aún le faltan SUS reglas.
+    if(resultado === 'ok' && typeof grupoMesaConfig === 'function' && grupoMesaConfig().activo && reglasGrupo === false) resultado = 'viejas';
     else if(espejoEnNubePropia === false || reglasAntiguas) resultado = lastSyncErrorCode && !/PERMISSION/i.test(String(lastSyncErrorCode)) ? 'error' : 'viejas';
   }catch(e){ resultado = 'error'; }
   reglasVeredicto = resultado;
@@ -7833,6 +7835,9 @@ async function comprobarEspejoEnNubePropia(){
         await sondaPedidoMesa.remove();
       }
       reglasAntiguas = false; reglasFallo = null;
+      // Pedido en grupo (27/11): solo si el negocio lo activó. Va APARTE de `reglasAntiguas`: quien no usa el grupo no ve ningún aviso rojo, y
+      // a quien lo activa sin las reglas nuevas se le dice en su tarjeta del QR (js/grupo-mesa.js).
+      if(typeof comprobarReglasGrupo === 'function' && grupoMesaConfig().activo){ try{ await comprobarReglasGrupo(); }catch(eg){ console.warn('Sonda del grupo', eg && eg.message); } }
     }catch(e2){
       if(!ggEsPermisoDenegado(e2)){ console.warn('No se pudo comprobar las reglas del negocio (no es un permiso denegado)', e2 && e2.message); return true; }
       console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
@@ -8421,6 +8426,8 @@ function cuentaMesaQr(order){
 function cuentaPublicaMesa(tbl){
   const base = {mesa: String(tbl.name || '').slice(0, 60), updatedAt: new Date().toISOString()};
   const order = typeof getOpenOrderForTable === 'function' ? getOpenOrderForTable(tbl.id) : null;
+  // Pedido en grupo (js/grupo-mesa.js): {} si el negocio no lo ofrece, así que el nodo de siempre no cambia ni un byte.
+  Object.assign(base, typeof grupoPublicaMesa === 'function' ? grupoPublicaMesa(tbl, order) : {});
   if(!order || !(order.items || []).length) return Object.assign(base, {abierta: false, total: 0, pagado: 0, pendiente: 0});
   const agrupadas = {};
   order.items.forEach(l => {
@@ -8444,6 +8451,7 @@ function publicarMesasQr(espejoApp, publicId){
   if(cfg.activo){
     (DB.tables || []).forEach(tbl => {
       if(!tbl || typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) return;
+      if(typeof grupoMantenerMesa === 'function') grupoMantenerMesa(tbl, espejoApp, publicId);
       const data = cuentaPublicaMesa(tbl);
       const firma = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
       [tbl.qrToken].concat(Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(tok => {
@@ -8459,7 +8467,8 @@ function publicarMesasQr(espejoApp, publicId){
   Object.keys(mesaQrPublicado).forEach(token => {
     if(vivos.has(token)) return;
     delete mesaQrPublicado[token];
-    nodo(token).remove().catch(() => {});
+    // El grupo se borra DESPUÉS de quitar la mesa: las reglas solo dejan borrar `mesaGrupo/{token}` cuando `mesaQr/{token}/grupo` ya no es true.
+    nodo(token).remove().then(() => espejoApp.database().ref('gastrogoan/public/' + publicId + '/mesaGrupo/' + token).remove()).catch(() => {});
   });
 }
 function retirarTokenMesaPublicado(token){
@@ -8467,7 +8476,7 @@ function retirarTokenMesaPublicado(token){
   const publicId = getPublicId();
   if(!publicId) return;
   delete mesaQrPublicado[token];
-  getPublicMirrorApp().then(app => { if(app) app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token).remove().catch(() => {}); }).catch(() => {});
+  getPublicMirrorApp().then(app => { if(app) app.database().ref('gastrogoan/public/' + publicId + '/mesaQr/' + token).remove().then(() => app.database().ref('gastrogoan/public/' + publicId + '/mesaGrupo/' + token).remove()).catch(() => {}); }).catch(() => {});
 }
 function seccionDelPlato(platoId){
   for(const c of (DB.cartas || [])) for(const s of (c.secciones || [])){
@@ -8495,9 +8504,16 @@ function recibirPedidoMesaQr(req){
   avisarPreciosCorregidos(revisado.correcciones, revisado.sinVerificar, t('qrMesa.quien').replace('${mesa}', tbl.name || ''));
   // Lo que no está en la carta del negocio no se puede pedir desde la carta:
   // sin plato no hay precio de confianza, así que esa línea no entra.
-  const items = revisado.lineas.filter(x => x.plato && x.plato.disponible !== false).map(({qty, price, mods, plato}) => {
+  const gv = req._gv && req._gv.slot ? req._gv : null;   // hueco del grupo YA verificado (grupoVerificarSolicitud): nunca lo que diga el navegador
+  const items = revisado.lineas.filter(x => x.plato && x.plato.disponible !== false).map(({qty, price, mods, plato, l: original}) => {
     const name = mods.length ? `${plato.nombre} (${mods.map(m => m.nombre).join(', ')})` : plato.nombre;
     const linea = {platoId: plato.id, recipeId: plato.recipeId ?? null, name, price, qty, tanda: '', notas: '', modificadores: mods, origenQr: true};
+    if(gv){
+      linea.comensal = gv.slot; linea.comensalNombre = gv.n;
+      // Plato compartido: partes iguales entre los marcados (el que lo pide siempre entra). Solo huecos que existen.
+      const rep = Array.isArray(original && original.reparto) ? [...new Set(original.reparto.filter(sl => typeof sl === 'string' && GRUPO_SLOT_RE.test(sl) && Number(sl.slice(1)) < grupoMesaConfig().max).concat([gv.slot]))].slice(0, GRUPO_MAX) : [];
+      if(rep.length > 1) linea.reparto = rep;
+    }
     const sec = seccionDelPlato(plato.id);
     if(sec != null && typeof isSeccionBebida === 'function' && isSeccionBebida(sec)) linea.bebida = true;
     return linea;
@@ -8509,12 +8525,15 @@ function recibirPedidoMesaQr(req){
     notas: String(req.notas || '').slice(0, 300), clienteNombre: String(req.clienteNombre || '').slice(0, 60),
     preciosCorregidos: revisado.correcciones.length ? revisado.correcciones : undefined,
     estado: 'pendiente', createdAt: new Date().toISOString()};
+  if(gv){ p.grupo = true; p.comensal = gv.slot; p.comensalNombre = gv.n; }
   // COBRO AL PEDIR. El negocio quiere el dinero ANTES de cocina: el pedido no entra hasta que Stripe confirme el pago (se
   // PREGUNTA, igual que el resto de cobros: comprobarPagosTarjeta → aplicarPagoPedidoMesaQr). El importe que vale es el
   // recalculado aquí con la carta del negocio, no el que mandó el móvil.
   if(qrMesaTarjetaDisponible()){
     const ref = typeof req.clientRef === 'string' ? req.clientRef.slice(0, 120) : '';
     if(req.pagoAlPedir === true && ref.length >= 8){
+      // Lo cobrado al pedir es de quien lo pide: una línea compartida solo se paga al final (si no, ¿quién paga qué parte?).
+      p.items.forEach(l => { delete l.reparto; });
       p.estado = 'esperando-pago';
       p.pagoRef = ref;
       p.totalEsperado = redondeoQr(items.reduce((s, l) => s + (Number(l.price) || 0) * (Number(l.qty) || 0), 0));
@@ -8532,7 +8551,11 @@ function recibirPedidoMesaQr(req){
     }
   }
   DB.pedidosMesaQr.push(p);
-  if(!cfg.aceptaCamarero) aceptarPedidoMesaQr(p.id, true);
+  // El PRIMER pedido sin pagar de cada comensal nuevo lo mira siempre el camarero, aunque el negocio mande directo a cocina: es la forma de
+  // saber quién se ha sentado a la mesa y de que alguien ajeno que conozca el QR no cargue cuenta sin que nadie lo vea.
+  const primeroDeUnNuevo = gv && !(DB.pedidosMesaQr || []).some(x => x && x.id !== p.id && x.tableId === tbl.id && x.comensal === gv.slot && x.estado !== 'rechazado')
+    && !(((getOpenOrderForTable(tbl.id) || {}).items) || []).some(l => l.comensal === gv.slot);
+  if(!cfg.aceptaCamarero && !primeroDeUnNuevo) aceptarPedidoMesaQr(p.id, true);
   return p;
 }
 // Llega la confirmación del banco de un pedido cobrado al pedir. Devuelve true si la referencia era de un pedido de mesa.
@@ -8600,6 +8623,8 @@ function aceptarPedidoMesaQr(id, auto){
     if(typeof decrementMenuOptionStock === 'function') decrementMenuOptionStock(l, l.qty);
   });
   order.cerrada = false;
+  // Pedido en grupo: la mesa pasa a «modo grupo» (no se cierra sola al cubrir lo pedido) y el grupo recuerda que ya tuvo comanda.
+  if(p.grupo){ order.grupo = true; if(tbl.grupo) tbl.grupo.conPedido = true; }
   p.estado = 'aceptado';
   p.orderId = order.id;
   p.resueltoEn = ahora;
@@ -8637,7 +8662,13 @@ function recibirPagoMesaQr(req){
   const order = tbl ? getOpenOrderForTable(tbl.id) : null;
   if(!order) return;
   if(!Array.isArray(order.pagosMesaQrPendientes)) order.pagosMesaQrPendientes = [];
-  if(!order.pagosMesaQrPendientes.some(x => x && x.ref === ref)) order.pagosMesaQrPendientes.push({ref, importe, desde: new Date().toISOString()});
+  if(!order.pagosMesaQrPendientes.some(x => x && x.ref === ref)){
+    const entrada = {ref, importe, desde: new Date().toISOString()};
+    // Pago de «mi parte»: el hueco lo da la verificación de la app, no el navegador. Un hueco que no cuadra deja el pago SIN aplicar (va a «Pagos sin pedido»).
+    if(req._gv && req._gv.slot){ entrada.slot = req._gv.slot; entrada.propina = redondeoQr(Math.max(0, Math.min(importe, Number(req.propina) || 0))); order.grupo = true; }
+    else if(req.slot) entrada.slotInvalido = true;
+    order.pagosMesaQrPendientes.push(entrada);
+  }
 }
 function aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre){
   const order = (DB.tpvOrders || []).find(o => o && Array.isArray(o.pagosMesaQrPendientes) && o.pagosMesaQrPendientes.some(p => p && p.ref === req.orderRef));
@@ -8655,14 +8686,30 @@ function aplicarPagoMesaQr(req, importeConfirmado, registrarDescuadre){
   };
   // La mesa se cobró en caja mientras este pago iba de camino: hay que devolverlo.
   if(order.status === 'pagada'){ devolver(importeConfirmado); return true; }
+  // Un hueco que dijo ser de otro: no se aplica a nadie, el dinero queda a la vista para devolverlo.
+  if(anunciado && anunciado.slotInvalido){ devolver(importeConfirmado); return true; }
   const {pendiente} = cuentaMesaQr(order);
-  const aplica = redondeoQr(Math.min(importeConfirmado, pendiente));
-  if(aplica > 0) order.pagosMesaQr.push({ref: req.orderRef, importe: aplica, fecha: req.createdAt || new Date().toISOString()});
-  devolver(importeConfirmado - aplica);
+  // Pago de «mi parte» (grupo): como mucho lo que ese comensal debe, y su propina aparte. El navegador no decide cuánto se aplica.
+  let tope = pendiente, propina = 0, slot = null;
+  if(anunciado && anunciado.slot && typeof grupoCuenta === 'function'){
+    slot = anunciado.slot;
+    const cu = grupoCuenta(order).slots[slot];
+    tope = Math.min(pendiente, cu ? cu.debe : 0);
+    propina = redondeoQr(Math.max(0, Math.min(Number(anunciado.propina) || 0, importeConfirmado)));
+    order.grupo = true;
+  }
+  const base = redondeoQr(importeConfirmado - propina);
+  const aplica = redondeoQr(Math.min(base, tope));
+  if(aplica > 0){
+    order.pagosMesaQr.push(Object.assign({ref: req.orderRef, importe: aplica, fecha: req.createdAt || new Date().toISOString()}, slot ? {slot} : {}));
+    if(propina > 0) order.propinaPagadaOnline = redondeoQr((order.propinaPagadaOnline || 0) + propina);
+    devolver(base - aplica);
+  }else devolver(importeConfirmado);
   if(typeof logAudit === 'function') logAudit('edit', t('qrMesa.audit.pago').replace('${importe}', fmtMoney(aplica)).replace('${mesa}', (DB.tables.find(x => x.id === order.tableId) || {}).name || ''));
   // ¿Pagada entera? Se cobra sola: venta normal, método «Online», ticket
   // numerado. Pagar de menos no llega aquí: queda abierta con lo que falta.
-  if(cuentaMesaQr(order).pendiente <= 0.01) cerrarMesaPagadaQr(order);
+  // En modo grupo NO: Ana paga lo suyo y Bruno aún no ha pedido. La cierra el camarero (grupoCerrarMesa).
+  if(!order.grupo && cuentaMesaQr(order).pendiente <= 0.01) cerrarMesaPagadaQr(order);
   return true;
 }
 function cerrarMesaPagadaQr(order){
@@ -8971,11 +9018,14 @@ function initPublicRequestsListener(){
         }
       }else if(req.type === 'pedido_mesa'){
         // Carta por QR con token de mesa (ver recibirPedidoMesaQr).
+        // Pedido en grupo: antes de nada se comprueba que el `uid` es el dueño del hueco que dice ser (grupoVerificarSolicitud, js/grupo-mesa.js).
+        if(req.slot && typeof grupoVerificarSolicitud === 'function') await grupoVerificarSolicitud(req); else delete req._gv;
         if(recibirPedidoMesaQr(req)) notifyNewRequest = true;
       }else if(req.type === 'pedido_aviso'){
         // Avisos del cliente sobre SU pedido (llegada, cancelar, incidencia). Se busca por el token, nunca por id.
         if(typeof entAvisoDelCliente === 'function' && entAvisoDelCliente(req)) notifyNewRequest = true;
       }else if(req.type === 'pago_mesa'){
+        if(req.slot && typeof grupoVerificarSolicitud === 'function') await grupoVerificarSolicitud(req); else delete req._gv;
         recibirPagoMesaQr(req);
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
         // ⚠️ QR ANTIGUO (?mesa=<id de la mesa>). Se mantiene para no dejar
@@ -11109,6 +11159,7 @@ function probarNubeDesdeElModal(){
   // relanza también la sonda: espejoEnNubePropia vuelve a null para que se
   // repita de cero, y el aviso se actualiza con el resultado real.
   espejoEnNubePropia = null;
+  if(typeof reglasGrupo !== 'undefined') reglasGrupo = null;
   esperandoVeredictoDelEspejo = false;
   // Se le contesta pase lo que pase: un botón que no responde es peor que no
   // tener botón. 8 s es de sobra para conectar, y si no, hay veredicto igual.
@@ -11533,6 +11584,7 @@ function renderTableQrCard(){
       <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('qrMesa.mn.desc')}</p>
       ${ajustes}
+      ${typeof grupoMiNegocioHtml === 'function' ? grupoMiNegocioHtml() : ''}
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
         <button class="btn btn-primary" style="min-height:44px" onclick="openQrMesasModal()"><i class="ti ti-qrcode"></i> ${escapeHtml(gl({es:'Ver el QR de cada mesa', ca:'Veure el QR de cada taula', en:'See each table\'s QR'}))} (${nMesas})</button>
         <button class="btn" style="min-height:44px" onclick="imprimirQrMesas()"><i class="ti ti-printer"></i> ${t('qrMesa.mn.imprimirTodos')}</button>
@@ -11580,7 +11632,10 @@ function saveQrMesaConfig(){
     activo = false;   // intentó activarlo sin elegir cómo cobra
     aviso = t('qrMesa.msg.eligeCobro');
   }
-  DB.business.qrMesa = {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero, cobroLocal: local, cobroTarjeta: tarjeta};
+  // El pedido en grupo (grupo, grupoMax, grupoMinPago) vive en el mismo objeto: se conserva, no se pisa.
+  const previo = (DB.business && DB.business.qrMesa) || {};
+  DB.business.qrMesa = Object.assign({}, previo.grupo !== undefined ? {grupo: previo.grupo} : {}, previo.grupoMax !== undefined ? {grupoMax: previo.grupoMax} : {}, previo.grupoMinPago !== undefined ? {grupoMinPago: previo.grupoMinPago} : {},
+    {activo, aceptaCamarero: sel ? sel.value !== 'cocina' : antes.aceptaCamarero, cobroLocal: local, cobroTarjeta: tarjeta});
   // Al activarlo, cada mesa recibe su token (el QR impreso no cambia
   // mientras no se rote a mano).
   if(activo) (DB.tables || []).forEach(asegurarTokenMesa);
@@ -11620,6 +11675,13 @@ async function rotarTokenMesa(tableId){
   const tbl = DB.tables.find(x => x.id === tableId);
   if(!tbl) return;
   if(!(await confirmModal(t('qrMesa.mn.rotarConfirm').replace('${mesa}', tbl.name || ''), {confirmLabel: t('qrMesa.mn.rotar')}))) return;
+  // Con un grupo en marcha, cambiar el código echa a todos y borra sus borradores. Los pagos ya anunciados se siguen aplicando (van por su referencia).
+  const ordenGrupo = typeof getOpenOrderForTable === 'function' ? getOpenOrderForTable(tbl.id) : null;
+  if(tbl.grupo || (ordenGrupo && ordenGrupo.grupo)){
+    const hayPagos = ordenGrupo && ((ordenGrupo.pagosMesaQrPendientes || []).length > 0);
+    if(!(await confirmModal(gl({es:'Esta mesa tiene un grupo pidiendo' + (hayPagos ? ' y pagos en curso' : '') + '. Cambiar el código los saca a todos y borra lo que tienen a medias. Lo ya pedido y pagado se mantiene. ¿Cambiarlo igualmente?', ca:'Aquesta taula té un grup demanant' + (hayPagos ? ' i pagaments en curs' : '') + '. Canviar el codi els treu a tots i esborra el que tenen a mitges. El que ja s\'ha demanat i pagat es manté. El canvies igualment?', en:'This table has a group ordering' + (hayPagos ? ' and payments in progress' : '') + '. Changing the code removes everyone and deletes what they have half-done. What was already ordered and paid stays. Change it anyway?'}), {confirmLabel: t('qrMesa.mn.rotar')}))) return;
+    delete tbl.grupo;
+  }
   const viejo = tbl.qrToken;
   tbl.qrToken = nuevoTokenMesaQr();
   tbl.qrRotadoEn = Date.now();

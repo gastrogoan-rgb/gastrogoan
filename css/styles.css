@@ -7949,3 +7949,20 @@ textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:
 @media (max-width:359px){
   #app-header .app-user-chip{max-width:68px}
 }
+
+/* ═══ PEDIDO EN GRUPO (27/11) · panel del camarero en la comanda y estado en Mi Negocio ═══
+   Una fila por comensal: el nombre nunca se parte a media palabra y el estado se lee con TEXTO (no solo con color). */
+.gr-panel{border:1px solid var(--border);background:#fff;border-radius:var(--r-m,4px);padding:10px 12px;margin:0 0 12px}
+.gr-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.gr-fila{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)}
+.gr-nom{font-weight:700;overflow-wrap:break-word;min-width:0}
+.gr-cifras{grid-column:1;grid-row:2;font-size:12px;color:var(--muted);overflow-wrap:break-word}
+.gr-est{grid-column:2;grid-row:1;font-size:12px;font-weight:600;color:var(--muted);text-align:right}
+.gr-est.is-ok{color:var(--olive)}
+.gr-est.is-debe{color:var(--red)}
+.gr-exp{grid-column:2;grid-row:2;justify-self:end}
+.gr-nota{font-size:12px;color:var(--muted);margin:8px 0 0;overflow-wrap:break-word}
+.gr-cerrar{margin-top:8px;min-height:44px;width:100%}
+.gr-estado{margin:6px 0}
+.gr-estado.is-aviso{color:var(--red);font-weight:600}
+.gr-estado.is-ok{color:var(--olive);font-weight:600}
