@@ -2877,7 +2877,7 @@ Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del inf
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
 Modalidad de pago: {{formaPago}}.
-Transferencia bancaria a la cuenta {{coachIban}} — Concepto: Programa 360 GastroGoan.
+Pago mediante el enlace de pago seguro de Stripe que GastroGoan facilita al cliente — Concepto: Programa 360 GastroGoan.
 
 4. Responsabilidades
 GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
@@ -2902,7 +2902,7 @@ En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si
 Ley española.
 
 11. Servicio de mantenimiento (opcional)
-Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Incluye cada mes cuatro contactos (dos por WhatsApp y dos por videollamada) con las entregas y tareas que el coach planifique para ese mes. Se contrata por meses naturales, se renueva automáticamente cada mes y se paga por adelantado. El cliente puede darse de baja en cualquier momento comunicándolo por escrito con al menos 15 días de antelación al inicio del mes siguiente; el mes en curso no se devuelve. Las cláusulas 4 a 10 y el acuerdo de confidencialidad se aplican también a este servicio.
+Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Ese servicio se rige por su propio «Acuerdo de servicio de mantenimiento», que el cliente lee y firma en el momento de activarlo: qué incluye, su duración, el pago y la baja se recogen en ese acuerdo. Hasta que se firme, este acuerdo no obliga a contratarlo. El acuerdo de confidencialidad (RGPD) se aplica también a ese servicio.
 
 CONTRATO DE CONFIDENCIALIDAD (RGPD)
 
@@ -2926,6 +2926,61 @@ El incumplimiento da derecho a la parte reveladora a reclamar daños y perjuicio
 
 7. Legislación y jurisdicción
 Ley española. Juzgados y Tribunales de Barcelona.`;
+/* PLAN360_MANT_CONTRACT_TEXT: contrato propio del servicio de MANTENIMIENTO (75 € + IVA al mes), aparte del acuerdo del Plan 360.
+   BORRADOR PENDIENTE DE REVISIÓN POR UN ABOGADO (como el del 360). Mismos marcadores que PLAN360_CONTRACT_TEXT; se rellena con
+   plan360FillTemplate y se firma al ACEPTAR el mantenimiento (DB.business.plan360ContratoMant = {signedAt, signedText, …}).
+   Una COPIA idéntica vive en admin-panel/plan360.html (test/plan360-contrato-mant.mjs lo exige). Sin datos personales reales:
+   los del coach salen de «Mis datos». */
+const PLAN360_MANT_CONTRACT_TEXT =
+`ACUERDO DE SERVICIO DE MANTENIMIENTO
+
+Partes: de una parte, {{coachNombre}} (GastroGoan), con DNI {{coachDni}} y domicilio en {{coachDomicilio}}. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+
+Este acuerdo es independiente del Acuerdo de prestación de servicios del programa Plan 360° y se firma al activar el mantenimiento, una vez terminado el programa.
+
+1. Objeto
+GastroGoan se compromete a prestar al cliente un servicio de seguimiento mensual para mantener y consolidar las mejoras conseguidas con el Plan 360° (en adelante, el servicio de mantenimiento).
+
+2. Qué incluye cada mes
+— Cuatro contactos al mes, uno por semana y en lunes: el primero y el tercero por WhatsApp, y el segundo y el cuarto por videollamada.
+— Las entregas que GastroGoan planifique para ese mes (documentos, análisis, plantillas y propuestas).
+— Las tareas que GastroGoan proponga al negocio, que el cliente marca y contesta desde su app.
+— Un informe del mes con los números del negocio calculados en la app, comparados con el mes anterior, y el cierre del mes con el objetivo del siguiente.
+— Cualquier servicio que no figure en esta lista, como el apoyo presencial, se pacta aparte.
+
+3. Obligaciones de GastroGoan
+Aportar su experiencia y herramientas, mantener comunicación fluida, preparar cada mes con antelación y entregar lo planificado.
+
+4. Obligaciones del cliente
+Mantener al día los datos del negocio en la app, marcar y contestar las tareas, atender los contactos acordados, facilitar la información que se le pida y aplicar las medidas que se acuerden.
+
+5. Duración y renovación
+El servicio se contrata por meses naturales, desde el mes en que se activa. Se renueva automáticamente cada mes mientras ninguna de las partes lo dé de baja conforme a la cláusula 8.
+
+6. Precio y forma de pago
+Precio del servicio: {{precioMantenimiento}}.
+El pago se hace por adelantado, al inicio de cada mes, mediante el enlace de pago seguro de Stripe que GastroGoan facilita al cliente — Concepto: Mantenimiento GastroGoan. Cada cobro queda registrado por GastroGoan.
+
+7. Revisión del precio
+El precio solo puede cambiar con un aviso previo por escrito de GastroGoan, antes del inicio del mes al que se aplique. Si el cliente no lo acepta, puede darse de baja conforme a la cláusula 8.
+
+8. Baja
+El cliente puede darse de baja en cualquier momento, por escrito (también desde su app), con al menos 15 días de antelación al inicio del mes siguiente. El mes en curso no se devuelve. GastroGoan puede dar de baja el servicio con el mismo preaviso.
+
+9. Garantías y limitación de responsabilidad
+GastroGoan garantiza la prestación profesional del servicio, pero no garantiza resultados concretos. La responsabilidad total no excederá el importe efectivamente abonado por el servicio.
+
+10. Propiedad intelectual
+Los entregables, metodologías, plantillas y materiales desarrollados permanecen como propiedad de GastroGoan. El cliente recibe una copia exclusiva para uso interno y no comercial.
+
+11. Confidencialidad y protección de datos
+Se aplica a este servicio el contrato de confidencialidad (RGPD) firmado junto con el Acuerdo de prestación de servicios del Plan 360°, que sigue vigente mientras dure la relación.
+
+12. Resolución de conflictos
+Las partes intentarán solucionar amistosamente cualquier discrepancia; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
+
+13. Legislación aplicable
+Ley española.`;
 function plan360FillTemplate(text, c){
   return text
     .replace(/\{\{cliente\}\}/g, (c && c.clienteNombre) || '________')
@@ -2940,11 +2995,15 @@ function plan360FillTemplate(text, c){
       return co[k.toLowerCase()] || '________';
     });
 }
+// Semilla del programa de un negocio que aún no tiene ninguno (ver
+// plan360RepararVaciosCoach). Solo día, fase y título: las tareas NO van aquí.
+// Antes llevaba un campo task «(Contenido pendiente de definir)» que nadie
+// leía, y un texto de relleno así no debe quedar en ningún dato del Plan 360.
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
   ...Array.from({length: 26}, (_, i) => ({
-    day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3), task: '(Contenido pendiente de definir)',
+    day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3),
   })),
 ];
 /* Checklist de Evaluación Inicial — la mitad "de incógnito" (bloques 0-13
@@ -4615,9 +4674,9 @@ function plan360CierreHtml(){
         ${m.respuesta ? `
           <div class="card" style="background:${m.respuesta==='acepta'?'var(--green-l)':'var(--amber-l)'};border-color:${m.respuesta==='acepta'?'var(--green)':'var(--amber)'}">
             ${m.respuesta==='acepta'
-              ? `<i class="ti ti-check"></i> El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}.`
+              ? `<i class="ti ti-check"></i> El negocio ha activado el plan de mantenimiento — firmado por <strong>${esc(m.firmaNombre)}</strong> el ${esc(new Date(m.firmaFecha).toLocaleDateString('es-ES'))}. <button class="btn btn-sm" onclick="renderContractMantPage()">Acuerdo de mantenimiento: ${esc(mantContratoEstado())}</button>`
               : `El negocio se lo piensa. Volver a hablar el: <strong>${esc(m.volverAHablarFecha || '—')}</strong>.`}
-          </div>` : `<p class="muted" style="font-size:12px;margin:0">Todavía no ha respondido — se lo enseñas en su app, en su propio Cierre.</p>`}
+          </div>` : `<p class="muted" style="font-size:12px;margin:0">Todavía no ha respondido — se lo enseñas en su app, en su propio Cierre. Al aceptar, firma el <a href="#" onclick="renderContractMantPage();return false">acuerdo de mantenimiento</a> (${esc(mantContratoEstado())}).</p>`}
       </div>
     </div>
   `;
@@ -5516,6 +5575,7 @@ function mantCuotaHtml(clave){
       <label style="display:flex;align-items:center;gap:6px">Contratado hasta <input type="month" value="${esc(sv.mantHasta || '')}" onchange="mantGuardarHasta(this.value)" style="width:auto"></label>
     </div>
     ${cobro ? `<div class="muted" style="font-size:12px;margin-top:4px">Cobrado el ${esc(new Date(cobro.ts).toLocaleDateString('es-ES'))}: ${cobro.importe} € + IVA.</div>` : ''}
+    <div style="margin-top:8px;font-size:13px"><i class="ti ${mantContratoFirmado() ? 'ti-circle-check' : 'ti-signature'}" style="${mantContratoFirmado() ? 'color:var(--green)' : 'color:var(--red)'}"></i> Acuerdo de mantenimiento: ${esc(mantContratoEstado())} <button class="btn btn-sm" onclick="renderContractMantPage()">Abrir</button></div>
     <div style="margin-top:8px">${sv.baja ? `<span style="color:var(--red);font-size:13px">De baja desde el ${esc(new Date(sv.baja.ts).toLocaleDateString('es-ES'))}${sv.baja.motivo ? ' — ' + esc(sv.baja.motivo) : ''}</span> <button class="btn btn-sm" onclick="mantDeshacerBaja()">Reactivar</button>` : `<button class="btn btn-sm" onclick="mantDarDeBaja()"><i class="ti ti-user-off"></i> Dar de baja del mantenimiento</button>`}</div>
   </div>`;
 }
@@ -5647,7 +5707,7 @@ async function mantLeerDeUnNegocio(e){
     // Solo las piezas del Plan 360 que hacen falta para la agenda y la
     // lista (nunca el negocio entero: ventas, carta… no se descargan).
     const base = 'gastrogoan/tenants/' + e.tenantId + '/db/business/';
-    const claves = ['plan360Mant', 'plan360Kpis', 'plan360StartDate', 'plan360Cierre', 'plan360Servicio', 'plan360Program'];
+    const claves = ['plan360Mant', 'plan360Kpis', 'plan360StartDate', 'plan360Cierre', 'plan360Servicio', 'plan360Program', 'plan360ContratoMant'];
     const snaps = await Promise.all(claves.map(k => db.ref(base + k).once('value')));
     const b = {}; claves.forEach((k, i) => { b[k] = snaps[i].val(); });
     return {mant: b.plan360Mant, kpis: b.plan360Kpis, biz: b};
@@ -5743,6 +5803,7 @@ function p360EventosDia(f, fechaStr){
     const sv = b.plan360Servicio || {};
     // El día 5 en adelante, si el mes no está cobrado.
     if(p360CuotaSinCobrar(f, fechaStr)) out.push({i: 'ti-receipt', t: 'Cuota de ' + kpiNombreMes(claveHoy).toLowerCase() + ' sin cobrar', alerta: true});
+    if(f.fase === 'mant' && !mantContratoFirmado(b)) out.push({i: 'ti-signature', t: 'Mantenimiento activo sin el acuerdo de mantenimiento firmado', alerta: true});
     if(f.fase === 'mant' && sv.mantHasta && sv.mantHasta <= claveHoy) out.push({i: 'ti-refresh', t: sv.mantHasta < claveHoy ? 'Contrato vencido: hablar de la renovación' : 'Renueva este mes', alerta: true});
     const mc = (b.plan360Cierre && b.plan360Cierre.mantenimiento) || {};
     const dia = p360DiaDelPrograma(b);
@@ -5769,7 +5830,8 @@ async function renderMiSemana(){
       const biz = lectura.biz || {};
       const fase = p360Fase(biz);
       const r = Object.assign({}, c, {biz, fase, hoyStr, kpis: lectura.kpis, dia: p360DiaDelPrograma(biz), prog: p360ResumenPrograma(biz, hoyStr)});
-      if(lectura.mant) Object.assign(r, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)));
+      // Un cliente que acaba de aceptar el mantenimiento aún no tiene meses preparados: sin esto la tarjeta de la agenda reventaba (f.tuyas undefined).
+      if(lectura.mant || fase === 'mant') Object.assign(r, mantResumenNegocio(lectura.mant, hoyStr, Number(localStorage.getItem(mantVistoKey(c.tenantId)) || 0)));
       return r;
     } catch(err){
       console.warn('Mi agenda: no se pudo leer', c.name, err);
@@ -6102,7 +6164,7 @@ function p360AbrirMenu(btn, ev){
   const m = document.createElement('div'); m._btn = btn;
   m.id = 'p360-menu'; m.setAttribute('role', 'menu');
   m.innerHTML = acc.map((a, i) => `<button type="button" role="menuitem" class="${a.peligro ? 'peligro' : ''}" data-i="${i}"><i class="ti ${esc(a.icono || 'ti-point')}"></i> ${esc(a.texto)}</button>`).join('');
-  m.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const a = acc[Number(b.dataset.i)]; p360CerrarMenu(); try{ new Function(a.fn)(); }catch(err){ console.error(err); } });
+  m.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const a = acc[Number(b.dataset.i)]; p360CerrarMenu(); try{ /* sin new Function: la CSP del panel no permite eval; un onclick se compila como cualquier controlador en línea */ const x = document.createElement('button'); x.setAttribute('onclick', a.fn); x.style.display = 'none'; document.body.appendChild(x); try{ x.click(); } finally { x.remove(); } }catch(err){ console.error(err); } });
   document.body.appendChild(m);
   const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
   m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
@@ -6264,7 +6326,7 @@ const COACH_CAMPOS = [
   {k: 'nombre', lbl: 'Nombre completo', obl: true, ac: 'name'},
   {k: 'dni', lbl: 'DNI / NIF', obl: true, ac: 'off'},
   {k: 'domicilio', lbl: 'Domicilio', obl: true, ac: 'street-address'},
-  {k: 'iban', lbl: 'IBAN (donde te transfieren)', obl: true, ac: 'off'},
+  {k: 'iban', lbl: 'IBAN (opcional: el cobro va por Stripe)', obl: false, ac: 'off'},
   {k: 'email', lbl: 'Email', obl: false, ac: 'email', tipo: 'email'},
   {k: 'telefono', lbl: 'Teléfono', obl: false, ac: 'tel', tipo: 'tel'},
 ];
@@ -6345,7 +6407,7 @@ function coachDatosSincronizar(){
   });
   return true;
 }
-// El contrato (y la firma en persona) lleva tu nombre, DNI, domicilio e IBAN: sin ellos no sale. Devuelve true si BLOQUEA.
+// El contrato (y la firma en persona) lleva tu nombre, DNI y domicilio (el IBAN ya no: se cobra por Stripe): sin ellos no sale. Devuelve true si BLOQUEA.
 function coachBloqueaContrato(){
   const f = coachDatosFaltan(coachDatos, true);
   if(!f.length) return false;
@@ -6990,6 +7052,16 @@ function renderIntakePage(){
         <i class="ti ti-chevron-right"></i>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderContractMantPage()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ${mantContratoFirmado() ? 'ti-circle-check' : 'ti-file-text'}" style="font-size:20px;${mantContratoFirmado() ? 'color:var(--green)' : ''}"></i>
+        <div style="flex:1">
+          <strong>Acuerdo de mantenimiento</strong>
+          <div class="p360-day-tag">${esc(mantContratoEstado())}</div>
+        </div>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+    </div>
     <div class="card" style="margin-top:14px;cursor:pointer" onclick="renderQuestionnairePage()">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="ti ti-clipboard-list" style="font-size:20px"></i>
@@ -7087,8 +7159,97 @@ function plan360SignContract(){
   c.signedName = name;
   c.signedDNI = dni;
   c.signedAt = Date.now();
+  c.signedText = plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);   // el texto EXACTO aceptado: sin él, un cambio del modelo reescribiría un contrato ya firmado
   saveRemoteBiz();
   renderContractPage();
+}
+
+/* ---- Acuerdo de mantenimiento (contrato propio, aparte del del Plan 360) ----
+   remoteBiz.plan360ContratoMant = {clienteNombre, clienteNIF, clienteDireccion, precioMantenimiento, enviadoEn, signedName, signedDNI,
+   signedAt, signedText}. Lo firma el negocio desde su app al aceptar el mantenimiento; aquí lo preparas (Guardar y enviar) y, si lo
+   recoges en persona, lo firmas tú por él. Misma regla que el 360: sin tus datos de coach no sale (coachBloqueaContrato). */
+function mantContratoFirmado(b){ b = b || remoteBiz || {}; return !!(b.plan360ContratoMant && b.plan360ContratoMant.signedAt); }
+function mantContratoEstado(b){
+  b = b || remoteBiz || {};
+  const cm = b.plan360ContratoMant || {};
+  if(cm.signedAt) return 'Firmado por ' + (cm.signedName || '') + ' el ' + new Date(cm.signedAt).toLocaleDateString('es-ES');
+  if(cm.enviadoEn) return 'Enviado el ' + new Date(cm.enviadoEn).toLocaleDateString('es-ES') + ' · pendiente de firma';
+  return 'Sin enviar';
+}
+function mantContratoDatos(){
+  const base = remoteBiz.plan360Contract || {}, cm = remoteBiz.plan360ContratoMant || {};
+  const m = (remoteBiz.plan360Cierre && remoteBiz.plan360Cierre.mantenimiento) || {};
+  const oferta = m.precio && m.precio !== '99€/mes' && m.precio !== '75€/mes' ? m.precio : '75 € + IVA al mes';
+  return {clienteNombre: cm.clienteNombre || base.clienteNombre || '', clienteNIF: cm.clienteNIF || base.clienteNIF || '', clienteDireccion: cm.clienteDireccion || base.clienteDireccion || '', precioMantenimiento: cm.precioMantenimiento || oferta};
+}
+function renderContractMantPage(){
+  document.getElementById('client-grid').innerHTML = `
+    <button class="btn btn-sm" onclick="renderIntakePage()">← Documentación inicial</button>
+    <h2 style="margin:10px 0 4px">Acuerdo de mantenimiento</h2>
+    ${coachDatosBannerHtml()}
+    ${mantContratoSeccionHtml()}
+  `;
+}
+function mantContratoSeccionHtml(){
+  const cm = remoteBiz.plan360ContratoMant || {};
+  const d = mantContratoDatos();
+  const texto = (cm.signedAt && cm.signedText) || plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d);
+  const caja = id => `<div ${id ? `id="${id}" ` : ''}style="white-space:pre-wrap;font-size:13px;line-height:1.6;border:1px solid var(--border);padding:12px;margin-bottom:14px">${esc(texto)}</div>`;
+  if(cm.signedAt){
+    return `<div class="card" style="margin-top:14px">${caja()}
+      <div class="card" style="background:var(--green-l);border-color:var(--green)">
+        <i class="ti ti-check"></i> Firmado por <strong>${esc(cm.signedName)}</strong> (${esc(cm.signedDNI)}) — ${esc(new Date(cm.signedAt).toLocaleString('es-ES'))}
+      </div>
+    </div>`;
+  }
+  return `<div class="card" style="margin-top:14px">
+    <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(mantContratoEstado())}. Es el contrato del servicio de mantenimiento, aparte del acuerdo del Plan 360: el negocio lo lee y lo firma en su app al activar el mantenimiento (su firma activa el servicio).</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:200px"><label>Nombre del cliente</label><input id="cm-nombre" value="${esc(d.clienteNombre)}"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>NIF</label><input id="cm-nif" value="${esc(d.clienteNIF)}"></div>
+    </div>
+    <div class="field"><label>Dirección</label><input id="cm-direccion" value="${esc(d.clienteDireccion)}"></div>
+    <div class="field"><label>Precio del mantenimiento</label><input id="cm-precio" value="${esc(d.precioMantenimiento)}"></div>
+    <button class="btn btn-sm" onclick="mantContratoGuardar(true)" style="margin-bottom:10px">Guardar y enviar al negocio</button>
+    ${caja('cm-texto')}
+    <div style="font-weight:600;margin-bottom:6px">Firma aquí (si la recoges tú en persona; activa el mantenimiento)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:180px"><label>Nombre completo</label><input id="cm-sign-name"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>DNI</label><input id="cm-sign-dni"></div>
+    </div>
+    <button class="btn btn-primary" onclick="mantContratoFirmar()">Firmar y activar el mantenimiento</button>
+    <p class="muted" style="margin-top:8px">Firma electrónica simple: queda registrada con el texto exacto aceptado, el nombre, el DNI y la fecha. Lo normal es que la firme el propio negocio desde su app.</p>
+  </div>`;
+}
+// Guarda los datos del cliente en plan360ContratoMant. enviar = true además lo deja «enviado» (el negocio lo ve ya con sus datos).
+function mantContratoGuardar(enviar){
+  if(coachBloqueaContrato()) return false;
+  coachDatosSincronizar();
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  const cm = remoteBiz.plan360ContratoMant = Object.assign({}, remoteBiz.plan360ContratoMant || {});
+  if(document.getElementById('cm-nombre')){
+    cm.clienteNombre = v('cm-nombre'); cm.clienteNIF = v('cm-nif'); cm.clienteDireccion = v('cm-direccion'); cm.precioMantenimiento = v('cm-precio');
+  }
+  if(enviar) cm.enviadoEn = Date.now();
+  saveRemoteBiz();
+  if(enviar) renderContractMantPage();
+  return true;
+}
+function mantContratoFirmar(){
+  const name = (document.getElementById('cm-sign-name').value || '').trim();
+  const dni = (document.getElementById('cm-sign-dni').value || '').trim();
+  if(!name || !dni){ alert('Escribe el nombre completo y el DNI para firmar.'); return; }
+  if(!mantContratoGuardar(false)) return;
+  const cm = remoteBiz.plan360ContratoMant;
+  cm.signedName = name; cm.signedDNI = dni; cm.signedAt = Date.now();
+  cm.signedText = plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, mantContratoDatos());
+  // Firmar el acuerdo ES aceptar el mantenimiento (igual que en la app del negocio).
+  const cierre = remoteBiz.plan360Cierre = remoteBiz.plan360Cierre || plan360FreshCierre();
+  cierre.mantenimiento = Object.assign({precio: '', volverAHablarFecha: '', firmaNombre: '', firmaFecha: null}, cierre.mantenimiento || {}, {respuesta: 'acepta', firmaNombre: name, firmaFecha: Date.now(), respondidoEn: Date.now()});
+  const sv = remoteBiz.plan360Servicio = Object.assign({}, remoteBiz.plan360Servicio || {}, {fase: 'mant', cambiado: Date.now()});
+  if(!sv.mantDesde) sv.mantDesde = mantMesClave(new Date());
+  saveRemoteBiz();
+  renderContractMantPage();
 }
 function saveIntake(){
   const sections = (remoteBiz.plan360Intake || {}).sections || [];

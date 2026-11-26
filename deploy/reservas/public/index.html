@@ -11,6 +11,10 @@
 @font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/schibsted-grotesk-500-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/schibsted-grotesk-600-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-mono-400-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
   :root{
     --ink:#1C1A17; --brand2:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
+    /* Oliva FIJO de la marca GastroGoan. --olive lo reescribe aplicarColoresMarca
+       con el color del negocio, y lo «elegido» no puede depender de eso (con una
+       marca roja se confundiría con «no disponible»). Lo elegido es oliva, no negro. */
+    --oliva-gg:#4A5D4E;
     --paper:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
     /* Mismo cambio que en la app: #8A857C se quedaba en 3,67:1 sobre
        blanco, por debajo del 4,5:1 legible, y aquí lo llevan las etiquetas
@@ -102,6 +106,8 @@
   .tab-btn:active{transform:translateY(1px);}
   .tab-btn.active{border-color:var(--ink);background:var(--ink);color:#fff;}
   .field{margin-bottom:14px;}
+  /* Campo trampa anti-bots (ver wzFiltroBot): fuera de pantalla, NO display:none (algunos bots saltan los ocultos), y fuera del teclado y de los lectores de pantalla. */
+  .gg-miel{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
   .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;margin-bottom:6px;color:var(--muted);}
   .field input, .field select, .field textarea{
     width:100%;padding:12px 14px;min-height:48px;border:1px solid var(--border);border-radius:0;
@@ -1487,7 +1493,7 @@ const I18N = {
 /* ============ Textos nuevos de los pasos (6/11) ============ */
 const I18N_WZ = {
   es:{
-    'wz.progress':'Pasos','wz.s.when':'Cuándo','wz.s.data':'Tus datos','wz.s.confirm':'Confirmar','wz.s.pick':'Elige',
+    'wz.err.bot':'No hemos podido enviar tu solicitud. Recarga la página e inténtalo de nuevo.','wz.progress':'Pasos','wz.s.when':'Cuándo','wz.s.data':'Tus datos','wz.s.confirm':'Confirmar','wz.s.pick':'Elige',
     'wz.next':'Continuar','wz.back':'Atrás','wz.edit':'Cambiar','wz.less':'Una persona menos','wz.more':'Una persona más','wz.guests':'personas',
     'wz.r.when.title':'¿Cuándo venís?','wz.r.when.sub':'Elige cuántos sois, el día y la hora. Solo ves las horas con sitio.',
     'wz.r.data.title':'¿A nombre de quién?','wz.r.data.sub':'Solo lo que el restaurante necesita para tenerte la mesa lista.',
@@ -1515,7 +1521,7 @@ const I18N_WZ = {
     'email.pedido.hint':'Opcional. El restaurante puede escribirte si hay algún problema con tu pedido.'
   },
   en:{
-    'wz.progress':'Steps','wz.s.when':'When','wz.s.data':'Your details','wz.s.confirm':'Confirm','wz.s.pick':'Choose',
+    'wz.err.bot':'We could not send your request. Reload the page and try again.','wz.progress':'Steps','wz.s.when':'When','wz.s.data':'Your details','wz.s.confirm':'Confirm','wz.s.pick':'Choose',
     'wz.next':'Continue','wz.back':'Back','wz.edit':'Change','wz.less':'One fewer guest','wz.more':'One more guest','wz.guests':'guests',
     'wz.r.when.title':'When are you coming?','wz.r.when.sub':'Choose how many you are, the day and the time. You only see times with room.',
     'wz.r.data.title':'Whose name is it under?','wz.r.data.sub':'Only what the restaurant needs to have your table ready.',
@@ -1543,7 +1549,7 @@ const I18N_WZ = {
     'email.pedido.hint':'Optional. The restaurant may write to you if there is any problem with your order.'
   },
   ca:{
-    'wz.progress':'Passos','wz.s.when':'Quan','wz.s.data':'Les teves dades','wz.s.confirm':'Confirmar','wz.s.pick':'Tria',
+    'wz.err.bot':'No hem pogut enviar la teva sol·licitud. Recarrega la pàgina i torna-ho a provar.','wz.progress':'Passos','wz.s.when':'Quan','wz.s.data':'Les teves dades','wz.s.confirm':'Confirmar','wz.s.pick':'Tria',
     'wz.next':'Continua','wz.back':'Enrere','wz.edit':'Canvia','wz.less':'Una persona menys','wz.more':'Una persona més','wz.guests':'persones',
     'wz.r.when.title':'Quan veniu?','wz.r.when.sub':'Tria quants sou, el dia i l\'hora. Només veus les hores amb lloc.',
     'wz.r.data.title':'A nom de qui?','wz.r.data.sub':'Només el que el restaurant necessita per tenir-te la taula a punt.',
@@ -2574,8 +2580,30 @@ let wzState = {kind:null, step:1, reached:1, rendered:null};
 const WZ_PASOS = {reserva:['wz.s.when','wz.s.data','wz.s.confirm'], pedido:['wz.s.pick','wz.s.data','wz.s.confirm']};
 const wzEl = id => document.getElementById(id);
 const wzVal = id => { const e = wzEl(id); return e ? String(e.value || '').trim() : ''; };
-function wzIniciar(kind){ if(wzState.kind !== kind) wzState = {kind, step:1, reached:1, rendered:null}; }
-function wzReset(){ wzState = {kind:null, step:1, reached:1, rendered:null}; }
+/* ═══ Filtro barato contra bots (auditoría 25/11, hallazgo de bots en la web pública) ═══
+   Turnstile/reCAPTCHA se descartaron A PROPÓSITO: las reglas de Firebase no pueden exigir un captcha (solo un servidor intermedio que lo verifique, y
+   ese intermediario sería un Worker de Cloudflare, justo lo que se evita con el servidor propio por los bloqueos de LaLiga: la reserva dejaría
+   de funcionar donde Cloudflare no llega). Lo que SÍ cabe aquí, sin servidor y sin coste:
+     1. Un campo trampa que un cliente no ve ni alcanza (fuera de pantalla, sin tabulador, oculto a los lectores de pantalla: accesibilidad intacta).
+        Los formularios que rellena un script lo rellenan; una persona, nunca. Si trae algo, no se envía nada.
+     2. Un tiempo mínimo desde que se abre el formulario hasta enviarlo (WZ_MIN_MS). Una persona tarda mucho más (tres pasos con datos); quien
+        va rápido de verdad (autorrelleno, «repetir último pedido») NO se rechaza: se le hace esperar el resto, 1-2 s, y se envía solo.
+   No para a un atacante que lo sepa y lo respete: sube su coste. Lo que ya está acotado por las reglas (aforo, tokens) sigue igual. */
+const WZ_MIN_MS = 3000;
+let wzDesde = Date.now(), wzEsperando = false;
+function wzFiltroBot(reenviar){
+  const miel = document.querySelector('.gg-miel input');
+  if(miel && String(miel.value || '').trim()) return 'bot';
+  const falta = WZ_MIN_MS - (Date.now() - wzDesde);
+  if(falta > 0){
+    if(!wzEsperando){ wzEsperando = true; setTimeout(() => { wzEsperando = false; reenviar(); }, falta + 40); }
+    return 'espera';
+  }
+  return null;
+}
+const wzMielHtml = () => `<div class="gg-miel" aria-hidden="true"><input type="text" name="gg_extra_contacto" tabindex="-1" autocomplete="off" inputmode="none" data-lpignore="true" data-1p-ignore="true"></div>`;
+function wzIniciar(kind){ if(wzState.kind !== kind){ wzState = {kind, step:1, reached:1, rendered:null}; wzDesde = Date.now(); } }
+function wzReset(){ wzState = {kind:null, step:1, reached:1, rendered:null}; wzDesde = Date.now(); }
 function telefonoValido(v){ return String(v || '').replace(/\D/g, '').length >= 7; }
 function wzProgHtml(kind){
   return `<ol class="wz-prog" aria-label="${escapeHtml(t('wz.progress'))}">${WZ_PASOS[kind].map((k, i) => {
@@ -3602,14 +3630,12 @@ function renderReservaCalendar(){
         ${slots.map(s => {
           const libre = checkSlotFree(calDate, s, people);
           const selected = calSelectedTime === s;
-          // El color de "elegido" NO puede ser --olive: es el color de marca
-          // del negocio (personalizable), así que en un negocio con marca
-          // naranja/roja se confundía visualmente con "no disponible". El
-          // negro de aquí es el mismo que ya usan las pestañas Día/Semana/Mes
-          // para "esto es lo activo" — no depende de ninguna marca y nunca
-          // se puede confundir con el verde/rojo de disponibilidad.
+          // Lo elegido va en OLIVA (norma de la app: lo marcado o elegido es
+          // oliva, nunca negro), pero con --oliva-gg y no con --olive: --olive
+          // es el color de marca del negocio, y con una marca naranja/roja el
+          // hueco elegido se confundía con «no disponible».
           const estilo = selected
-            ? 'background:var(--olive);color:#fff;border-color:var(--olive)'
+            ? 'background:var(--oliva-gg);color:#fff;border-color:var(--oliva-gg)'
             : libre
               ? 'background:var(--green-l);border-color:var(--green);color:var(--ink)'
               : 'background:var(--red-l);border-color:var(--red);color:var(--red);text-decoration:line-through';
@@ -3737,6 +3763,7 @@ function renderReservaForm(){
           <label for="r-name">${t('nombre')}</label>
           <input type="text" id="r-name" autocomplete="name">
         </div>
+        ${wzMielHtml()}
         <div class="field">
           <label for="r-phone">${t('telefono')}</label>
           <input type="tel" id="r-phone" placeholder="600 000 000" autocomplete="tel" inputmode="tel">
@@ -3847,6 +3874,8 @@ function sendReservaRequest(req, successMsg){
 
 function submitReserva(){
   if(submittingRequest) return;
+  const filtro = wzFiltroBot(submitReserva);
+  if(filtro){ if(filtro === 'bot') showInlineError(t('wz.err.bot')); else setBtnLoading('r-submit', true); return; }
   submittingRequest = true;
   setBtnLoading('r-submit', true);
   const clientName = document.getElementById('r-name').value.trim();
@@ -5162,6 +5191,7 @@ function renderOrderForm(){
           <label for="o-name">${t('nombre')}</label>
           <input type="text" id="o-name" autocomplete="name">
         </div>
+        ${wzMielHtml()}
         <div class="field">
           <label for="o-phone">${t('telefono')}</label>
           <input type="tel" id="o-phone" placeholder="600 000 000" autocomplete="tel" inputmode="tel">
@@ -5551,6 +5581,8 @@ async function submitOrder(){
   const pausaEnvio = canalPausadoHasta(currentTab === 'delivery' ? 'delivery' : 'takeaway');
   if(pausaEnvio){ showInlineError(t('error.pedidosPausados.title') + '. ' + mensajePausaCanal(currentTab === 'delivery' ? 'delivery' : 'takeaway', pausaEnvio)); return; }
   if(submittingRequest) return;
+  const filtro = wzFiltroBot(submitOrder);
+  if(filtro){ if(filtro === 'bot') showInlineError(t('wz.err.bot')); else setBtnLoading('o-submit', true); return; }
   submittingRequest = true;
   setBtnLoading('o-submit', true);
   const clienteNombre = document.getElementById('o-name').value.trim();
@@ -6383,13 +6415,16 @@ function shareTrackUrl(url, isReserva, btnEl){
    publicId, y mientras la app del negocio está cerrada las solicitudes esperan ahí. Mismos campos y mismo formato que
    `descifrarSolicitud` en js/core.js. Sin clave publicada (app antigua) o sin WebCrypto, se envía en claro como siempre. */
 const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas'];
+// Ampliada (reqPubV >= 2, ver js/core.js): lo que revela qué se vende y cuándo, y los tokens de acceso. Una app anterior no la conoce: sin reqPubV, solo la lista corta.
+const CAMPOS_PRIVADOS_SOLICITUD_V2 = CAMPOS_PRIVADOS_SOLICITUD.concat(['date', 'time', 'people', 'items', 'total', 'costeEnvio', 'propina', 'codigoPostal', 'instrucciones', 'referral', 'tableId', 'tipo', 'resToken', 'clientRef', 'token', 'mesaToken']);
 function bytesAb64(buf){ const u = new Uint8Array(buf); let s = ''; for(let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
 async function cifrarSolicitud(req){
   const pub = (DB.business || {}).reqPub;
   if(!pub || typeof crypto === 'undefined' || !crypto.subtle) return req;
   try{
     const priv = {}; let hay = false;
-    CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { if(req[k] !== undefined && req[k] !== '' && req[k] !== null){ priv[k] = req[k]; hay = true; } });
+    const CAMPOS = ((DB.business || {}).reqPubV >= 2) ? CAMPOS_PRIVADOS_SOLICITUD_V2 : CAMPOS_PRIVADOS_SOLICITUD;
+    CAMPOS.forEach(k => { if(req[k] !== undefined && req[k] !== '' && req[k] !== null){ priv[k] = req[k]; hay = true; } });
     if(!hay) return req;
     const aes = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']);
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -6397,7 +6432,7 @@ async function cifrarSolicitud(req){
     const rsa = await crypto.subtle.importKey('jwk', pub, {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
     const llave = await crypto.subtle.encrypt({name: 'RSA-OAEP'}, rsa, await crypto.subtle.exportKey('raw', aes));
     const out = Object.assign({}, req);
-    CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { delete out[k]; });
+    CAMPOS.forEach(k => { delete out[k]; });
     out.enc = {v: 1, k: bytesAb64(llave), iv: bytesAb64(iv), d: bytesAb64(dato)};
     return out;
   }catch(e){ console.error('No se pudo cifrar la solicitud; se envía como siempre', e); return req; }
