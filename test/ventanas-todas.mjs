@@ -218,5 +218,8 @@ hallazgos.forEach(h => {
 });
 if(errs.length) console.log('\nErrores de JavaScript:\n  ' + [...new Set(errs)].slice(0, 10).join('\n  '));
 console.log('\n' + '═'.repeat(60));
-console.log(hallazgos.length || errs.length ? `❌ ${hallazgos.length} ventana(s) con hallazgos, ${errs.length} error(es)` : `✅ ${ventanas} ventanas sin hallazgos a ${ANCHO}px`);
-process.exitCode = hallazgos.length || errs.length ? 1 : 0;
+// Una corrida que no abre NINGUNA ventana no ha comprobado nada: no puede salir en verde (antes salía ✅ «0 ventanas sin hallazgos»).
+const sinCobertura = ventanas === 0;
+if(sinCobertura) console.log(`❌ ninguna ventana medida a ${ANCHO}px: esta corrida no ha cubierto nada (revisar los botones de cada vista)`);
+else console.log(hallazgos.length || errs.length ? `❌ ${hallazgos.length} ventana(s) con hallazgos, ${errs.length} error(es)` : `✅ ${ventanas} ventanas sin hallazgos a ${ANCHO}px`);
+process.exitCode = hallazgos.length || errs.length || sinCobertura ? 1 : 0;
