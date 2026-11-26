@@ -104,7 +104,8 @@ JSON
 #   · la sonda del espejo escribiendo en orderStatus.
 # Todos fallaban EN SILENCIO. Con las reglas reales cargadas aquí, cualquier
 # operación que la app haga y las reglas no permitan sale sola.
-cp "$RAIZ/reglas/reglas-de-cada-negocio.json" "$TRABAJO/emu/database.rules.json"
+# REGLAS_NEGOCIO=<fichero> prueba contra otras reglas (p. ej. las de antes del endurecimiento)
+cp "${REGLAS_NEGOCIO:-$RAIZ/reglas/reglas-de-cada-negocio.json}" "$TRABAJO/emu/database.rules.json"
 cp "$RAIZ/reglas/reglas-de-la-plataforma.json" "$TRABAJO/emu/plataforma.rules.json"   # las reglas REALES de la plataforma (cuentas, lista de negocios…)
 
 # 4. Arrancar. Se quita el proxy: el CLI habla con su propio emulador por
