@@ -67,8 +67,11 @@ Tres lectores revisaron todos los documentos de pendientes y comprobaron contra 
 Contradicción de `tenantLookup` cerrada: se endureció el 25/11 (`reglas/NOTAS.md` conserva el estudio del 17/11 como histórico).
 
 ## 3 quater. Pruebas del emulador (26/11)
-Ver el estado exacto al final de este apartado; se rellena con lo ejecutado de verdad.
-EMULADOR_ESTADO
+Ejecutadas de verdad el 26/11 con el emulador oficial (`SOLO=<prueba> bash test/emulador/run.sh`; arranca sin problemas aquí):
+- `aparato-nuevo.mjs`: **9 de 9 en verde**, repetida dos veces (sin fallos intermitentes). Si fallaba antes, ya no reproduce: no hay nada que arreglar.
+- `qr-mesa-nube.mjs`: **7 de 7 en verde**, repetida dos veces.
+- `cobro.mjs`: sale con **código 1** si algo falla (ya no con 0). **2 de 4 en rojo, y es de la APP, no de la prueba**: los casos 1 («dos cobros a la vez: no se pierde ninguna venta») y 1b («el cobro duplicado queda anotado») fallan porque dos aparatos cobrando la misma mesa crean dos ventas con el MISMO `id` (`id: order.id`, js/tpv.js líneas 4589, 4726 y 5173); `mergeArraysById` las funde en una (queda `["7000:Efectivo"]`, el cobro con tarjeta se pierde) y `avisarSiCobroDuplicado` (js/core.js:10310, busca ids repetidos) no puede saltar nunca. Sin tocar `js/` hasta que lo decidas (es zona de cobros). Los casos 2 (un solo cerrojo de cierre de caja) y 3 (reserva nueva aparece sola) pasan. `cobro.mjs` no está en `run.sh`.
+- **Yo** · Decidir con el dueño cómo evitar el id repetido en cobros simultáneos (id de venta propio del aparato, o conservar las dos ventas al fundir).
 
 ## 4. LaLiga (bloqueos de Cloudflare en partidos)
 - Causa: operadores bloquean por IP; Cloudflare no da IP dedicada en el plan gratuito.
