@@ -269,6 +269,7 @@ lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
 lanzar; node test/precios.mjs > "$SALIDA/precios.txt" 2>&1 & P90=$!
 lanzar; node test/pagos-worker.mjs > "$SALIDA/pagos-worker.txt" 2>&1 & P91=$!
+lanzar; node test/pagos-worker-cuenta-servicio.mjs > "$SALIDA/pagos-worker-cuenta-servicio.txt" 2>&1 & PWSA=$!
 lanzar; node test/pagos-app.mjs > "$SALIDA/pagos-app.txt" 2>&1 & P92=$!
 lanzar; node test/reservas-mesas.mjs > "$SALIDA/reservas-mesas.txt" 2>&1 & P93=$!
 lanzar; node test/modulos.mjs > "$SALIDA/modulos.txt" 2>&1 & P94=$!
@@ -406,6 +407,7 @@ espera $P88 "El service worker no secuestra el contrato ni la privacidad (los en
 espera $P89 "Plan 360: coach y negocio no se pisan, y lo vacío no rompe nada" "$SALIDA/plan360.txt" "casos pasaron"
 espera $P90 "Subidas de precio: historial, albarán, gasto real y aviso con impacto" "$SALIDA/precios.txt" "casos pasaron"
 espera $P91 "Worker de pagos (Stripe): cuenta del negocio, cobro directo, aviso firmado, pagos a la plataforma" "$SALIDA/pagos-worker.txt" "casos pasaron"
+espera $PWSA "Worker de pagos con cuenta de servicio de Firebase: JWT firmado, token reutilizado, sin el secreto obsoleto, y el heredado sigue valiendo" "$SALIDA/pagos-worker-cuenta-servicio.txt" "los [0-9]+ casos pasaron"
 espera $P92 "Pagos y pedidos online: precios de la carta, pago corto no confirma, confirmación por consulta" "$SALIDA/pagos-app.txt" "casos pasaron"
 espera $P93 "Reservas: horas verde/rojo por mesa de N a N+2, el cliente elige mesa, grupos por teléfono" "$SALIDA/reservas-mesas.txt" "casos pasaron"
 espera $P94 "Módulos: previsión de IRPF/IVA verificada contra la Orden HAC/1425/2025, comparador con el beneficio real" "$SALIDA/modulos.txt" "casos pasaron"
