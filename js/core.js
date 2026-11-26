@@ -2185,8 +2185,11 @@ function guardarLocalDB(){
     if(idbLocal.enCurso || idbLocal.timer) return;   // ya hay una escritura en marcha o programada: esta viaja en la siguiente
     const espera = Math.max(0, idbLocal.ultimo + IDB_JUNTAR_MS - Date.now());
     /* La copia estructurada de TODA la base (20.000 ventas: ~80 ms en un PC, ~325 ms en un móvil lento) bloqueaba el hilo justo
-       antes de pintar el ticket. Se deja para después del siguiente fotograma; pagehide/hidden la vuelcan en el acto. */
-    idbLocal.timer = setTimeout(volcarLocalDB, Math.max(espera, 150));
+       antes de pintar el ticket. Se deja para justo DESPUÉS del siguiente fotograma (unos 16 ms; el respaldo de 100 ms cubre una
+       pestaña oculta, donde no hay fotogramas) y pagehide/hidden la vuelcan en el acto. Una espera larga abriría una ventana
+       en la que cerrar o recargar la pestaña dejaría el cobro sin guardar en el aparato. */
+    if(espera === 0 && typeof requestAnimationFrame === 'function') requestAnimationFrame(() => setTimeout(volcarLocalDB, 0));
+    idbLocal.timer = setTimeout(volcarLocalDB, espera === 0 ? 100 : espera);
   });
 }
 if(typeof window !== 'undefined' && typeof document !== 'undefined'){

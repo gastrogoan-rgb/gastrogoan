@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Corre SOLO test/emulador/ventas-nube.mjs con su PROPIO emulador, en otros puertos (db 9100, auth 9199, web 8961) y su propia
+# Corre SOLO test/emulador/ventas-nube.mjs (o VN_TEST=otro.mjs) con su PROPIO emulador, en otros puertos (db 9100, auth 9199, web 8961) y su propia
 # carpeta de trabajo: así no choca con `run.sh` (que usa 9000/9099/8951 y borra `__sdk` al terminar) si dos sesiones lo lanzan a la vez.
 set -uo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -31,4 +31,4 @@ for i in $(seq 1 30); do
   { [ "$db" = "200" ] || [ "$db" = "401" ]; } && [ "$au" = "200" ] && break; sleep 2
 done
 [ "$au" = "200" ] || { echo "❌ el emulador no arrancó"; strings "$TRABAJO/emu.log" | tail; exit 1; }
-node "$RAIZ/test/emulador/ventas-nube.mjs" "$@"; exit $?
+node "$RAIZ/test/emulador/${VN_TEST:-ventas-nube.mjs}" "$@"; exit $?
