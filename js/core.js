@@ -111,6 +111,10 @@ function slotLicenseKey(slotId){
 }
 
 const ACTIVE_SLOT = getActiveSlot();
+/* Un ajuste que es de ESTE aparato pero también de ESTE negocio (el «Visto» de un aviso, «ya avisé hoy») no puede ser una
+   clave única: con dos negocios en el aparato, marcarlo en uno lo daba por hecho en el otro. El negocio por defecto conserva
+   la clave de siempre (no se pierde lo ya guardado). */
+function lsClaveDeNegocio(base){ return ACTIVE_SLOT === 'default' ? base : base + '_' + ACTIVE_SLOT; }
 getBusinessSlots(); // asegura que el registro exista desde el arranque
 
 /* ============================================================
@@ -10001,6 +10005,18 @@ function vaciarOwnerListOutbox(){
       if(!app) return;
       for(const op of ownerListOutboxLeer()){
         const ref = app.database().ref('gastrogoan/ownerAuth/' + op.authKey + '/businesses/' + op.tenantId);
+        if(op.op === 'rename'){
+          // Un cambio de NOMBRE no puede resucitar un negocio que otro aparato borró (lápida) ni inventar uno que no está: se lee antes
+          // y solo se toca el campo `name`. Si ya no está vivo, la operación se da por hecha (no hay nada que renombrar).
+          const snap = await withTimeout(ref.once('value'), 12000);
+          if(!snap) continue;   // sin respuesta: se queda en la cola
+          const cur = snap.val();
+          if(cur && cur.deleted === true){ /* borrado en otro aparato: no se toca */ }
+          else if(cur && cur.code){ const r = await withTimeout(ref.set(Object.assign({}, cur, {name: op.name || ''})).then(() => true), 12000); if(r !== true) continue; }
+          else if(!cur && op.code){ const r = await withTimeout(ref.set({code: op.code, name: op.name || ''}).then(() => true), 12000); if(r !== true) continue; }   // nunca estuvo en la cuenta: se da de alta
+          ownerListOutboxEscribir(ownerListOutboxLeer().filter(x => !(x.authKey === op.authKey && x.tenantId === op.tenantId && x.ts === op.ts)));
+          continue;
+        }
         const valor = op.op === 'unlink'
           ? {code: op.code || '', name: op.name || '', deleted: true, deletedAt: op.ts}
           : {code: op.code, name: op.name || ''};
@@ -10021,6 +10037,21 @@ function linkBusinessToOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
   if(!authKey || !tenantId || !code) return;
   ownerListOutboxPoner({op: 'link', authKey, tenantId, code, name: name || '', ts: Date.now()});
+}
+/* Solo cambia el NOMBRE de un negocio ya en la cuenta. A diferencia de `linkBusinessToOwnerAccount` (que escribe el nodo entero y es la
+   operación del ALTA) no pisa una lápida puesta desde otro aparato, y no sustituye a un borrado o alta que aún espera en la cola. */
+function renombrarNegocioEnCuenta(tenantId, code, name){
+  const authKey = getOwnerAuthKey();
+  if(!authKey || !tenantId) return;
+  const pend = ownerListOutboxLeer().find(x => x.authKey === authKey && x.tenantId === tenantId && x.op !== 'rename');
+  if(pend){
+    if(pend.op === 'link'){ pend.name = name || ''; ownerListOutboxEscribir(ownerListOutboxLeer().map(x => x === pend ? pend : x)); vaciarOwnerListOutbox(); }
+    return;   // borrado pendiente: manda el borrado
+  }
+  const l = ownerListOutboxLeer().filter(x => !(x.authKey === authKey && x.tenantId === tenantId));
+  l.push({op: 'rename', authKey, tenantId, code: code || '', name: name || '', ts: Date.now()});
+  ownerListOutboxEscribir(l);
+  vaciarOwnerListOutbox();
 }
 function unlinkBusinessFromOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
