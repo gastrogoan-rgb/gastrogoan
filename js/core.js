@@ -10779,6 +10779,18 @@ function applyRemoteBlock(key, remoteValue){
         location.reload();
         return;
       }
+      /* Pasar a un empleado de Cocina a Sala (o al revés) en otro aparato: su sesión abierta llevaba el ÁREA con que entró y la conservaba
+         hasta cerrar sesión, o sea con el acceso de la carpeta que ya no es la suya. Se reajusta y se recarga para que las pantallas
+         bloqueadas del área nueva y las abiertas del área vieja se recompongan. */
+      try{
+        const ses = getAccessSession();
+        const areaNueva = meAfter.area || 'cocina';
+        if(ses && ses.type === 'employee' && ses.area && ses.area !== areaNueva){
+          localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(Object.assign({}, ses, {area: areaNueva})));   // directo: setAccessSession anotaría un acceso nuevo
+          location.reload();
+          return;
+        }
+      }catch(e){}
       if(typeof applyEmployeeSessionEditRights === 'function') applyEmployeeSessionEditRights(myId);
     }
   }
