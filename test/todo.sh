@@ -182,6 +182,7 @@ lanzar; node test/mi-negocio-ronda.mjs > "$SALIDA/minegociorona.txt" 2>&1 & P175
 lanzar; node test/atras.mjs > "$SALIDA/atras.txt" 2>&1 & P176=$!
 lanzar; node test/atras-hojas.mjs > "$SALIDA/atrashojas.txt" 2>&1 & PATRH=$!
 lanzar; node test/atras-paneles.mjs > "$SALIDA/atraspaneles.txt" 2>&1 & PATRP=$!
+lanzar; node test/ajustes-por-aparato.mjs > "$SALIDA/ajustesaparato.txt" 2>&1 & PAJAP=$!
 lanzar; node test/novedades-fecha.mjs > "$SALIDA/novedadesfecha.txt" 2>&1 & PNOVF=$!
 lanzar; node test/plan360-programa-base.mjs > "$SALIDA/plan360prog.txt" 2>&1 & PP360B=$!
 lanzar; node test/frases-dia.mjs > "$SALIDA/frasesdia.txt" 2>&1 & PFRDIA=$!
@@ -491,6 +492,7 @@ espera $P175 "Mi Negocio · fiscal bloqueado, reservas por grupo desmarcable, pl
 espera $P176 "Atrás en toda la app: cada pantalla y cada página interior (pedido, historial de cliente, tema del manual) es una entrada del historial; vuelve con su pestaña y su scroll" "$SALIDA/atras.txt" "todos los casos pasaron"
 espera $PATRH "Atrás en Escandallo y Fichas: la hoja de un plato o una ficha es una página del historial (atrás la cierra, adelante la reabre, Volver también)" "$SALIDA/atrashojas.txt" "Escandallo y Fichas pasaron"
 espera $PATRP "Atrás cierra el chat, la ayuda, la campana y el menú ⋯ en vez de salir de la pantalla" "$SALIDA/atraspaneles.txt" "todos los casos pasaron"
+espera $PAJAP "Ajustes del aparato (alarma, avisos del navegador, Bluetooth) lo dicen en pantalla; claves secretas solo en localStorage" "$SALIDA/ajustesaparato.txt" "todos los casos pasaron"
 espera $PNOVF "Novedades: el día de una oferta semanal sale en el idioma activo (es, ca, en) y no queda ningún locale fijo" "$SALIDA/novedadesfecha.txt" "fecha de Novedades pasaron"
 espera $PP360B "Plan 360º · semilla del programa del panel: sin texto de relleno y 28 días" "$SALIDA/plan360prog.txt" "semilla del programa pasaron"
 espera $PFRDIA "Frases del día: 365 frases, sin repetir, con autor y fuente en es, ca y en" "$SALIDA/frasesdia.txt" "todas las frases del día pasaron"
