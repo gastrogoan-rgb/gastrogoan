@@ -22,6 +22,7 @@ vm.runInContext([
   trozo('const P360_FASES', 'function p360CambiarFase'),
   trozo('function p360Fecha(', 'async function renderMiSemana'),
   trozo('function p360CuotaSinCobrar', '\n/*'),   // definida DESPUÉS de renderMiSemana (la agenda y las alertas la comparten)
+  trozo('function mantContratoFirmado', '\nfunction'),   // la agenda avisa si el mantenimiento está activo sin su acuerdo firmado
   trozo('function stableJson', '\nfunction'),
   trozo('const MANT_NIVELES', 'function saveRemoteBiz'),
   'const MANT_CUOTA = 75;',

@@ -278,6 +278,7 @@ lanzar; node test/auditoria-contable.mjs > "$SALIDA/auditoria-contable.txt" 2>&1
 lanzar; node test/paquete-gestor.mjs > "$SALIDA/paquete-gestor.txt" 2>&1 & P98=$!
 lanzar; node test/kpis-coach.mjs > "$SALIDA/kpis-coach.txt" 2>&1 & P99=$!
 lanzar; node test/plan360-fases.mjs > "$SALIDA/plan360-fases.txt" 2>&1 & P100=$!
+lanzar; node test/plan360-contrato-mant.mjs > "$SALIDA/p360contratomant.txt" 2>&1 & P360CM=$!
 lanzar; node test/plan360-ciclo-app.mjs > "$SALIDA/p360cicloapp.txt" 2>&1 & P360CA=$!
 lanzar; node test/plan360-ciclo-panel.mjs > "$SALIDA/p360ciclopanel.txt" 2>&1 & P360CP=$!
 lanzar; node test/vision-global.mjs > "$SALIDA/vision-global.txt" 2>&1 & P101=$!
@@ -414,6 +415,7 @@ espera $P97 "Auditoría contable: retención 115/111, envío al 10%, IVA de la s
 espera $P98 "Paquete para el gestor: periodo, Excel + CSV con columnas de libro registro, fotos de facturas y LÉEME" "$SALIDA/paquete-gestor.txt" "casos pasaron"
 espera $P99 "Números para el coach: indicadores del mes, foto del Día 1, marcador en euros e informe para WhatsApp" "$SALIDA/kpis-coach.txt" "casos pasaron"
 espera $P100 "Plan 360 y mantenimiento separados: servicio activo de cada cliente y agenda del coach" "$SALIDA/plan360-fases.txt" "casos pasaron"
+espera $P360CM "Plan 360º · acuerdo de mantenimiento propio: texto relleno, firma al aceptar (activa el servicio), el del 360 ya firmado no cambia, panel del coach y aviso en la agenda" "$SALIDA/p360contratomant.txt" "acuerdo de mantenimiento"
 espera $P360CA "Plan 360º · ciclo completo de la app (5 etapas × 320/360/390 × es/ca/en)" "$SALIDA/p360cicloapp.txt" "ciclo completo de la app"
 espera $P360CP "Plan 360º · ciclo completo del panel del coach (4 etapas × 320/360/390)" "$SALIDA/p360ciclopanel.txt" "ciclo completo del panel"
 espera $P101 "Visión global de mis negocios: suma bien, nunca el ajeno, sin tocar el slot activo ni ninguna IndexedDB" "$SALIDA/vision-global.txt" "todos los casos pasaron"
