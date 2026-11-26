@@ -68,12 +68,15 @@ async function medir(etapa, ancho, llamadas){
           if(!enScroll){ desborde = (el.className && el.className.baseVal === undefined ? el.className : el.tagName) + ' ' + Math.round(b.left) + '..' + Math.round(b.right); break; }
         }
       }
-      out.push({c, desborde, sw: document.documentElement.scrollWidth, iw: innerWidth, texto: cont.innerText});
+      out.push({c, len: cont.innerText.length, desborde, sw: document.documentElement.scrollWidth, iw: innerWidth, texto: cont.innerText});
     }
     return out;
   }, llamadas);
+  let prev = null;
   for(const x of r){
     const id = `[${etapa} · ${ancho}px] ${x.c}`;
+    if(prev !== null && x.len === prev && /OrdenDia/.test(x.c)) fallos.push(id + ' → no pintó nada (devuelve sin hacer nada)');
+    prev = x.len;
     if(x.err){ fallos.push(id + ' → error: ' + x.err); continue; }
     if(x.desborde) fallos.push(id + ' → se sale por los lados: ' + x.desborde);
     else if(x.sw > x.iw + 1) fallos.push(id + ` → scroll horizontal de página (${x.sw} > ${x.iw})`);
@@ -86,6 +89,7 @@ await esperar(1200);
 // Etapa 1: cliente nuevo con la plantilla base aplicada
 await p.evaluate(() => { plantillaPonerBase && plantillaPonerBase(); });
 await esperar(500);
+await p.evaluate(() => { const P = remoteBiz.plan360Program; [8, 15].forEach(n => { P.find(d => d.day === n).reunion = {tipo:'online', objectiveIds:[], notas:'Revisar costes con el equipo de cocina al completo', hecha:false, completadaAt:null}; }); });
 const pantallas = ['renderClientGrid()','renderPlantillaPage()','renderInformeSemanaPage()','renderActaPage()','renderCoachDatosPage()','renderIntakePage()','renderQuestionnairePage()','renderWelcomePage(false)','renderContractPage()','renderDocsPage()','renderObjetivosPage(2)','renderPlanAccionPage(2)','renderInversionesPage(2)','renderOrdenDiaPage(8)','renderOrdenDiaPage(15)','renderTrabajoPage(remoteBiz.plan360Program.find(d => d.day === 3))','renderTrabajoPage(remoteBiz.plan360Program.find(d => d.day === 20))','renderSummaryPage()','renderMantPage()'];
 const hechas = await p.evaluate(() => {
   const P = remoteBiz && remoteBiz.plan360Program || [];
