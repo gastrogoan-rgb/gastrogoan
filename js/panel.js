@@ -582,7 +582,7 @@ function panelRender(){
    Los avisos NO se guardan: se calculan de lo que hay, y desaparecen solos cuando se resuelven. Solo los informativos
    (cumpleaños, bajadas de precio) se pueden «marcar como visto», y se recuerda en ESTE aparato hasta que cambie la cifra.
    El propietario ve todo; el empleado, solo lo operativo (no las aprobaciones, el dinero ni los precios). */
-const AVISOS_VISTOS_LS = 'gastrogoan_avisos_vistos';
+const AVISOS_VISTOS_LS = lsClaveDeNegocio('gastrogoan_avisos_vistos');
 function avisosVistosLeer(){ try{ return JSON.parse(localStorage.getItem(AVISOS_VISTOS_LS) || '{}') || {}; }catch(e){ return {}; } }
 /* Stock bajo de UN área. El Panel cuenta solo la del área en que estás (currentArea); la campana las cuenta las dos, porque un aviso
    no puede depender de en qué carpeta estés: el dueño en Sala no se enteraba de que se acababa el fondo de Cocina. */

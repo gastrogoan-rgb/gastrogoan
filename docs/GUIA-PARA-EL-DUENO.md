@@ -9,12 +9,14 @@ GastroGoan no tiene un servidor propio. Son ficheros que se descargan al navegad
 | Pieza | Qué es | Dónde vive | Quién la paga |
 |---|---|---|---|
 | **App de gestión** (`app.gastrogoan.com`) | La aplicación que usa el hostelero y su equipo | Cloudflare Pages (proyecto de la app) | Tú, gratis (tráfico ilimitado) |
-| **Web de reservas** (`reservas.gastrogoan.com`) | Lo que ve el cliente final: carta, reservas, pedidos | Cloudflare Pages | Tú, gratis |
+| **Web de reservas** (`reservas.gastrogoan.com`) | Lo que ve el cliente final: carta, reservas, pedidos | **Servidor propio en Hetzner** (Helsinki, IP `5.222.10.11`, ~6 €/mes; se baja la web de GitHub cada 5 min). Cloudflare Pages queda como marcha atrás | Tú, ~6 €/mes (excepción aceptada) |
 | **Web comercial** (`gastrogoan.com`) | Donde vendes | Cloudflare Pages | Tú, gratis |
 | **Panel de admin** (`admin.gastrogoan.com`) | Generador de licencias y panel del Plan 360 | Cloudflare Pages | Tú, gratis |
 | **Datos de cada negocio** | Ventas, carta, personal… | **Firebase del propio negocio** (cada uno crea el suyo, gratis) | El negocio |
 | **Registro de licencias** | Qué códigos has vendido y de quién son | **Firebase de la plataforma** (`plataforma-gastrogoan`) | Tú, gratis |
-| **Cobros con tarjeta de los clientes de cada restaurante** | Dinero del restaurante, no tuyo | Stripe del restaurante + un Worker de Cloudflare | El restaurante |
+| **Cobros con tarjeta de los clientes de cada restaurante** | Dinero del restaurante, no tuyo | Stripe del restaurante + el Worker `gastro` de Cloudflare (`gastro.gastrogoan.workers.dev`), que entra a Firebase con una **cuenta de servicio** | El restaurante |
+| **Vigilancia** | Avisa si cae una web | UptimeRobot (plan gratuito) | Tú, gratis |
+| **Registrador del dominio** | Donde está registrado `gastrogoan.com` | **Cloudflare** (antes estuvo en Canva) | Tú, precio de coste |
 | **Código** | Todo el programa | GitHub (`gastrogoan-rgb/gastrogoan`, **público**) | Gratis |
 
 Por qué importa: **ninguna pieza te cuesta dinero por cada cliente que vendes.** Esa es la regla de oro y lo que permite llegar a 5.000 licencias sin cuotas.
@@ -33,20 +35,24 @@ Rellénalo tú y guárdalo **en un gestor de contraseñas**, nunca en un documen
 | Cuenta | Para qué | Quién más debería poder entrar | ¿Tiene verificación en dos pasos? |
 |---|---|---|---|
 | GitHub (propietario del repositorio) | Código y publicación | Una segunda persona de confianza como respaldo | comprobar |
-| Cloudflare | Hosting, DNS, Worker de pagos | Ídem | comprobar |
-| Firebase `plataforma-gastrogoan` | Registro de licencias | Ídem | comprobar |
+| Cloudflare | Hosting, DNS, registrador del dominio, Worker de pagos | Ídem | comprobar |
+| Firebase `plataforma-gastrogoan` | Registro de licencias y cuenta de servicio del Worker | Ídem | comprobar |
 | Stripe (tu cuenta) | Cobro de licencias y del Plan 360 | — | comprobar |
 | Cuenta de Google del admin | Entrar como administrador en el generador | — | comprobar |
-| Registrador del dominio | Que no caduque `gastrogoan.com` | — | comprobar |
+| Registrador del dominio (Cloudflare, misma cuenta que arriba) | Que no caduque `gastrogoan.com` | — | sí (misma cuenta de Cloudflare) |
+| Hetzner | Servidor de la web de reservas | Ídem | comprobar |
+| UptimeRobot | Avisos de caída | — | comprobar |
 | Correo de GastroGoan | Recuperar todo lo anterior | — | comprobar |
 
-Dos cosas que conviene hacer ya: activar la **verificación en dos pasos** en todas, y guardar los **códigos de recuperación** impresos en un sitio físico seguro.
+**Verificación en dos pasos: hecha el 26/11** en tus cuentas (confirma que también está en Hetzner y UptimeRobot). Sigue pendiente guardar los **códigos de recuperación** impresos en un sitio físico seguro y una **segunda persona** con acceso de emergencia.
 
 ## 4. Qué pasa si falla algo
 | Si… | Qué ven los clientes | Qué haces |
 |---|---|---|
 | Cloudflare Pages cae unas horas | La app ya abierta sigue funcionando (guarda una copia y los datos están en el aparato) | Esperar; revisar el estado de Cloudflare |
-| Un operador bloquea la IP de Cloudflare en un partido | La web de reservas puede no abrir a clientes nuevos | Plan LaLiga: servidores con IP propia (ver `servidor/`) |
+| Un operador bloquea la IP de Cloudflare en un partido | La web de reservas ya no depende de Cloudflare (sale de Hetzner); la app y el pago con tarjeta sí | Ver `docs/LALIGA-PUESTA-A-PUNTO.md` |
+| El servidor de reservas no contesta | Clientes nuevos no abren la web de reservas | UptimeRobot avisa. Recrearlo (abajo) o marcha atrás a Cloudflare Pages |
+| El cobro con tarjeta deja de funcionar | Los clientes no pueden pagar | Ver «Si el cobro con tarjeta deja de funcionar» |
 | Firebase de un negocio falla | Ese negocio trabaja en local y sube al volver | Nada |
 | Firebase de la plataforma falla | No se pueden canjear códigos nuevos ni crear cuentas | Esperar; los negocios ya activos siguen |
 | Se pierde un código de licencia o un PIN | Un cliente no entra | Generador de licencias, paso 3 (reemite la cuenta) |
@@ -62,7 +68,7 @@ Dos cosas que conviene hacer ya: activar la **verificación en dos pasos** en to
 | **Las reglas de Firebase** | Ya están en `reglas/` | Con el código |
 | **Los datos de cada cliente** | Los guarda su propio Firebase; la app tiene «Copia de seguridad» manual | Que cada cliente la use (recordatorio diario en la app) |
 | **El Worker de pagos** | Está en `worker/pagos-worker.js`; se pega a mano en Cloudflare | Con el código |
-| **Las claves del Worker** | En Cloudflare. Apúntalas en tu gestor de contraseñas | Una vez |
+| **Las claves del Worker** (Stripe, cuenta de servicio de Firebase…) | **Solo** en Cloudflare (Variables y secretos) y en tu gestor de contraseñas; nunca en el repositorio ni en el chat | Una vez |
 
 ### Dónde guardar las copias (regla 3-2-1)
 **Tres copias, en dos tipos de soporte, y una fuera de casa.** Todas con la misma carpeta que genera `bash tools/copia-maestra.sh` (repositorio entero con su historial, reglas de Firebase, generador de licencias, Worker de pagos, kit de servidor, panel, textos legales y guías; probado: se restaura con `git clone gastrogoan.bundle`).
@@ -106,4 +112,22 @@ Dos cosas que conviene hacer ya: activar la **verificación en dos pasos** en to
 ## 9. Riesgo de depender de una sola persona (o de una sola IA)
 - **Tú** eres el único con las cuentas. Mitigación: segunda persona con acceso de emergencia y códigos de recuperación impresos.
 - **Yo** trabajo con la memoria que dejan estos documentos. Si cambias de asistente o de informático, esta guía y `CLAUDE.md` son lo que le ahorra semanas. Mantenerlos al día es parte del trabajo.
-- **El repositorio es público**: cualquiera puede leer el código y el historial. No hay claves dentro (revisado), pero sí hubo datos personales en versiones anteriores; considera pasarlo a privado cuando decidas (ojo: en privado, GitHub Actions pasa a 2.000 minutos al mes).
+- **El repositorio es público**: cualquiera puede leer el código y el historial. No hay claves dentro (revisado), pero sí hubo datos personales en versiones anteriores; considera pasarlo a privado cuando decidas. Ojo, tiene tres consecuencias: la revocación de licencias se lee de `raw.githubusercontent.com` (dejaría de funcionar), el servidor de Hetzner baja la web de GitHub sin llaves (dejaría de poder) y GitHub Actions pasa a 2.000 minutos al mes.
+
+## 10. Si el cobro con tarjeta deja de funcionar
+Los pagos pasan por el Worker `gastro` de Cloudflare. Por orden:
+1. **¿Está vivo?** Abre en el navegador o ejecuta `curl -i https://gastro.gastrogoan.workers.dev/stripe/estado`. Debe contestar un JSON. Si da **404 o una página HTML**, el Worker ha perdido su código.
+2. **Que NO esté conectado a Git.** Cloudflare → Workers → `gastro` → Configuración → Compilaciones: no debe haber ningún repositorio conectado. (El 26/11 estaba conectado a GitHub y en cada publicación se redesplegaba como «solo activos estáticos», borrando el código de pagos y sus claves. Por eso ahora es un Worker nuevo, sin Git.) Si lo está, desconéctalo y vuelve a pegar `worker/pagos-worker.js`.
+3. **Las claves siguen puestas.** Configuración → Variables y secretos: deben estar las de Stripe y `FIREBASE_SERVICE_ACCOUNT` (el JSON de la cuenta de servicio de `plataforma-gastrogoan`, como secreto). Si faltan, se vuelven a poner desde tu gestor de contraseñas. Lista completa y nombres exactos en `worker/README.md`.
+4. **El aviso de Stripe llega.** Stripe → Desarrolladores → Webhooks: el destino es `https://gastro.gastrogoan.workers.dev/stripe/webhook` y los últimos envíos deben salir en verde.
+5. Si sigue sin ir, dímelo con el mensaje exacto; nunca pegues una clave en el chat.
+
+## 11. Cómo recrear el servidor de reservas
+Cuando el servidor no arranca o quieres uno limpio (los datos viven en Firebase; en el servidor no hay nada que perder):
+1. En Hetzner crea un servidor nuevo: Ubuntu 24.04, el tipo más barato con 2 GB, IPv4, **sin llave SSH**, y en «User data» pega el contenido de `servidor/fase1/cloud-init.yaml` (si cambias algo, regenéralo con `python3 servidor/fase1/generar-cloud-init.py`).
+2. Mira en la consola (`>_`) que salga `GG-ARRANQUE: LISTO`.
+3. **Pruébalo sin tocar el DNS** en `x-x-x-x.sslip.io` (la IP con guiones, p. ej. `5-222-10-11.sslip.io`): debe cargar con candado y dejar hacer una reserva de prueba.
+4. En Cloudflare → DNS cambia el registro **A** de `reservas` a la IP nueva (nube **gris**, TTL 1 min).
+5. **Reinicia el servidor** (Hetzner → Power) para que pida el certificado al momento.
+6. Comprueba `https://reservas.gastrogoan.com` y, cuando todo vaya, **borra el servidor viejo** (si no, pagas dos).
+Marcha atrás: ver `docs/LALIGA-PUESTA-A-PUNTO.md`. Última vez hecho: 26/11 (IP `5.222.2.92` → `5.222.10.11`).

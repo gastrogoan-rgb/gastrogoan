@@ -6,8 +6,10 @@ const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromiu
 const res=[]; const ok=(n,c,d)=>{res.push({n,c:!!c}); console.log((c?'✅':'❌')+' '+n+(d?'  → '+d:''));};
 
 for(const ns of ['demo-gastrogoan','demo-plataforma']){
-  const r=await fetch(`http://127.0.0.1:9000/.json?ns=${ns}`,{method:'DELETE'});
-  if(!r.ok) console.warn('no se pudo vaciar',ns);
+  // Con las reglas REALES cargadas la raíz está cerrada: se vacía con el token de administrador del emulador (sin él, el DELETE da 401 y
+  // los datos de una pasada anterior se quedaban y contaminaban esta).
+  const r=await fetch(`http://127.0.0.1:9000/.json?ns=${ns}`,{method:'DELETE',headers:{Authorization:'Bearer owner'}});
+  if(!r.ok) console.warn('no se pudo vaciar',ns,r.status);
 }
 console.log('→ emulador vaciado\n');
 
@@ -28,12 +30,17 @@ async function dispositivo(){
 }
 async function arrancar(d,code){
   await d.page.goto('http://localhost:8951/index.html',{waitUntil:'domcontentloaded'});
+  // ⚠️ Esperar a que loadDB() termine ANTES de tocar DB: si no, el DB de IndexedDB lo reemplaza y la nube desaparece (ver README, «Dos trampas»).
+  await d.page.evaluate(()=>(typeof dbReadyPromise!=='undefined')?dbReadyPromise:null).catch(()=>{});
   await d.page.evaluate(async ({code,dburl})=>{
     localStorage.setItem('gastrogoan_license_v1',JSON.stringify({code,tenantId:ggBizTenantId(code)}));
     localStorage.setItem('gastrogoan_owner_login',JSON.stringify({user:'jefe',authKey:'k',pinHash:'h'}));
     localStorage.setItem('gastrogoan_access_session',JSON.stringify({type:'owner',ts:Date.now()}));
     localStorage.setItem('gastrogoan_owner_pass_prompted','1');
-    Object.assign(DB.business,{netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true});
+    // El aviso diario de «Copia de seguridad» (js/app.js, checkBackupReminder) abre una ventana, y mientras hay una ventana abierta un cambio
+    // remoto NO repinta la pantalla (a propósito: podría estar escribiéndose en ella). Se da por avisado hoy, como hacen las demás pruebas.
+    localStorage.setItem('gastrogoan_backup_reminder_day',todayStr());
+    Object.assign(DB.business,{backupAvisoDia:todayStr(),netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true});
     DB.business.ownFirebase={apiKey:'fake',databaseURL:dburl};
     await saveDB();
   },{code,dburl:DBURL});
@@ -55,21 +62,25 @@ async function arrancar(d,code){
     DB.sales=[]; saveDB();
   });
   await new Promise(r=>setTimeout(r,3500));
-  // Los dos cobran esa mesa casi a la vez
+  // Los dos cobran esa mesa casi a la vez. ⚠️ Con el MISMO id (el de la venta es el del pedido: finalizeCharge hace `id: order.id`), que es lo que
+  // de verdad producen dos tablets. Con ids distintos (V-A / V-B, como estaba antes) la prueba no representaba nada: `mergeArraysById`
+  // fusiona por id, así que en la realidad las dos ventas son UNA para la nube y la detección de duplicados (que busca ids repetidos) no puede saltar.
   await Promise.all([
     A.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===7000); o.status='pagada';
-      DB.sales.push({id:'V-A',date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Efectivo',orderId:7000,items:o.items}); saveDB(); }),
+      DB.sales.push({id:7000,date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Efectivo',orderId:7000,items:o.items}); saveDB(); }),
     B.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===7000); o.status='pagada';
-      DB.sales.push({id:'V-B',date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Tarjeta',orderId:7000,items:o.items}); saveDB(); }),
+      DB.sales.push({id:7000,date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Tarjeta',orderId:7000,items:o.items}); saveDB(); }),
   ]);
   await new Promise(r=>setTimeout(r,6000));
   const r = await A.page.evaluate(()=>({
-    ventas:(DB.sales||[]).map(s=>s.id).sort(),
+    ventas:(DB.sales||[]).map(s=>s.id+':'+s.metodoPago).sort(),
     delMismoPedido:(DB.sales||[]).filter(s=>s.orderId===7000).length,
   }));
   // Lo importante: que NINGUNA de las dos ventas desaparezca. Un cobro
   // duplicado se ve y se anula; uno perdido no lo detecta nadie.
-  ok('1. Dos cobros a la vez: no se pierde ninguna venta', r.ventas.length===2, 'quedaron '+JSON.stringify(r.ventas));
+  // Cada cobro es dinero distinto (Efectivo y Tarjeta): tienen que quedar los dos métodos. Si queda uno solo, el otro cobro se perdió.
+  // ⚠️ HALLAZGO DE LA APP (26/11), no de la prueba: hoy queda UNA (la otra se pisa por tener el mismo id). Ver docs/PENDIENTE-MAESTRO.md.
+  ok('1. Dos cobros a la vez: no se pierde ninguna venta', r.ventas.length===2 && r.ventas.some(v=>/Efectivo/.test(v)) && r.ventas.some(v=>/Tarjeta/.test(v)), 'quedaron '+JSON.stringify(r.ventas));
   // Y que el duplicado quede ANOTADO: una venta de más infla facturación
   // e IVA, y si nadie lo ve se declara mal.
   const aviso = await A.page.evaluate(()=> (DB.auditLog||[]).find(e=>e.action==='cobro_duplicado'));
@@ -132,3 +143,5 @@ await browser.close();
 console.log('\n'+'─'.repeat(60));
 const mal=res.filter(r=>!r.c);
 console.log(mal.length?`❌ ${mal.length} de ${res.length} fallaron`:`✅ los ${res.length} escenarios pasaron`);
+// Salir con código distinto de 0 si algo falla (antes salía siempre con 0 y el banco daba por buena una prueba que fallaba).
+process.exit(mal.length?1:0);

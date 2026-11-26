@@ -111,6 +111,10 @@ function slotLicenseKey(slotId){
 }
 
 const ACTIVE_SLOT = getActiveSlot();
+/* Un ajuste que es de ESTE aparato pero también de ESTE negocio (el «Visto» de un aviso, «ya avisé hoy») no puede ser una
+   clave única: con dos negocios en el aparato, marcarlo en uno lo daba por hecho en el otro. El negocio por defecto conserva
+   la clave de siempre (no se pierde lo ya guardado). */
+function lsClaveDeNegocio(base){ return ACTIVE_SLOT === 'default' ? base : base + '_' + ACTIVE_SLOT; }
 getBusinessSlots(); // asegura que el registro exista desde el arranque
 
 /* ============================================================
@@ -9829,13 +9833,16 @@ function publishTenantLookup(tenantId, config){
   // en CADA arranque y el aviso de Plan 360º no se publicaría jamás.
   publishCoaching360Pointer(tenantId);
   const huella = tenantId + '|' + config.apiKey + '|' + config.databaseURL;
-  try{ if(localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
+  /* La huella es POR NEGOCIO: con una sola por aparato, dos negocios en la misma tablet se la pisaban y cada cambio de negocio volvía a
+     escribir en la plataforma compartida (justo lo que no puede crecer con las licencias). La antigua (una sola) se sigue aceptando. */
+  const claveHuella = TENANT_LOOKUP_PUBLICADO_LS + '_' + tenantId;
+  try{ if(localStorage.getItem(claveHuella) === huella || localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/tenantLookup/' + tenantId).set({
       apiKey: config.apiKey, databaseURL: config.databaseURL
     }).then(() => {
-      try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
+      try{ localStorage.setItem(claveHuella, huella); }catch(e){}
     }).catch(e => {
       console.error('Error publicando la referencia del negocio', e);
       /* Desde el 25/11 las reglas de la plataforma NO dejan cambiar a qué proyecto de Firebase apunta un negocio ya
@@ -9858,11 +9865,12 @@ function publishCoaching360Pointer(tenantId){
   if(!DB.business.plan360) return;
   const nombre = (DB.business.name || '(sin nombre)').slice(0, 200);
   const huella = 'c360|' + tenantId + '|' + nombre;
-  try{ if(localStorage.getItem(COACHING360_PUBLICADO_LS) === huella) return; }catch(e){}
+  const claveC = COACHING360_PUBLICADO_LS + '_' + tenantId;   // por negocio (ver publishTenantLookup)
+  try{ if(localStorage.getItem(claveC) === huella || localStorage.getItem(COACHING360_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/coaching360/' + tenantId).set({name: nombre, updatedAt: Date.now()})
-      .then(() => { try{ localStorage.setItem(COACHING360_PUBLICADO_LS, huella); }catch(e){} })
+      .then(() => { try{ localStorage.setItem(claveC, huella); }catch(e){} })
       .catch(e => console.error('Error publicando el puntero de Plan 360°', e));
   }).catch(()=>{});
 }
@@ -10001,6 +10009,18 @@ function vaciarOwnerListOutbox(){
       if(!app) return;
       for(const op of ownerListOutboxLeer()){
         const ref = app.database().ref('gastrogoan/ownerAuth/' + op.authKey + '/businesses/' + op.tenantId);
+        if(op.op === 'rename'){
+          // Un cambio de NOMBRE no puede resucitar un negocio que otro aparato borró (lápida) ni inventar uno que no está: se lee antes
+          // y solo se toca el campo `name`. Si ya no está vivo, la operación se da por hecha (no hay nada que renombrar).
+          const snap = await withTimeout(ref.once('value'), 12000);
+          if(!snap) continue;   // sin respuesta: se queda en la cola
+          const cur = snap.val();
+          if(cur && cur.deleted === true){ /* borrado en otro aparato: no se toca */ }
+          else if(cur && cur.code){ const r = await withTimeout(ref.set(Object.assign({}, cur, {name: op.name || ''})).then(() => true), 12000); if(r !== true) continue; }
+          else if(!cur && op.code){ const r = await withTimeout(ref.set({code: op.code, name: op.name || ''}).then(() => true), 12000); if(r !== true) continue; }   // nunca estuvo en la cuenta: se da de alta
+          ownerListOutboxEscribir(ownerListOutboxLeer().filter(x => !(x.authKey === op.authKey && x.tenantId === op.tenantId && x.ts === op.ts)));
+          continue;
+        }
         const valor = op.op === 'unlink'
           ? {code: op.code || '', name: op.name || '', deleted: true, deletedAt: op.ts}
           : {code: op.code, name: op.name || ''};
@@ -10021,6 +10041,21 @@ function linkBusinessToOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
   if(!authKey || !tenantId || !code) return;
   ownerListOutboxPoner({op: 'link', authKey, tenantId, code, name: name || '', ts: Date.now()});
+}
+/* Solo cambia el NOMBRE de un negocio ya en la cuenta. A diferencia de `linkBusinessToOwnerAccount` (que escribe el nodo entero y es la
+   operación del ALTA) no pisa una lápida puesta desde otro aparato, y no sustituye a un borrado o alta que aún espera en la cola. */
+function renombrarNegocioEnCuenta(tenantId, code, name){
+  const authKey = getOwnerAuthKey();
+  if(!authKey || !tenantId) return;
+  const pend = ownerListOutboxLeer().find(x => x.authKey === authKey && x.tenantId === tenantId && x.op !== 'rename');
+  if(pend){
+    if(pend.op === 'link'){ pend.name = name || ''; ownerListOutboxEscribir(ownerListOutboxLeer().map(x => x === pend ? pend : x)); vaciarOwnerListOutbox(); }
+    return;   // borrado pendiente: manda el borrado
+  }
+  const l = ownerListOutboxLeer().filter(x => !(x.authKey === authKey && x.tenantId === tenantId));
+  l.push({op: 'rename', authKey, tenantId, code: code || '', name: name || '', ts: Date.now()});
+  ownerListOutboxEscribir(l);
+  vaciarOwnerListOutbox();
 }
 function unlinkBusinessFromOwnerAccount(tenantId, code, name){
   const authKey = getOwnerAuthKey();
@@ -10744,12 +10779,29 @@ function applyRemoteBlock(key, remoteValue){
         location.reload();
         return;
       }
+      /* Pasar a un empleado de Cocina a Sala (o al revés) en otro aparato: su sesión abierta llevaba el ÁREA con que entró y la conservaba
+         hasta cerrar sesión, o sea con el acceso de la carpeta que ya no es la suya. Se reajusta y se recarga para que las pantallas
+         bloqueadas del área nueva y las abiertas del área vieja se recompongan. */
+      try{
+        const ses = getAccessSession();
+        const areaNueva = meAfter.area || 'cocina';
+        if(ses && ses.type === 'employee' && ses.area && ses.area !== areaNueva){
+          localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(Object.assign({}, ses, {area: areaNueva})));   // directo: setAccessSession anotaría un acceso nuevo
+          location.reload();
+          return;
+        }
+      }catch(e){}
       if(typeof applyEmployeeSessionEditRights === 'function') applyEmployeeSessionEditRights(myId);
     }
   }
   if(mergedFromLocal && typeof scheduleCloudSync === 'function') scheduleCloudSync();
+  /* El espejo público se publicaba al arrancar con la copia LOCAL (que puede ir por detrás) y no se corregía al llegar lo de la nube:
+     la web seguía enseñando una carta o un menú ya retirados hasta el siguiente guardado hecho aquí. Si llega algo que la web lee, se
+     vuelve a publicar (el espejo compara con lo último enviado: si no cambia nada, no escribe). */
+  if(!mergedFromLocal && ESPEJO_BLOQUES_QUE_LEE_LA_WEB.has(key) && typeof schedulePublicMirrorSync === 'function') schedulePublicMirrorSync();
   refreshAfterRemoteChange();
 }
+const ESPEJO_BLOQUES_QUE_LEE_LA_WEB = new Set(['business', 'cartas', 'menus', 'tables', 'promos', 'activeCartaIds', 'activeMenuIds', 'fichas']);
 
 /* Tras la conexión inicial, en vez de re-descargar TODA la base de datos
    del negocio cada vez que algo cambia (lo que multiplicaba el consumo de
@@ -12089,7 +12141,7 @@ async function pagoOnlineLlamar(ruta, cuerpo){
   if(data && data.code === 'no_dueno'){
     try{
       const lic = getLicense();
-      if(lic && lic.code){ linkBusinessToOwnerAccount(getTenantId(), lic.code, (DB.business && DB.business.name) || ''); await vaciarOwnerListOutbox(); }
+      if(lic && lic.code){ renombrarNegocioEnCuenta(getTenantId(), lic.code, (DB.business && DB.business.name) || ''); await vaciarOwnerListOutbox();   /* no pisa una lápida de otro aparato */ }
     }catch(e){}
     res = await hacer();
     data = await res.json().catch(() => ({}));

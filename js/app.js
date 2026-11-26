@@ -9122,7 +9122,7 @@ function dataMaintenanceCutoff(){
 // descartar. Ahora sigue el MISMO patrón que checkBackupReminder: avisa una
 // vez al día como mucho, solo al propietario, con un modal que deja elegir
 // "Ahora no" o ir a archivar — no una pieza fija en la barra superior.
-const ARCHIVE_REMINDER_DAY_KEY = 'gastrogoan_archive_reminder_day';
+const ARCHIVE_REMINDER_DAY_KEY = lsClaveDeNegocio('gastrogoan_archive_reminder_day');
 function oldDataCount(){
   const cutoff = dataMaintenanceCutoff();
   return DB.sales.filter(s => s.date && s.date < cutoff).length
@@ -9503,6 +9503,17 @@ function updateLogoutBtn(){
   const session = getAccessSession();
   if(logoutBtn) logoutBtn.style.display = session ? '' : 'none';
   if(bizBtn) bizBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
+  // Quién está dentro: el nombre del empleado a la vista, para que en un aparato compartido (la tablet de sala) se sepa a nombre de quién
+  // queda lo que se haga (mesas, fichajes, anulaciones). Al propietario no se le pone etiqueta: él ya sabe que es él.
+  const chip = document.getElementById('app-user-chip');
+  if(chip){
+    const nombre = (session && session.type === 'employee' && typeof currentActorName === 'function') ? currentActorName() : '';
+    const valido = nombre && nombre !== t('common.unknown') && nombre !== t('common.owner');
+    chip.style.display = valido ? '' : 'none';
+    const el = document.getElementById('app-user-name');
+    if(el) el.textContent = valido ? nombre : '';
+    if(valido) chip.title = nombre; else chip.removeAttribute('title');
+  }
 }
 async function logoutAccessSession(){
   if(ggEditorSucio()){ return ggGuardarSiHaceFalta(() => logoutAccessSession()); }
@@ -9689,10 +9700,10 @@ async function saveBusiness(silent){
   // aparecía en el selector como "Mi negocio" hasta que se entraba dentro
   // (que es cuando llega el nombre real por la nube). Con varios locales,
   // todos iguales y sin poder distinguirlos.
-  if(DB.business.name && DB.license && DB.license.tenantId && typeof linkBusinessToOwnerAccount === 'function'
+  if(DB.business.name && DB.license && DB.license.tenantId && typeof renombrarNegocioEnCuenta === 'function'
      && _lastLinkedBusinessName !== DB.business.name){
     _lastLinkedBusinessName = DB.business.name;
-    linkBusinessToOwnerAccount(DB.license.tenantId, DB.license.code, DB.business.name);
+    renombrarNegocioEnCuenta(DB.license.tenantId, DB.license.code, DB.business.name);
   }
   renderHeader();
   updateAutoActiveCarta(true);

@@ -242,6 +242,7 @@ lanzar; node test/fiscal-nomina-extras.mjs > "$SALIDA/fiscal-nomina-extras.txt" 
 lanzar; node test/fiscal-349-347.mjs > "$SALIDA/fiscal-349-347.txt" 2>&1 & PF349=$!
 lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
 lanzar; node test/cambio-contrasena.mjs > "$SALIDA/cambiocontra.txt" 2>&1 & PCAMPIN=$!
+lanzar; node test/sincronia-global.mjs > "$SALIDA/sincronia-global.txt" 2>&1 & PSINCGLO=$!
 lanzar; node test/pin-h3.mjs > "$SALIDA/pinh3.txt" 2>&1 & PPINH3=$!
 lanzar; node test/tpv-scroll.mjs > "$SALIDA/tpvscroll.txt" 2>&1 & PTPVSC=$!
 lanzar; node test/tpv-tomar-nota-pda.mjs > "$SALIDA/tpvpda.txt" 2>&1 & PTPVPDA=$!
@@ -270,6 +271,7 @@ lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
 lanzar; node test/precios.mjs > "$SALIDA/precios.txt" 2>&1 & P90=$!
 lanzar; node test/pagos-worker.mjs > "$SALIDA/pagos-worker.txt" 2>&1 & P91=$!
 lanzar; node test/pagos-worker-cuenta-servicio.mjs > "$SALIDA/pagos-worker-cuenta-servicio.txt" 2>&1 & PWSA=$!
+lanzar; node test/empleado-cabecera.mjs > "$SALIDA/empleado-cabecera.txt" 2>&1 & PEMPCAB=$!
 lanzar; node test/pagos-app.mjs > "$SALIDA/pagos-app.txt" 2>&1 & P92=$!
 lanzar; node test/reservas-mesas.mjs > "$SALIDA/reservas-mesas.txt" 2>&1 & P93=$!
 lanzar; node test/modulos.mjs > "$SALIDA/modulos.txt" 2>&1 & P94=$!
@@ -408,6 +410,7 @@ espera $P89 "Plan 360: coach y negocio no se pisan, y lo vacío no rompe nada" "
 espera $P90 "Subidas de precio: historial, albarán, gasto real y aviso con impacto" "$SALIDA/precios.txt" "casos pasaron"
 espera $P91 "Worker de pagos (Stripe): cuenta del negocio, cobro directo, aviso firmado, pagos a la plataforma" "$SALIDA/pagos-worker.txt" "casos pasaron"
 espera $PWSA "Worker de pagos con cuenta de servicio de Firebase: JWT firmado, token reutilizado, sin el secreto obsoleto, y el heredado sigue valiendo" "$SALIDA/pagos-worker-cuenta-servicio.txt" "los [0-9]+ casos pasaron"
+espera $PEMPCAB "Cabecera: el nombre del empleado se ve (recortado si es largo) en 320-430 px y escritorio, sin desbordes ni solapes, y no sale al propietario" "$SALIDA/empleado-cabecera.txt" "los [0-9]+ casos pasaron"
 espera $P92 "Pagos y pedidos online: precios de la carta, pago corto no confirma, confirmación por consulta" "$SALIDA/pagos-app.txt" "casos pasaron"
 espera $P93 "Reservas: horas verde/rojo por mesa de N a N+2, el cliente elige mesa, grupos por teléfono" "$SALIDA/reservas-mesas.txt" "casos pasaron"
 espera $P94 "Módulos: previsión de IRPF/IVA verificada contra la Orden HAC/1425/2025, comparador con el beneficio real" "$SALIDA/modulos.txt" "casos pasaron"
@@ -570,5 +573,6 @@ espera $PFNEX "Fiscal, horas extra y pluses: base de cotización con tope, solid
 espera $PF349 "Fiscal, 349 intracomunitarias, comisiones de delivery en el 347 (con NIF, ISP y umbral) y avisos de módulos, con cuentas a mano" "$SALIDA/fiscal-349-347.txt" "los [0-9]+ casos pasaron"
 espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
+espera $PSINCGLO "Sincronía global (Y6): «Visto» y aviso de archivar por negocio, lápida de negocio no pisada, área de empleado, espejo público tras la nube, huella de nube por negocio" "$SALIDA/sincronia-global.txt" "todos los casos pasaron"
 espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"
 exit $FALLOS
