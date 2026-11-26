@@ -22,7 +22,7 @@
        "hora": "21:30", "total": 24.5, "comision": 5.1,
        "items": [ { "nombre": "Hamburguesa", "cantidad": 2, "precio": 9.5, "notas": "sin cebolla" } ] }
 
-   Variables del Worker (Settings → Variables): FIREBASE_DB_URL y FIREBASE_DB_SECRET (las mismas que pagos-worker.js:
+   Variables del Worker (Settings → Variables): FIREBASE_DB_URL y FIREBASE_SERVICE_ACCOUNT (las mismas que pagos-worker.js; FIREBASE_DB_SECRET sigue valiendo, pero está obsoleto:
    leen gastrogoan/publicLookup/{publicId} en la plataforma) y PUENTE_CLAVE, OBLIGATORIA desde el 25/11 (auditoría de seguridad):
    cada POST debe llevar la cabecera `x-puente-clave` con ese valor. Antes era opcional y SIN ella cualquiera con el publicId
    (va impreso en el QR del local) podía inyectar pedidos falsos con el nombre de una plataforma, mezclados con los reales de
@@ -69,8 +69,53 @@ function clavesIguales(a, b) {
   return d === 0;
 }
 
+/* Cómo se identifica el Worker ante Firebase. Lo normal ahora es una CUENTA DE SERVICIO (FIREBASE_SERVICE_ACCOUNT, el JSON
+   que descarga Firebase): el Worker firma un JWT con su clave privada, Google le da un token de una hora y ese token va en
+   cada llamada REST. Los «secretos de la base de datos» (FIREBASE_DB_SECRET) están OBSOLETOS en Firebase: se conservan solo como
+   respaldo para quien aún no haya cambiado, y si están las dos cosas manda la cuenta de servicio. Sin Admin SDK: no corre en Workers. */
+let _tokenGoogle = null;   // {token, exp, clave}: vive mientras viva la instancia del Worker; así no se pide un token por llamada
+const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64urlTexto = txt => b64url(new TextEncoder().encode(txt));
+let _tokenPendiente = null;   // la petición a Google en curso: dos llamadas a Firebase a la vez comparten UN solo token, no piden uno cada una
+async function tokenDeGoogle(env){
+  const ahora = Math.floor(Date.now() / 1000);
+  if(_tokenGoogle && _tokenGoogle.clave === env.FIREBASE_SERVICE_ACCOUNT && _tokenGoogle.exp - 120 > ahora) return _tokenGoogle.token;
+  if(!_tokenPendiente || _tokenPendiente.clave !== env.FIREBASE_SERVICE_ACCOUNT){
+    const p = pedirTokenAGoogle(env, ahora).finally(() => { if(_tokenPendiente && _tokenPendiente.p === p) _tokenPendiente = null; });
+    _tokenPendiente = {p, clave: env.FIREBASE_SERVICE_ACCOUNT};
+  }
+  return _tokenPendiente.p;
+}
+async function pedirTokenAGoogle(env, ahora){
+  let sa;
+  try { sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT); } catch(e){ throw new Error('FIREBASE_SERVICE_ACCOUNT no es un JSON válido'); }
+  if(!sa.client_email || !sa.private_key) throw new Error('FIREBASE_SERVICE_ACCOUNT no trae client_email y private_key');
+  const der = Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+  const clave = await crypto.subtle.importKey('pkcs8', der, {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256'}, false, ['sign']);
+  const cab = b64urlTexto(JSON.stringify({alg: 'RS256', typ: 'JWT'}));
+  const cuerpo = b64urlTexto(JSON.stringify({
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
+    aud: 'https://oauth2.googleapis.com/token', iat: ahora, exp: ahora + 3600,
+  }));
+  const firma = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', clave, new TextEncoder().encode(cab + '.' + cuerpo));
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST', headers: {'content-type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: cab + '.' + cuerpo + '.' + b64url(firma)}),
+  });
+  if(!r.ok) throw new Error('Google token failed: ' + r.status);
+  const j = await r.json();
+  _tokenGoogle = {token: j.access_token, exp: ahora + (j.expires_in || 3600), clave: env.FIREBASE_SERVICE_ACCOUNT};
+  return _tokenGoogle.token;
+}
+async function fbUrl(env, path){
+  const base = `${env.FIREBASE_DB_URL}/${path}.json`;
+  if(env.FIREBASE_SERVICE_ACCOUNT) return `${base}?access_token=${encodeURIComponent(await tokenDeGoogle(env))}`;
+  if(env.FIREBASE_DB_SECRET) return `${base}?auth=${env.FIREBASE_DB_SECRET}`;
+  throw new Error('Falta FIREBASE_SERVICE_ACCOUNT (o, heredado, FIREBASE_DB_SECRET)');
+}
 async function fbPlataforma(env, path) {
-  const r = await fetch(`${env.FIREBASE_DB_URL}/${path}.json?auth=${env.FIREBASE_DB_SECRET}`);
+  const r = await fetch(await fbUrl(env, path));
   if (!r.ok) throw new Error('plataforma ' + r.status);
   return r.json();
 }

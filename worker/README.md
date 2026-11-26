@@ -33,7 +33,8 @@ punta a punta en modo pruebas.
 | Nombre | Qué es |
 |---|---|
 | `FIREBASE_DB_URL` | la base de datos de `plataforma-gastrogoan` |
-| `FIREBASE_DB_SECRET` | su "Database secret" |
+| `FIREBASE_SERVICE_ACCOUNT` | el JSON de una cuenta de servicio de `plataforma-gastrogoan` (Firebase → Configuración del proyecto → Cuentas de servicio → **Generar nueva clave privada**). Se pega entero como SECRETO. Sustituye al «Database secret», que Firebase ya da por obsoleto |
+| `FIREBASE_DB_SECRET` | (heredado, opcional) su "Database secret". Solo se usa si NO hay cuenta de servicio |
 | `STRIPE_SECRET_KEY` | clave secreta de la cuenta de Stripe de GastroGoan (`sk_test_…` en pruebas, `sk_live_…` en real) |
 | `STRIPE_WEBHOOK_SECRET` | secreto de firma del webhook (`whsec_…`) |
 
@@ -106,3 +107,15 @@ cabecera `x-puente-clave` con ese valor, y sin la variable el Worker responde 50
 en el QR del local) podía inyectar pedidos falsos con el nombre de Glovo o Uber. Las fuentes (Make, Zapier, el Email Worker…) tienen que mandarla.
 Pruebas: `test/pedidos-plataforma.mjs` (la parte de la app y la normalización del puente).
 ⚠️ Pendiente de comprobar con una plataforma real: el formato de cada una y su plazo para aceptar el pedido.
+
+
+## ⚠️ El nombre `gastro` y el despliegue automático desde GitHub (26/11)
+
+Descubierto el 26/11: el Worker `gastro` estaba **conectado a este repositorio** (Configuración → Compilaciones → Repositorio Git),
+un resto del primer intento de alojar la app en Workers. En cada publicación en `main` Cloudflare lo **redesplegaba como «solo
+activos estáticos»** (los ficheros de `deploy/app/public`), y eso se llevaba por delante el código de pagos pegado a mano **y sus
+claves**. `/stripe/estado` daba 404 y no se podían añadir variables. La app NO dependía de ese Worker (se sirve desde Cloudflare Pages).
+- **Regla:** este Worker no se conecta a Git. Si algún día se quiere publicar desde el repositorio, que sea con su propio
+  `wrangler.jsonc` apuntando a `worker/pagos-worker.js` y sin activos, y con `keep_vars`.
+- **Cómo comprobar que está vivo:** `curl -i https://gastro.gastrogoan.workers.dev/stripe/estado` debe contestar JSON (no 404 ni HTML).
+- Las claves viven SOLO en Cloudflare: guardarlas además en el gestor de contraseñas.

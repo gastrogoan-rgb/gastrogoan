@@ -6,7 +6,9 @@
  * código → Desplegar (ver worker/README.md). Sin claves: viven en Cloudflare
  * (Settings → Variables and Secrets) y NUNCA se escriben aquí:
  *  - FIREBASE_DB_URL        base de datos de `plataforma-gastrogoan`
- *  - FIREBASE_DB_SECRET     su "Database secret"
+ *  - FIREBASE_SERVICE_ACCOUNT  el JSON de una cuenta de servicio de `plataforma-gastrogoan` (secreto). Sustituye al
+ *                           «Database secret», que Firebase ya da por obsoleto
+ *  - FIREBASE_DB_SECRET     (heredado, opcional) su "Database secret": solo si no hay cuenta de servicio
  *  - STRIPE_SECRET_KEY      clave secreta de la cuenta de Stripe de GastroGoan
  *  - STRIPE_WEBHOOK_SECRET  secreto de firma del webhook (eventos de cuentas conectadas)
  *
@@ -86,26 +88,68 @@ function urlPermitida(u, origenes){
 
 /* ===================== Firebase (plataforma) por REST ===================== */
 
-function fbUrl(env, path){
-  return `${env.FIREBASE_DB_URL}/${path}.json?auth=${env.FIREBASE_DB_SECRET}`;
+/* Cómo se identifica el Worker ante Firebase. Lo normal ahora es una CUENTA DE SERVICIO (FIREBASE_SERVICE_ACCOUNT, el JSON
+   que descarga Firebase): el Worker firma un JWT con su clave privada, Google le da un token de una hora y ese token va en
+   cada llamada REST. Los «secretos de la base de datos» (FIREBASE_DB_SECRET) están OBSOLETOS en Firebase: se conservan solo como
+   respaldo para quien aún no haya cambiado, y si están las dos cosas manda la cuenta de servicio. Sin Admin SDK: no corre en Workers. */
+let _tokenGoogle = null;   // {token, exp, clave}: vive mientras viva la instancia del Worker; así no se pide un token por llamada
+const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64urlTexto = txt => b64url(new TextEncoder().encode(txt));
+let _tokenPendiente = null;   // la petición a Google en curso: dos llamadas a Firebase a la vez comparten UN solo token, no piden uno cada una
+async function tokenDeGoogle(env){
+  const ahora = Math.floor(Date.now() / 1000);
+  if(_tokenGoogle && _tokenGoogle.clave === env.FIREBASE_SERVICE_ACCOUNT && _tokenGoogle.exp - 120 > ahora) return _tokenGoogle.token;
+  if(!_tokenPendiente || _tokenPendiente.clave !== env.FIREBASE_SERVICE_ACCOUNT){
+    const p = pedirTokenAGoogle(env, ahora).finally(() => { if(_tokenPendiente && _tokenPendiente.p === p) _tokenPendiente = null; });
+    _tokenPendiente = {p, clave: env.FIREBASE_SERVICE_ACCOUNT};
+  }
+  return _tokenPendiente.p;
+}
+async function pedirTokenAGoogle(env, ahora){
+  let sa;
+  try { sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT); } catch(e){ throw new Error('FIREBASE_SERVICE_ACCOUNT no es un JSON válido'); }
+  if(!sa.client_email || !sa.private_key) throw new Error('FIREBASE_SERVICE_ACCOUNT no trae client_email y private_key');
+  const der = Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+  const clave = await crypto.subtle.importKey('pkcs8', der, {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256'}, false, ['sign']);
+  const cab = b64urlTexto(JSON.stringify({alg: 'RS256', typ: 'JWT'}));
+  const cuerpo = b64urlTexto(JSON.stringify({
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
+    aud: 'https://oauth2.googleapis.com/token', iat: ahora, exp: ahora + 3600,
+  }));
+  const firma = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', clave, new TextEncoder().encode(cab + '.' + cuerpo));
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST', headers: {'content-type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: cab + '.' + cuerpo + '.' + b64url(firma)}),
+  });
+  if(!r.ok) throw new Error('Google token failed: ' + r.status);
+  const j = await r.json();
+  _tokenGoogle = {token: j.access_token, exp: ahora + (j.expires_in || 3600), clave: env.FIREBASE_SERVICE_ACCOUNT};
+  return _tokenGoogle.token;
+}
+async function fbUrl(env, path){
+  const base = `${env.FIREBASE_DB_URL}/${path}.json`;
+  if(env.FIREBASE_SERVICE_ACCOUNT) return `${base}?access_token=${encodeURIComponent(await tokenDeGoogle(env))}`;
+  if(env.FIREBASE_DB_SECRET) return `${base}?auth=${env.FIREBASE_DB_SECRET}`;
+  throw new Error('Falta FIREBASE_SERVICE_ACCOUNT (o, heredado, FIREBASE_DB_SECRET)');
 }
 async function fbGet(env, path){
-  const res = await fetch(fbUrl(env, path));
+  const res = await fetch(await fbUrl(env, path));
   if(!res.ok) throw new Error('Firebase GET ' + path + ' failed: ' + res.status);
   return res.json();
 }
 async function fbPut(env, path, data){
-  const res = await fetch(fbUrl(env, path), { method: 'PUT', body: JSON.stringify(data) });
+  const res = await fetch(await fbUrl(env, path), { method: 'PUT', body: JSON.stringify(data) });
   if(!res.ok) throw new Error('Firebase PUT ' + path + ' failed: ' + res.status);
   return res.json();
 }
 async function fbPatch(env, path, data){
-  const res = await fetch(fbUrl(env, path), { method: 'PATCH', body: JSON.stringify(data) });
+  const res = await fetch(await fbUrl(env, path), { method: 'PATCH', body: JSON.stringify(data) });
   if(!res.ok) throw new Error('Firebase PATCH ' + path + ' failed: ' + res.status);
   return res.json();
 }
 async function fbPush(env, path, data){
-  const res = await fetch(fbUrl(env, path), { method: 'POST', body: JSON.stringify(data) });
+  const res = await fetch(await fbUrl(env, path), { method: 'POST', body: JSON.stringify(data) });
   if(!res.ok) throw new Error('Firebase POST ' + path + ' failed: ' + res.status);
   return res.json();
 }
