@@ -113,6 +113,9 @@ cp fonts/*.woff2 dist/fonts/
 # Copy the offline app-shell service worker (must sit at the site root next to index.html)
 cp sw.js dist/sw.js
 cp sw-reservas.js dist/sw-reservas.js
+# Favicon como archivo real: los navegadores piden /favicon.ico siempre y, sin él, el servidor devolvía la página entera.
+cp favicon.png dist/favicon.png
+cp favicon.png dist/favicon.ico
 
 # Tutorial de autoalojamiento (Netlify): solo lo enseña la app cuando NO se
 # abre desde *.gastrogoan.com (ver esKitAutoAlojado, js/core.js), pero tiene
