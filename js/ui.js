@@ -2770,6 +2770,16 @@ const GG_RUTA_PROV = {
   horarios:   {guardar: () => ({t: horariosTab}), restaurar: s => { if(s.t) horariosTab = s.t; renderHorarios(); }},
   promocion:  {guardar: () => ({t: promoTab}), restaurar: s => { if(s.t) promoTab = s.t; renderPromocion(); }},
   carta:      {guardar: () => ({t: ofertaTab}), restaurar: s => { if(s.t) ofertaTab = s.t; renderOferta(); }},
+  // Hoja de un plato o elaboración (Escandallo): solo se recuerda la receta. Una hoja nueva sin guardar no sobrevive a «atrás»
+  // (no tiene id): vuelve a la lista, que es lo que se ve al salir sin guardar.
+  escandallo: {guardar: () => ({h: escandalloHoja ? {i: escandalloHoja.id, b: !!escandalloHoja.isBase} : null}), restaurar: s => {
+    const r = s.h && s.h.i ? getRecipe(s.h.i) : null;
+    if(r){ escandalloHoja = {id: r.id, isBase: !!s.h.b}; escandalloTab = s.h.b ? 'elaboraciones' : 'platos'; recipeModalLines = (r.ingredients || []).map(l => ({...l})); }
+    else { escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; }
+    renderEscandallo(); }},
+  fichas:     {guardar: () => ({h: fichaHoja && fichaModalState && fichaModalState.id ? fichaModalState.id : null}), restaurar: s => {
+    if(s.h && getFicha(s.h)) openFichaModal(s.h, null, {restaurar: true});
+    else { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; renderFichas(); } }},
   economia:   {guardar: () => { const a = document.querySelector('#view-economia .ge-tab-panel.active'); return {t: a ? a.id.replace('ge-', '') : null}; }, restaurar: s => { if(s.t) GE.tab(s.t); }},
 };
 function ggRutaVista(){ const a = document.querySelector('.view.active'); return a ? a.id.replace('view-', '') : null; }

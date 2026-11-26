@@ -1068,6 +1068,7 @@ const GE = (function(){
         </div>
         <p id="gf-auto-smi" class="txt-xs" style="display:none;color:var(--red);margin:-4px 0 10px"><i class="ti ti-alert-triangle"></i> ${t('hr.gf.bajoSmi').replace('${smi}', fmtMoney(SMI_ANUAL))}</p>
       </div>
+      ${autoCalc && !(fiscalPerfil().personaFisica && gfEsRetribucionTitular(g)) ? gfExtrasFormHtml(g) : ''}
       ` : ''}
       <div class="gf-mh">${gl({es:'Importe y pago', ca:'Import i pagament', en:'Amount and payment'})}</div>
       <div class="field-row">
@@ -1183,10 +1184,11 @@ const GE = (function(){
   const BASE_MIN_RESTO_2026 = 1424.40;
   const SOLIDARIDAD_2026 = [[0.10, 0.96], [0.50, 1.04], [Infinity, 1.22]];   // % empresa por tramo
   const CONTRATO_CORTO_2026 = 33.62;
-  function calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagas, opts={}){
-    const retPct = irpfPct + ssTrabPct;
-    const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
-    const brutoMes = bruto * (pagas||12) / 12;
+  // Seguridad Social de la EMPRESA sobre un bruto mensual: la base con suelo
+  // y techo, más la solidaridad por encima del techo. Lo usan la nómina base
+  // (calcNomina) y las horas extra (nominaExtrasMes), para que una y otra
+  // cotizen igual y el tope no se aplique dos veces.
+  function ssEmpresaDeBrutoMes(brutoMes, ssPct, opts={}){
     const jornada = Math.min(100, Math.max(1, parseFloat(opts.jornada) || 100)) / 100;
     const baseMin = (BASE_MIN_2026[parseInt(opts.grupo)] || BASE_MIN_RESTO_2026) * jornada;
     const base = Math.min(BASE_MAX_2026, Math.max(baseMin, brutoMes));
@@ -1198,9 +1200,47 @@ const GE = (function(){
       solidaridad += (Math.min(exceso, hasta) - desde) * pct / 100;
       desde = hasta;
     }
+    return {base, solidaridad, ssEmpresa: base * ssPct/100 + solidaridad};
+  }
+  function calcNomina(neto, irpfPct, ssTrabPct, ssPct, pagas, opts={}){
+    const retPct = irpfPct + ssTrabPct;
+    const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
+    const brutoMes = bruto * (pagas||12) / 12;
+    const ss = ssEmpresaDeBrutoMes(brutoMes, ssPct, opts);
     const cortos = (parseFloat(opts.contratosCortos) || 0) * CONTRATO_CORTO_2026;
-    const ssEmpresa = base * ssPct/100 + solidaridad + cortos;
-    return {bruto, brutoMes, base, ssEmpresa, irpfMensual: brutoMes * irpfPct/100, total: brutoMes + ssEmpresa};
+    const ssEmpresa = ss.ssEmpresa + cortos;
+    return {bruto, brutoMes, base: ss.base, ssEmpresa, irpfMensual: brutoMes * irpfPct/100, total: brutoMes + ssEmpresa};
+  }
+  // Horas extra y pluses de UN mes (ex = {horas, precioHora, plusCot, plusNoCot}),
+  // sobre el bruto mensual de la nómina de convenio (g.brutoMes, g.ssPct,
+  // g.ssTrabPct, g.irpfPct, g.grupo, g.jornada).
+  // · Cotizan a la SS las horas extra y los pluses que se marquen como «cotizan»:
+  //   suman a la base de cotización, con el mismo tope de 5.101,20 € que el sueldo.
+  //   Lo que pasa del tope solo paga la solidaridad.
+  // · El IRPF se aplica al tipo de la nómina: es una APROXIMACIÓN (la retención
+  //   real de un mes con extras depende del algoritmo AEAT completo).
+  // · Qué pluses cotizan y cuáles no (transporte, dietas exentas…) y si las horas
+  //   de fuerza mayor cotizan aparte, lo confirma el GESTOR: la app pide marcarlo
+  //   y, si hay duda, cuenta el plus como cotizable (que es lo prudente para la caja).
+  function nominaExtrasMes(ex, g){
+    const cent = v => Math.round(v * 100) / 100;
+    const horas = Math.max(0, parseFloat(ex.horas) || 0), precio = Math.max(0, parseFloat(ex.precioHora) || 0);
+    const plusCot = Math.max(0, parseFloat(ex.plusCot) || 0), plusNoCot = Math.max(0, parseFloat(ex.plusNoCot) || 0);
+    const horasImp = cent(horas * precio);
+    const cot = cent(horasImp + plusCot);          // lo que cotiza
+    const total = cent(cot + plusNoCot);           // todo lo que cobra el empleado por extras
+    const B0 = Math.max(0, parseFloat(g.brutoMes) || 0);
+    const ssDelta = ssEmpresaDeBrutoMes(B0 + cot, g.ssPct, g).ssEmpresa - ssEmpresaDeBrutoMes(B0, g.ssPct, g).ssEmpresa;
+    const ssTrabDelta = cot * (parseFloat(g.ssTrabPct) || 0) / 100;
+    const irpfDelta = total * (parseFloat(g.irpfPct) || 0) / 100;
+    return {
+      total, cot,
+      ssEmpresaDelta: cent(ssDelta),
+      costeEmpresa: cent(total + ssDelta),           // lo que le cuestan al negocio los extras
+      irpfDelta: cent(irpfDelta),
+      ssTrabDelta: cent(ssTrabDelta),
+      netoDelta: cent(total - ssTrabDelta - irpfDelta),
+    };
   }
   // Retención de IRPF de un trabajador por el algoritmo oficial de la AEAT 2026
   // (versión de 10/09/2026), sin discapacidad, pensiones ni movilidad. Trabajador
@@ -1273,6 +1313,54 @@ const GE = (function(){
       smiEl.style.display = (anual > 0 && anual < SMI_ANUAL * jor) ? '' : 'none';
     }
   }
+  // Horas extra y pluses por MES (g.extrasMes['AAAA-MM'] = {horas, precioHora, plusCot, plusNoCot}).
+  // Solo con nómina automática: sin el bruto de convenio no hay tope de cotización que aplicar.
+  const GF_EX_AVISO = gl({es:'Cuentan como coste del mes y como IRPF del Modelo 111. Solo los pluses que cotizan suben la base de cotización (con el tope). Qué plus cotiza y las horas de fuerza mayor: pendiente de revisar con el gestor.', ca:'Compten com a cost del mes i com a IRPF del Model 111. Només els pluses que cotitzen pugen la base de cotització (amb el topall). Quin plus cotitza i les hores de força major: pendent de revisar amb la gestoria.', en:'They count as the month\'s cost and as withholding for Form 111. Only bonuses subject to social security raise the contribution base (up to the cap). Which bonus is subject and overtime due to force majeure: pending review with your accountant.'});
+  function gfExtrasFormHtml(g){
+    const ym = todayStr().slice(0,7);
+    const v = (g.extrasMes||{})[ym] || {};
+    const num = x => (x==null || x==='') ? '' : x;
+    const campo = (id, lbl, val, step) => `<div class="field"><label for="${id}">${escapeHtml(lbl)}</label><input type="number" id="${id}" min="0" step="${step}" inputmode="decimal" value="${num(val)}" oninput="GE.gfExtrasRecalc()"></div>`;
+    return `<div class="gf-mh">${gl({es:'Horas extra y pluses', ca:'Hores extra i pluses', en:'Overtime and bonuses'})}</div>
+      <div class="field-row">
+        <div class="field"><label for="gf-ex-mes">${gl({es:'Mes', ca:'Mes', en:'Month'})}</label><input type="month" id="gf-ex-mes" value="${ym}" onchange="GE.gfExtrasCargarMes()"></div>
+        ${campo('gf-ex-horas', gl({es:'Horas extra', ca:'Hores extra', en:'Overtime hours'}), v.horas, '0.5')}
+      </div>
+      <div class="field-row">
+        ${campo('gf-ex-precio', gl({es:'Precio de la hora extra (€)', ca:'Preu de l\'hora extra (€)', en:'Overtime hourly rate (€)'}), v.precioHora, '0.01')}
+        ${campo('gf-ex-plus-cot', gl({es:'Pluses que cotizan (€)', ca:'Pluses que cotitzen (€)', en:'Bonuses subject to social security (€)'}), v.plusCot, '0.01')}
+      </div>
+      <div class="field-row">
+        ${campo('gf-ex-plus-nocot', gl({es:'Pluses que NO cotizan (€)', ca:'Pluses que NO cotitzen (€)', en:'Bonuses NOT subject to social security (€)'}), v.plusNoCot, '0.01')}
+        <div class="field"><label>${gl({es:'Coste del mes para la empresa', ca:'Cost del mes per a l\'empresa', en:'Month cost for the business'})}</label><div class="val" id="gf-ex-coste" style="font-weight:600">0,00 €</div></div>
+      </div>
+      <div class="txt-xs" style="color:var(--muted);margin:-4px 0 10px">${escapeHtml(GF_EX_AVISO)}</div>`;
+  }
+  // Lee el bloque de horas extra del formulario (mes + importes).
+  function gfExtrasLeerForm(){
+    const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    return {ym: val('gf-ex-mes'), ex: {horas: val('gf-ex-horas'), precioHora: val('gf-ex-precio'), plusCot: val('gf-ex-plus-cot'), plusNoCot: val('gf-ex-plus-nocot')}};
+  }
+  function gfExtrasVacio(ex){ return ['horas','precioHora','plusCot','plusNoCot'].every(k => !(parseFloat(ex[k]) > 0)); }
+  // Coste en vivo del mes: con la nómina que hay escrita en el formulario (no la guardada).
+  function gfExtrasRecalc(){
+    const el = document.getElementById('gf-ex-coste'); if(!el) return;
+    const num = id => parseFloat((document.getElementById(id)||{}).value) || 0;
+    const pagas = parseInt((document.getElementById('gf-f-pagas')||{}).value) || 12;
+    const nom = calcNomina(num('gf-f-neto'), num('gf-f-irpfpct'), num('gf-f-sstrabpct'), num('gf-f-sspct'), pagas, nominaOpts());
+    const {ex} = gfExtrasLeerForm();
+    const r = nominaExtrasMes(ex, {brutoMes: nom.brutoMes, ssPct: num('gf-f-sspct'), ssTrabPct: num('gf-f-sstrabpct'), irpfPct: num('gf-f-irpfpct'), grupo: nominaOpts().grupo, jornada: nominaOpts().jornada});
+    el.textContent = fmtMoney(r.costeEmpresa);
+  }
+  // Al cambiar de mes en la ficha, se cargan los importes de ESE mes (si los hay).
+  function gfExtrasCargarMes(){
+    const {ym} = gfExtrasLeerForm();
+    const g = editingGF ? fijos().find(x=>x.id===editingGF) : null;
+    const v = (g && g.extrasMes && g.extrasMes[ym]) || {};
+    const set = (id, x) => { const el = document.getElementById(id); if(el) el.value = (x==null) ? '' : x; };
+    set('gf-ex-horas', v.horas); set('gf-ex-precio', v.precioHora); set('gf-ex-plus-cot', v.plusCot); set('gf-ex-plus-nocot', v.plusNoCot);
+    gfExtrasRecalc();
+  }
   function saveGF(){
     const nombre = document.getElementById('gf-f-nombre').value.trim();
     const importe = parseFloat(document.getElementById('gf-f-importe').value);
@@ -1336,6 +1424,17 @@ const GE = (function(){
     }else{
       data.autoCalc = false;
       delete data.sueldoNeto; delete data.irpfPct; delete data.ssTrabPct; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa; delete data.irpfMensual;
+    }
+    // Horas extra y pluses: cada mes se guarda aparte y no se pisa al editar otro. Si el gasto deja de ser de
+    // nómina automática (o es el titular), los meses ya anotados se conservan, por si vuelve a serlo.
+    const prevEx = editingGF ? ((fijos().find(x=>x.id===editingGF)||{}).extrasMes || {}) : {};
+    if(isAutoCalc && catVal==='PERSONAL' && !(fiscalPerfil().personaFisica && data.esTitular)){
+      const {ym, ex} = gfExtrasLeerForm();
+      const mapa = {...prevEx};
+      if(gfExtrasVacio(ex)) delete mapa[ym]; else mapa[ym] = {horas: parseFloat(ex.horas)||0, precioHora: parseFloat(ex.precioHora)||0, plusCot: parseFloat(ex.plusCot)||0, plusNoCot: parseFloat(ex.plusNoCot)||0};
+      if(Object.keys(mapa).length) data.extrasMes = mapa;
+    }else if(Object.keys(prevEx).length){
+      data.extrasMes = prevEx;
     }
     if(editingGF){
       const existing = fijos().find(x=>x.id===editingGF);
@@ -4222,6 +4321,17 @@ const GE = (function(){
         sumar(g.proveedor || g.nombre, g.nifProveedor, Math.floor(m/3), (parseFloat(g.importe)||0)*(1+(parseFloat(g.iva)||0)/100));
       });
     }
+    // Comisiones de delivery (Glovo, Uber Eats…): la plataforma nos factura su comisión, así que es una operación
+    // CON ELLA y cuenta para el 347 como cualquier proveedor, con el IVA incluido. Solo la ESTIMACIÓN venta a venta:
+    // si la factura real de la plataforma va en Gastos Variables, ya entró arriba y no se cuenta dos veces.
+    // Con ISP (inversión del sujeto pasivo) la plataforma no repercute IVA: cuenta la base. Sin NIF de la
+    // plataforma no se puede identificar: se avisa en la hoja de avisos (platformSinNifAviso).
+    activeSales().filter(v => (v.date||'').startsWith(String(año)+'-') && v.plataforma && !v.plataforma.facturaReal && parseFloat(v.comisionPlataforma) > 0).forEach(v => {
+      const q = Math.floor((parseInt(v.date.slice(5,7))-1)/3);
+      const dp = (DB.business.deliveryPlatforms||[]).find(x => String(x.id) === String(v.plataforma.id));
+      const imp = v.plataforma.isp ? comisionPlataformaNeta(v) : parseFloat(v.comisionPlataforma);
+      sumar(v.plataforma.nombre || '—', (dp && dp.nif) || '', q, imp);
+    });
     const lista = Object.values(prov).map(p => [p.nombre, p.nif, ...p.q.map(n2), n2(p.q.reduce((a,b)=>a+b,0))]).filter(r => r[6] > 3005.06).sort((a,b)=>b[6]-a[6]);
     if(lista.length) rows.push(...lista); else rows.push([t('hr.libro.sin347')]);
     // Clientes con factura completa por más de 3.005,06 € en el año: también
@@ -4453,6 +4563,8 @@ const GE = (function(){
         const coste = gfMonthlyImporte(g);
         filas.push([`${y}-${String(m+1).padStart(2,'0')}`, gfConceptLabel(g.nombre), g.titular ? (pf ? t('pg.titularNoGasto') : t('pg.titularNomina')) : '', act.sueldoBruto ? act.sueldoBruto * (act.pagas||12)/12 : '', act.ssEmpresa || '', act.irpfMensual || '', coste]);
       });
+      const exExtras = geExtrasPersonalMes(y, m);
+      if(exExtras) filas.push([`${y}-${String(m+1).padStart(2,'0')}`, gl({es:'Horas extra y pluses', ca:'Hores extra i pluses', en:'Overtime and bonuses'}), '', '', '', geExtrasIrpfMes(y, m), exExtras]);
       filas.push([`${y}-${String(m+1).padStart(2,'0')}`, t('hr.cdr.irpfToDeposit'), '', '', '', geModelo111ForMonth(y, m), '']);
     });
     return {nombre: t('pg.h.personal'), cabecera: 2, filas: [[t('pg.h.personal')+' · '+p.nombre], [], [t('common.month'), t('hr.libro.concepto'), '', t('pg.c.brutoMes'), t('hr.gf.companySs'), t('hr.gf.irpfWithheld'), t('hr.gf.totalCompanyCost')], ...filas]};
@@ -4538,10 +4650,56 @@ const GE = (function(){
     poner(emi.filter(f => f[3] === 'F1' && !f[8]).length, 'Facturas completas sin NIF del cliente', 'Factures completes sense NIF del client', 'Full invoices without customer tax ID', {es:'Una factura completa exige el NIF del cliente', ca:'Una factura completa exigeix el NIF del client', en:'A full invoice requires the customer tax ID'});
     const sinCerrar = mesesDelPeriodo(p).filter(({y, m}) => new Date(y, m + 1, 0) < new Date() && !isMonthClosed(y, m)).length;
     poner(sinCerrar, 'Meses ya terminados sin cerrar', 'Mesos ja acabats sense tancar', 'Finished months not closed', {es:'Tesorería → Cerrar mes, para que nada se modifique tras presentar', ca:'Tresoreria → Tancar mes, perquè res es modifiqui després de presentar', en:'Treasury → Close month, so nothing changes after filing'});
+    const platSinNif = [...new Set(activeSales().filter(v => enP(p, v.date) && v.plataforma && !v.plataforma.facturaReal && parseFloat(v.comisionPlataforma) > 0).map(v => {
+      const dp = (b.deliveryPlatforms||[]).find(x => String(x.id) === String(v.plataforma.id));
+      return (dp && dp.nif) ? null : (v.plataforma.nombre || '—');
+    }).filter(Boolean))];
+    poner(platSinNif.length, 'Plataformas de delivery sin NIF (su comisión no sale en el 347)', 'Plataformes de delivery sense NIF (la seva comissió no surt al 347)', 'Delivery platforms without tax ID (their commission is missing from form 347)', {es:'Mi Negocio → Plataformas → NIF o CIF de cada una', ca:'El Meu Negoci → Plataformes → NIF o CIF de cadascuna', en:'My Business → Platforms → tax ID of each one'});
+    // Módulos: la app NO comprueba el límite de exclusión (la cifra no está verificada en el BOE) y las subvenciones
+    // no entran en el rendimiento de módulos (calcularModulos no las lee). Se avisa; no se corrige ni se inventa un límite.
+    if(modulosAplica()){
+      poner(1, 'Módulos: la app no comprueba el límite de exclusión del año', 'Mòduls: l\'app no comprova el límit d\'exclusió de l\'any', 'Modules: the app does not check the exclusion limit for the year', {es:'Compara tu facturación del año con el límite vigente con tu gestor', ca:'Compara la teva facturació de l\'any amb el límit vigent amb la teva gestoria', en:'Check the year\'s turnover against the limit in force with your accountant'});
+      poner((DB.ge.otrosIngresos||[]).filter(o => o.tipo === 'subvencion' && enP(p, o.fecha)).length, 'Subvenciones en módulos: no entran en el rendimiento de módulos', 'Subvencions en mòduls: no entren al rendiment de mòduls', 'Grants under modules: not part of the modules income', {es:'Confirma con tu gestor cómo tratarlas', ca:'Confirma amb la teva gestoria com tractar-les', en:'Confirm with your accountant how to treat them'});
+    }
     let sinIva = 0; activeSales().filter(v => enP(p, v.date)).forEach(v => (v.items || []).forEach(l => { if(l.ivaPct == null) sinIva++; }));
     poner(sinIva, 'Líneas de venta sin IVA propio (se aplicó el IVA por defecto)', 'Línies de venda sense IVA propi (s\'ha aplicat l\'IVA per defecte)', 'Sales lines without their own VAT (default VAT applied)', {es:'Elige el IVA de esos platos en Oferta', ca:'Tria l\'IVA d\'aquests plats a Oferta', en:'Set the VAT of those dishes in Menu Offering'});
     const cab = [gl({es:'Aviso', ca:'Avís', en:'Warning'}), gl({es:'Cuántos', ca:'Quants', en:'How many'}), gl({es:'Qué hacer', ca:'Què fer', en:'What to do'})];
     return {nombre: gl({es:'Avisos', ca:'Avisos', en:'Warnings'}), cabecera: 2, filas: [[gl({es:'Avisos antes de presentar', ca:'Avisos abans de presentar', en:'Warnings before filing'})], [], cab, ...(av.length ? av : [[gl({es:'Sin avisos: los libros están completos.', ca:'Sense avisos: els llibres són complets.', en:'No warnings: the books are complete.'}), 0, '']])]};
+  }
+  // Prefijos del NIF-IVA de los países de la UE (España fuera: es el propio país). Grecia usa «EL».
+  const UE_NIF_PREFIJOS = ['AT','BE','BG','CY','CZ','DE','DK','EE','EL','FI','FR','HR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK'];
+  // Devuelve el prefijo UE del NIF-IVA, o null. Sin NIF no se sabe de dónde es: NO se supone nada.
+  function nifPrefijoUE(nif){
+    const s = String(nif||'').replace(/[\s.\-]/g,'').toUpperCase();
+    const pre = s.slice(0,2);
+    return (UE_NIF_PREFIJOS.includes(pre) && /^[A-Z]{2}[0-9A-Z]{2,}$/.test(s)) ? pre : null;
+  }
+  // 349 (operaciones intracomunitarias): compras a proveedores con NIF-IVA de otro país de la UE, base SIN IVA por
+  // trimestre, sacadas de la hoja de facturas recibidas (las mismas filas que ven los libros). Incluye bienes y
+  // servicios (ISP): la app no distingue unos de otros, y el umbral y las casillas los confirma el gestor.
+  function hoja349(hR){
+    const datos = h => { const i = h.filas.findIndex(f => f && f[0] === t('pg.c.ejercicio')); const fin = h.filas.findIndex((f, k) => k > i && (!f || f.length === 0)); return h.filas.slice(i + 1, fin < 0 ? undefined : fin); };
+    const rows = datos(hR).filter(f => f[6] !== t('pg.concepto.comision'));
+    const por = {}, qs = new Set();
+    let sinNif = 0;
+    rows.forEach(f => {
+      if(!f[4]) { sinNif++; return; }        // sin NIF-IVA no sabemos si es de la UE: se avisa, no se supone
+      if(!nifPrefijoUE(f[4])) return;        // español u otro país: no es 349
+      const nif = String(f[4]).replace(/[\s.\-]/g,'').toUpperCase();
+      (por[nif] = por[nif] || {nombre: f[5] || '', nif, q: {}});
+      por[nif].q[f[1]] = (por[nif].q[f[1]] || 0) + (parseFloat(f[7]) || 0);
+      qs.add(f[1]);
+    });
+    const trim = [...qs].sort();
+    const filas = Object.values(por).sort((a,b) => a.nombre.localeCompare(b.nombre)).map(x => {
+      const v = trim.map(q => n2(x.q[q] || 0));
+      return [x.nombre, x.nif, ...v, n2(v.reduce((a,b)=>a+b,0))];
+    });
+    const titulo = gl({es:'Operaciones intracomunitarias (349)', ca:'Operacions intracomunitàries (349)', en:'Intra-EU operations (349)'});
+    const cab = [gl({es:'Proveedor', ca:'Proveïdor', en:'Supplier'}), gl({es:'NIF-IVA', ca:'NIF-IVA', en:'VAT ID'}), ...trim, t('hr.lbl.yearAbbrev')];
+    const cuerpo = filas.length ? filas : [[gl({es:'Sin compras a proveedores de otros países de la UE en el periodo.', ca:'Cap compra a proveïdors d\'altres països de la UE en el període.', en:'No purchases from suppliers in other EU countries in the period.'})]];
+    const avisos = sinNif ? [[], [gl({es:'Facturas sin NIF-IVA (no se sabe si son de la UE, no entran aquí)', ca:'Factures sense NIF-IVA (no se sap si són de la UE, no entren aquí)', en:'Invoices without VAT ID (unknown whether EU, not included here)'}), sinNif]] : [];
+    return {nombre: titulo, cabecera: 2, filas: [[titulo], [gl({es:'Base sin IVA. Pendiente de revisar con el gestor: umbral y casillas del 349.', ca:'Base sense IVA. Pendent de revisar amb la gestoria: llindar i caselles del 349.', en:'Base excluding VAT. Pending review with your accountant: threshold and boxes of form 349.'})], [], cab, ...cuerpo, ...avisos]};
   }
   function csvDeFilas(filas){
     const cel = v => {
@@ -4566,6 +4724,7 @@ const GE = (function(){
     if(incl('pg-i-impuestos')){
       hojas.push(hojaImpuestos(p));
       hojas.push(hojaIvaPorTipo(hEmit, hRec));
+      hojas.push(hoja349(hRec));
       const y0 = parseInt(p.desde.slice(0,4));
       if(p.desde === `${y0}-01-01` && p.hasta === `${y0}-12-31`) hojas.push({nombre: t('hr.libro.resumen'), cabecera: 2, filas: resumenAño(y0)});
     }
@@ -5038,7 +5197,7 @@ const GE = (function(){
   // isDateClosed, nifDeProveedor y renderVariables los usa también la
   // lectura de facturas con foto (js/operations.js), que guarda la compra
   // con las mismas reglas que el formulario a mano.
-  const api = {bcPrevisionCaja, obligacionesPendientes, isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaIvaPorTipo, hojaAvisos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
+  const api = {bcPrevisionCaja, obligacionesPendientes, isDateClosed, nifDeProveedor, renderVariables, init, tab, renderVentas, setGVPeriodo, setTePeriodo, setVentasYear, setVentasMonth, setVentasPeriodo, setVentasTipoFiltro, irPrimeroSinMesPago, newGF, newGFFromEmployee, editGF, dupGF, gfAvisoPrestamo, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, gfContratoCambia, gvRellenarNif, descargarLibroGestor, ocultarChecklist, gfExtrasCargarMes, gfExtrasRecalc, nominaExtrasMes, ssEmpresaDeBrutoMes, nifPrefijoUE, hoja349, nuevoSueldoTitular, sinSueldoTitular, descargarPaqueteGestor, compartirPaqueteGestor, pgTipoCambia, construirPaqueteGestor, hojaEmitidas, hojaRecibidas, hojaResultados, hojaImpuestos, hojaIvaPorTipo, hojaAvisos, hojaPersonal, hojaJornada, editarExistencias, nuevoDividendo, nuevoVale, guardarVale, canjearVale, nuevoOtroIngreso, guardarOtroIngreso, borrarOtroIngreso, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, anularGV, anularGVGroup, editFoodCostObj, calcPE, peUseRealData, peFoodCostCambia, peUsarFoodCostReal, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, dupCapex, setCxFiltro, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, renderTesoreria, setCDRYear, setCDRGranularidad, setCdrGrafTab, cdrAyuda, cdrComoSeCalcula, setCDRPeriodo, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, renderModulos, saveModulosField, calcModulos: calcularModulos, modulosEpigrafes: () => MODULOS_EPIGRAFES, pctEfectivo: pctImpuestoEfectivoMes, sugerenciaSociedad: sugerenciaImpuestoSociedad, gfAttachFactura, gfRemoveFactura, gvAttachFactura, gvRemoveFactura, sueltaAttach, verFacturaGV, sueltaUpload, sueltaDelete, sueltaUsar, downloadMonthInvoices, ivaVentasMes, ivaLiquidarMes, comisionesMes, libroIngresos, libroGastos, libroBienesInversion, resumenAño, registroJornada, impuestoMes, resultadoAntesImpMes, resultadoMes, pagoACuentaTrimestre, calcNomina, retencionIrpfTrabajador, renderBC, setBcTab, bcGuardarSaldo, bcMesDatos, bcAgregar, bcPeriodo, facturacionNetaMes, ivaVentasMes, ivaLiquidarQTD, iva303TrimestreAPagar, perdidasCompensables, baseAnualEstimada, optsImpuesto, tipoImpuestoAño, totalVariablesNetoMes, retDividendosMes, comisionesMes, capexCuotaMes, variablesMes};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.

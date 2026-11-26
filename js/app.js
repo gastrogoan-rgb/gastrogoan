@@ -9753,6 +9753,11 @@ function openDeliveryPlatformModal(title, p){
       <input type="text" id="dp-f-nombre" list="dp-sugerencias" value="${escapeHtml(p.nombre)}" placeholder="${t('ph.egDeliveryPlatform')}">
       <datalist id="dp-sugerencias">${sugerencias}</datalist>
     </div>
+    <div class="field">
+      <label>${escapeHtml(gl({es:'NIF o CIF de la plataforma', ca:'NIF o CIF de la plataforma', en:'Platform tax ID'}))}</label>
+      <input type="text" id="dp-f-nif" value="${escapeHtml(p.nif||'')}" placeholder="${escapeHtml(gl({es:'Para el modelo 347 (comisiones)', ca:'Per al model 347 (comissions)', en:'For form 347 (commissions)'}))}">
+      <p class="txt-xs" style="color:var(--muted);margin:4px 0 0">${escapeHtml(gl({es:'Sin él, la comisión de esta plataforma no sale identificada en el modelo 347.', ca:'Sense ell, la comissió d\'aquesta plataforma no surt identificada al model 347.', en:'Without it, this platform\'s commission is not identified in form 347.'}))}</p>
+    </div>
     <div class="field-row">
       <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}" oninput="updateDeliveryPlatformExample()"></div>
       <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}" oninput="updateDeliveryPlatformExample()"></div>
@@ -9821,7 +9826,7 @@ function saveDeliveryPlatform(){
   const dupe = DB.business.deliveryPlatforms.find(p => p.nombre.trim().toLowerCase()===nombre.toLowerCase() && String(p.id)!==idVal);
   if(dupe){ showToast(t('msg.platformNameDuplicate')); return; }
   const comisionSobreEnvio = document.getElementById('dp-f-comision-envio').checked;
-  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio,
+  const data = {nombre, nif: (document.getElementById('dp-f-nif')||{value:''}).value.trim().toUpperCase(), comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio,
     isp: document.getElementById('dp-f-isp').checked, facturaReal: document.getElementById('dp-f-real').checked,
     // IVA de la VENTA (no el de la comisión) y si la plataforma sale en el cierre de caja. '' = el IVA por defecto del negocio.
     ivaVentaPct: (() => { const v = document.getElementById('dp-f-iva-venta').value; return v === '' ? '' : parseFloat(v); })(),

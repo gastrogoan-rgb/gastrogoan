@@ -2940,11 +2940,15 @@ function plan360FillTemplate(text, c){
       return co[k.toLowerCase()] || '________';
     });
 }
+// Semilla del programa de un negocio que aún no tiene ninguno (ver
+// plan360RepararVaciosCoach). Solo día, fase y título: las tareas NO van aquí.
+// Antes llevaba un campo task «(Contenido pendiente de definir)» que nadie
+// leía, y un texto de relleno así no debe quedar en ningún dato del Plan 360.
 const PLAN360_DEFAULT_PROGRAM = [
   {day: 1, phase: 'presencial', title: 'Cliente misterioso y diagnóstico'},
   {day: 2, phase: 'presencial', title: 'Presentación y entrega del plan'},
   ...Array.from({length: 26}, (_, i) => ({
-    day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3), task: '(Contenido pendiente de definir)',
+    day: i + 3, phase: 'trabajo', title: 'Día ' + (i + 3),
   })),
 ];
 /* Checklist de Evaluación Inicial — la mitad "de incógnito" (bloques 0-13

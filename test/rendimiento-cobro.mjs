@@ -53,7 +53,7 @@ async function medir(ON){
     const T = {}; const o = window.flushCloudSync; window.flushCloudSync = function(){ const t0 = performance.now(); try{ return o.apply(this, arguments); }finally{ T.flush = Math.round(performance.now() - t0); } };
     openPaymentModal(777001); await new Promise(r => setTimeout(r, 300));
     const t0 = performance.now(); finalizeCharge(777001); const sync = performance.now() - t0;
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise(r => requestAnimationFrame(r));   // el fotograma en el que sale el ticket; la copia a IndexedDB va después
     const pintado = performance.now() - t0;
     await new Promise(r => setTimeout(r, 3000));
     return {sync: Math.round(sync), pintado: Math.round(pintado), flush: T.flush, subidas: window.__subidas, longtasks: window.__lt, ventas: DB.sales.length, cobrada: DB.sales.some(s => s.id === 777001)};

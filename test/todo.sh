@@ -180,6 +180,9 @@ lanzar; node test/reservas-ajustes.mjs > "$SALIDA/reservasajustes.txt" 2>&1 & P1
 lanzar; node test/clientes-filtros.mjs > "$SALIDA/clientesfiltros.txt" 2>&1 & P174=$!
 lanzar; node test/mi-negocio-ronda.mjs > "$SALIDA/minegociorona.txt" 2>&1 & P175=$!
 lanzar; node test/atras.mjs > "$SALIDA/atras.txt" 2>&1 & P176=$!
+lanzar; node test/atras-hojas.mjs > "$SALIDA/atrashojas.txt" 2>&1 & PATRH=$!
+lanzar; node test/novedades-fecha.mjs > "$SALIDA/novedadesfecha.txt" 2>&1 & PNOVF=$!
+lanzar; node test/plan360-programa-base.mjs > "$SALIDA/plan360prog.txt" 2>&1 & PP360B=$!
 lanzar; node test/panel-v2.mjs > "$SALIDA/panelv2.txt" 2>&1 & P177=$!
 lanzar; node test/chat-ayuda.mjs > "$SALIDA/chatayuda.txt" 2>&1 & P178=$!
 lanzar; node test/gestion-scroll.mjs > "$SALIDA/gestionscroll.txt" 2>&1 & P179=$!
@@ -234,6 +237,8 @@ lanzar; node test/tpv-nota-movil.mjs > "$SALIDA/tpvnm.txt" 2>&1 & PTPVNM=$!
 lanzar; node test/inicio-acceso.mjs > "$SALIDA/inicac.txt" 2>&1 & PINICAC=$!
 lanzar; node test/solicitudes-cifradas.mjs > "$SALIDA/solcif.txt" 2>&1 & PSOLCIF=$!
 lanzar; node test/fiscal-pendientes.mjs > "$SALIDA/fiscalpend.txt" 2>&1 & PFISPEN=$!
+lanzar; node test/fiscal-nomina-extras.mjs > "$SALIDA/fiscal-nomina-extras.txt" 2>&1 & PFNEX=$!
+lanzar; node test/fiscal-349-347.mjs > "$SALIDA/fiscal-349-347.txt" 2>&1 & PF349=$!
 lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
 lanzar; node test/cambio-contrasena.mjs > "$SALIDA/cambiocontra.txt" 2>&1 & PCAMPIN=$!
 lanzar; node test/pin-h3.mjs > "$SALIDA/pinh3.txt" 2>&1 & PPINH3=$!
@@ -471,6 +476,9 @@ espera $P173 "Reservas · un solo botón nuevo, cuartos de hora con margen de ci
 espera $P174 "Clientes · nueve filtros (Recurrentes y Ocasionales) y Promoción › Clientes con la última visita real" "$SALIDA/clientesfiltros.txt" "casos pasaron"
 espera $P175 "Mi Negocio · fiscal bloqueado, reservas por grupo desmarcable, plano de sala en rejilla, horario especial, IVA por producto e impresoras con estado" "$SALIDA/minegociorona.txt" "Todo en verde"
 espera $P176 "Atrás en toda la app: cada pantalla y cada página interior (pedido, historial de cliente, tema del manual) es una entrada del historial; vuelve con su pestaña y su scroll" "$SALIDA/atras.txt" "todos los casos pasaron"
+espera $PATRH "Atrás en Escandallo y Fichas: la hoja de un plato o una ficha es una página del historial (atrás la cierra, adelante la reabre, Volver también)" "$SALIDA/atrashojas.txt" "Escandallo y Fichas pasaron"
+espera $PNOVF "Novedades: el día de una oferta semanal sale en el idioma activo (es, ca, en) y no queda ningún locale fijo" "$SALIDA/novedadesfecha.txt" "fecha de Novedades pasaron"
+espera $PP360B "Plan 360º · semilla del programa del panel: sin texto de relleno y 28 días" "$SALIDA/plan360prog.txt" "semilla del programa pasaron"
 espera $P177 "Panel de Control v2: equilibrio destacado, reservas/ventas/gastos/resultado con gráfica de semana o mes, análisis con picos, clientela y atención ampliada" "$SALIDA/panelv2.txt" "todos los casos pasaron"
 espera $P178 "Chat interno (mis mensajes no avisan, áreas separadas, fijar, urgente, directo) y Ayuda (cada tema se encuentra en los tres idiomas)" "$SALIDA/chatayuda.txt" "todos los casos pasaron"
 espera $P179 "Gestión Económica: repintar una pestaña o cambiar un reparto/periodo no devuelve la página arriba del todo" "$SALIDA/gestionscroll.txt" "todos los casos pasaron"
@@ -548,6 +556,8 @@ espera $PSCRG "Scroll global: repintar una pantalla conserva el scroll y navegar
 espera $PINICAC "Entrada: frase sin comillas dobles y título de Puesta a punto sin cortar" "$SALIDA/inicac.txt" "en orden"
 espera $PSOLCIF "Solicitudes públicas cifradas: la web cifra los datos personales y solo la app los abre" "$SALIDA/solcif.txt" "en orden"
 espera $PFISPEN "Motor fiscal, pendientes cerrados: 5 % en el 130, mínimos autonómicos, IVA que no aplica y ejercicio 2024, con cuentas a mano" "$SALIDA/fiscalpend.txt" "todos los casos pasaron"
+espera $PFNEX "Fiscal, horas extra y pluses: base de cotización con tope, solidaridad, pluses que no cotizan, 111 y titular, con cuentas a mano" "$SALIDA/fiscal-nomina-extras.txt" "los [0-9]+ casos pasaron"
+espera $PF349 "Fiscal, 349 intracomunitarias, comisiones de delivery en el 347 (con NIF, ISP y umbral) y avisos de módulos, con cuentas a mano" "$SALIDA/fiscal-349-347.txt" "los [0-9]+ casos pasaron"
 espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
 espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"

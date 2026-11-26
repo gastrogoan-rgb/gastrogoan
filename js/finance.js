@@ -132,12 +132,13 @@ function geMesConActividad(year, month){
 function geTotalFijosNetoForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'totalNeto');
-  return v==null ? geTotalFijosNeto() : v;
+  // Las horas extra y pluses no están en las fotos del histórico (son de cada mes): se suman siempre aparte.
+  return (v==null ? geTotalFijosNeto() : v) + geExtrasPersonalMes(year, month);
 }
 function geTotalFijosGrossForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'totalGross');
-  return v==null ? geTotalFijos() : v;
+  return (v==null ? geTotalFijos() : v) + geExtrasPersonalMes(year, month);
 }
 // IVA soportado en gastos fijos de un mes concreto, a partir del histórico
 // (gross - neto de ese momento), en vez de recalcularlo siempre con la
@@ -213,10 +214,31 @@ function gfPagaEnMes(g, year, month){
 // hoy con la de un mes pasado. Los puntos del histórico anteriores a este
 // desglose (personalNeto/gfNeto) no tienen estos campos: en ese caso se cae
 // en la configuración actual, igual que el resto de fallbacks del histórico.
+// Horas extra y pluses del mes de cada empleado (Personal → ficha, «Horas extra y pluses»). Se guardan
+// por mes en el propio gasto de personal (g.extrasMes['AAAA-MM']) porque cambian cada mes y no son el sueldo fijo.
+// El cálculo (base de cotización con tope, SS de la empresa, IRPF) es GE.nominaExtrasMes (js/hr.js).
+// Solo con nómina automática: sin el bruto de convenio no se puede aplicar el tope de cotización. Un titular
+// autónomo o comunero no tiene nómina, así que nunca lleva extras.
+function geExtrasItemMes(g, year, month){
+  if(!g || g.categoria !== 'PERSONAL' || !g.autoCalc || !g.extrasMes) return null;
+  if(fiscalPerfil().personaFisica && gfEsRetribucionTitular(g)) return null;
+  const ex = g.extrasMes[`${year}-${String(month+1).padStart(2,'0')}`];
+  if(!ex) return null;
+  const pagas = parseInt(g.pagas)||12;
+  return GE.nominaExtrasMes(ex, {brutoMes: (parseFloat(g.sueldoBruto)||0)*pagas/12, ssPct: g.ssPct, ssTrabPct: g.ssTrabPct, irpfPct: g.irpfPct, grupo: g.grupo, jornada: g.jornada});
+}
+// Coste para la empresa de las horas extra y pluses de ese mes (bruto + SS de la empresa).
+function geExtrasPersonalMes(year, month){
+  return (DB.ge.fijos||[]).reduce((s,g) => { const r = geExtrasItemMes(g, year, month); return s + (r ? r.costeEmpresa : 0); }, 0);
+}
+// IRPF retenido sobre esas horas extra y pluses ese mes: va al Modelo 111.
+function geExtrasIrpfMes(year, month){
+  return (DB.ge.fijos||[]).reduce((s,g) => { const r = geExtrasItemMes(g, year, month); return s + (r ? r.irpfDelta : 0); }, 0);
+}
 function geTotalPersonalNetoForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'personalNeto');
-  return v==null ? geTotalPersonalNeto() : v;
+  return (v==null ? geTotalPersonalNeto() : v) + geExtrasPersonalMes(year, month);
 }
 function geTotalGFNetoForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
@@ -230,7 +252,7 @@ function geTotalGFNetoForMonth(year, month){
 function geIrpfMensualForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'irpfMensual');
-  return v==null ? geTotalIrpfMensual() : v;
+  return (v==null ? geTotalIrpfMensual() : v) + geExtrasIrpfMes(year, month);
 }
 // Mismo criterio de histórico para las retenciones de los gastos fijos. Un
 // punto del histórico anterior a esta función no tiene el campo: entonces
