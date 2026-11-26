@@ -4857,7 +4857,7 @@ Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del inf
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
 Modalidad de pago: {{formaPago}}.
-Transferencia bancaria a la cuenta {{coachIban}} — Concepto: Programa 360 GastroGoan.
+Pago mediante el enlace de pago seguro de Stripe que GastroGoan facilita al cliente — Concepto: Programa 360 GastroGoan.
 
 4. Responsabilidades
 GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
@@ -4939,7 +4939,7 @@ El servicio se contrata por meses naturales, desde el mes en que se activa. Se r
 
 6. Precio y forma de pago
 Precio del servicio: {{precioMantenimiento}}.
-El pago se hace por adelantado, al inicio de cada mes, por transferencia bancaria a la cuenta {{coachIban}} — Concepto: Mantenimiento GastroGoan. Cada cobro queda registrado por GastroGoan.
+El pago se hace por adelantado, al inicio de cada mes, mediante el enlace de pago seguro de Stripe que GastroGoan facilita al cliente — Concepto: Mantenimiento GastroGoan. Cada cobro queda registrado por GastroGoan.
 
 7. Revisión del precio
 El precio solo puede cambiar con un aviso previo por escrito de GastroGoan, antes del inicio del mes al que se aplique. Si el cliente no lo acepta, puede darse de baja conforme a la cláusula 8.
@@ -4970,7 +4970,7 @@ function plan360CoachDatos(){
   if(!c || typeof c !== 'object') return null;
   const lim = k => String(c[k] == null ? '' : c[k]).trim();
   const d = {nombre: lim('nombre'), dni: lim('dni'), domicilio: lim('domicilio'), iban: lim('iban'), email: lim('email'), telefono: lim('telefono')};
-  return d.nombre && d.dni && d.domicilio && d.iban ? d : null;
+  return d.nombre && d.dni && d.domicilio ? d : null;   // el IBAN ya no se exige: el cobro va por enlace de pago de Stripe
 }
 function plan360FillTemplate(text, c){
   const co = plan360CoachDatos() || {};
