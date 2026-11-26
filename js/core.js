@@ -6435,6 +6435,69 @@ function mergeArraysById(local, remote){
   return merged;
 }
 
+/* ============================================================
+   DOS COBROS DE LA MISMA MESA NO SE FUNDEN EN UNO (26/11, decisión del dueño: «conservar las dos»)
+
+   La venta de un pedido lleva `id: order.id` A PROPÓSITO (js/tpv.js, finalizeCharge): así un doble toque o una
+   sincronización repetida no duplican. Pero si dos aparatos cobran la MISMA mesa casi a la vez (efectivo en uno,
+   tarjeta en otro), las dos ventas comparten id y mergeArraysById / la subida por venta se quedaban con UNA: el
+   otro cobro se perdía en silencio y el cierre de caja no cuadraba. Y avisarSiCobroDuplicado, que busca ids
+   repetidos, no podía saltar jamás.
+
+   Qué es «otro cobro» y qué «la misma venta modificada»: una venta que se modifica (anulada, factura completa,
+   cierre de caja, corrección de plataforma) conserva su `createdAt`; un cobro distinto nace en otro instante y
+   además no coincide en total, forma de pago o importes. Dos ventas con el mismo contenido (doble toque, eco de
+   una sincronización) se siguen fundiendo en una.
+
+   Cuál conserva el id: la MÁS ANTIGUA (createdAt; a igualdad, el texto menor). Es la misma respuesta en todos los
+   aparatos, y por eso no se vuelve a duplicar en cada sincronización. La otra pasa a `id~createdAt`, un id
+   derivado y estable. Nada del formato guardado cambia: la venta derivada es una venta normal con otro id y su
+   propio número de ticket (cada aparato numera en su serie). */
+const VENTA_ID_DERIVADO_RE = /~\d{4}-\d\d-\d\dT[^~]*$/;
+function ventaIdBase(id){ const x = String(id); return x.indexOf('~') < 0 ? x : x.replace(VENTA_ID_DERIVADO_RE, ''); }
+function ventaPagosHuella(v){
+  if(!Array.isArray(v.pagos)) return '';
+  return v.pagos.filter(Boolean).map(p => String(p.metodoPago) + ':' + (Math.round((parseFloat(p.amount) || 0) * 100) / 100)).sort().join('|');
+}
+function ventasSonCobrosDistintos(a, b){
+  if(!a || !b || a === b) return false;
+  if(!a.createdAt || !b.createdAt || a.createdAt === b.createdAt) return false;   // la misma venta, modificada
+  /* Un pedido pagado por internet apunta su venta al llegar el pago, y al recogerlo con algo más (propina, extra) la
+     REHACE con el mismo id (finalizeCharge): eso es una sustitución, no dos cobros. Como siempre, gana la última. */
+  if(!!a.pagoOnlineAnticipado !== !!b.pagoOnlineAnticipado) return false;
+  if((Math.round((parseFloat(a.total) || 0) * 100)) !== (Math.round((parseFloat(b.total) || 0) * 100))) return true;
+  if(String(a.metodoPago || '') !== String(b.metodoPago || '')) return true;
+  return ventaPagosHuella(a) !== ventaPagosHuella(b);
+}
+/* ¿Quién conserva el id: a o b? Devuelve el que lo CONSERVA. */
+function ventaConservaId(a, b){
+  if(a.createdAt !== b.createdAt) return String(a.createdAt) < String(b.createdAt) ? a : b;
+  return canonicalStringify(a) <= canonicalStringify(b) ? a : b;
+}
+function ventaConIdDerivado(v){ return Object.assign({}, v, {id: String(v.id) + '~' + String(v.createdAt)}); }
+/* Fusión de `sales`: lo de siempre (mergeArraysById) tras apartar los cobros distintos que comparten id. */
+function mergeVentas(local, remote){
+  if(!Array.isArray(local) || !Array.isArray(remote)) return mergeArraysById(local, remote);
+  let remoteMap = null, cambioLocal = null, cambioRemoto = null;
+  for(let i = 0; i < local.length; i++){
+    const l = local[i];
+    if(!l || l.id == null) continue;
+    if(remoteMap === null){ remoteMap = new Map(); remote.forEach((r, j) => { if(r && r.id != null) remoteMap.set(r.id, j); }); }
+    const j = remoteMap.get(l.id);
+    if(j === undefined) continue;
+    const r = remote[j];
+    if(l === r || !ventasSonCobrosDistintos(l, r)) continue;
+    if(ventaConservaId(l, r) === l){
+      if(!cambioRemoto){ cambioRemoto = remote.slice(); }
+      cambioRemoto[j] = ventaConIdDerivado(r);
+    }else{
+      if(!cambioLocal){ cambioLocal = local.slice(); }
+      cambioLocal[i] = ventaConIdDerivado(l);
+    }
+  }
+  return mergeArraysById(cambioLocal || local, cambioRemoto || remote);
+}
+
 /* Listas de NOMBRES sin id: las carpetas de ingredientes (texto suelto) y las
    de recetas ({name, area}).
    mergeArraysById fusiona por `id`, y al no encontrarlo hace `return remote`:
@@ -10284,27 +10347,37 @@ function avisarSiCobroDuplicado(ventas){
        lleva `orderId` (se guardan con `id`, que ya ES el id del pedido) ni
        `anulada` (la anulación pone `status:'anulada'`), así que el bucle salía
        en la primera línea SIEMPRE y no avisaba jamás.
-       Importa porque CLAUDE.md acepta a conciencia el riesgo de cobro
-       duplicado precisamente por esta red — que no existía. */
+       Y aun arreglado eso, seguía sin poder saltar: la fusión juntaba las dos
+       ventas en UNA. Desde el 26/11 el segundo cobro se conserva con un id
+       derivado (`id~createdAt`, ver mergeVentas), así que se agrupa por el id
+       BASE del pedido. */
     ventas.forEach(v => {
       if(!v || v.id == null || v.status === 'anulada') return;
-      if(!porPedido.has(v.id)) porPedido.set(v.id, []);
-      porPedido.get(v.id).push(v);
+      const base = ventaIdBase(v.id);
+      if(!porPedido.has(base)) porPedido.set(base, []);
+      porPedido.get(base).push(v);
     });
     porPedido.forEach((lista, orderId) => {
       if(lista.length < 2 || cobrosDuplicadosAvisados.has(orderId)) return;
+      /* Solo si alguna es un cobro apartado por la fusión: dos ventas que comparten id base sin ser derivadas no
+         existen (el id es único), y así no se avisa de nada que el dueño no pueda arreglar. */
+      if(!lista.some(v => VENTA_ID_DERIVADO_RE.test(String(v.id)))) return;
       cobrosDuplicadosAvisados.add(orderId);
+      // Tras recargar la página el Set está vacío: el registro de actividad es la memoria de verdad.
+      if(DB.auditLog.some(e => e && e.action === 'cobro_duplicado' && e.ref === String(orderId))) return;
       const importe = lista.reduce((s,v) => s + (parseFloat(v.total)||0), 0);
+      const resumen = t('msg.duplicateChargeDetected')
+                  .replace('${n}', lista.length)
+                  .replace('${total}', (typeof fmtMoney === 'function' ? fmtMoney(importe) : importe));
       DB.auditLog.unshift({
         id: genId(), ts: new Date().toISOString(),
         actor: (typeof currentActorName === 'function' ? currentActorName() : ''),
-        action: 'cobro_duplicado',
-        summary: t('msg.duplicateChargeDetected')
-                  .replace('${n}', lista.length)
-                  .replace('${total}', (typeof fmtMoney === 'function' ? fmtMoney(importe) : importe)),
+        action: 'cobro_duplicado', ref: String(orderId),
+        summary: resumen,
         severity: 'critical'
       });
       if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
+      if(typeof showToast === 'function'){ try{ showToast(resumen); }catch(e){} }
     });
   }catch(e){ console.error('Error detectando cobro duplicado', e); }
 }
@@ -10512,7 +10585,7 @@ function applyRemoteBlock(key, remoteValue){
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     const tokensAntes = key === 'tables' ? qrTokensDeMesas(DB[key]) : null;
-    merged = mergeArraysById(DB[key], merged);
+    merged = key === 'sales' ? mergeVentas(DB[key], merged) : mergeArraysById(DB[key], merged);
     if(tokensAntes) conservarAliasQr(tokensAntes, merged);
     if(PREFER_LOCAL_ARRAYS.has(key)){
       merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
@@ -10830,7 +10903,7 @@ function mergeRemoteIntoLocal(val){
     const remoteOnlyJson = canonicalStringify(merged[key]);
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
-      value = mergeArraysById(DB[key], value);
+      value = key === 'sales' ? mergeVentas(DB[key], value) : mergeArraysById(DB[key], value);
       if(PREFER_LOCAL_ARRAYS.has(key)){
         value = preferLocalWhenRemoteStale(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }

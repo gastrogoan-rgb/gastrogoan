@@ -264,6 +264,7 @@ lanzar; node test/cocina-movil-1811b.mjs > "$SALIDA/cocinamovil1811b.txt" 2>&1 &
 lanzar; node test/buscadores-lupa.mjs > "$SALIDA/buscadoreslupa.txt" 2>&1 & P205=$!
 lanzar; node test/cierre-plataformas.mjs > "$SALIDA/cierreplataformas.txt" 2>&1 & P206=$!
 lanzar; node test/rendimiento-cobro.mjs > "$SALIDA/rendcobro.txt" 2>&1 & P207=$!
+lanzar; node test/cobro-misma-mesa.mjs > "$SALIDA/cobromisma.txt" 2>&1 & P208=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -527,6 +528,7 @@ espera $P204 "Cocina en móvil (18/11, datos reales): ningún botón con el text
 espera $P205 "Buscadores con lupa: el texto empieza a la derecha del icono en 7 anchos y 11 pantallas" "$SALIDA/buscadoreslupa.txt" "buscadores con lupa"
 espera $P206 "Cierre de caja con plataformas (Glovo, Uber Eats, Just Eat a mano): venta de Delivery con IVA, comisión en gastos (isp y factura real), fuera de la caja y la conciliación, sin duplicar al reabrir, anulación con rectificativa" "$SALIDA/cierreplataformas.txt" "los [0-9]+ casos pasaron"
 espera $P207 "Cobrar con 20.000 ventas (CPU x4): con las ventas una a una un cobro sube solo la venta nueva (no los 12 MB del historial), la subida y recibir la venta de otro aparato no cuelgan la pantalla, y el ticket sale enseguida" "$SALIDA/rendcobro.txt" "los [0-9]+ casos pasaron"
+espera $P208 "Dos aparatos cobrando la MISMA mesa (efectivo y tarjeta): se conservan las dos ventas con id derivado estable, el cierre de caja cuadra, avisa al dueño una vez, y dos ventas idénticas siguen siendo una (fusión y ventas una a una)" "$SALIDA/cobromisma.txt" "los [0-9]+ casos pasaron"
 
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
