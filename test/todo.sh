@@ -278,6 +278,8 @@ lanzar; node test/auditoria-contable.mjs > "$SALIDA/auditoria-contable.txt" 2>&1
 lanzar; node test/paquete-gestor.mjs > "$SALIDA/paquete-gestor.txt" 2>&1 & P98=$!
 lanzar; node test/kpis-coach.mjs > "$SALIDA/kpis-coach.txt" 2>&1 & P99=$!
 lanzar; node test/plan360-fases.mjs > "$SALIDA/plan360-fases.txt" 2>&1 & P100=$!
+lanzar; node test/plan360-ciclo-app.mjs > "$SALIDA/p360cicloapp.txt" 2>&1 & P360CA=$!
+lanzar; node test/plan360-ciclo-panel.mjs > "$SALIDA/p360ciclopanel.txt" 2>&1 & P360CP=$!
 lanzar; node test/vision-global.mjs > "$SALIDA/vision-global.txt" 2>&1 & P101=$!
 lanzar; node test/impresion.mjs > "$SALIDA/impresion.txt" 2>&1 & P102=$!
 lanzar; node test/leer-facturas.mjs > "$SALIDA/leer-facturas.txt" 2>&1 & P103=$!
@@ -412,6 +414,8 @@ espera $P97 "Auditoría contable: retención 115/111, envío al 10%, IVA de la s
 espera $P98 "Paquete para el gestor: periodo, Excel + CSV con columnas de libro registro, fotos de facturas y LÉEME" "$SALIDA/paquete-gestor.txt" "casos pasaron"
 espera $P99 "Números para el coach: indicadores del mes, foto del Día 1, marcador en euros e informe para WhatsApp" "$SALIDA/kpis-coach.txt" "casos pasaron"
 espera $P100 "Plan 360 y mantenimiento separados: servicio activo de cada cliente y agenda del coach" "$SALIDA/plan360-fases.txt" "casos pasaron"
+espera $P360CA "Plan 360º · ciclo completo de la app (5 etapas × 320/360/390 × es/ca/en)" "$SALIDA/p360cicloapp.txt" "ciclo completo de la app"
+espera $P360CP "Plan 360º · ciclo completo del panel del coach (4 etapas × 320/360/390)" "$SALIDA/p360ciclopanel.txt" "ciclo completo del panel"
 espera $P101 "Visión global de mis negocios: suma bien, nunca el ajeno, sin tocar el slot activo ni ninguna IndexedDB" "$SALIDA/vision-global.txt" "todos los casos pasaron"
 espera $P102 "Impresión sin Bluetooth: Navegador/AirPrint en rollo de 80/58 mm, datos escapados y caída avisada" "$SALIDA/impresion.txt" "todos los casos de impresión pasaron"
 espera $P103 "Leer facturas con foto: casa líneas, caza descuadres, gasto con nº de factura, precio con historial y stock opcional" "$SALIDA/leer-facturas.txt" "casos pasaron"

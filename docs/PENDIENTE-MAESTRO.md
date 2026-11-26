@@ -1,13 +1,13 @@
 # Pendiente maestro de GastroGoan
 
-**Un solo sitio para todo lo que queda por hacer.** Actualizado el 25/11/2026 (miércoles). Meta inmediata: poder empezar a vender el lunes 30/11 con tranquilidad.
+**Un solo sitio para todo lo que queda por hacer.** Actualizado el 26/11/2026 (jueves). Meta inmediata: poder empezar a vender el lunes 30/11 con tranquilidad.
 Quién: **Yo** = Claude · **Juntos** = hacen falta tus cuentas · **Tú** = solo tú puedes. Marca `[x]` al terminar y ponle la fecha.
 Los demás pendientes antiguos siguen en `docs/PENDIENTES.md`, `docs/PENDIENTE.md` y `reports/`; este manda cuando haya duda.
 
 ## 1. En curso ahora mismo
-- [ ] **Yo** · Plan 360º, tanda 2 (dos agentes en paralelo):
-  - Panel: guion y orden del día de las reuniones, alertas al coach, «Mis datos de coach», archivar clientes terminados, mostrar fotos y objetivos nuevos, menú ⋯ en todas las filas.
-  - App: fotos de prueba a un bloque aparte (riesgo de peso), prueba de sincronización con dos aparatos, datos del coach fuera del código, marcador semanal frente al Día 1, radar con más ejes si hay datos, informe de cierre pulido, solo lectura al terminar, manual y ayuda en es/ca/en.
+- [x] **Yo** · Plan 360º, tanda 2: publicada en `main` el 25/11 (commit `0f51e962`: panel del coach, fotos aparte, marcador semanal, informe de cierre, datos del coach fuera del código, manual en es/ca/en). Cerrada el 26/11 con la **prueba de ciclo completo** (`test/plan360-ciclo-app.mjs`: 5 etapas × 320/360/390 × es/ca/en × 17 pantallas; `test/plan360-ciclo-panel.mjs`: 4 etapas × 3 anchos × 19 pantallas) y un arreglo: la descripción de una tarea que fuera el aviso «(Contenido pendiente de definir)» se pintaba al cliente (`plan360DescReal`, js/app.js). Ambas pruebas están en `todo.sh`.
+  - **Sigue abierto del Plan 360**: el **cobro automático con Stripe** (decisión tuya, aparcado). Haría falta: enlace de pago o Checkout de Stripe para 950 € + IVA (o 475 € + 475 € el día 15), una ruta nueva en el Worker (`worker/pagos-worker.js`) que reciba el aviso firmado de Stripe y lo deje en `gastrogoan/pagos`, que el panel lo escriba en `plan360Servicio.cobros360`, el aviso en la agenda y pegar el Worker a mano en Cloudflare. Hoy los cobros se anotan a mano en el panel.
+  - Comprobar con el abogado el contrato del Plan 360 (con los datos del coach ya fuera del código: si alguna vez estuvieron en el repositorio público, siguen en su historial).
 - [ ] **Yo** · Batería completa (`bash test/todo.sh`), publicar con sello de versión y decirte qué mirar y dónde.
   Estado previo: tanda 1 (auditoría) ya pasó la batería: 237 en verde y solo el fallo aceptado de Comandas Cocina.
 
