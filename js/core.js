@@ -9833,13 +9833,16 @@ function publishTenantLookup(tenantId, config){
   // en CADA arranque y el aviso de Plan 360º no se publicaría jamás.
   publishCoaching360Pointer(tenantId);
   const huella = tenantId + '|' + config.apiKey + '|' + config.databaseURL;
-  try{ if(localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
+  /* La huella es POR NEGOCIO: con una sola por aparato, dos negocios en la misma tablet se la pisaban y cada cambio de negocio volvía a
+     escribir en la plataforma compartida (justo lo que no puede crecer con las licencias). La antigua (una sola) se sigue aceptando. */
+  const claveHuella = TENANT_LOOKUP_PUBLICADO_LS + '_' + tenantId;
+  try{ if(localStorage.getItem(claveHuella) === huella || localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/tenantLookup/' + tenantId).set({
       apiKey: config.apiKey, databaseURL: config.databaseURL
     }).then(() => {
-      try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
+      try{ localStorage.setItem(claveHuella, huella); }catch(e){}
     }).catch(e => {
       console.error('Error publicando la referencia del negocio', e);
       /* Desde el 25/11 las reglas de la plataforma NO dejan cambiar a qué proyecto de Firebase apunta un negocio ya
@@ -9862,11 +9865,12 @@ function publishCoaching360Pointer(tenantId){
   if(!DB.business.plan360) return;
   const nombre = (DB.business.name || '(sin nombre)').slice(0, 200);
   const huella = 'c360|' + tenantId + '|' + nombre;
-  try{ if(localStorage.getItem(COACHING360_PUBLICADO_LS) === huella) return; }catch(e){}
+  const claveC = COACHING360_PUBLICADO_LS + '_' + tenantId;   // por negocio (ver publishTenantLookup)
+  try{ if(localStorage.getItem(claveC) === huella || localStorage.getItem(COACHING360_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/coaching360/' + tenantId).set({name: nombre, updatedAt: Date.now()})
-      .then(() => { try{ localStorage.setItem(COACHING360_PUBLICADO_LS, huella); }catch(e){} })
+      .then(() => { try{ localStorage.setItem(claveC, huella); }catch(e){} })
       .catch(e => console.error('Error publicando el puntero de Plan 360°', e));
   }).catch(()=>{});
 }
