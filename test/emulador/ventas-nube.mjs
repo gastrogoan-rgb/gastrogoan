@@ -118,6 +118,22 @@ ok('3. Ventas simultáneas en los dos aparatos: ninguna se pierde ni se duplica'
 const sumaA = await A.page.evaluate(() => DB.sales.reduce((s, x) => s + x.total, 0)), sumaB = await B.page.evaluate(() => DB.sales.reduce((s, x) => s + x.total, 0));
 ok('3b. Los totales de dinero coinciden', Math.abs(sumaA - sumaB) < 0.001, sumaA + ' / ' + sumaB);
 
+/* ═══ 3c. La MISMA mesa cobrada a la vez en los dos aparatos (26/11): se conservan las dos ventas ═══ */
+await Promise.all([
+  A.page.evaluate(() => { DB.sales.push({id:'mesa-9', date:todayStr(), createdAt:new Date().toISOString(), total:50, subtotal:45, tipo:'mesa', metodoPago:'Efectivo', items:[{name:'Menú', qty:2, price:25}]}); saveDB(); }),
+  B.page.evaluate(() => { DB.sales.push({id:'mesa-9', date:todayStr(), createdAt:new Date(Date.now() + 9).toISOString(), total:50, subtotal:45, tipo:'mesa', metodoPago:'Tarjeta', items:[{name:'Menú', qty:2, price:25}]}); saveDB(); }),
+]);
+const mesa9 = async d => d.page.evaluate(() => DB.sales.filter(s => String(s.id).startsWith('mesa-9')).map(s => s.id + '|' + s.metodoPago).sort());
+// Ojo: al principio cada aparato tiene SU venta con el mismo id y las listas de ids son «iguales»: se espera a que haya dos en cada uno.
+let m9a, m9b; for(const t0m = Date.now(); Date.now() - t0m < 20000; ){ m9a = await mesa9(A); m9b = await mesa9(B); if(m9a.length === 2 && JSON.stringify(m9a) === JSON.stringify(m9b)) break; await w(400); }
+r = await esperaIguales(A, B, 15000);
+ok('3c. La misma mesa cobrada a la vez en A (efectivo) y B (tarjeta): las DOS ventas existen y son las mismas en los dos', r.ok && m9a.length === 2 && JSON.stringify(m9a) === JSON.stringify(m9b) && m9a.some(x => /\|Efectivo$/.test(x)) && m9a.some(x => /\|Tarjeta$/.test(x)), JSON.stringify(m9a) + ' / ' + JSON.stringify(m9b));
+await w(2500);
+const nubeMesa = Object.keys((await (await gf(`http://127.0.0.1:${PDB}/gastrogoan/tenants/${nube1.tid}/ventas.json?ns=demo-gastrogoan&shallow=true`)).json()) || {}).filter(k => k.startsWith('mesa-9'));
+ok('3d. Las dos están también en la nube (cada una en su nodo) y el cierre de caja suma los 100 €', nubeMesa.length === 2 && (await A.page.evaluate(() => DB.sales.filter(s => String(s.id).startsWith('mesa-9')).reduce((x, s) => x + s.total, 0))) === 100, JSON.stringify(nubeMesa));
+const avisoMesa = await A.page.evaluate(() => (DB.auditLog || []).filter(e => e.action === 'cobro_duplicado').length);
+ok('3e. El dueño recibe el aviso de posible cobro duplicado (una vez)', avisoMesa >= 1);
+
 /* ═══ 4. Aparato sin conexión que vuelve ═══ */
 await A.page.evaluate(() => firebase.database().goOffline());
 await A.page.evaluate(() => { for(let i = 0; i < 25; i++) DB.sales.push({id:'off' + i, date:todayStr(), createdAt:new Date().toISOString(), total:3, subtotal:2.7, tipo:'mesa', metodoPago:'Efectivo', items:[{name:'z', qty:1, price:3}]}); saveDB(); });
@@ -125,7 +141,7 @@ await B.page.evaluate(() => { for(let i = 0; i < 25; i++) DB.sales.push({id:'onl
 await w(2500);
 await A.page.evaluate(() => firebase.database().goOnline());
 r = await esperaIguales(A, B, 25000);
-ok('4. Un aparato sin conexión vuelve y todo se junta (sin perder ni duplicar)', r.ok && r.a.length === 3001 + 1 + 120 + 50 && new Set(r.a).size === r.a.length, 'A=' + r.a.length + ' B=' + r.b.length);
+ok('4. Un aparato sin conexión vuelve y todo se junta (sin perder ni duplicar)', r.ok && r.a.length === 3001 + 1 + 120 + 2 + 50 && new Set(r.a).size === r.a.length, 'A=' + r.a.length + ' B=' + r.b.length);
 
 /* ═══ 5. Anulación y borrado ═══ */
 await A.page.evaluate(() => { const s = DB.sales.find(x => x.id === 'sa1'); s.status = 'anulada'; s.rectificativa = {num:'R26AAAA-000001', fecha:todayStr(), rectifica:'x', motivo:'prueba'}; saveDB(); });
@@ -134,7 +150,7 @@ ok('5a. Anular una venta llega al otro aparato (la venta sigue, anulada)', await
 await A.page.evaluate(() => { DB.sales = DB.sales.filter(s => !/^off/.test(String(s.id))); saveDB(); });   // como «archivar datos antiguos»
 await w(5000);
 const post = await esperaIguales(A, B, 15000);
-ok('5b. Borrar (archivar) en A lo borra también en B y en la nube, con lápida', post.ok && !post.b.some(x => /^off/.test(x)) && post.a.length === 3001 + 1 + 120 + 25, 'A=' + post.a.length + ' B=' + post.b.length);
+ok('5b. Borrar (archivar) en A lo borra también en B y en la nube, con lápida', post.ok && !post.b.some(x => /^off/.test(x)) && post.a.length === 3001 + 1 + 120 + 2 + 25, 'A=' + post.a.length + ' B=' + post.b.length);
 ok('5c. La nube ya no tiene las borradas', await (async () => { const t = await (await gf(`http://127.0.0.1:${PDB}/gastrogoan/tenants/${nube1.tid}/ventas/off3.json?ns=demo-gastrogoan`)).json(); return t === null; })());
 
 /* ═══ 6. Aparato «viejo» que sigue escribiendo el bloque antiguo ═══ */
