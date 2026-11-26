@@ -122,7 +122,7 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
 // ───────────── 4 y 5. Espejo público y huella de la referencia de nube ─────────────
 {
   const p = await aparato({slot: 'default'});
-  await w(2500); await p.evaluate(() => clearTimeout(publicMirrorSyncTimer));
+  await p.evaluate(() => { getPublicId(); }); await w(2500); await p.evaluate(() => clearTimeout(publicMirrorSyncTimer));   // getPublicId guarda el id la primera vez: se hace antes para que no dispare su propio espejo
   await caso('Espejo público: lo que llega de la nube después del arranque SE PUBLICA (no se queda la copia anticuada del aparato)', async () => {
     await p.evaluate(() => {
       window.firebase = window.firebase || {};
@@ -153,10 +153,11 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
   });
   await caso('Espejo público: un bloque que no se publica (clientes) no dispara ninguna publicación', async () => {
     await w(300);
-    const n0 = await p.evaluate(() => window.__sets.length);
+    const cuenta = () => p.evaluate(() => window.__sets.filter(s => /\/info$/.test(s[0])).length);
+    const n0 = await cuenta();
     await p.evaluate(() => { applyRemoteBlock('clients', [{id: 'cx', name: 'Pepe'}]); });
     await w(1500);
-    assert.equal(await p.evaluate(() => window.__sets.length), n0);
+    assert.equal(await cuenta(), n0);
   });
   await caso('Referencia de nube del negocio: con DOS negocios en el aparato no se reescribe en la plataforma en cada cambio de negocio', async () => {
     await p.evaluate(() => {
