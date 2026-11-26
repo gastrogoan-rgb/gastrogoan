@@ -183,6 +183,7 @@ lanzar; node test/atras.mjs > "$SALIDA/atras.txt" 2>&1 & P176=$!
 lanzar; node test/atras-hojas.mjs > "$SALIDA/atrashojas.txt" 2>&1 & PATRH=$!
 lanzar; node test/novedades-fecha.mjs > "$SALIDA/novedadesfecha.txt" 2>&1 & PNOVF=$!
 lanzar; node test/plan360-programa-base.mjs > "$SALIDA/plan360prog.txt" 2>&1 & PP360B=$!
+lanzar; node test/frases-dia.mjs > "$SALIDA/frasesdia.txt" 2>&1 & PFRDIA=$!
 lanzar; node test/panel-v2.mjs > "$SALIDA/panelv2.txt" 2>&1 & P177=$!
 lanzar; node test/chat-ayuda.mjs > "$SALIDA/chatayuda.txt" 2>&1 & P178=$!
 lanzar; node test/gestion-scroll.mjs > "$SALIDA/gestionscroll.txt" 2>&1 & P179=$!
@@ -479,6 +480,7 @@ espera $P176 "Atrás en toda la app: cada pantalla y cada página interior (pedi
 espera $PATRH "Atrás en Escandallo y Fichas: la hoja de un plato o una ficha es una página del historial (atrás la cierra, adelante la reabre, Volver también)" "$SALIDA/atrashojas.txt" "Escandallo y Fichas pasaron"
 espera $PNOVF "Novedades: el día de una oferta semanal sale en el idioma activo (es, ca, en) y no queda ningún locale fijo" "$SALIDA/novedadesfecha.txt" "fecha de Novedades pasaron"
 espera $PP360B "Plan 360º · semilla del programa del panel: sin texto de relleno y 28 días" "$SALIDA/plan360prog.txt" "semilla del programa pasaron"
+espera $PFRDIA "Frases del día: 365 frases, sin repetir, con autor y fuente en es, ca y en" "$SALIDA/frasesdia.txt" "todas las frases del día pasaron"
 espera $P177 "Panel de Control v2: equilibrio destacado, reservas/ventas/gastos/resultado con gráfica de semana o mes, análisis con picos, clientela y atención ampliada" "$SALIDA/panelv2.txt" "todos los casos pasaron"
 espera $P178 "Chat interno (mis mensajes no avisan, áreas separadas, fijar, urgente, directo) y Ayuda (cada tema se encuentra en los tres idiomas)" "$SALIDA/chatayuda.txt" "todos los casos pasaron"
 espera $P179 "Gestión Económica: repintar una pestaña o cambiar un reparto/periodo no devuelve la página arriba del todo" "$SALIDA/gestionscroll.txt" "todos los casos pasaron"

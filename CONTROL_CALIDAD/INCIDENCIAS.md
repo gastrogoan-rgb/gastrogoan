@@ -42,3 +42,16 @@
 | A-06 | Web comercial (`deploy/web/public`) | Lista numerada 01/02/03 sin que el orden signifique nada; faltan ~10 páginas por inspeccionar | CLAUDE.md la deja como pendiente conocida |
 | A-07 | Ventanas | ≈79 de 86 sin inspección visual | Tiempo |
 | A-08 | Documentos descargables (PDF, Excel, tickets, ficha) | Sin revisión visual esta noche | Tiempo |
+
+## Cierre de pendientes pequeños (26/11, sesión de Haiku)
+
+| Id | Dónde | Qué pasaba | Estado |
+|---|---|---|---|
+| C-01 | `js/novedades.js` (oferta semanal) | Literal de locale (`es-ES`) escrito a mano en la fecha del día de la semana. Medido: la salida ya era correcta en es, ca y en; el problema era el literal | **Cerrado**: `localeActual()`; `test/novedades-fecha.mjs` |
+| C-02 | `admin-panel/plan360.html`, `PLAN360_DEFAULT_PROGRAM` | Campo `task` «(Contenido pendiente de definir)» en 26 días. La constante SÍ se lee (siembra el programa vacío) pero nadie leía `task` | **Cerrado**: campo quitado, la lectura se conserva; `test/plan360-programa-base.mjs`. Queda igual en `js/core.js` y en las copias de `deploy/` (zona ajena a esta tanda) |
+| C-03 | Escandallo y Fichas (hojas) | «Atrás» no reabría ni cerraba la hoja: la hoja no era entrada del historial | **Cerrado** sin tocar `openModal`/`closeModal`: la hoja usa `ggRutaPagina` y `GG_RUTA_PROV`; `test/atras-hojas.mjs` (9 casos). Pasan `atras`, `sin-guardar`, `escandallo` y `fichas` (copias contra el código de desarrollo) |
+| C-04 | `js/frases.js` | 357 frases, faltaban 8 para 365 | **Cerrado**: 8 citas comprobadas en Wikiquote (obra y referencia en `f`); `test/frases-dia.mjs`. Verificación vía las citas de Wikiquote, no de la fuente primaria |
+| C-05 | `test/ventanas-todas.mjs` a 360 px | Se colgaba en inicio, Mega Lista e I+D: esperaba `finished` de TODAS las animaciones y la portada tiene infinitas (`gg-lampara`, `gg-flotar`, `splash-bar`). Además, una corrida sin ninguna ventana salía en verde | **Cerrado en el tiempo**: solo animaciones finitas con tope de 1,5 s; una corrida sin ventanas sale en rojo. **Cobertura baja**: inicio 0 ventanas, Mega Lista 1 de 5 botones, I+D 1 de 7 (solo se miran los botones de primer nivel y se deduplica por función) |
+| C-06 | `test/emulador/espejo-sesion.mjs` | Fallaba: lanzaba `firebase.app()` sin esperar a la app `[DEFAULT]` | **Cerrado**: espera explícita a la app por defecto; 3 casos pasan contra el emulador |
+| C-07 | `test/emulador/cobro.mjs` | 1 de 4 casos falla («el cobro duplicado queda anotado como crítico»), y el script sale con 0 porque no fija el código de salida | **Abierto**: es la zona de cobros y sincronización de ventas que otro agente está tocando; no se modifica aquí |
+| C-08 | `docs/PENDIENTES.md`, sección 8 (push) | Mencionaba el despliegue en Netlify | **Cerrado**: marcado como histórico en una línea |
