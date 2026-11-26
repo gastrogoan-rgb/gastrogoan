@@ -52,7 +52,7 @@ Redactado el 26/11/2026 a petición del informático externo (punto «Previsión
 
 ### No verificado (no hay cifra; no la invento)
 
-- Precio anual de `gastrogoan.com` y de la renovación. Además, CLAUDE.md dice en un sitio que el registrador es Canva y en otro que el dominio está registrado en Cloudflare: **confirmar dónde está** y mirar el precio en ese registrador.
+- Precio anual de `gastrogoan.com` y de la renovación. El registrador es Cloudflare (confirmado por el dueño el 26/11; antes estuvo en Canva): mirar el precio en su panel.
 - Si el límite de 500 publicaciones de Pages es **por cuenta o por proyecto** (la página del límite no lo aclara). Importa porque hay cuatro proyectos desde el mismo repositorio.
 - Qué pasa exactamente en Firebase Spark cuando se supera la cuota de descarga o de almacenamiento (si se corta, si se limita, hasta cuándo). No he encontrado el texto oficial.
 - Cómo cuenta Firebase Authentication los usuarios anónimos para el límite de 50.000 al mes.
