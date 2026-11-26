@@ -122,6 +122,7 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
 // ───────────── 4 y 5. Espejo público y huella de la referencia de nube ─────────────
 {
   const p = await aparato({slot: 'default'});
+  await w(2500); await p.evaluate(() => clearTimeout(publicMirrorSyncTimer));
   await caso('Espejo público: lo que llega de la nube después del arranque SE PUBLICA (no se queda la copia anticuada del aparato)', async () => {
     await p.evaluate(() => {
       window.firebase = window.firebase || {};
@@ -144,7 +145,7 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
     const antes = await ultimo();
     assert.ok(antes && (antes.menus || []).some(m => m.id === 'm0'), 'el arranque publica lo que tiene el aparato');
     // Otro aparato retiró ese menú y puso uno nuevo; la nube nos lo entrega.
-    await p.evaluate(() => { applyRemoteBlock('menus', [{id: 'm1', name: 'Menú de hoy', grupos: []}]); });
+    await p.evaluate(() => { applyRemoteBlock('menus', [{id: 'm0', name: 'Menú de ayer', grupos: []}, {id: 'm1', name: 'Menú de hoy', grupos: []}]); });
     await w(1800);
     const despues = await ultimo();
     const ids = (despues.menus || []).map(m => m.id);
@@ -191,7 +192,7 @@ async function abrirNegocio(page, {slot, code, sesion, slots}){
   const nodo = () => p.evaluate((a, t) => __nube.arbol.gastrogoan.ownerAuth[a].businesses[t], AUTH, tid);
   await caso('Otro aparato borró el negocio (lápida); aquí aún estaba abierto y se guarda Mi Negocio con un nombre nuevo: la lápida SE QUEDA', async () => {
     await p.evaluate(() => { DB.license = {code: 'NEGOCIOA', tenantId: ggBizTenantId('NEGOCIOA')}; _lastLinkedBusinessName = null; document.getElementById('app-splash')?.remove(); let i = document.getElementById('business-name'); if(!i){ i = document.createElement('input'); i.id = 'business-name'; i.style.display = 'none'; document.body.appendChild(i); } i.value = 'Casa Paco Nuevo'; });
-    await p.evaluate(() => saveBusiness(true)).catch(() => {});
+    await p.evaluate(() => saveBusiness(true)).catch(e => console.log('saveBusiness:', e.message));
     await w(800);
     const n = await nodo();
     assert.equal(n && n.deleted, true, 'la lápida se pisó y el negocio resucita en todos los aparatos: ' + JSON.stringify(n));
