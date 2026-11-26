@@ -315,7 +315,7 @@ function dpEquilibrioHtml(){
     </div>
     <div class="dp-eq-barra" role="img" aria-label="${escapeHtml(frase)}">
       <div class="dp-eq-rell" style="width:${pct.toFixed(1)}%"></div>
-      <div class="dp-eq-marca${pctEsp > 70 ? " is-fin" : ""}" style="left:${pctEsp.toFixed(1)}%"><span>${escapeHtml(gl({es: 'tu ritmo ideal hoy', ca: 'el teu ritme ideal avui', en: 'ideal pace today'}))}</span></div>
+      <div class="dp-eq-marca${pctEsp > 70 ? " is-fin" : (pctEsp < 30 ? " is-ini" : "")}" style="left:${pctEsp.toFixed(1)}%"><span>${escapeHtml(gl({es: 'tu ritmo ideal hoy', ca: 'el teu ritme ideal avui', en: 'ideal pace today'}))}</span></div>
     </div>
     <p class="dp-eq-frase"><i class="ti ${superado ? 'ti-circle-check' : (llegaras ? 'ti-trending-up' : 'ti-alert-triangle')}"></i> ${escapeHtml(frase)}</p>
     <div class="dp-eq-stats">
