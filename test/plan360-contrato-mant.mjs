@@ -27,7 +27,7 @@ await caso('1 · el acuerdo de mantenimiento lleva todos los marcadores y las cl
 await caso('1 · la cláusula 3 del acuerdo del 360 cobra por el enlace de Stripe, sin IBAN, y el IBAN ya no es obligatorio para el coach', () => {
   const t = constante(core, 'PLAN360_CONTRACT_TEXT');
   assert.ok(/enlace de pago seguro de Stripe[^\n]*Concepto: Programa 360 GastroGoan/.test(t) && !/coachIban|Transferencia bancaria/.test(t));
-  assert.ok(/\{\{coachIban\}\}/.test(core) && /coach\(Nombre\|Dni\|Domicilio\|Iban\)/.test(panelSrc), 'el marcador sigue soportado en plan360FillTemplate');
+  assert.ok(/replace\(\/\\\{\\\{coachIban/.test(core) && /coach\(Nombre\|Dni\|Domicilio\|Iban\)/.test(panelSrc), 'el marcador sigue soportado en plan360FillTemplate');
   assert.ok(/\{k: 'iban'[^}]*obl: false/.test(panelSrc));
 });
 await caso('1 · la cláusula 11 del acuerdo del 360 remite al acuerdo propio (ya no regula el servicio)', () => {
