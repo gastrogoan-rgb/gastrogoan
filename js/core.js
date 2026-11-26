@@ -5535,7 +5535,7 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa' || newData.child('type').val() === 'pedido_aviso')",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pedido_mesa' || newData.child('type').val() === 'pago_mesa' || newData.child('type').val() === 'pedido_aviso') && (!newData.child('uid').exists() || (newData.child('uid').isString() && newData.child('uid').val() === auth.uid)) && (!newData.child('slot').exists() || (newData.child('slot').isString() && newData.child('slot').val().matches(/^m([0-9]|1[01])$/)))",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -5590,6 +5590,32 @@ const FIREBASE_RULES_JSON = `{
               ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64",
               ".validate": "newData.hasChildren(['mesa', 'updatedAt']) && newData.child('mesa').isString() && newData.child('mesa').val().length <= 60"
+            }
+          },
+          "mesaGrupo": {
+            "$token": {
+              ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64 && root.child('gastrogoan/public/'+$publicId+'/mesaQr/'+$token+'/grupo').val() === true",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64 && !newData.exists() && root.child('gastrogoan/public/'+$publicId+'/mesaQr/'+$token+'/grupo').val() !== true",
+              "miembros": {
+                "$slot": {
+                  ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64 && root.child('gastrogoan/public/'+$publicId+'/mesaQr/'+$token+'/grupo').val() === true && !root.child('gastrogoan/public/'+$publicId+'/mesaQr/'+$token+'/expulsados/'+$slot).exists() && (!data.exists() || data.child('uid').val() === auth.uid || data.child('ts').val() < now - 28800000)",
+                  ".validate": "$slot.matches(/^m([0-9]|1[01])$/) && newData.hasChildren(['uid', 'n', 'ts']) && newData.child('uid').val() === auth.uid && newData.child('uid').isString() && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 30 && newData.child('ts').isNumber()",
+                  "$otro": {
+                    ".validate": "$otro === 'uid' || $otro === 'n' || $otro === 'ts'"
+                  }
+                }
+              },
+              "carritos": {
+                "$slot": {
+                  ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && $token.length >= 16 && $token.length <= 64 && root.child('gastrogoan/public/'+$publicId+'/mesaQr/'+$token+'/grupo').val() === true && !root.child('gastrogoan/public/'+$publicId+'/mesaQr/'+$token+'/expulsados/'+$slot).exists() && $slot.matches(/^m([0-9]|1[01])$/) && root.child('gastrogoan/public/'+$publicId+'/mesaGrupo/'+$token+'/miembros/'+$slot+'/uid').val() === auth.uid",
+                  "$linea": {
+                    ".validate": "$linea.matches(/^l([0-9]|[12][0-9])$/) && newData.hasChildren(['p', 'q']) && newData.child('p').isString() && newData.child('p').val().length <= 60 && newData.child('q').isNumber() && newData.child('q').val() >= 1 && newData.child('q').val() <= 20 && (!newData.child('m').exists() || (newData.child('m').isString() && newData.child('m').val().length <= 120)) && (!newData.child('r').exists() || (newData.child('r').isString() && newData.child('r').val().length <= 60))",
+                    "$otro": {
+                      ".validate": "$otro === 'p' || $otro === 'q' || $otro === 'm' || $otro === 'r'"
+                    }
+                  }
+                }
+              }
             }
           },
           "reservationLookup": {
