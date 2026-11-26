@@ -2,29 +2,31 @@
 // Comprueba: migración sin pérdida desde el layout antiguo, una venta en A llega a B, simultáneas, un aparato sin conexión que vuelve,
 // anulación y borrado, un aparato «viejo» que sigue escribiendo el bloque antiguo, marcha atrás, bytes por cobro y una ráfaga aleatoria.
 import puppeteer from 'puppeteer-core';
-const DBURL = 'http://127.0.0.1:9000/?ns=demo-gastrogoan';
+const PDB = process.env.VN_DB || '9000', PWEB = process.env.VN_WEB || '8951', SDKD = process.env.VN_DB ? '__sdk_vn' : '__sdk';
+const DBURL = `http://127.0.0.1:${PDB}/?ns=demo-gastrogoan`;
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:true});
 const res = []; const ok = (n, c, d) => { res.push({n, c:!!c}); console.log((c?'✅':'❌') + ' ' + n + (d ? '  → ' + d : '')); };
 const H = {Authorization:'Bearer owner'};
 const gf = (u, o) => fetch(u, Object.assign({headers:H}, o || {}));
 const w = ms => new Promise(r => setTimeout(r, ms));
-for(const ns of ['demo-gastrogoan', 'demo-plataforma']) await gf(`http://127.0.0.1:9000/.json?ns=${ns}`, {method:'DELETE'});
+for(const ns of ['demo-gastrogoan', 'demo-plataforma']) await gf(`http://127.0.0.1:${PDB}/.json?ns=${ns}`, {method:'DELETE'});
 
 async function dispositivo(){
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage(); await page.setCacheEnabled(false);
   const errs = []; page.on('pageerror', e => errs.push(e.message));
+  if(process.env.VN_DEBUG){ page.on('console', m => { if(/error|warn/i.test(m.type())) console.log('   [consola]', m.text().slice(0, 200)); }); page.on('requestfailed', r => console.log('   [red]', r.url().slice(0, 120), r.failure() && r.failure().errorText)); }
   await page.setRequestInterception(true);
   page.on('request', req => { const m = req.url().match(/gstatic\.com\/firebasejs\/[\d.]+\/(firebase-[a-z-]+\.js)/);
-    if(m) return req.continue({url:'http://localhost:8951/__sdk/' + m[1]}); req.continue(); });
+    if(m) return req.continue({url:`http://localhost:${PWEB}/${SDKD}/` + m[1]}); req.continue(); });
   await page.evaluateOnNewDocument(() => {
-    const iv = setInterval(() => { try{ if(typeof PLATFORM_FIREBASE_CONFIG !== 'undefined'){ PLATFORM_FIREBASE_CONFIG.databaseURL = 'http://127.0.0.1:9000/?ns=demo-plataforma'; clearInterval(iv); } }catch(e){} }, 5);
+    const iv = setInterval(() => { try{ if(typeof PLATFORM_FIREBASE_CONFIG !== 'undefined'){ PLATFORM_FIREBASE_CONFIG.databaseURL = `http://127.0.0.1:${PDB}/?ns=demo-plataforma`; clearInterval(iv); } }catch(e){} }, 5);
     setTimeout(() => clearInterval(iv), 4000);
   });
   return {page, errs, ctx};
 }
 async function arrancar(d, code, bandera){
-  await d.page.goto('http://localhost:8951/index.html', {waitUntil:'domcontentloaded'});
+  await d.page.goto(`http://localhost:${PWEB}/index.html`, {waitUntil:'domcontentloaded'});
   await d.page.evaluate(async ({code, dburl, bandera}) => {
     localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)}));
     localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'jefe', authKey:'k', pinHash:'h'}));
@@ -56,9 +58,9 @@ async function arrancar(d, code, bandera){
 const venta = (id, extra) => Object.assign({id, date: new Date().toISOString().slice(0,10), createdAt: new Date().toISOString(), total: 20, subtotal: 18.2, propina: 0, tipo:'mesa', metodoPago:'Efectivo', pagos:[{label:'Efectivo', amount:20, metodoPago:'Efectivo'}], items:[{name:'Menú', qty:1, price:20, ivaPct:10}]}, extra || {});
 const ids = d => d.page.evaluate(() => (DB.sales || []).map(s => String(s.id)).sort());
 const idsNube = async () => { // lo que hay en el nodo nuevo y en el antiguo, leído por REST con el emulador
-  const t = await (await gf('http://127.0.0.1:9000/gastrogoan/tenants.json?ns=demo-gastrogoan&shallow=true')).json();
+  const t = await (await gf(`http://127.0.0.1:${PDB}/gastrogoan/tenants.json?ns=demo-gastrogoan&shallow=true`)).json();
   const tid = Object.keys(t || {})[0];
-  const nuevo = await (await gf(`http://127.0.0.1:9000/gastrogoan/tenants/${tid}/ventas.json?ns=demo-gastrogoan&shallow=true`)).json();
+  const nuevo = await (await gf(`http://127.0.0.1:${PDB}/gastrogoan/tenants/${tid}/ventas.json?ns=demo-gastrogoan&shallow=true`)).json();
   return {tid, nuevo: Object.keys(nuevo || {}).length};
 };
 const igual = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -92,7 +94,7 @@ const nube1 = await idsNube();
 ok('1d. Migración: las 3001 ventas están en la nube nueva y la bandera sube', nube1.nuevo === 3001 && await A.page.evaluate(() => DB.business.ventasPorMes === true), 'nuevo=' + nube1.nuevo + ' en ' + ms + ' ms');
 await w(4000);
 ok('1e. El otro aparato recibe la bandera y no pierde ni duplica nada', await B.page.evaluate(() => DB.business.ventasPorMes === true) && (await ids(B)).length === 3001 && new Set(await ids(B)).size === 3001);
-ok('1f. El bloque antiguo se deja (red de seguridad para aparatos viejos)', await (async () => { const x = await (await gf(`http://127.0.0.1:9000/gastrogoan/tenants/${nube1.tid}/db/sales.json?ns=demo-gastrogoan&shallow=true`)).json(); return x && Object.keys(x).length >= 3000; })());
+ok('1f. El bloque antiguo se deja (red de seguridad para aparatos viejos)', await (async () => { const x = await (await gf(`http://127.0.0.1:${PDB}/gastrogoan/tenants/${nube1.tid}/db/sales.json?ns=demo-gastrogoan&shallow=true`)).json(); return x && Object.keys(x).length >= 3000; })());
 
 /* ═══ 2. Venta en A llega a B; lo subido baja a «solo lo nuevo» ═══ */
 await A.page.evaluate(() => { window.__bytes = {db:0, ventas:0, nUpd:0}; window.__medir(); });
@@ -132,10 +134,10 @@ await A.page.evaluate(() => { DB.sales = DB.sales.filter(s => !/^off/.test(Strin
 await w(5000);
 const post = await esperaIguales(A, B, 15000);
 ok('5b. Borrar (archivar) en A lo borra también en B y en la nube, con lápida', post.ok && !post.b.some(x => /^off/.test(x)) && post.a.length === 3001 + 1 + 120 + 25, 'A=' + post.a.length + ' B=' + post.b.length);
-ok('5c. La nube ya no tiene las borradas', await (async () => { const t = await (await gf(`http://127.0.0.1:9000/gastrogoan/tenants/${nube1.tid}/ventas/off3.json?ns=demo-gastrogoan`)).json(); return t === null; })());
+ok('5c. La nube ya no tiene las borradas', await (async () => { const t = await (await gf(`http://127.0.0.1:${PDB}/gastrogoan/tenants/${nube1.tid}/ventas/off3.json?ns=demo-gastrogoan`)).json(); return t === null; })());
 
 /* ═══ 6. Aparato «viejo» que sigue escribiendo el bloque antiguo ═══ */
-const base = `http://127.0.0.1:9000/gastrogoan/tenants/${nube1.tid}`;
+const base = `http://127.0.0.1:${PDB}/gastrogoan/tenants/${nube1.tid}`;
 const leg = await (await gf(`${base}/db/sales.json?ns=demo-gastrogoan`)).json();
 const arr = Array.isArray(leg) ? leg.filter(Boolean) : Object.values(leg || {});
 arr.push(venta('viejo-1', {createdAt: new Date().toISOString()}), venta('viejo-2', {createdAt: new Date().toISOString()}));
@@ -179,6 +181,9 @@ r = await esperaIguales(A, B, 30000);
 const unicos = new Set(r.a).size === r.a.length;
 const sinPerdidas = [...esperados.keys()].filter(k => !/^off/.test(k)).every(k => r.a.includes(k));
 ok('8a. Ráfaga aleatoria: los dos aparatos acaban con las MISMAS ventas, sin duplicados ni pérdidas', r.ok && unicos && sinPerdidas, 'A=' + r.a.length + ' B=' + r.b.length);
+const converge = async () => { const t0 = Date.now(); let a, b, sa, sb; do{ [a, b] = await Promise.all([A, B].map(D => D.page.evaluate(() => DB.sales.filter(s => s.status === 'anulada').map(s => s.id).sort().join()))); [sa, sb] = await Promise.all([A, B].map(D => D.page.evaluate(() => Math.round(DB.sales.filter(s => s.status !== 'anulada').reduce((s, x) => s + x.total, 0) * 100)))); if(a === b && sa === sb) return Date.now() - t0; await w(1000); }while(Date.now() - t0 < 90000); return -1; };
+const tConv = await converge();
+console.log('   ℹ️  anulaciones de ventas ANTIGUAS (fuera de los 3 días): convergen en ' + (tConv / 1000).toFixed(0) + ' s (barrido lento)');
 const anuA = await A.page.evaluate(() => DB.sales.filter(s => s.status === 'anulada').map(s => s.id).sort().join()), anuB = await B.page.evaluate(() => DB.sales.filter(s => s.status === 'anulada').map(s => s.id).sort().join());
 ok('8b. Las mismas ventas anuladas en los dos', anuA === anuB && anuA.length > 0);
 const sA = await A.page.evaluate(() => Math.round(DB.sales.filter(s => s.status !== 'anulada').reduce((s, x) => s + x.total, 0) * 100)), sB = await B.page.evaluate(() => Math.round(DB.sales.filter(s => s.status !== 'anulada').reduce((s, x) => s + x.total, 0) * 100));
@@ -189,6 +194,7 @@ ok('8d. La nube tiene exactamente las ventas de los aparatos', nubeFinal.nuevo =
 /* ═══ 9. Negocio nuevo: nace con la bandera encendida ═══ */
 const C = await dispositivo(); await arrancar(C, 'VENTAS002', undefined);
 await w(2500);
+console.log('   ℹ️  C:', JSON.stringify(await C.page.evaluate(() => ({f: DB.business.ventasPorMes, n: (DB.sales||[]).length, cloud: !!cloudRef, listo: vnListo}))));
 ok('9. Un negocio nuevo (nube vacía) nace con las ventas una a una', await C.page.evaluate(() => DB.business.ventasPorMes === true));
 
 const errores = [A, B, C].flatMap(d => d.errs).filter(e => !/net::|Failed to fetch|firebase/i.test(e));
