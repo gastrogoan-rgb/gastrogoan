@@ -23,9 +23,10 @@
        "items": [ { "nombre": "Hamburguesa", "cantidad": 2, "precio": 9.5, "notas": "sin cebolla" } ] }
 
    Variables del Worker (Settings → Variables): FIREBASE_DB_URL y FIREBASE_DB_SECRET (las mismas que pagos-worker.js:
-   leen gastrogoan/publicLookup/{publicId} en la plataforma) y, opcional, PUENTE_CLAVE: si se pone, cada POST debe llevar la
-   cabecera `x-puente-clave` con ese valor (las fuentes 1-4 son de confianza; sin clave, cualquiera con el publicId podría
-   mandar un pedido falso — igual que ya puede hacerlo por la web, y la app lo deja siempre por aceptar).
+   leen gastrogoan/publicLookup/{publicId} en la plataforma) y PUENTE_CLAVE, OBLIGATORIA desde el 25/11 (auditoría de seguridad):
+   cada POST debe llevar la cabecera `x-puente-clave` con ese valor. Antes era opcional y SIN ella cualquiera con el publicId
+   (va impreso en el QR del local) podía inyectar pedidos falsos con el nombre de una plataforma, mezclados con los reales de
+   Glovo/Uber. Sin la variable el Worker NO funciona (responde 503): un despliegue olvidado falla a la vista en vez de quedar abierto.
    ─────────────────────────────────────────────────────────────────────────────────────────────── */
 
 const CORS = {
@@ -60,6 +61,14 @@ export function normalizar(b) {
   };
 }
 
+// Comparación sin atajos (el tiempo no depende de en qué carácter falla).
+function clavesIguales(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
 async function fbPlataforma(env, path) {
   const r = await fetch(`${env.FIREBASE_DB_URL}/${path}.json?auth=${env.FIREBASE_DB_SECRET}`);
   if (!r.ok) throw new Error('plataforma ' + r.status);
@@ -87,7 +96,9 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const url = new URL(req.url);
     if (url.pathname !== '/pedido' || req.method !== 'POST') return json({ error: 'No existe' }, 404);
-    if (env.PUENTE_CLAVE && req.headers.get('x-puente-clave') !== env.PUENTE_CLAVE) return json({ error: 'Clave incorrecta' }, 401);
+    // Cerrado por defecto: sin PUENTE_CLAVE configurada no se acepta NADA (ni siquiera con cabecera vacía).
+    if (!env.PUENTE_CLAVE || String(env.PUENTE_CLAVE).length < 16) return json({ error: 'Puente sin configurar: falta PUENTE_CLAVE (mínimo 16 caracteres)' }, 503);
+    if (!clavesIguales(req.headers.get('x-puente-clave') || '', String(env.PUENTE_CLAVE))) return json({ error: 'Clave incorrecta' }, 401);
     let cuerpo;
     try { cuerpo = await req.json(); } catch (e) { return json({ error: 'JSON no válido' }, 400); }
     if (!idValido(cuerpo.publicId, 4, 60)) return json({ error: 'Falta el publicId' }, 400);

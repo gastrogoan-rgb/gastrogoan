@@ -144,6 +144,10 @@ await caso('Los huecos se ven en verde/rojo según disponibilidad, y el elegido 
   // de MARCA del negocio (personalizable) — en un negocio con marca
   // naranja/roja, el hueco elegido se confundía visualmente con "no
   // disponible" (rojo). Se prueba con una marca naranja a propósito.
+  // Desde 14/11 (efec2db3) lo elegido es OLIVA por norma de la app, no negro:
+  // la expectativa antigua (--ink) quedó desfasada. Lo que se mantiene es que
+  // sea el oliva FIJO (--oliva-gg), no la marca: la marca naranja de aquí no
+  // debe cambiarlo.
   const r = await page.evaluate(() => {
     document.documentElement.style.setProperty('--olive', '#E85D3C'); // naranja
     DB.tables = [{id:1, name:'Mesa 1', plazas:3}];
@@ -159,14 +163,14 @@ await caso('Los huecos se ven en verde/rojo según disponibilidad, y el elegido 
     return {
       libreAntes,
       colorElegido: getComputedStyle(elegido).backgroundColor,
-      ink: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
-      greenL: getComputedStyle(document.documentElement).getPropertyValue('--green-l').trim(),
+      oliva: getComputedStyle(document.documentElement).getPropertyValue('--oliva-gg').trim(),
     };
   });
   // rgb(237, 241, 236) === #EDF1EC (--green-l)
   assert.equal(r.libreAntes, 'rgb(237, 241, 236)', `un hueco disponible debe pintarse en verde claro (--green-l), salió ${r.libreAntes}`);
-  // rgb(28, 26, 23) === #1C1A17 (--ink)
-  assert.equal(r.colorElegido, 'rgb(28, 26, 23)', `el hueco elegido debe usar --ink (negro), NUNCA el color de marca del negocio — salió ${r.colorElegido}`);
+  // rgb(74, 93, 78) === #4A5D4E (--oliva-gg, el oliva fijo de la marca GastroGoan)
+  assert.equal(r.oliva, '#4A5D4E', 'el token --oliva-gg debe ser el oliva de la marca GastroGoan');
+  assert.equal(r.colorElegido, 'rgb(74, 93, 78)', `el hueco elegido debe usar el oliva fijo (--oliva-gg), NUNCA el color de marca del negocio — salió ${r.colorElegido}`);
 });
 
 await caso('Un hueco ocupado se ve en rojo, tachado y deshabilitado', async () => {

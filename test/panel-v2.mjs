@@ -25,7 +25,7 @@ async function abrir(ancho = 1280, alto = 900){
     DB.business.ownFirebase = {apiKey:'fake', databaseURL:'https://fake-default-rtdb.firebaseio.com'};
     // Un mes con cifras redondas para poder comprobar las cuentas a mano: 1 venta de 110 € (IVA 10 %) por día de los días 1-5 del mes.
     const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth(), p2 = n => String(n).padStart(2, '0');
-    DB.sales.length = 0; DB.reservations.length = 0; DB.clients.length = 0;
+    DB.sales.length = 0; DB.reservations.length = 0; DB.clients.length = 0; DB.tpvOrders.length = 0;
     DB.clients.push({id: 901, name: 'Ana Fiel', phone: '600111222', points: 8, cumpleanos: (y - 40) + '-05-05', allergies: 'gluten'}, {id: 902, name: 'Beto Raro', phone: '600333444', points: 0, cumpleanos: (y - 24) + '-03-03'});
     const mes = y + '-' + p2(m + 1);
     for(let d = 1; d <= Math.min(5, hoy.getDate()); d++){

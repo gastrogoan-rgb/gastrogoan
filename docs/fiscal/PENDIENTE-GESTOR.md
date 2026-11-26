@@ -19,5 +19,11 @@
 - Calendario: 111, 115 y 123 del 4T vencen el 20/01.
 - Pruebas: test/fiscal-rapido.mjs (12 casos con las cuentas hechas a mano de docs/fiscal/).
 
-# Sin aplicar todavía
-Autoconsumo del titular a valor de mercado en el IRPF, IVA por canal (bebidas para llevar al 21 %), horas extra y pluses de convenio en la nómina, bonificación del 50 % a fijos discontinuos, finiquito de temporales, nueva creación por períodos con base positiva, gastos no deducibles y reserva de capitalización, 349 y alta en el ROI, 347 con comisiones de Glovo, escala autonómica del IRPF, aviso de límites de exclusión de módulos, subvenciones en módulos.
+# Aplicado el 26/11 (tanda sin gestor)
+- Horas extra y pluses por empleado y mes (cotización con tope, solidaridad, IRPF aproximado, 111); qué pluses cotizan se confirma con el gestor.
+- 349: compras a proveedores con NIF-IVA de otro país de la UE (base sin IVA por trimestre); sin NIF, aviso.
+- 347: comisiones de delivery como operaciones con cada plataforma (NIF nuevo en Mi Negocio → Plataformas; con ISP, la base).
+- Módulos: aviso de que el límite de exclusión lo comprueba el gestor y de que las subvenciones no entran en el rendimiento.
+
+# Sin aplicar todavía (y por qué)
+Finiquito de temporales (depende del convenio y de la indemnización del contrato; sin fuente no se inventa), autoconsumo del titular a valor de mercado, IVA por canal (bebidas para llevar al 21 %), bonificación del 50 % a fijos discontinuos, nueva creación por períodos con base positiva, gastos no deducibles y reserva de capitalización, alta en el ROI, escala autonómica del IRPF, límite de exclusión de módulos (cifra sin verificar en el BOE), subvenciones en módulos (tratamiento a confirmar), ejercicios 2022 y anteriores, País Vasco foral.

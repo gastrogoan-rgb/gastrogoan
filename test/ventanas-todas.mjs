@@ -161,7 +161,12 @@ const pulsar = (c, enModal) => page.evaluate((c, enModal) => {
 const medir = async (nombre, etiqueta, ruta) => {
   await new Promise(r => setTimeout(r, 450));
   // Con la máquina cargada la ventana aún puede estar entrando (escala .97): se mediría 35 px en un botón de 36,5.
-  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => {}))));
+  // Solo las animaciones FINITAS (la entrada de la ventana). Las infinitas (luz de lámpara, flotar de la portada, barra de carga)
+  // no terminan nunca: esperar a todas colgaba la prueba (protocolTimeout) en inicio, Mega Lista e I+D. Con tope de 1,5 s.
+  await page.evaluate(() => Promise.race([
+    Promise.all(document.getAnimations().filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => {}))),
+    new Promise(r => setTimeout(r, 1500)),
+  ]));
   const m = await page.evaluate(MEDIR, ANCHO, MOVIL);
   if(process.env.GG_DEBUG) console.log(`  ${nombre} · ${etiqueta} → ${m ? 'VENTANA «' + m.titulo + '»' : 'nada'}`);
   if(!m) return null;
@@ -213,5 +218,8 @@ hallazgos.forEach(h => {
 });
 if(errs.length) console.log('\nErrores de JavaScript:\n  ' + [...new Set(errs)].slice(0, 10).join('\n  '));
 console.log('\n' + '═'.repeat(60));
-console.log(hallazgos.length || errs.length ? `❌ ${hallazgos.length} ventana(s) con hallazgos, ${errs.length} error(es)` : `✅ ${ventanas} ventanas sin hallazgos a ${ANCHO}px`);
-process.exitCode = hallazgos.length || errs.length ? 1 : 0;
+// Una corrida que no abre NINGUNA ventana no ha comprobado nada: no puede salir en verde (antes salía ✅ «0 ventanas sin hallazgos»).
+const sinCobertura = ventanas === 0;
+if(sinCobertura) console.log(`❌ ninguna ventana medida a ${ANCHO}px: esta corrida no ha cubierto nada (revisar los botones de cada vista)`);
+else console.log(hallazgos.length || errs.length ? `❌ ${hallazgos.length} ventana(s) con hallazgos, ${errs.length} error(es)` : `✅ ${ventanas} ventanas sin hallazgos a ${ANCHO}px`);
+process.exitCode = hallazgos.length || errs.length || sinCobertura ? 1 : 0;

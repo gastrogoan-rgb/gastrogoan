@@ -29,7 +29,14 @@ await p.evaluate(async ([code, dburl]) => {
   DB.business.ownFirebase = {apiKey: 'fake-api-key', databaseURL: dburl};
   await saveDB();
 }, [CODE, DB_NEGOCIO]);
-await p.reload({waitUntil: 'domcontentloaded'}); await new Promise(r => setTimeout(r, 9000));
+await p.reload({waitUntil: 'domcontentloaded'}); await new Promise(r => setTimeout(r, 2000));
+// Como el resto de pruebas del emulador: se quitan las pantallas de alta/bloqueo y se espera a que Firebase esté de verdad inicializado.
+// Antes la prueba lanzaba firebase.app() a los 9 s sin esperar: si la app no había llegado a iniciar Firebase, salía «No Firebase App».
+await p.evaluate(() => { ['netlify-gate','license-gate','firebase-gate','extconn-gate','revoked-gate','app-splash'].forEach(id => document.getElementById(id)?.remove()); try{ hideAccessSelectScreen(); }catch(e){} });
+// La app del NEGOCIO es la [DEFAULT]; la de la plataforma va con nombre, así que no basta con que haya alguna app.
+await p.waitForFunction(() => typeof firebase !== 'undefined' && firebase.apps && firebase.apps.some(x => x.name === '[DEFAULT]'), {timeout: 60000})
+  .catch(() => { throw new Error('Firebase no se inicializó en la página (ni tras 60 s): revisar la configuración de la prueba'); });
+await new Promise(r => setTimeout(r, 7000));
 const r = await p.evaluate(async () => {
   const app = firebase.app();
   await app.auth().signOut();                                  // la sesión se cae…

@@ -175,7 +175,7 @@ function openEscandalloRecipe(id){
 }
 // Vuelve de la hoja a la lista (preguntando antes si hay cambios sin guardar).
 function backToEscandalloRecipes(){
-  const volver = () => { escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; escandalloRecipe = null; renderEscandallo(); scrollContentToTop(); };
+  const volver = () => { ggRutaPagina(() => { escandalloHoja = null; recipeModalLines = []; escandalloHojaBase = ''; escandalloRecipe = null; }); renderEscandallo(); scrollContentToTop(); };
   if(ggEditorSucio()) ggGuardarSiHaceFalta(volver); else volver();
 }
 // Navega directo al Escandallo completo de un plato por nombre (usado desde
@@ -471,13 +471,18 @@ function openRecipeModal(id, forceBase){
   if(id && !r) return;
   if(id && typeof logAudit === 'function') logAudit('recipe_view', t('audit.recipeViewed').replace('${name}', r.name||'?'));
   const isBase = id ? !!r.isBase : !!forceBase;
-  escandalloTab = isBase ? 'elaboraciones' : 'platos';
-  escandalloHoja = {id: id || null, isBase};
-  recipeModalLines = (r && r.ingredients ? r.ingredients : []).map(l => ({...l}));
-  escandalloHojaNueva = id ? null : {name:'', priceBase:0, ivaPct:null, deliverySupplement:null, consumiblesPct:5, category:(escandalloFolder && escandalloFolder !== '__none__') ? escandalloFolder : '', baseYield:1, baseUnit:'L', isBase};
+  const poner = () => {
+    escandalloTab = isBase ? 'elaboraciones' : 'platos';
+    escandalloHoja = {id: id || null, isBase};
+    recipeModalLines = (r && r.ingredients ? r.ingredients : []).map(l => ({...l}));
+    escandalloHojaNueva = id ? null : {name:'', priceBase:0, ivaPct:null, deliverySupplement:null, consumiblesPct:5, category:(escandalloFolder && escandalloFolder !== '__none__') ? escandalloFolder : '', baseYield:1, baseUnit:'L', isBase};
+  };
   const alAbrir = () => { renderEscandallo(); scrollContentToTop(); };
   const activa = document.querySelector('.view.active');
-  if(activa && activa.id === 'view-escandallo') alAbrir(); else navigate('escandallo');
+  // Dentro de Escandallo, abrir una hoja es una página nueva del historial (como un pedido): «atrás» vuelve a la lista.
+  // Desde otra pantalla, la hoja nace con la navegación normal (la entrada de la pantalla ya es la que vuelve).
+  if(activa && activa.id === 'view-escandallo'){ ggRutaPagina(poner); alAbrir(); }
+  else { poner(); navigate('escandallo'); }
 }
 let escandalloHojaNueva = null;     // los valores de partida de una hoja nueva (para no depender de una receta que aún no existe)
 
@@ -1681,8 +1686,12 @@ function getFichaIngredientLines(f){
   return (f.ingredients||[]).filter(Boolean).map(s => ({qty: null, unit:'', name: s}));
 }
 
-function openFichaModal(id, recipeId){
+// opts.restaurar: llamada desde el historial («atrás»/«adelante»), que ya ha pintado la pantalla: no se toca el historial ni el scroll.
+function openFichaModal(id, recipeId, opts){
   if(!isOwnerSession() && !editUnlocked && !id && !recipeId) return;
+  // Dentro de Fichas, abrir una hoja es una página del historial (como un pedido): el estado de ANTES se guarda antes de cambiarlo.
+  const enPagina = !(opts && opts.restaurar) && !!document.querySelector('.view.active#view-fichas');
+  if(enPagina) ggRutaGuardarSalida();
   if(id){
     const f = getFicha(id);
     // f puede no existir si se borró desde otro dispositivo mientras esta
@@ -1729,6 +1738,8 @@ function openFichaModal(id, recipeId){
   fichaHoja = true;
   renderFichaModal();
   fichaHojaBase = fiFoto();
+  if(opts && opts.restaurar) return;
+  if(enPagina){ if(ggRutaId != null) ggRutaMarca('fichas', true); scrollContentToTop(); return; }
   const activa = document.querySelector('.view.active');
   if(!activa || activa.id !== 'view-fichas') navigate('fichas');
   else scrollContentToTop();
@@ -2087,7 +2098,7 @@ function renderFichaModal(){
 
 // Abrir la hoja desde donde sea: si no se está en Fichas, se va; y al volver se ve la lista, no una ficha a medias.
 function backToFichaList(){
-  const volver = () => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; renderFichas(); scrollContentToTop(); };
+  const volver = () => { ggRutaPagina(() => { fichaHoja = false; fichaModalState = null; fichaHojaBase = ''; }); renderFichas(); scrollContentToTop(); };
   if(ggEditorSucio()) ggGuardarSiHaceFalta(volver); else volver();
 }
 function fiVerEscandallo(recipeId){

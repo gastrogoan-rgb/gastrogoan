@@ -183,7 +183,7 @@ caso('La venta de liquidación de una plataforma recibe cierreId, no se duplica 
   // SIGUIENTE cierre de caja del mismo día, duplicando su importe.
   const m = operations.match(/async function performCashClosure\(\)\{[\s\S]*?\n\}/);
   assert.ok(m, 'no se encontró performCashClosure');
-  assert.ok(m[0].includes('platformSaleObjs.push(sale)'),
+  assert.ok(m[0].includes('platformSaleObjs.push(r.sale)'),
     'no se guarda la referencia a la venta de liquidación creada');
   assert.ok(m[0].includes('platformSaleObjs.forEach(s => { s.cierreId = closure.id; })'),
     'la venta de liquidación de plataforma no recibe cierreId — se duplicará en el próximo cierre');

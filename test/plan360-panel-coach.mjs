@@ -53,7 +53,7 @@ await caso('C · en el código del panel no queda ningún DNI ni IBAN escrito (e
     assert.ok(!/(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?: ?[0-9A-Z]{4}){2,}/.test(t), f + ': hay algo con forma de IBAN');
   }
   const t = fs.readFileSync(new URL('../admin-panel/plan360.html', import.meta.url), 'utf8');
-  assert.ok(/\{\{coachDni\}\}/.test(t) && /\{\{coachIban\}\}/.test(t) && /\{\{coachNombre\}\}/.test(t), 'el contrato debe llevar marcadores, no datos');
+  assert.ok(/\{\{coachDni\}\}/.test(t) && /\{\{coachNombre\}\}/.test(t), 'el contrato debe llevar marcadores, no datos');
 });
 await caso('C · IBAN y DNI: se reconoce el dígito de control y la letra (y se avisa sin bloquear si no cuadran)', async () => {
   const r = await ev(() => [coachIbanValido('ES91 2100 0418 4502 0005 1332'), coachIbanValido('ES91 2100 0418 4502 0005 1333'), coachDniValido('12345678Z'), coachDniValido('1234567'), coachDniValido('X1234567L'), coachDniValido('B12345674')]);
@@ -74,7 +74,7 @@ await caso('C · sin datos de coach el contrato NO se puede enviar ni firmar, y 
     return {banner, igual: antes === despues, bloqueado: coachBloqueaContrato(), enCoachPage: !document.getElementById('view-coach').classList.contains('hidden'), faltan: coachDatosFaltan(coachDatos, true), confirmado, enviado: !!(dia1.misteryCheck && dia1.misteryCheck.sentAt)};
   });
   assert.ok(r.banner, 'falta el aviso en la pantalla del contrato'); assert.ok(r.igual, 'el contrato cambió sin tener los datos del coach');
-  assert.ok(r.bloqueado && r.enCoachPage && r.faltan.length === 4);
+  assert.ok(r.bloqueado && r.enCoachPage && r.faltan.length === 3 && !r.faltan.some(x => /IBAN/.test(x)));
   assert.ok(/Faltan tus datos de coach/.test(r.confirmado || ''), 'el diagnóstico debe avisar de los datos que faltan'); assert.equal(r.enviado, false);
 });
 await caso('C · guardar «Mis datos» → plataforma + navegador; el negocio recibe plan360Coach SOLO si cambia (update de esa clave)', async () => {
@@ -108,7 +108,7 @@ await caso('C · con los datos puestos el contrato se puede actualizar y sale co
   await abrir('T3', 'Cafetería Nueva Era');
   const r = await ev(() => { renderContractPage(); document.getElementById('c-nombre').value = 'Bar Nuevo SL'; const bloq = plan360SaveContractFields() === false; return {bloq, texto: document.getElementById('client-grid').innerText, c: remoteBiz.plan360Contract.clienteNombre}; });
   assert.equal(r.bloq, false); assert.equal(r.c, 'Bar Nuevo SL');
-  assert.ok(/Ana Coach Prueba/.test(r.texto) && /12345678Z/.test(r.texto) && /ES91 2100/.test(r.texto), 'el contrato debe llevar los datos del coach');
+  assert.ok(/Ana Coach Prueba/.test(r.texto) && /12345678Z/.test(r.texto) && /Stripe/.test(r.texto) && !/ES91 2100/.test(r.texto), 'el contrato debe llevar los datos del coach');
   assert.ok(!/Partes: de una parte, ________/.test(r.texto));
 });
 await caso('C · si la plataforma rechaza la escritura (reglas sin publicar) se guarda en el navegador y la pantalla lo avisa', async () => {

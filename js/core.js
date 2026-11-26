@@ -155,7 +155,29 @@ function setOwnerLogin(user, authKey, pinPlain){
   migrateSlotOwners();
   cerrarAdjudicacionDeNegocios();
   localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({user: u, authKey, pinHash: hashPin(pinPlain, u)}));
+  // Cambiar el PIN ESCRIBE los dos hashes: el H2 de siempre (otro aparato con la versión vieja sigue pudiendo entrar) y el H3 en cuanto se calcula.
+  // La derivación de authKey NO cambia (es la ruta de la cuenta en la nube).
+  ownerPinCortoAnotar(pinPlain);
+  pinH3Mejorar(pinPlain, getOwnerLogin(), 'pinHash', u, ownerLoginPersistirH3);
 }
+// Guarda en localStorage el H3 calculado, SOLO si el login guardado sigue siendo el mismo (no se pisa un cambio de PIN hecho mientras tanto).
+function ownerLoginPersistirH3(obj){
+  try{
+    const cur = getOwnerLogin();
+    if(!cur || cur.pinHash !== obj.pinHash) return;
+    cur.pinHash3 = obj.pinHash3; cur.pinHash3De = obj.pinHash3De;
+    localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify(cur));
+  }catch(e){}
+}
+// El PIN del dueño no se guarda en ningún sitio, así que «¿es corto?» solo se sabe en el momento de teclearlo. Se apunta por aparato para el aviso de la campana.
+const OWNER_PIN_CORTO_LS = 'gastrogoan_owner_pin_corto';
+function ownerPinCortoAnotar(pin){
+  try{
+    if(/^[0-9A-Za-z]{6,12}$/.test(String(pin))) localStorage.removeItem(OWNER_PIN_CORTO_LS);
+    else localStorage.setItem(OWNER_PIN_CORTO_LS, '1');
+  }catch(e){}
+}
+function ownerPinEsCorto(){ try{ return localStorage.getItem(OWNER_PIN_CORTO_LS) === '1'; }catch(e){ return false; } }
 // Comprobación puramente local: una vez la cuenta se validó online al
 // entrar la primera vez en este dispositivo, las siguientes veces no hace
 // falta internet (un restaurante no puede quedarse sin poder abrir la caja
@@ -164,6 +186,12 @@ function verifyOwnerLogin(user, pinPlain){
   const login = getOwnerLogin();
   if(!login) return false;
   return login.user === ggOwnerUser(user) && pinMatchesHash(pinPlain, login.pinHash, login.user);
+}
+// Igual que la anterior pero prefiriendo el H3 (PBKDF2) si esta cuenta ya lo tiene; con un H2 válido lo refuerza en segundo plano.
+async function verifyOwnerLoginAsync(user, pinPlain){
+  const login = getOwnerLogin();
+  if(!login || login.user !== ggOwnerUser(user)) return false;
+  return pinCoincideAsync(pinPlain, login, 'pinHash', login.user, p => pinMatchesHash(p, login.pinHash, login.user), ownerLoginPersistirH3);
 }
 
 // Si ha pasado más de ACCESS_INACTIVITY_OWNER_MS (o _EMPLOYEE_MS) desde el último toque
@@ -459,7 +487,8 @@ async function confirmOwnerAccess(){
   // ⚠️ Pero el PIN guardado aquí puede ser el ANTIGUO (25/11, el dueño: «al cambiar la contraseña sigue valiendo la antigua»): al cambiarlo en otro
   // aparato, este conserva su copia y la daba por buena para siempre. Con internet se comprueba que la cuenta sigue en la ruta de ese PIN; si ya no
   // está, el PIN cambió y se pide el nuevo. Sin internet (o si la nube tarda) NO se bloquea a nadie: un restaurante sin wifi tiene que poder abrir.
-  if(verifyOwnerLogin(user, pin)){
+  if(await verifyOwnerLoginAsync(user, pin)){
+    ownerPinCortoAnotar(pin);
     const vigente = await ownerLoginSigueVigente(3000);
     if(vigente === false){
       try{ localStorage.removeItem(OWNER_LOGIN_LS); }catch(e){}
@@ -609,6 +638,28 @@ function pinDeEmpleadoCoincide(pin, storedPin, licenseCode){
   // Respaldo: PIN guardado antes de unificar la sal.
   return licenseCode ? pinMatchesHash(pin, storedPin, undefined) : false;
 }
+// Versiones asíncronas (prefieren H3, ver «H3» junto a hashPin). Las síncronas de arriba se mantienen para las barreras internas que no pueden esperar.
+async function pinDeNegocioCoincideAsync(pin){
+  const cod = codigoNegocioParaPin();
+  const b = DB.business;
+  if(!b) return false;
+  return pinCoincideAsync(pin, b, 'pin', cod, p => pinDeEmpleadoCoincide(p, b.pin, cod), () => saveDB());
+}
+async function findEmployeeMatchAsync(employees, name, pin, licenseCode){
+  for(const e of (employees || [])){
+    if(e.active === false) continue;
+    if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) continue;
+    if(await pinCoincideAsync(pin, e, 'pin', licenseCode, p => pinDeEmpleadoCoincide(p, e.pin || '1234', licenseCode))) return e;
+  }
+  return undefined;
+}
+// Refuerza con H3 el PIN de UN empleado de una copia (slot o nube) donde SÍ se va a guardar después. Solo si el PIN coincide con el H2 de ESA copia.
+async function pinMejorarEmpleadoEnCopia(employees, id, pin, licenseCode){
+  const e = (employees || []).find(x => x && x.id === id);
+  if(!e || pinH3Vigente(e, 'pin')) return false;
+  if(!pinDeEmpleadoCoincide(pin, e.pin || '1234', licenseCode)) return false;
+  return pinH3Mejorar(pin, e, 'pin', licenseCode);
+}
 function codigoNegocioParaPin(){
   const lic = (typeof getLicense === 'function') ? getLicense() : null;
   return (lic && lic.code) || (DB && DB.license && DB.license.code) || undefined;
@@ -719,12 +770,16 @@ async function confirmEmployeeAccess(){
       // venta o borrar un empleado) antes de permitirlo.
       const bizPin = await promptText(t('access.ownerPinRequiredForReset'), '', {title: t('title.enterBusinessPin'), icon: 'ti-lock'});
       if(bizPin === null) return;
-      if(!pinDeEmpleadoCoincide(bizPin.trim(), slotData.business && slotData.business.pin, localSlot.code)){ showToast(t('access.badCredentials')); return; }
+      const bizSlot = slotData.business || {};
+      if(!(await pinCoincideAsync(bizPin.trim(), bizSlot, 'pin', localSlot.code, p => pinDeEmpleadoCoincide(p, bizSlot.pin, localSlot.code)))){ showToast(t('access.badCredentials')); return; }
       const newPin = await promptText(t('access.newPinPrompt'), '', {title: t('access.newPinPrompt'), icon: 'ti-lock'});
       if(!newPin || !newPin.trim()){ return; }
       if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
       owner.pin = hashPin(newPin.trim(), localSlot.code);
       owner.pinChanged = true;
+      // Se escriben los dos hashes (H2 para versiones viejas, H3 para esta); se espera al H3 porque se guarda ahora mismo.
+      pinH3Borrar(owner, 'pin');
+      await pinH3Mejorar(newPin.trim(), owner, 'pin', localSlot.code);
       // Deja rastro en el registro de actividad del propio negocio (no del
       // dispositivo que hace el reseteo, que puede no tener sesión ninguna
       // todavía) — antes esto no dejaba ninguna constancia.
@@ -738,8 +793,16 @@ async function confirmEmployeeAccess(){
     // antiguo y el nuevo daba «incorrecto» (y en un negocio que no es el abierto, para siempre: su copia solo se actualiza al abrirlo). Con internet
     // manda la nube (solo la lista de empleados, no todo el negocio); sin internet o si tarda, se usa la copia local para no dejar a nadie fuera.
     const frescos = await empleadosFrescosDeLaNube(localSlot, slotData);
-    const match = findEmployeeMatch(frescos || slotData.employees, name, pin, localSlot.code);
+    const match = await findEmployeeMatchAsync(frescos || slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
+    // Refuerzo perezoso con H3 del PIN que acaba de servir, donde de verdad se guardará: en el negocio abierto (DB) o, si se va a cambiar de negocio
+    // (recarga), en la copia local del otro antes de irnos. Con la nube conectada subirá solo.
+    if(localSlot.id === ACTIVE_SLOT){
+      const dbEmp = (DB.employees || []).find(x => x.id === match.id);
+      if(dbEmp && !pinH3Vigente(dbEmp, 'pin') && pinDeEmpleadoCoincide(pin, dbEmp.pin || '1234', localSlot.code)) pinH3Mejorar(pin, dbEmp, 'pin', localSlot.code, () => saveDB());
+    } else if(await pinMejorarEmpleadoEnCopia(slotData.employees, match.id, pin, localSlot.code)){
+      try{ await writeSlotDB(localSlot.id, slotData); }catch(e){}
+    }
     rememberBusinessCode(code, (slotData.business && slotData.business.name) || localSlot.name);
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
     if(localSlot.id !== ACTIVE_SLOT){
@@ -762,8 +825,9 @@ async function confirmEmployeeAccess(){
   try{ remoteData = await fetchRemoteTenantDB(tenantId, fbConfig); }
   catch(e){ console.error('Error conectando con el negocio remoto', e); showToast(t('access.connectFailed')); return; }
   if(!remoteData){ showToast(t('access.badCredentials')); return; }
-  const match = findEmployeeMatch(remoteData.employees, name, pin, code);
+  const match = await findEmployeeMatchAsync(remoteData.employees, name, pin, code);
   if(!match){ showToast(t('access.badCredentials')); return; }
+  await pinMejorarEmpleadoEnCopia(remoteData.employees, match.id, pin, code);   // la copia se escribe justo debajo (registerRemoteBusinessLocally)
   rememberBusinessCode(code, remoteData.business && remoteData.business.name);
   let newSlotId;
   try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
@@ -2120,7 +2184,12 @@ function guardarLocalDB(){
     idbLocal.esperan.push({resolve, reject});
     if(idbLocal.enCurso || idbLocal.timer) return;   // ya hay una escritura en marcha o programada: esta viaja en la siguiente
     const espera = Math.max(0, idbLocal.ultimo + IDB_JUNTAR_MS - Date.now());
-    if(espera === 0) volcarLocalDB(); else idbLocal.timer = setTimeout(volcarLocalDB, espera);
+    /* La copia estructurada de TODA la base (20.000 ventas: ~80 ms en un PC, ~325 ms en un móvil lento) bloqueaba el hilo justo
+       antes de pintar el ticket. Se deja para justo DESPUÉS del siguiente fotograma (unos 16 ms; el respaldo de 100 ms cubre una
+       pestaña oculta, donde no hay fotogramas) y pagehide/hidden la vuelcan en el acto. Una espera larga abriría una ventana
+       en la que cerrar o recargar la pestaña dejaría el cobro sin guardar en el aparato. */
+    if(espera === 0 && typeof requestAnimationFrame === 'function') requestAnimationFrame(() => setTimeout(volcarLocalDB, 0));
+    idbLocal.timer = setTimeout(volcarLocalDB, espera === 0 ? 100 : espera);
   });
 }
 if(typeof window !== 'undefined' && typeof document !== 'undefined'){
@@ -4788,7 +4857,7 @@ Duración inicial: 4 semanas (28 días), desde la firma hasta la entrega del inf
 3. Tarifas y forma de pago
 Precio total del servicio: {{precio}}.
 Modalidad de pago: {{formaPago}}.
-Transferencia bancaria a la cuenta {{coachIban}} — Concepto: Programa 360 GastroGoan.
+Pago mediante el enlace de pago seguro de Stripe que GastroGoan facilita al cliente — Concepto: Programa 360 GastroGoan.
 
 4. Responsabilidades
 GastroGoan se compromete a aportar su experiencia y herramientas especializadas, mantener comunicación fluida y reportes periódicos, adaptar las estrategias según necesidades y mantener confidencial la información del cliente (cláusula 7).
@@ -4813,7 +4882,7 @@ En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si
 Ley española.
 
 11. Servicio de mantenimiento (opcional)
-Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Incluye cada mes cuatro contactos (dos por WhatsApp y dos por videollamada) con las entregas y tareas que el coach planifique para ese mes. Se contrata por meses naturales, se renueva automáticamente cada mes y se paga por adelantado. El cliente puede darse de baja en cualquier momento comunicándolo por escrito con al menos 15 días de antelación al inicio del mes siguiente; el mes en curso no se devuelve. Las cláusulas 4 a 10 y el acuerdo de confidencialidad se aplican también a este servicio.
+Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Ese servicio se rige por su propio «Acuerdo de servicio de mantenimiento», que el cliente lee y firma en el momento de activarlo: qué incluye, su duración, el pago y la baja se recogen en ese acuerdo. Hasta que se firme, este acuerdo no obliga a contratarlo. El acuerdo de confidencialidad (RGPD) se aplica también a ese servicio.
 
 CONTRATO DE CONFIDENCIALIDAD (RGPD)
 
@@ -4837,6 +4906,61 @@ El incumplimiento da derecho a la parte reveladora a reclamar daños y perjuicio
 
 7. Legislación y jurisdicción
 Ley española. Juzgados y Tribunales de Barcelona.`;
+/* PLAN360_MANT_CONTRACT_TEXT: contrato propio del servicio de MANTENIMIENTO (75 € + IVA al mes), aparte del acuerdo del Plan 360.
+   BORRADOR PENDIENTE DE REVISIÓN POR UN ABOGADO (como el del 360). Mismos marcadores que PLAN360_CONTRACT_TEXT; se rellena con
+   plan360FillTemplate y se firma al ACEPTAR el mantenimiento (DB.business.plan360ContratoMant = {signedAt, signedText, …}).
+   Una COPIA idéntica vive en admin-panel/plan360.html (test/plan360-contrato-mant.mjs lo exige). Sin datos personales reales:
+   los del coach salen de «Mis datos». */
+const PLAN360_MANT_CONTRACT_TEXT =
+`ACUERDO DE SERVICIO DE MANTENIMIENTO
+
+Partes: de una parte, {{coachNombre}} (GastroGoan), con DNI {{coachDni}} y domicilio en {{coachDomicilio}}. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+
+Este acuerdo es independiente del Acuerdo de prestación de servicios del programa Plan 360° y se firma al activar el mantenimiento, una vez terminado el programa.
+
+1. Objeto
+GastroGoan se compromete a prestar al cliente un servicio de seguimiento mensual para mantener y consolidar las mejoras conseguidas con el Plan 360° (en adelante, el servicio de mantenimiento).
+
+2. Qué incluye cada mes
+— Cuatro contactos al mes, uno por semana y en lunes: el primero y el tercero por WhatsApp, y el segundo y el cuarto por videollamada.
+— Las entregas que GastroGoan planifique para ese mes (documentos, análisis, plantillas y propuestas).
+— Las tareas que GastroGoan proponga al negocio, que el cliente marca y contesta desde su app.
+— Un informe del mes con los números del negocio calculados en la app, comparados con el mes anterior, y el cierre del mes con el objetivo del siguiente.
+— Cualquier servicio que no figure en esta lista, como el apoyo presencial, se pacta aparte.
+
+3. Obligaciones de GastroGoan
+Aportar su experiencia y herramientas, mantener comunicación fluida, preparar cada mes con antelación y entregar lo planificado.
+
+4. Obligaciones del cliente
+Mantener al día los datos del negocio en la app, marcar y contestar las tareas, atender los contactos acordados, facilitar la información que se le pida y aplicar las medidas que se acuerden.
+
+5. Duración y renovación
+El servicio se contrata por meses naturales, desde el mes en que se activa. Se renueva automáticamente cada mes mientras ninguna de las partes lo dé de baja conforme a la cláusula 8.
+
+6. Precio y forma de pago
+Precio del servicio: {{precioMantenimiento}}.
+El pago se hace por adelantado, al inicio de cada mes, mediante el enlace de pago seguro de Stripe que GastroGoan facilita al cliente — Concepto: Mantenimiento GastroGoan. Cada cobro queda registrado por GastroGoan.
+
+7. Revisión del precio
+El precio solo puede cambiar con un aviso previo por escrito de GastroGoan, antes del inicio del mes al que se aplique. Si el cliente no lo acepta, puede darse de baja conforme a la cláusula 8.
+
+8. Baja
+El cliente puede darse de baja en cualquier momento, por escrito (también desde su app), con al menos 15 días de antelación al inicio del mes siguiente. El mes en curso no se devuelve. GastroGoan puede dar de baja el servicio con el mismo preaviso.
+
+9. Garantías y limitación de responsabilidad
+GastroGoan garantiza la prestación profesional del servicio, pero no garantiza resultados concretos. La responsabilidad total no excederá el importe efectivamente abonado por el servicio.
+
+10. Propiedad intelectual
+Los entregables, metodologías, plantillas y materiales desarrollados permanecen como propiedad de GastroGoan. El cliente recibe una copia exclusiva para uso interno y no comercial.
+
+11. Confidencialidad y protección de datos
+Se aplica a este servicio el contrato de confidencialidad (RGPD) firmado junto con el Acuerdo de prestación de servicios del Plan 360°, que sigue vigente mientras dure la relación.
+
+12. Resolución de conflictos
+Las partes intentarán solucionar amistosamente cualquier discrepancia; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
+
+13. Legislación aplicable
+Ley española.`;
 /* Los datos personales del coach (nombre, DNI, domicilio, IBAN, email y teléfono) NO viven en el código: la app va en un repositorio
    público y se vendía con ellos escritos dentro del contrato. Los escribe el coach en su panel (`DB.business.plan360Coach`, clave
    plan360*) y llegan por la nube del negocio como cualquier otro dato suyo. Sin ellos completos el contrato no se puede firmar
@@ -4846,7 +4970,7 @@ function plan360CoachDatos(){
   if(!c || typeof c !== 'object') return null;
   const lim = k => String(c[k] == null ? '' : c[k]).trim();
   const d = {nombre: lim('nombre'), dni: lim('dni'), domicilio: lim('domicilio'), iban: lim('iban'), email: lim('email'), telefono: lim('telefono')};
-  return d.nombre && d.dni && d.domicilio && d.iban ? d : null;
+  return d.nombre && d.dni && d.domicilio ? d : null;   // el IBAN ya no se exige: el cobro va por enlace de pago de Stripe
 }
 function plan360FillTemplate(text, c){
   const co = plan360CoachDatos() || {};
@@ -5419,7 +5543,7 @@ const FIREBASE_RULES_JSON = `{
             "$dateStr": {
               "$turnoIdx": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= (root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').isNumber() && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() > 1 && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() <= 51 ? root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() - 1 : 50)) || (data.exists() && newData.val() <= data.val() + (root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').isNumber() && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() > 1 && root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() <= 51 ? root.child('gastrogoan/public/'+$publicId+'/info/business/reservaConfirmManualDesde').val() - 1 : 50)))"
               }
             }
           },
@@ -5428,7 +5552,7 @@ const FIREBASE_RULES_JSON = `{
             "$dateStr": {
               "$slot": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 40) || (data.exists() && newData.val() <= data.val() + 40))"
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && ((!data.exists() && newData.val() <= 1) || (data.exists() && newData.val() <= data.val() + 1))"
               }
             }
           },
@@ -6865,8 +6989,13 @@ function anotarLapidas(){
     if(!Array.isArray(DB[key])) return;
     const ahora = new Set(DB[key].map(claveDeElemento).filter(c => c != null));
     ahora.forEach(c => { if(mapa[key + ':' + c] != null){ delete mapa[key + ':' + c]; cambio = true; } });
-    if(!lastSyncedSnapshot[key]) return;
-    const antes = clavesPreviasLapida(key, lastSyncedSnapshot[key], v => v);
+    let antes;
+    if(key === 'sales' && typeof vnActivo === 'function' && vnActivo()){
+      antes = vnIdsParaLapidas();        // con las ventas una a una, «lo que había» es lo que la nube de ventas tiene
+    }else{
+      if(!lastSyncedSnapshot[key]) return;
+      antes = clavesPreviasLapida(key, lastSyncedSnapshot[key], v => v);
+    }
     if(!antes) return;
     antes.forEach(c => {
       if(!ahora.has(c) && mapa[key + ':' + c] == null){
@@ -7047,6 +7176,91 @@ function pinMatchesHash(pin, storedHash, licenseCode){
   if(storedHash.startsWith('H2:')) return hashPin(pin, licenseCode) === storedHash;
   if(storedHash.startsWith('H:')) return 'H:' + hashPinRaw(pin, licenseCode) === storedHash;
   return pin === storedHash;
+}
+
+/* ============================================================
+   H3: PBKDF2-SHA256 (WebCrypto) — hallazgo 4 de la auditoría de seguridad (25/11)
+   ============================================================
+   H2 es FNV-1a de 32 bits repetido 8.000 veces: sale en milisegundos por PIN, así que quien consiga un hash (la nube del negocio guarda
+   los de los empleados y el del negocio) prueba los 10.000 PIN de 4 dígitos al instante. H3 es PBKDF2 con sal ALEATORIA por hash
+   (dos empleados con el mismo PIN ya no dan el mismo texto) y un coste que se anota dentro del propio hash (`H3:<iteraciones>:<sal>:<hash>`),
+   así que se puede subir más adelante sin romper los guardados.
+
+   ⚠️ DECISIÓN: NO se toca ggOwnerAuthKey/authKey. Esa clave es la RUTA de la cuenta del dueño en la nube; si cambiara su derivación, todos los
+   dueños dejarían de encontrar su cuenta. Aquí solo se refuerzan los hashes que se COMPARAN: `pinHash` local del dueño (localStorage), `pin` de cada
+   empleado y `pin` del negocio (DB.employees / DB.business).
+
+   ⚠️ MIGRACIÓN PEREZOSA Y COMPATIBLE (versiones mezcladas): los hashes de empleados viajan por la nube y un aparato con la versión vieja no sabe
+   leer H3. Por eso el H3 va en un campo APARTE (`pin3` junto a `pin`, `pinHash3` junto a `pinHash`) y el H2 se queda. Al validar con éxito un PIN con
+   hash antiguo se calcula también el H3. Cada H3 guarda en `…3De` el H2 con el que nació: si un aparato viejo cambia el PIN (escribe `pin` nuevo y no
+   toca `pin3`), `pin3De` ya no coincide con `pin` y ese H3 se IGNORA (haría valer el PIN antiguo y rechazaría el nuevo). Sin WebCrypto (contexto no
+   seguro, Safari viejo) se usa el camino de siempre.
+
+   ⚠️ RETIRAR EL HASH VIEJO (no se hace aún): mientras `pin` siga siendo H2, quien lea la nube sigue pudiendo romper ESE hash; la ganancia real llega
+   cuando se deje de guardarlo. Condiciones y pasos en CLAUDE.md («Hash H3»). */
+const PIN_H3_ITER = 210000;
+function pinH3Disponible(){
+  try{ return typeof crypto !== 'undefined' && !!crypto.subtle && typeof crypto.subtle.importKey === 'function' && typeof TextEncoder !== 'undefined'; }
+  catch(e){ return false; }
+}
+function pinB64(bytes){ let s = ''; bytes = new Uint8Array(bytes); for(let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function pinB64Bytes(b64){ const s = atob(String(b64).replace(/-/g,'+').replace(/_/g,'/')); const out = new Uint8Array(s.length); for(let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
+async function pinH3Derivar(pin, contexto, salAleatoria, iter){
+  const enc = new TextEncoder();
+  const ctx = enc.encode('GG3$pin:' + (contexto === undefined ? '' : contexto));
+  const sal = new Uint8Array(salAleatoria.length + ctx.length);
+  sal.set(salAleatoria, 0); sal.set(ctx, salAleatoria.length);
+  const clave = await crypto.subtle.importKey('raw', enc.encode(String(pin)), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({name: 'PBKDF2', hash: 'SHA-256', salt: sal, iterations: iter}, clave, 256));
+}
+// `contexto` = lo mismo que la sal del H2: código del negocio (empleados y PIN del negocio) o nombre de usuario (dueño).
+async function hashPinH3(pin, contexto, iter){
+  iter = iter || PIN_H3_ITER;
+  const sal = crypto.getRandomValues(new Uint8Array(16));
+  const h = await pinH3Derivar(pin, contexto, sal, iter);
+  return 'H3:' + iter + ':' + pinB64(sal) + ':' + pinB64(h);
+}
+async function pinH3Coincide(pin, h3, contexto){
+  const partes = String(h3).split(':');
+  if(partes.length !== 4 || partes[0] !== 'H3') return false;
+  const iter = parseInt(partes[1], 10);
+  if(!(iter >= 1000 && iter <= 5000000)) return false;   // un valor absurdo no puede colgar el aparato
+  const h = pinB64(await pinH3Derivar(pin, contexto, pinB64Bytes(partes[2]), iter));
+  return h === partes[3];
+}
+// ¿El H3 de este registro sigue siendo el de su H2 actual? (ver «versiones mezcladas» arriba)
+function pinH3Vigente(obj, campo){
+  return !!(obj && obj[campo] && obj[campo + '3'] && obj[campo + '3De'] === obj[campo]);
+}
+function pinH3Borrar(obj, campo){ if(obj){ delete obj[campo + '3']; delete obj[campo + '3De']; } }
+// Calcula y apunta el H3 de un PIN que YA se sabe correcto para este registro. No lanza nunca: es una mejora, no puede impedir entrar.
+async function pinH3Mejorar(pin, obj, campo, contexto, guardar){
+  try{
+    if(!obj || !pinH3Disponible()) return false;
+    const h2 = obj[campo];
+    if(typeof h2 !== 'string' || !/^H2?:/.test(h2)) return false;   // PIN de fábrica en claro u otro formato: nada que reforzar
+    const h3 = await hashPinH3(pin, contexto);
+    if(obj[campo] !== h2) return false;   // el PIN cambió mientras se calculaba: este H3 ya no es de este registro
+    obj[campo + '3'] = h3; obj[campo + '3De'] = h2;
+    if(typeof guardar === 'function') guardar(obj);
+    return true;
+  }catch(e){ return false; }
+}
+// Tras ESCRIBIR un hash H2 nuevo (cambio de PIN): quita el H3 antiguo y calcula el nuevo sin bloquear a nadie.
+function pinH3Anotar(obj, campo, pin, contexto, guardar){
+  pinH3Borrar(obj, campo);
+  return pinH3Mejorar(pin, obj, campo, contexto, guardar);
+}
+// Comprobación ASÍNCRONA que PREFIERE el H3. `legacyFn(pin)` es la comparación de siempre (H2/H:), que sigue siendo la única posible sin WebCrypto o sin H3.
+// Si hay H3 vigente decide SOLO él (un PIN equivocado no entra aunque el H2 antiguo, de 32 bits, colisionara). Si entra por el camino viejo y se pasa
+// `guardar`, se reforzará con un H3 en segundo plano. Sin `guardar` no se escribe nada (copias de la nube, otros negocios).
+async function pinCoincideAsync(pin, obj, campo, contexto, legacyFn, guardar){
+  if(pinH3Vigente(obj, campo) && pinH3Disponible()){
+    try{ return await pinH3Coincide(pin, obj[campo + '3'], contexto); }catch(e){ /* cae al camino de siempre */ }
+  }
+  const ok = !!legacyFn(pin);
+  if(ok && typeof guardar === 'function') pinH3Mejorar(pin, obj, campo, contexto, guardar);   // sin await a propósito: no retrasa la entrada
+  return ok;
 }
 
 // Recuerda el último estado real de la nube (más allá de si el badge del
@@ -8437,7 +8651,11 @@ function cerrarMesaPagadaQr(order){
    notas (alergias) a la vista. Ahora la web cifra esos campos con la clave PÚBLICA del negocio (RSA-OAEP + AES-GCM, WebCrypto) y
    solo la app, que guarda la privada, puede abrirlos. No cambia ninguna regla de Firebase, así que sirve también a los negocios
    que aún tienen las reglas viejas. Sin clave publicada (app antigua) o sin WebCrypto, la web envía en claro como siempre. */
-const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas'];
+const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas', 'date', 'time', 'people', 'items', 'total', 'costeEnvio', 'propina', 'codigoPostal', 'instrucciones', 'referral', 'tableId', 'tipo', 'resToken', 'clientRef', 'token', 'mesaToken'];
+/* 25/11 (auditoría, hallazgo 3): se cifra también lo que revelaba qué vende y cuándo (líneas del pedido, fecha, hora, personas, importes) y los TOKENS que dan
+   acceso a una reserva o pedido ajenos (resToken, clientRef, token, mesaToken). Siguen en claro `type` y `createdAt` (las reglas los exigen) y lo que genera
+   el Worker de pagos. La app abre SIEMPRE la lista ampliada; la web solo la usa si el negocio publica `reqPubV >= 2` (una app anterior no conoce los campos
+   nuevos y los descartaría). Nadie lee la solicitud antes de abrirla (ggDescifrando), así que ni el orden ni el aforo dependen de lo cifrado. */
 function b64aBytes(b64){ const bin = atob(b64), u = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 // Devuelve true si ACABA de crear la clave (para republicar el espejo con ella).
 async function asegurarClaveSolicitudes(){
@@ -9335,7 +9553,7 @@ function negocioParaElEspejoPublico(){
   const b = DB.business || {};
   const out = {};
   CAMPOS_PUBLICOS_DEL_NEGOCIO.forEach(k => { if(b[k] !== undefined) out[k] = b[k]; });
-  if(b.reqPub) out.reqPub = b.reqPub;   // la PÚBLICA, para que la web cifre; la privada (reqPriv) nunca sale
+  if(b.reqPub){ out.reqPub = b.reqPub; out.reqPubV = 2; }   // la PÚBLICA, para que la web cifre; la privada (reqPriv) nunca sale
   return out;
 }
 
@@ -9359,6 +9577,121 @@ function limpiarHolds(app, publicId, rama, fecha){
   }).catch(e => console.error('No se pudieron leer los holds', rama, fecha, e));
 }
 
+/* ═══ Auto-curación de los candados públicos (25/11, auditoría de seguridad) ═══
+   `aforoHold`, `pedidosHold` y `mesaHold` los escribe CUALQUIERA con una sesión anónima (la web pública no tiene otra identidad), y
+   unas reglas de Firebase no pueden limitar cuántas veces seguidas se escribe: con ~13 escrituras de +40 alguien dejaba el aforo de un
+   turno en 500 y la agenda online cerrada. Un límite de velocidad real pide backend (que no hay) y un intervalo mínimo entre
+   escrituras dañaría a clientes reales que reservan a la vez, así que la defensa es REPARAR: el dueño tiene escritura total en SU nube.
+
+   Un candado legítimo es transitorio: la web lo sube al reservar, la app procesa la solicitud en segundos y su sincronización lo suelta
+   (limpiarHolds). Uno que sigue ahí, igual o más alto, tras HOLDS_GRACIA_MS con la app abierta no lo justifica nada: se borra.
+   Si además es de un tamaño que no sale de una reserva normal (o que cerraría el turno entero) se anota para avisar en la campana. */
+let HOLDS_GRACIA_MS = 8 * 60 * 1000;
+let HOLDS_REPASO_MS = 10 * 60 * 1000;
+const HOLDS_ATAQUES_LS = 'gastrogoan_holds_atacados';
+// Sin el aforo configurado no se sabe cuándo «cierra el turno»; con él, un candado ≥ aforo es lo que de verdad bloquea la web.
+function holdsEsNotable(rama, valor, aforo){
+  if(rama === 'aforoHold') return valor >= 20 || (aforo > 0 && valor >= aforo);
+  if(rama === 'pedidosHold') return valor >= 5;
+  return valor >= 8;            // mesaHold: tantas franjas en una misma mesa y día no salen de una reserva (90 min = 6)
+}
+/* Parte pura (la prueba la llama sin Firebase): `snaps` = lo leído de cada rama, `previos` = lo visto en el repaso anterior,
+   devuelve qué borrar, qué recordar y qué es un ataque. Clave de cada candado: rama/fecha/hijo (hijo = turno, franja o mesa). */
+function holdsDecidirReparacion(snaps, previos, ahora, aforo, gracia){
+  const nuevos = {}, aReparar = [], ataques = [];
+  ['aforoHold', 'pedidosHold', 'mesaHold'].forEach(rama => {
+    const porFecha = (snaps && snaps[rama]) || {};
+    Object.keys(porFecha).forEach(fecha => {
+      const hijos = porFecha[fecha];
+      if(!hijos || typeof hijos !== 'object') return;
+      Object.keys(hijos).forEach(hijo => {
+        const v = hijos[hijo];
+        // Contador (aforo/pedidos) o, en mesaHold, nº de franjas ocupadas de esa mesa ese día.
+        const valor = rama === 'mesaHold' ? (v && typeof v === 'object' ? Object.keys(v).length : 0) : (Number(v) || 0);
+        if(valor <= 0) return;
+        const clave = rama + '/' + fecha + '/' + hijo;
+        const p = previos && previos[clave];
+        // Si ha BAJADO desde la última vez, alguien (la app) lo está soltando: empieza de nuevo.
+        const desde = p && valor >= p.valor ? p.desde : ahora;
+        nuevos[clave] = {valor, desde};
+        if(p && valor >= p.valor && ahora - p.desde >= gracia){
+          aReparar.push({rama, fecha, hijo, valor});
+          if(holdsEsNotable(rama, valor, aforo)) ataques.push({rama, fecha, valor});
+        }
+      });
+    });
+  });
+  return {nuevos, aReparar, ataques};
+}
+function holdsAtaquesLeer(){
+  try{ const a = JSON.parse(localStorage.getItem(HOLDS_ATAQUES_LS + ':' + getPublicId()) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; }
+}
+function holdsAtaquesAnotar(ataques){
+  if(!ataques.length) return;
+  try{
+    const corte = Date.now() - 7 * 86400000;
+    const lista = holdsAtaquesLeer().filter(a => a.ts > corte).concat(ataques.map(a => ({fecha: a.fecha, rama: a.rama, valor: a.valor, ts: Date.now()})));
+    localStorage.setItem(HOLDS_ATAQUES_LS + ':' + getPublicId(), JSON.stringify(lista.slice(-20)));
+  }catch(e){}
+}
+// El aviso de la campana (se suma en avisosDeLaApp, js/finance.js). Informativo: «Visto» lo apaga hasta que haya otro intento.
+function avisoAforoAtacado(){
+  try{
+    if(typeof isOwnerSession !== 'function' || !isOwnerSession()) return [];
+    const corte = Date.now() - 7 * 86400000;
+    const lista = holdsAtaquesLeer().filter(a => a.ts > corte);
+    if(!lista.length) return [];
+    const ultimo = lista[lista.length - 1];
+    const dia = (typeof fechaImpresaLegible === 'function' ? fechaImpresaLegible(ultimo.fecha) : ultimo.fecha);
+    const que = ultimo.rama === 'pedidosHold'
+      ? gl({es:'los pedidos online', ca:'les comandes en línia', en:'online orders'})
+      : ultimo.rama === 'mesaHold' ? gl({es:'tus mesas', ca:'les teves taules', en:'your tables'}) : gl({es:'tu aforo', ca:'el teu aforament', en:'your capacity'});
+    const vistos = (typeof avisosVistosLeer === 'function') ? avisosVistosLeer() : {};
+    if(vistos.aforoAtacado === lista.length) return [];
+    return [{count: lista.length, icon:'ti-shield-exclamation', id:'aforoAtacado', campana:true, soloDueno:true, ocultable:true,
+      label: gl({es:'Alguien intentó bloquear ' + que + ' del ' + dia + '; ya se corrigió', ca:'Algú va intentar bloquejar ' + que + ' del ' + dia + '; ja s\'ha corregit', en:'Someone tried to block ' + que + ' for ' + dia + '; it has been fixed'}),
+      onclick: `cerrarAvisos()`}];
+  }catch(e){ return []; }
+}
+let holdsPrevios = {}, holdsUltimoRepaso = 0, holdsReparando = false;
+async function repararHoldsAtacados(app, publicId, forzar){
+  if(holdsReparando) return;
+  const ahora = Date.now();
+  if(!forzar && ahora - holdsUltimoRepaso < HOLDS_REPASO_MS - 1000) return;
+  holdsUltimoRepaso = ahora;
+  holdsReparando = true;
+  try{
+    // Desde ayer en adelante, como el resto del espejo: nadie reserva el pasado y las claves de fecha ordenan como texto.
+    const desde = dateStr(new Date(ahora - 86400000));
+    const base = app.database().ref('gastrogoan/public/' + publicId);
+    const snaps = {};
+    for(const rama of ['aforoHold', 'pedidosHold', 'mesaHold']){
+      const s = await base.child(rama).orderByKey().startAt(desde).once('value');
+      snaps[rama] = s.val() || {};
+    }
+    const r = holdsDecidirReparacion(snaps, holdsPrevios, ahora, parseInt((DB.business || {}).aforo) || 0, HOLDS_GRACIA_MS);
+    holdsPrevios = r.nuevos;
+    for(const x of r.aReparar){
+      // Se borra el MISMO nivel que ya borra limpiarHolds (las reglas dan el permiso ahí y no en el padre).
+      try{ await base.child(x.rama + '/' + x.fecha + '/' + x.hijo).remove(); delete holdsPrevios[x.rama + '/' + x.fecha + '/' + x.hijo]; }
+      catch(e){ console.error('No se pudo reparar el candado', x, e); }
+    }
+    if(r.aReparar.length) console.warn('Candados públicos sin justificar, corregidos:', r.aReparar);
+    holdsAtaquesAnotar(r.ataques);
+    if(r.ataques.length && typeof avisosProgramar === 'function') avisosProgramar();
+  }catch(e){
+    console.warn('No se pudieron revisar los candados públicos', e && e.message);
+  }finally{ holdsReparando = false; }
+}
+let holdsTimer = null, holdsCtx = null;
+function programarReparacionHolds(app, publicId){
+  // Un solo reloj por pestaña: repasa los candados del negocio abierto mientras la app esté abierta (con la app cerrada no hay quien repare).
+  if(holdsCtx && holdsCtx.publicId !== publicId){ holdsPrevios = {}; holdsUltimoRepaso = 0; }   // otro negocio: no mezclar lo visto
+  holdsCtx = {app, publicId};
+  if(!holdsTimer) holdsTimer = setInterval(() => { if(holdsCtx) repararHoldsAtacados(holdsCtx.app, holdsCtx.publicId); }, HOLDS_REPASO_MS);
+  repararHoldsAtacados(app, publicId);
+}
+
 let espejoUltimoEnvio = {huella: '', ts: 0};
 const ESPEJO_REPASO_MS = 10 * 60 * 1000;
 function syncPublicMirror(){
@@ -9370,6 +9703,7 @@ function syncPublicMirror(){
     const sucursales = buildSucursalesList();
     getPublicMirrorApp().then(app => {
       if(!app) return;
+      try{ programarReparacionHolds(app, publicId); }catch(e){ console.warn('Reparación de candados', e); }
       const data = {
         business: negocioParaElEspejoPublico(),
         cartas: cartasParaElEspejo(),
@@ -9502,7 +9836,17 @@ function publishTenantLookup(tenantId, config){
       apiKey: config.apiKey, databaseURL: config.databaseURL
     }).then(() => {
       try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
-    }).catch(e => console.error('Error publicando la referencia del negocio', e));
+    }).catch(e => {
+      console.error('Error publicando la referencia del negocio', e);
+      /* Desde el 25/11 las reglas de la plataforma NO dejan cambiar a qué proyecto de Firebase apunta un negocio ya
+         publicado (cualquiera con el tenantId podía desviar sus datos a una nube ajena). Un negocio que de verdad
+         migra de nube recibe aquí "permiso denegado": hay que avisarle de que lo desbloquea GastroGoan, en vez de
+         dejar que los aparatos nuevos sigan encontrando la nube vieja sin que nadie sepa por qué. */
+      try{
+        if(ggEsPermisoDenegado(e) && typeof showToast === 'function')
+          showToast(gl({es:'Cambiaste de nube: avisa a GastroGoan para que actualice la referencia de tu negocio (los aparatos nuevos aún encontrarían la antigua).', ca:'Has canviat de núvol: avisa GastroGoan perquè actualitzi la referència del teu negoci (els aparells nous encara trobarien l\'antiga).', en:'You changed cloud: tell GastroGoan so they update your business reference (new devices would still find the old one).'}));
+      }catch(e2){}
+    });
   }).catch(()=>{});
 }
 
@@ -10150,6 +10494,10 @@ function plan360RepararVacios(biz){
   });
 }
 function applyRemoteBlock(key, remoteValue){
+  /* Con las ventas una a una, el bloque antiguo `sales` solo puede traer ventas de un aparato sin actualizar:
+     se AÑADE lo que falte y nada más (js/ventas-nube.js). */
+  if(key === 'sales' && typeof vnActivo === 'function' && vnActivo()){ vnLegacyEntrante(remoteValue); return; }
+  const vnBanderaAntes = (key === 'business' && DB.business) ? !!DB.business.ventasPorMes : false;
   if(key === 'plan360Pruebas') remoteValue = plan360PruebasNormalizar(remoteValue);
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
@@ -10369,6 +10717,7 @@ function applyRemoteBlock(key, remoteValue){
   // DB[key] (el merge) todavía no coincide y lo suba de verdad.
   lastSyncedSnapshot[key] = mergedFromLocal ? remoteOnlyJson : json;
   DB[key] = merged;
+  if(key === 'business' && typeof vnAlCambiarBandera === 'function') vnAlCambiarBandera(vnBanderaAntes, !!(merged && merged.ventasPorMes));
   guardarLocalDB().catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
   if(isStoredLicenseValid(DB.license)){
@@ -10431,10 +10780,12 @@ function attachCloudChildListeners(){
   const onOk = snap => { marcarNubeAlDia({trasProbarNube: true}); applyRemoteBlock(snap.key, snap.val()); };
   cloudRef.on('child_added', onOk, onErr);
   cloudRef.on('child_changed', onOk, onErr);
+  if(typeof vnIniciar === 'function') vnIniciar();   // las ventas sueltas (`ventas`, hermano de `db`) se escuchan siempre
   cloudRef.on('child_removed', snap => {
     // Quitada la ÚLTIMA foto de prueba en otro aparato, el bloque desaparece entero: aquí hay que tratarlo como «vacío», o la foto
     // se quedaría viva en este aparato y al siguiente guardado volvería a subirse a la nube.
     if(snap.key === 'plan360Pruebas'){ applyRemoteBlock(snap.key, {}); return; }
+    if(snap.key === 'sales' && typeof vnActivo === 'function' && vnActivo()) return;   // el bloque antiguo ya no manda
     const def = defaultData();
     if(!def.hasOwnProperty(snap.key)) return;
     applyRemoteBlock(snap.key, def[snap.key]);
@@ -10460,7 +10811,14 @@ function mergeRemoteIntoLocal(val){
   // (applyRemoteBlock, para los listeners incrementales, no tiene este
   // problema porque solo procesa un bloque cada vez).
   if(merged.borrados !== undefined) DB.borrados = mergeLapidas(DB.borrados, merged.borrados);
+  /* Bandera de las ventas una a una: manda la de la nube (si la trae) y, si no, la local. */
+  const vnOn = !!((merged.business && merged.business.ventasPorMes !== undefined) ? merged.business.ventasPorMes : (DB.business && DB.business.ventasPorMes));
   Object.keys(merged).forEach(key => {
+    if(key === 'sales' && vnOn){
+      if(DB.business) DB.business.ventasPorMes = true;
+      vnLegacyEntrante(merged.sales);   // solo añade lo que falte; el resto viene de `ventas`
+      return;
+    }
     // `lastSyncedSnapshot` vive solo en memoria: en cada recarga de página
     // empieza en null, así que sin esto TODA clave se trataba como "sin
     // sincronizar" y se sustituía entera por lo que hubiera en la nube —
@@ -10726,6 +11084,10 @@ function startCloudSync(tenantId){
         const initClaimRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/initClaim');
         initClaimRef.transaction(current => current === null ? {ts: Date.now()} : undefined).then(result => {
           if(result.committed){
+            /* Nube recién creada y sin ventas = negocio nuevo: nace con las ventas una a una (sin aparatos viejos que proteger). */
+            if(DB.business && DB.business.ventasPorMes === undefined && !(DB.sales && DB.sales.length)){
+              DB.business.ventasPorMes = true; DB.business.ventasPorMesDesde = new Date().toISOString();
+            }
             lastSyncedSnapshot = {};
             pushAllToCloud();
             syncPublicMirror();
@@ -11706,11 +12068,56 @@ function pagoOnlineInfoHtml(){
   });
 }
 function pagoOnlineIdentidad(){
-  return {tenantId: getTenantId(), publicId: getPublicId()};
+  /* ⚠️ `ownerAuthKey` es la prueba de que quien llama es el DUEÑO (auditoría 25/11): el tenantId lo conoce cualquier empleado y no vale. El Worker lo
+     comprueba contra la cuenta del propietario en la plataforma (worker/pagos-worker.js, esDuenoDelNegocio). Viaja en el cuerpo (POST), nunca en la URL. */
+  return {tenantId: getTenantId(), publicId: getPublicId(), ownerAuthKey: (typeof getOwnerAuthKey === 'function' ? getOwnerAuthKey() : null) || undefined};
 }
 function pagoOnlineErrorTexto(data){
   if(data && data.code === 'no_vinculado') return t('mn.pago.errNotLinked');
+  if(data && data.code === 'no_dueno') return gl({
+    es: 'No se ha podido comprobar que eres el propietario de este negocio. Entra con tu usuario y contraseña de propietario (si la cambiaste en otro aparato, con la nueva) y vuelve a probar.',
+    ca: 'No s\'ha pogut comprovar que ets el propietari d\'aquest negoci. Entra amb el teu usuari i contrasenya de propietari (si l\'has canviat en un altre aparell, amb la nova) i torna-ho a provar.',
+    en: 'We could not verify that you are the owner of this business. Sign in with your owner username and password (the new one if you changed it on another device) and try again.'});
   return (data && data.error) || t('mn.pago.error');
+}
+/* Llama al Worker de pagos como propietario. Un negocio cuya alta en la lista de la cuenta no llegó a subirse (sin conexión en su día, cola
+   pendiente) recibe «no_dueno»: se vuelve a anotar en la cuenta (es idempotente) y se reintenta UNA vez, para que el dueño no tenga que saber nada. */
+async function pagoOnlineLlamar(ruta, cuerpo){
+  const hacer = () => fetch(`${PAGOS_WORKER_URL}${ruta}`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(Object.assign(pagoOnlineIdentidad(), cuerpo || {}))});
+  let res = await hacer();
+  let data = await res.json().catch(() => ({}));
+  if(data && data.code === 'no_dueno'){
+    try{
+      const lic = getLicense();
+      if(lic && lic.code){ linkBusinessToOwnerAccount(getTenantId(), lic.code, (DB.business && DB.business.name) || ''); await vaciarOwnerListOutbox(); }
+    }catch(e){}
+    res = await hacer();
+    data = await res.json().catch(() => ({}));
+  }
+  return {res, data};
+}
+/* ¿Sigue siendo la cuenta de Stripe que vio el dueño? Se recuerda la primera que se ve (en el negocio, así avisa en TODOS los aparatos) y si
+   cambia —cosa que la app no puede hacer sola y el Worker no deja sin ser el dueño— se avisa en rojo hasta que el dueño la confirme. */
+function stripeCuentaCambioAviso(data){
+  try{
+    if(!data || !data.accountId || !DB.business) return '';
+    const vista = DB.business.stripeCuentaVista;
+    if(!vista || !vista.accountId){ DB.business.stripeCuentaVista = {accountId: data.accountId, nombre: data.nombre || '', email: data.email || '', ts: Date.now()}; saveDB(); return ''; }
+    if(vista.accountId === data.accountId) return '';
+    const antes = [vista.nombre, vista.email].filter(Boolean).join(' · ') || vista.accountId;
+    const ahora = [data.nombre, data.email].filter(Boolean).join(' · ') || data.accountId;
+    try{ showToast(gl({es:'¡Ojo! La cuenta de Stripe de tu negocio ha cambiado', ca:'Compte! El compte d\'Stripe del teu negoci ha canviat', en:'Careful! Your business\'s Stripe account has changed'})); }catch(e){}
+    return `<div class="gg-aviso-stripe" style="margin-top:8px;padding:10px 12px;border:1px solid var(--red);border-radius:4px;color:var(--red);font-weight:600">
+      ${escapeHtml(gl({es:'La cuenta de Stripe conectada ha cambiado.', ca:'El compte d\'Stripe connectat ha canviat.', en:'The connected Stripe account has changed.'}))}
+      <div style="font-weight:400;margin-top:4px">${escapeHtml(gl({es:'Antes: ', ca:'Abans: ', en:'Before: '}) + antes)}<br>${escapeHtml(gl({es:'Ahora: ', ca:'Ara: ', en:'Now: '}) + ahora)}</div>
+      <div style="font-weight:400;margin-top:4px">${escapeHtml(gl({es:'Si no la has cambiado tú, pulsa «Desconectar» y avisa a GastroGoan: los cobros con tarjeta irían a otra cuenta.', ca:'Si no l\'has canviat tu, prem «Desconnectar» i avisa GastroGoan: els cobraments amb targeta anirien a un altre compte.', en:'If you did not change it, press “Disconnect” and tell GastroGoan: card payments would go to another account.'}))}</div>
+      <button class="btn btn-sm" style="margin-top:6px" onclick="stripeCuentaConfirmar('${escapeHtml(data.accountId)}')">${escapeHtml(gl({es:'Es mi cuenta', ca:'És el meu compte', en:'It is my account'}))}</button></div>`;
+  }catch(e){ return ''; }
+}
+function stripeCuentaConfirmar(accountId){
+  if(!/^acct_\w+$/.test(accountId || '')) return;
+  DB.business.stripeCuentaVista = Object.assign({}, DB.business.stripeCuentaVista, {accountId, ts: Date.now()});
+  saveDB(); loadPagoOnlineStatus();
 }
 async function loadPagoOnlineStatus(){
   const el = document.getElementById('pago-online-status');
@@ -11719,8 +12126,8 @@ async function loadPagoOnlineStatus(){
   let data = null;
   try{
     const {tenantId, publicId} = pagoOnlineIdentidad();
-    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/estado?tenantId=${encodeURIComponent(tenantId)}&publicId=${encodeURIComponent(publicId || '')}`);
-    data = await res.json();
+    // POST con la prueba de propietario: solo así el Worker enseña a nombre de quién está la cuenta (GET solo dice si cobra).
+    data = (await pagoOnlineLlamar('/stripe/estado', {})).data;
   }catch(e){ data = null; }
   if(!data || data.error){
     pagoOnlineActivo = false;
@@ -11732,20 +12139,21 @@ async function loadPagoOnlineStatus(){
     // A nombre de quién está la cuenta: que el dueño vea que es la SUYA
     // (el primer alta no puede comprobar quién la hace).
     const aNombre = [data.nombre, data.email].filter(Boolean).map(escapeHtml).join(' · ');
+    const avisoCuenta = stripeCuentaCambioAviso(data);
     if(!data.conectado){
       el.innerHTML = escapeHtml(t('mn.pago.notConnected'));
       if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-plug-connected"></i> ${t('mn.pago.connect')}</button>`;
     }else if(data.desconectado){
-      el.innerHTML = `${escapeHtml(t('mn.pago.paused'))}${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}`;
+      el.innerHTML = `${escapeHtml(t('mn.pago.paused'))}${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}${avisoCuenta}`;
       if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-plug-connected"></i> ${t('mn.pago.reconnect')}</button>`;
     }else if(!data.activo){
-      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-clock"></i> ${escapeHtml(t('mn.pago.pending'))}</span>${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}`;
+      el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-clock"></i> ${escapeHtml(t('mn.pago.pending'))}</span>${aNombre ? `<div style="margin-top:4px">${aNombre}</div>` : ''}${avisoCuenta}`;
       if(acciones) acciones.innerHTML = `<button class="btn btn-primary" onclick="conectarStripe()"><i class="ti ti-arrow-right"></i> ${t('mn.pago.continue')}</button>
         <button class="btn btn-sm" onclick="loadPagoOnlineStatus()"><i class="ti ti-refresh"></i> ${t('mn.pago.retry')}</button>`;
     }else{
       el.innerHTML = `<span style="color:var(--ink);font-weight:600"><i class="ti ti-check"></i> ${escapeHtml(t('mn.pago.active'))}</span>${aNombre ? `<div style="margin-top:4px">${t('mn.pago.account')}: ${aNombre}</div>` : ''}
         <div style="margin-top:4px">${escapeHtml(t('mn.pago.ownerNote'))}</div>
-        <div style="margin-top:6px;color:var(--muted)">${escapeHtml(t('mn.pago.twoAccounts').replace('${nombre}', data.nombre || data.email || ''))}</div>`;
+        <div style="margin-top:6px;color:var(--muted)">${escapeHtml(t('mn.pago.twoAccounts').replace('${nombre}', data.nombre || data.email || ''))}</div>${avisoCuenta}`;
       if(acciones) acciones.innerHTML = `<a class="btn btn-sm" href="https://dashboard.stripe.com/${/^acct_\w+$/.test(data.accountId||'') ? data.accountId + '/payments' : ''}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i> ${t('mn.pago.openStripe')}</a>
         <button class="btn btn-sm btn-danger" onclick="desconectarStripe()"><i class="ti ti-plug-connected-x"></i> ${t('mn.pago.disconnect')}</button>`;
     }
@@ -11903,11 +12311,7 @@ async function conectarStripeAhora(){
     // una vez cargado el estado real (ver loadPagoOnlineStatus).
     try{ localStorage.setItem(STRIPE_VUELTA_LS, '1'); }catch(e){}
     const volver = location.origin + location.pathname + '#minegocio';
-    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/conectar`, {
-      method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify(Object.assign(pagoOnlineIdentidad(), {volver}))
-    });
-    const data = await res.json().catch(() => ({}));
+    const {res, data} = await pagoOnlineLlamar('/stripe/conectar', {volver});
     if(!res.ok || data.error){ showToast(pagoOnlineErrorTexto(data)); loadPagoOnlineStatus(); return; }
     if(data.url){ location.href = data.url; return; }
     showToast(t('mn.pago.active'));
@@ -11923,12 +12327,8 @@ async function conectarStripeAhora(){
 async function desconectarStripe(){
   if(!(await confirmModal(t('mn.pago.confirmDisconnect')))) return;
   try{
-    const res = await fetch(`${PAGOS_WORKER_URL}/stripe/desconectar`, {
-      method: 'POST', headers: {'content-type': 'application/json'},
-      body: JSON.stringify(pagoOnlineIdentidad())
-    });
-    const data = await res.json().catch(() => ({}));
-    if(!res.ok || data.error){ showToast(t('mn.pago.disconnectError')); return; }
+    const {res, data} = await pagoOnlineLlamar('/stripe/desconectar', {});
+    if(!res.ok || data.error){ showToast(data && data.code === 'no_dueno' ? pagoOnlineErrorTexto(data) : t('mn.pago.disconnectError')); return; }
   }catch(e){
     showToast(t('mn.pago.disconnectError'));
     return;
@@ -12701,6 +13101,7 @@ function pushAllToCloud(){
   const updates = {};
   const pendingJson = {};
   Object.keys(DB).forEach(key => {
+    if(key === 'sales' && typeof vnActivo === 'function' && vnActivo()) return;   // las ventas van una a una (js/ventas-nube.js)
     updates[key] = DB[key];
     pendingJson[key] = canonicalStringify(DB[key]);
   });
@@ -12832,13 +13233,17 @@ function flushCloudSync(){
   anotarLapidas();
   const updates = {};
   const pendingJson = {};
+  /* Con las ventas «una a una» (js/ventas-nube.js) `sales` NO pasa por aquí: ni se convierte a texto ni se sube entera. */
+  const vnOn = typeof vnActivo === 'function' && vnActivo();
   Object.keys(DB).forEach(key => {
+    if(vnOn && key === 'sales') return;
     const json = canonicalStringify(DB[key]);
     if(lastSyncedSnapshot[key] !== json){
       updates[key] = DB[key];
       pendingJson[key] = json;
     }
   });
+  const vn = vnOn ? vnPrepararSubida() : {hay: false};
   /* El bloque `business` NO se sube entero (17/11, Plan 360º): lo escriben a la vez el negocio y el coach. Una tablet que
      vuelve a tener conexión y sube su `business` completo antes de que baje lo que el coach cambió entre tanto lo pisaba.
      Ahora se sube solo cada clave de primer nivel que ha cambiado de verdad aquí (`business/plan360Program`, etc.): lo que el
@@ -12874,7 +13279,7 @@ function flushCloudSync(){
     }catch(e){ /* si el snapshot no se puede leer, se sube entero */ }
   }
   const keys = Object.keys(updates);
-  if(keys.length === 0){ marcarNubeAlDia(); return; }
+  if(keys.length === 0 && !vn.hay){ marcarNubeAlDia(); return; }
   const seqAlSubir = cambiosLocalesSeq;
   const bloquesEnVuelo = Object.keys(pendingJson);
   bloquesEnVuelo.forEach(k => { subidaEnVuelo[k] = pendingJson[k]; });
@@ -12891,7 +13296,8 @@ function flushCloudSync(){
        ni a los demás aparatos. Se limpia el VALOR de cada ruta, no el nombre de la ruta. */
     const aSubir = {};
     Object.keys(updates).forEach(k => { aSubir[k] = sinIndefinidos(updates[k]); });
-    cloudRef.update(aSubir).then(() => {
+    /* Las dos subidas (bloques y ventas sueltas) se confirman juntas: el indicador solo vuelve a verde si ninguna falló. */
+    Promise.all([keys.length ? cloudRef.update(aSubir) : Promise.resolve(), vn.hay ? vn.subir() : Promise.resolve()]).then(() => {
       soltarEnVuelo();
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { const bloque = key.split('/')[0]; lastSyncedSnapshot[bloque] = pendingJson[bloque]; });

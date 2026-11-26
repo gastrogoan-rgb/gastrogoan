@@ -34,7 +34,7 @@ CSS_APP=$(cat css/styles.css)
 
 # Read all JS in order
 JS=""
-for f in js/core.js js/qr.js js/i18n.js js/frases.js js/iconos-comida.js js/iconos-comida-uso.js js/ui.js js/finance.js js/panel.js js/motor-fiscal.js js/recipes.js js/menu.js js/tpv.js js/tpv-sala.js js/entregas.js js/operations.js js/hr.js js/idr.js js/novedades.js js/clientes.js js/reservas.js js/manual.js js/polish.js js/app.js; do
+for f in js/core.js js/ventas-nube.js js/qr.js js/i18n.js js/frases.js js/iconos-comida.js js/iconos-comida-uso.js js/ui.js js/finance.js js/panel.js js/motor-fiscal.js js/recipes.js js/menu.js js/tpv.js js/tpv-sala.js js/entregas.js js/operations.js js/hr.js js/idr.js js/novedades.js js/clientes.js js/reservas.js js/manual.js js/polish.js js/app.js; do
   JS="$JS
 $(cat $f)"
 done
@@ -113,6 +113,9 @@ cp fonts/*.woff2 dist/fonts/
 # Copy the offline app-shell service worker (must sit at the site root next to index.html)
 cp sw.js dist/sw.js
 cp sw-reservas.js dist/sw-reservas.js
+# Favicon como archivo real: los navegadores piden /favicon.ico siempre y, sin él, el servidor devolvía la página entera.
+cp favicon.png dist/favicon.png
+cp favicon.png dist/favicon.ico
 
 # Tutorial de autoalojamiento (Netlify): solo lo enseña la app cuando NO se
 # abre desde *.gastrogoan.com (ver esKitAutoAlojado, js/core.js), pero tiene

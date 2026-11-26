@@ -1792,11 +1792,11 @@ function openDistEmployee(id){
   `);
   setTimeout(()=>document.getElementById('dist-pin-input')?.focus(), 50);
 }
-function confirmDistEmployeePin(){
+async function confirmDistEmployeePin(){
   const e = DB.employees.find(x=>x.id===distPendingPinEmployeeId);
   if(!e) return;
   const val = document.getElementById('dist-pin-input').value;
-  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
+  if(!(await pinMatchesEmployeeOrBusinessAsync(val, e))){ showToast(t('msg.pinIncorrect')); return; }
   closeModal();
   openDistEmployeeAuthed(e.id);
 }
@@ -5811,6 +5811,11 @@ function plan360TareaReal(tk){
   return !!x && !/^\(?\s*contenido pendiente de definir\s*\)?\.?$/i.test(x);
 }
 function plan360TareasReales(d){ return ((d && d.tasks) || []).filter(plan360TareaReal); }
+// La descripción de una tarea tampoco puede ser el aviso interno: se esconde (el cliente no debe verlo nunca, esté donde esté).
+function plan360DescReal(tk){
+  const x = tk && typeof tk.description === 'string' ? tk.description.trim() : '';
+  return x && !/contenido pendiente de definir/i.test(x) ? x : '';
+}
 // Cuántos días de retraso se cuentan como máximo: pasado el día 28 el programa
 // ya terminó y «53 días de retraso» no dice nada útil, solo entierra el cierre.
 const PLAN360_DIAS_PROGRAMA = 28;
@@ -6214,10 +6219,11 @@ function plan360CierreHtml(){
         <div style="font-size:22px;font-weight:800;margin-bottom:12px">${escapeHtml(m.precio && m.precio !== '99€/mes' && m.precio !== '75€/mes' ? m.precio : '75 € + IVA al mes')}</div>
         ${m.respuesta === 'acepta' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px">
             ✓ ${escapeHtml(t('plan360.maintenanceAccepted'))} <strong>${escapeHtml(m.firmaNombre)}</strong> — ${escapeHtml(new Date(m.firmaFecha).toLocaleDateString(localeActual()))}
+            ${(DB.business.plan360ContratoMant || {}).signedAt ? `<div style="margin-top:6px"><button class="btn btn-sm" onclick="renderPlan360ContractMant()"><i class="ti ti-file-text"></i> ${escapeHtml(gl({es:'Ver el acuerdo firmado', ca:'Veure l\'acord signat', en:'View the signed agreement'}))}</button></div>` : ''}
           </div>`
         : esOwner ? `
           ${m.respuesta === 'piensa' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px;margin-bottom:10px">${escapeHtml(t('plan360.maintenanceThinking'))} ${escapeHtml(plan360FechaLegible(m.volverAHablarFecha))}</div>` : ''}
-          <div class="field" style="margin-bottom:8px"><label style="color:#fff">${escapeHtml(t('plan360.signName'))}</label><input id="p360-mant-firma" style="color:var(--text)"></div>
+          <p style="margin:0 0 8px;font-size:12.5px;opacity:.85">${escapeHtml(gl({es:'Al activarlo leerás y firmarás el acuerdo de mantenimiento, que es independiente del acuerdo del Plan 360º.', ca:'En activar-lo llegiràs i signaràs l\'acord de manteniment, que és independent de l\'acord del Pla 360º.', en:'When you activate it you will read and sign the maintenance agreement, which is separate from the 360º Plan agreement.'}))}</p>
           <button class="btn btn-primary btn-sm" onclick="plan360MantenimientoAceptar()" style="margin-right:6px">${escapeHtml(t('plan360.maintenanceAcceptBtn'))}</button>
           <div class="field" style="margin:10px 0 6px"><label style="color:#fff">${escapeHtml(t('plan360.maintenanceThinkDate'))}</label><input id="p360-mant-fecha" type="date" style="color:var(--text);max-width:180px"></div>
           <button class="btn btn-sm" onclick="plan360MantenimientoPensar()">${escapeHtml(t('plan360.maintenanceThinkBtn'))}</button>
@@ -6475,7 +6481,7 @@ function plan360PlanAccionHtml(){
   prog.filter(d => d.phase === 'trabajo').forEach(d => plan360TareasReales(d).forEach(tk => tareas.push({day: d.day, tk})));
   const fecha = day => { try{ return plan360FechaLegible(plan360DateForDay(day)); }catch(e){ return ''; } };
   const casilla = tk => tk.status === 'hecha' ? '☑' : '☐';
-  const fila = x => `<tr><td class="c">${casilla(x.tk)}</td><td>${escapeHtml(x.tk.title || '')}${x.tk.description ? `<div class="m">${escapeHtml(x.tk.description).slice(0, 220)}</div>` : ''}</td><td class="f">${escapeHtml(fecha(x.day))}</td></tr>`;
+  const fila = x => `<tr><td class="c">${casilla(x.tk)}</td><td>${escapeHtml(x.tk.title || '')}${plan360DescReal(x.tk) ? `<div class="m">${escapeHtml(plan360DescReal(x.tk)).slice(0, 220)}</div>` : ''}</td><td class="f">${escapeHtml(fecha(x.day))}</td></tr>`;
   const orden = {prioritario: 0, esencial: 1, complementario: 2};
   const objs = objetivos.slice().sort((a, c) => (orden[a.prioridad] ?? 1) - (orden[c.prioridad] ?? 1));
   const ids = new Set(objs.map(o => o.id));
@@ -6636,23 +6642,116 @@ function plan360FechaLegible(f){
   const [y, mo, d] = f.split('-').map(Number);
   return new Date(y, mo - 1, d).toLocaleDateString(localeActual(), {day: 'numeric', month: 'long', year: 'numeric'});
 }
+/* Aceptar el mantenimiento = leer y firmar SU acuerdo (PLAN360_MANT_CONTRACT_TEXT), no un nombre suelto: el botón de la oferta abre
+   el acuerdo y es la firma la que activa el servicio (plan360ContratoMantFirmar). Si el acuerdo ya estaba firmado (p. ej. el
+   coach lo recogió en persona) se activa directamente con ese nombre. */
 function plan360MantenimientoAceptar(){
   if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
-  const nombre = (document.getElementById('p360-mant-firma').value || '').trim();
-  if(!nombre){ showToast(t('plan360.signMissing')); return; }
+  const cm = DB.business.plan360ContratoMant || {};
+  if(cm.signedAt && cm.signedName){ plan360MantenimientoActivar(cm.signedName); saveDB(); plan360PingActivity(); showToast(t('plan360.saved')); renderPlan360Grid(); return; }
+  renderPlan360ContractMant();
+}
+// El cambio de estado de aceptar (lo hace la firma del acuerdo): el panel del coach lo pasa solo a «Mantenimiento» (6/10).
+function plan360MantenimientoActivar(nombre){
   const c = DB.business.plan360Cierre;
-  if(!c || !c.mantenimiento) return;
-  c.mantenimiento.respuesta = 'acepta';
-  c.mantenimiento.firmaNombre = nombre;
-  c.mantenimiento.firmaFecha = Date.now();
-  c.mantenimiento.respondidoEn = Date.now();
-  // El panel del coach lo pasa solo a «Mantenimiento» (6/10).
-  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {fase: 'mant', mantDesde: plan360MantClave(new Date()), cambiado: Date.now()});   // fusionar: ahí van también los cobros del coach
+  if(c && c.mantenimiento){
+    c.mantenimiento.respuesta = 'acepta';
+    c.mantenimiento.firmaNombre = nombre;
+    c.mantenimiento.firmaFecha = Date.now();
+    c.mantenimiento.respondidoEn = Date.now();
+  }
+  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {fase: 'mant', mantDesde: ((DB.business.plan360Servicio || {}).mantDesde) || plan360MantClave(new Date()), cambiado: Date.now()});   // fusionar: ahí van también los cobros del coach
+}
+/* ---- Acuerdo de servicio de mantenimiento (contrato propio, aparte del acuerdo del Plan 360º) ----
+   DB.business.plan360ContratoMant = {clienteNombre, clienteNIF, clienteDireccion, precioMantenimiento, enviadoEn (lo pone el coach),
+   signedName, signedDNI, signedAt, signedText}. Clave plan360*: la app y el panel ya la fusionan. El texto firmado se guarda
+   (signedText) y es el que se enseña siempre: si el modelo cambia, lo firmado no. */
+function plan360ContratoMantDatos(){
+  const base = DB.business.plan360Contract || {};
+  const cm = DB.business.plan360ContratoMant || {};
+  const m = (DB.business.plan360Cierre || {}).mantenimiento || {};
+  const oferta = m.precio && m.precio !== '99€/mes' && m.precio !== '75€/mes' ? m.precio : '75 € + IVA al mes';
+  return {
+    clienteNombre: cm.clienteNombre || base.clienteNombre || '',
+    clienteNIF: cm.clienteNIF || base.clienteNIF || '',
+    clienteDireccion: cm.clienteDireccion || base.clienteDireccion || '',
+    precioMantenimiento: cm.precioMantenimiento || oferta,
+  };
+}
+function renderPlan360ContractMant(){
+  const el = document.getElementById('plan360-content');
+  if(!el) return;
+  el.innerHTML = `
+    ${plan360PageHeader(gl({es:'Acuerdo de mantenimiento', ca:'Acord de manteniment', en:'Maintenance agreement'}))}
+    ${plan360ContratoMantHtml()}`;
+}
+function plan360ContratoMantHtml(){
+  const cm = DB.business.plan360ContratoMant || {};
+  const d = plan360ContratoMantDatos();
+  const texto = (cm.signedAt && cm.signedText) || plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d);
+  if(cm.signedAt){
+    return `<div class="card" style="margin-top:14px">
+      <div class="p360-txt p360-txt-box" style="margin-bottom:10px">${plan360TextoHtml(texto)}</div>
+      <div class="card" style="background:var(--green-l);border-color:var(--green)">
+        <i class="ti ti-circle-check" style="color:var(--green)"></i>
+        ${escapeHtml(t('plan360.signedBy'))} <strong>${escapeHtml(cm.signedName)}</strong> (${escapeHtml(cm.signedDNI)}) — ${escapeHtml(new Date(cm.signedAt).toLocaleString(localeActual()))}
+      </div>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="plan360PrintContractMant()"><i class="ti ti-printer"></i> ${escapeHtml(t('plan360.contractPrint'))}</button>
+    </div>`;
+  }
+  const coachListo = !!plan360CoachDatos();
+  const puede = coachListo && plan360EsOwner() && !plan360SoloLectura();
+  return `<div class="card" style="margin-top:14px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-cm-nombre" value="${escapeHtml(d.clienteNombre)}" oninput="plan360ContratoMantVivo()"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-cm-nif" value="${escapeHtml(d.clienteNIF)}" oninput="plan360ContratoMantVivo()"></div>
+    </div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-cm-direccion" value="${escapeHtml(d.clienteDireccion)}" oninput="plan360ContratoMantVivo()"></div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractPrice'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(d.precioMantenimiento)}</div></div>
+    <div id="p360-cm-texto" class="p360-txt p360-txt-box" style="margin:10px 0 14px">${plan360TextoHtml(texto)}</div>
+    ${!coachListo ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-user-edit"></i> ${escapeHtml(gl({es:'Tu coach completará sus datos antes de la firma. Cuando lo haga, podrás firmar aquí mismo.', ca:'El teu coach completarà les seves dades abans de la signatura. Quan ho faci, podràs signar aquí mateix.', en:'Your coach will complete their details before signing. Once done, you will be able to sign right here.'}))}</div>` : ''}
+    ${!plan360EsOwner() ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px">${escapeHtml(t('plan360.maintenanceOwnerOnly'))}</div>` : ''}
+    <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-cm-sign-name" value="${escapeHtml(d.clienteNombre)}" oninput="this.dataset.tocado='1'" ${puede ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-cm-sign-dni" value="${escapeHtml(d.clienteNIF)}" oninput="this.dataset.tocado='1'" ${puede ? '' : 'disabled'}></div>
+    </div>
+    <button class="btn btn-primary" onclick="plan360ContratoMantFirmar()" ${puede ? '' : 'disabled'}>${escapeHtml(gl({es:'Firmar y activar el mantenimiento', ca:'Signar i activar el manteniment', en:'Sign and activate maintenance'}))}</button>
+    <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
+  </div>`;
+}
+// El texto se rehace mientras se escribe (como el del acuerdo del 360º); la firma sigue nombre y NIF si no se han tocado a mano.
+function plan360ContratoMantVivo(){
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const d = Object.assign({}, plan360ContratoMantDatos(), {clienteNombre: val('p360-cm-nombre'), clienteNIF: val('p360-cm-nif'), clienteDireccion: val('p360-cm-direccion')});
+  const caja = document.getElementById('p360-cm-texto');
+  if(caja) caja.innerHTML = plan360TextoHtml(plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d));
+  [['p360-cm-sign-name', d.clienteNombre], ['p360-cm-sign-dni', d.clienteNIF]].forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if(el && !el.dataset.tocado) el.value = v;
+  });
+}
+function plan360ContratoMantFirmar(){
+  if(plan360SoloLecturaAviso()) return;
+  if(!plan360EsOwner()) return;
+  if(!plan360CoachDatos()){ showToast(gl({es:'Tu coach completará sus datos antes de la firma.', ca:'El teu coach completarà les seves dades abans de la signatura.', en:'Your coach will complete their details before signing.'})); return; }
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const name = val('p360-cm-sign-name'), dni = val('p360-cm-sign-dni');
+  if(!name || !dni){ showToast(t('plan360.signMissing')); return; }
+  const prev = DB.business.plan360ContratoMant || {};
+  const d = Object.assign({}, plan360ContratoMantDatos(), {clienteNombre: val('p360-cm-nombre'), clienteNIF: val('p360-cm-nif'), clienteDireccion: val('p360-cm-direccion')});
+  DB.business.plan360ContratoMant = Object.assign({}, prev, d, {signedName: name, signedDNI: dni, signedAt: Date.now(), signedText: plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d)});
+  plan360MantenimientoActivar(name);
   saveDB();
   plan360PingActivity();
   showToast(t('plan360.saved'));
-  renderPlan360Grid();
+  renderPlan360ContractMant();
+}
+function plan360PrintContractMant(){
+  const cm = DB.business.plan360ContratoMant || {};
+  if(!cm.signedAt) return;
+  plan360ImprimirFirmado(gl({es:'Acuerdo de mantenimiento', ca:'Acord de manteniment', en:'Maintenance agreement'}), cm.signedText || plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, plan360ContratoMantDatos()), cm);
 }
 function plan360MantenimientoPensar(){
   if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
@@ -6812,6 +6911,10 @@ function plan360MantServicioHtml(){
       ${sv.mantHasta ? `<div><div class="txt-xs txt-muted">${escapeHtml(L({es:'Pagado hasta', ca:'Pagat fins', en:'Paid until'}))}</div><b>${escapeHtml(/^\d{4}-\d{2}$/.test(sv.mantHasta) ? (() => { const [y, m] = sv.mantHasta.split('-').map(Number); return plan360Mayus(new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'})); })() : plan360FechaLegible(sv.mantHasta))}</b></div>` : ''}
     </div>
     ${ult.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${ult.map(k => `<span class="badge" style="background:var(--green-bg,#E4EDE6);color:var(--green,#3F6B4A)"><i class="ti ti-check"></i> ${escapeHtml(mesTxt(k))}</span>`).join('')}</div>` : `<p class="txt-xs txt-muted" style="margin:4px 0 8px">${escapeHtml(L({es:'Todavía no hay cobros apuntados.', ca:'Encara no hi ha cobraments apuntats.', en:'No payments recorded yet.'}))}</p>`}
+    ${(() => { const cm = DB.business.plan360ContratoMant || {};
+      return cm.signedAt
+        ? `<div class="txt-xs" style="margin:0 0 8px"><i class="ti ti-circle-check" style="color:var(--green)"></i> ${escapeHtml(L({es:'Acuerdo de mantenimiento firmado el ', ca:'Acord de manteniment signat el ', en:'Maintenance agreement signed on '}))}${escapeHtml(new Date(cm.signedAt).toLocaleDateString(localeActual()))} <button class="btn btn-sm" onclick="renderPlan360ContractMant()">${escapeHtml(L({es:'Ver', ca:'Veure', en:'View'}))}</button></div>`
+        : `<div class="txt-xs" style="margin:0 0 8px"><i class="ti ti-signature"></i> ${escapeHtml(L({es:'Falta firmar el acuerdo de mantenimiento. ', ca:'Falta signar l\'acord de manteniment. ', en:'The maintenance agreement is not signed yet. '}))}${esOwner ? `<button class="btn btn-sm" onclick="renderPlan360ContractMant()">${escapeHtml(L({es:'Leer y firmar', ca:'Llegir i signar', en:'Read and sign'}))}</button>` : ''}</div>`; })()}
     ${baja ? `<div style="background:var(--amber-bg,#F6EBD0);padding:10px;border-radius:6px;font-size:13px">${escapeHtml(L({es:'Has pedido la baja el ', ca:'Has demanat la baixa el ', en:'You asked to cancel on '}))}<b>${escapeHtml(new Date(baja.ts).toLocaleDateString(localeActual()))}</b>${escapeHtml(L({es:': será efectiva a fin de mes.', ca:': serà efectiva a final de mes.', en:': effective at the end of the month.'}))}
         ${esOwner && !plan360SoloLectura() ? ` <button class="btn btn-sm btn-toque" onclick="plan360RetirarBaja()">${escapeHtml(L({es:'Retirar la solicitud', ca:'Retirar la sol·licitud', en:'Withdraw the request'}))}</button>` : ''}</div>`
       : (esOwner && !plan360SoloLectura() ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
@@ -7106,10 +7209,12 @@ function plan360ContractSectionHtml(){
 function plan360PrintContract(){
   const c = DB.business.plan360Contract || {};
   if(!c.signedAt) return;
-  const texto = c.signedText || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  plan360ImprimirFirmado(t('plan360.contract'), c.signedText || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c), c);
+}
+function plan360ImprimirFirmado(titulo, texto, c){
   const win = window.open('', '_blank', 'width=700,height=800');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title>
     <style>${ggFuentesImpresionCss()} ${GG_BARRA_IMPRESION_CSS} @page{margin:18mm 16mm} body{font-family:'Schibsted Grotesk',Arial,sans-serif;color:#1C1A17;white-space:pre-wrap;line-height:1.65;font-size:13px;padding:0 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact} .firma{margin-top:28px;padding:14px 16px;border:1px solid #D5CFC4;border-top:3px solid #1C1A17;background:#FAF8F4;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;white-space:normal;break-inside:avoid}</style>
     </head><body>${ggBarraImpresionHtml()}${escapeHtml(texto)}
     <div class="firma">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(c.signedName)} (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}</div>
@@ -8048,7 +8153,7 @@ function plan360TaskRow(day, tk, i){
     <div class="pl-extra">
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
     ${area ? `<div class="p360-tarea-area">${escapeHtml(gl(area.nombre))}</div>` : ''}
-    ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
+    ${plan360DescReal(tk) ? `<p class="p360-tarea-desc">${escapeHtml(plan360DescReal(tk))}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
     ${!soloLec && plan360EsOwner() && (DB.employees || []).length ? `<div class="field" style="margin:4px 0 8px"><label>${escapeHtml(gl({es:'Pasar a un empleado', ca:'Passar a un empleat', en:'Hand to an employee'}))}</label>
@@ -8977,6 +9082,7 @@ function renderDataMaintenanceCard(){
       ${desktopNotificationsEnabled()
         ? `<span class="badge badge-green" style="margin-bottom:8px;display:inline-block"><i class="ti ti-bell-check"></i> ${t('notif.enabledBadge')}</span><br><button class="btn btn-sm" onclick="disableDesktopNotifications()">${t('notif.disable')}</button>`
         : `<button class="btn btn-sm btn-primary" onclick="requestDesktopNotifications()"><i class="ti ti-bell"></i> ${t('notif.enableBtn')}</button>`}
+      ${typeof vnTarjetaHtml === 'function' ? vnTarjetaHtml() : ''}
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-archive"></i> ${t('mn.data.archiveTitle')}</p>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('mn.data.archiveDesc')}</p>
@@ -9211,6 +9317,8 @@ function confirmRestoreBackup(){
     if(!lapidasFusionadas[clave] || lapidasActuales[clave] > lapidasFusionadas[clave]) lapidasFusionadas[clave] = lapidasActuales[clave];
   });
   parsed.borrados = lapidasFusionadas;
+  // La bandera de las ventas una a una es del negocio, no de la copia: restaurar una copia vieja no la apaga (sería marcha atrás sin querer).
+  if(DB && DB.business && DB.business.ventasPorMes !== undefined){ parsed.business.ventasPorMes = DB.business.ventasPorMes; parsed.business.ventasPorMesDesde = DB.business.ventasPorMesDesde; }
   idbSet(DB_KEY, parsed).then(() => {
     delete window._pendingRestoreBackup;
     delete window._pendingRestoreBackupExpectedName;
@@ -9642,11 +9750,21 @@ function renderDeliveryPlatformsCard(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.delivery.desc')}</p>
       <div id="delivery-platforms-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${platforms.length ? platforms.map(p=>`
-          <div class="ge-item">
-            <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(p.nombre)}</span>
-            <span style="font-size:12px;color:var(--muted);margin-right:8px">${t('mn.delivery.commissionLabel')} ${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</span>
-            <button class="btn btn-sm btn-icon" onclick="editDeliveryPlatform(${p.id})"><i class="ti ti-edit"></i></button>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteDeliveryPlatform(${p.id})"><i class="ti ti-trash"></i></button>
+          <div class="ge-item dlv-fila">
+            <div class="dlv-cab">
+              <span class="dlv-nombre">${escapeHtml(p.nombre)}</span>
+              ${ggMenuAcciones([
+                {icono:'ti-edit', texto:t('common.edit'), fn:`editDeliveryPlatform(${p.id})`},
+                {icono:'ti-trash', texto:t('common.delete'), fn:`deleteDeliveryPlatform(${p.id})`, peligro:true}
+              ])}
+            </div>
+            <div class="dlv-chips">
+              <span class="dlv-chip">${t('mn.delivery.commissionLabel')} ${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</span>
+              ${p.ivaVentaPct !== undefined && p.ivaVentaPct !== null && p.ivaVentaPct !== '' ? `<span class="dlv-chip">${escapeHtml(gl({es:'Venta con IVA ', ca:'Venda amb IVA ', en:'Sales at VAT '}))}${fmtNum(p.ivaVentaPct)}%</span>` : ''}
+              ${p.isp ? `<span class="dlv-chip">${escapeHtml(gl({es:'IVA autoliquidado', ca:'IVA autoliquidat', en:'Reverse-charge VAT'}))}</span>` : ''}
+              ${p.facturaReal ? `<span class="dlv-chip">${escapeHtml(gl({es:'Factura real', ca:'Factura real', en:'Real invoice'}))}</span>` : ''}
+              ${p.activa === false ? `<span class="dlv-chip dlv-chip-off">${escapeHtml(gl({es:'No sale en el cierre', ca:'No surt al tancament', en:'Not in the closing'}))}</span>` : ''}
+            </div>
           </div>`).join('')
         : `<div class="empty" style="padding:12px 16px">${t('mn.delivery.empty')}</div>`}
       </div>
@@ -9740,16 +9858,36 @@ function openDeliveryPlatformModal(title, p){
       <input type="text" id="dp-f-nombre" list="dp-sugerencias" value="${escapeHtml(p.nombre)}" placeholder="${t('ph.egDeliveryPlatform')}">
       <datalist id="dp-sugerencias">${sugerencias}</datalist>
     </div>
+    <div class="field">
+      <label>${escapeHtml(gl({es:'NIF o CIF de la plataforma', ca:'NIF o CIF de la plataforma', en:'Platform tax ID'}))}</label>
+      <input type="text" id="dp-f-nif" value="${escapeHtml(p.nif||'')}" placeholder="${escapeHtml(gl({es:'Para el modelo 347 (comisiones)', ca:'Per al model 347 (comissions)', en:'For form 347 (commissions)'}))}">
+      <p class="txt-xs" style="color:var(--muted);margin:4px 0 0">${escapeHtml(gl({es:'Sin él, la comisión de esta plataforma no sale identificada en el modelo 347.', ca:'Sense ell, la comissió d\'aquesta plataforma no surt identificada al model 347.', en:'Without it, this platform\'s commission is not identified in form 347.'}))}</p>
+    </div>
     <div class="field-row">
       <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}" oninput="updateDeliveryPlatformExample()"></div>
       <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}" oninput="updateDeliveryPlatformExample()"></div>
     </div>
+    <div class="field">
+      <label>${escapeHtml(gl({es:'IVA de lo que vendes por esta plataforma', ca:'IVA del que vens per aquesta plataforma', en:'VAT on what you sell through this platform'}))}</label>
+      <select id="dp-f-iva-venta">
+        <option value="" ${(p.ivaVentaPct===undefined||p.ivaVentaPct===null||p.ivaVentaPct==='')?'selected':''}>${escapeHtml(gl({es:'El de tu negocio (por defecto)', ca:'El del teu negoci (per defecte)', en:'Your business default'}))}</option>
+        <option value="10" ${String(p.ivaVentaPct)==='10'?'selected':''}>10 %</option>
+        <option value="21" ${String(p.ivaVentaPct)==='21'?'selected':''}>21 %</option>
+        <option value="4" ${String(p.ivaVentaPct)==='4'?'selected':''}>4 %</option>
+        <option value="0" ${String(p.ivaVentaPct)==='0'?'selected':''}>0 %</option>
+      </select>
+      <p class="txt-xs" style="color:var(--muted);margin:4px 0 0">${escapeHtml(gl({es:'Es el IVA que cobras TÚ al cliente final (comida preparada: 10 %; bebida alcohólica: 21 %), no el de la comisión. Se usa cuando apuntas las ventas del día en el cierre de caja.', ca:'És l\'IVA que cobres TU al client final (menjar preparat: 10 %; beguda alcohòlica: 21 %), no el de la comissió. S\'usa quan apuntes les vendes del dia al tancament de caixa.', en:'This is the VAT YOU charge the end customer (prepared food: 10 %; alcoholic drinks: 21 %), not the one on the commission. It is used when you enter the day\'s sales at cash closing.'}))}</p>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="dp-f-activa" ${p.activa!==false?'checked':''} style="width:18px;height:18px;flex:none"> <span>${escapeHtml(gl({es:'Apuntar sus ventas al cerrar caja', ca:'Apuntar les seves vendes en tancar caixa', en:'Enter its sales when closing the till'}))}</span>
+    </label>
+    <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${escapeHtml(gl({es:'Desmárcalo si ya no trabajas con ella: deja de salir en el cierre, pero sus ventas anteriores se conservan.', ca:'Desmarca-ho si ja no hi treballes: deixa de sortir al tancament, però les seves vendes anteriors es conserven.', en:'Untick it if you no longer work with it: it stops appearing at closing, but past sales are kept.'}))}</p>
     <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
       <input type="checkbox" id="dp-f-comision-envio" ${p.comisionSobreEnvio!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.delivery.commissionOnShipping')}
     </label>
     <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('mn.delivery.commissionOnShippingDesc')}</p>
     <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
-      <input type="checkbox" id="dp-f-isp" ${p.isp?'checked':''} style="width:18px;height:18px;flex:none"> <span>${t('mn.delivery.isp')}</span>
+      <input type="checkbox" id="dp-f-isp" ${p.isp?'checked':''} style="width:18px;height:18px;flex:none" onchange="updateDeliveryPlatformExample()"> <span>${t('mn.delivery.isp')}</span>
     </label>
     <p class="txt-xs" style="color:var(--muted);margin:0 0 10px">${t('mn.delivery.ispDesc')}</p>
     <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
@@ -9772,7 +9910,9 @@ function updateDeliveryPlatformExample(){
   const el = document.getElementById('dp-example');
   if(!el) return;
   const comisionPct = parseFloat(document.getElementById('dp-f-comision').value) || 0;
-  const ivaPct = parseFloat(document.getElementById('dp-f-iva').value) || 0;
+  // Con «factura desde otra UE» el IVA de la comisión no se suma (se autoliquida): el ejemplo tiene que reflejarlo.
+  const isp = document.getElementById('dp-f-isp') && document.getElementById('dp-f-isp').checked;
+  const ivaPct = isp ? 0 : (parseFloat(document.getElementById('dp-f-iva').value) || 0);
   const ejemplo = 20;
   const comision = ejemplo * (comisionPct/100) * (1 + ivaPct/100);
   const neto = ejemplo - comision;
@@ -9791,8 +9931,11 @@ function saveDeliveryPlatform(){
   const dupe = DB.business.deliveryPlatforms.find(p => p.nombre.trim().toLowerCase()===nombre.toLowerCase() && String(p.id)!==idVal);
   if(dupe){ showToast(t('msg.platformNameDuplicate')); return; }
   const comisionSobreEnvio = document.getElementById('dp-f-comision-envio').checked;
-  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio,
-    isp: document.getElementById('dp-f-isp').checked, facturaReal: document.getElementById('dp-f-real').checked};
+  const data = {nombre, nif: (document.getElementById('dp-f-nif')||{value:''}).value.trim().toUpperCase(), comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio,
+    isp: document.getElementById('dp-f-isp').checked, facturaReal: document.getElementById('dp-f-real').checked,
+    // IVA de la VENTA (no el de la comisión) y si la plataforma sale en el cierre de caja. '' = el IVA por defecto del negocio.
+    ivaVentaPct: (() => { const v = document.getElementById('dp-f-iva-venta').value; return v === '' ? '' : parseFloat(v); })(),
+    activa: document.getElementById('dp-f-activa').checked};
   if(idVal){
     const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));
     if(p){
@@ -10406,6 +10549,7 @@ function changeOwnerPin(){
   requestBusinessPinAction(t('title.changeOwnerPin'), t('msg.confirmCurrentPin'), () => {
     DB.business.pin = hashPin(n1, codigoNegocioParaPin());
     DB.business.pinSet = true;
+    pinH3Anotar(DB.business, 'pin', n1, codigoNegocioParaPin(), () => saveDB());   // los dos hashes: H2 para versiones viejas, H3 para esta
     logBusinessSettingChange('PIN del negocio cambiado');
     saveDB();
     renderMiNegocio();

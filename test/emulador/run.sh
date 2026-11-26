@@ -150,6 +150,8 @@ node "$RAIZ/test/emulador/qr-mesa-nube.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/sonda-reglas.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/espejo-sesion.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/plan360-sync.mjs" || SALIDA=1
+node "$RAIZ/test/emulador/holds-atacados.mjs" || SALIDA=1
+node "$RAIZ/test/emulador/ventas-nube.mjs" || SALIDA=1
 echo
 node "$RAIZ/test/emulador/reglas-asistente.mjs" || SALIDA=1
 rm -rf "$RAIZ/__sdk"

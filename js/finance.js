@@ -132,12 +132,13 @@ function geMesConActividad(year, month){
 function geTotalFijosNetoForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'totalNeto');
-  return v==null ? geTotalFijosNeto() : v;
+  // Las horas extra y pluses no están en las fotos del histórico (son de cada mes): se suman siempre aparte.
+  return (v==null ? geTotalFijosNeto() : v) + geExtrasPersonalMes(year, month);
 }
 function geTotalFijosGrossForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'totalGross');
-  return v==null ? geTotalFijos() : v;
+  return (v==null ? geTotalFijos() : v) + geExtrasPersonalMes(year, month);
 }
 // IVA soportado en gastos fijos de un mes concreto, a partir del histórico
 // (gross - neto de ese momento), en vez de recalcularlo siempre con la
@@ -213,10 +214,31 @@ function gfPagaEnMes(g, year, month){
 // hoy con la de un mes pasado. Los puntos del histórico anteriores a este
 // desglose (personalNeto/gfNeto) no tienen estos campos: en ese caso se cae
 // en la configuración actual, igual que el resto de fallbacks del histórico.
+// Horas extra y pluses del mes de cada empleado (Personal → ficha, «Horas extra y pluses»). Se guardan
+// por mes en el propio gasto de personal (g.extrasMes['AAAA-MM']) porque cambian cada mes y no son el sueldo fijo.
+// El cálculo (base de cotización con tope, SS de la empresa, IRPF) es GE.nominaExtrasMes (js/hr.js).
+// Solo con nómina automática: sin el bruto de convenio no se puede aplicar el tope de cotización. Un titular
+// autónomo o comunero no tiene nómina, así que nunca lleva extras.
+function geExtrasItemMes(g, year, month){
+  if(!g || g.categoria !== 'PERSONAL' || !g.autoCalc || !g.extrasMes) return null;
+  if(fiscalPerfil().personaFisica && gfEsRetribucionTitular(g)) return null;
+  const ex = g.extrasMes[`${year}-${String(month+1).padStart(2,'0')}`];
+  if(!ex) return null;
+  const pagas = parseInt(g.pagas)||12;
+  return GE.nominaExtrasMes(ex, {brutoMes: (parseFloat(g.sueldoBruto)||0)*pagas/12, ssPct: g.ssPct, ssTrabPct: g.ssTrabPct, irpfPct: g.irpfPct, grupo: g.grupo, jornada: g.jornada});
+}
+// Coste para la empresa de las horas extra y pluses de ese mes (bruto + SS de la empresa).
+function geExtrasPersonalMes(year, month){
+  return (DB.ge.fijos||[]).reduce((s,g) => { const r = geExtrasItemMes(g, year, month); return s + (r ? r.costeEmpresa : 0); }, 0);
+}
+// IRPF retenido sobre esas horas extra y pluses ese mes: va al Modelo 111.
+function geExtrasIrpfMes(year, month){
+  return (DB.ge.fijos||[]).reduce((s,g) => { const r = geExtrasItemMes(g, year, month); return s + (r ? r.irpfDelta : 0); }, 0);
+}
 function geTotalPersonalNetoForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'personalNeto');
-  return v==null ? geTotalPersonalNeto() : v;
+  return (v==null ? geTotalPersonalNeto() : v) + geExtrasPersonalMes(year, month);
 }
 function geTotalGFNetoForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
@@ -230,7 +252,7 @@ function geTotalGFNetoForMonth(year, month){
 function geIrpfMensualForMonth(year, month){
   if(!geMesConActividad(year, month)) return 0;
   const v = geFijosLogValueForMonth(year, month, 'irpfMensual');
-  return v==null ? geTotalIrpfMensual() : v;
+  return (v==null ? geTotalIrpfMensual() : v) + geExtrasIrpfMes(year, month);
 }
 // Mismo criterio de histórico para las retenciones de los gastos fijos. Un
 // punto del histórico anterior a esta función no tiene el campo: entonces
@@ -1027,7 +1049,7 @@ function plan360KpisMes(year, month){
   const ventas = activeSales().filter(v => (v.date||'').startsWith(mesStr));
   const netas = geFacturacionNetaMes(year, month);
   const brutas = ventas.reduce((s,v)=>s+(parseFloat(v.total)||0) - (parseFloat(v.propina)||0), 0);
-  const tickets = ventas.length;
+  const tickets = ventas.reduce((s,v) => s + (typeof ventaNTickets === 'function' ? ventaNTickets(v) : 1), 0);
   const comensales = ventas.reduce((s,v)=>s+(parseInt(v.pax)||0), 0);
   const compras = geTotalVariablesNetoMes(year, month) + geVariacionExistenciasMes(year, month);
   const personal = geTotalPersonalNetoForMonth(year, month);
@@ -1187,7 +1209,7 @@ function plan360KpisRango(desde, hasta){
   // Las mermas solo cuentan si el negocio las ANOTA (alguna en los últimos 90 días): sin eso un 0 % sería «no lo apunto», no «no tiro nada».
   const usaMermas = (DB.mermas || []).some(x => x.fecha >= addDaysStr(hasta, -90));
   return {
-    desde, hasta, dias: dias.size, valido: ok, tickets: ventas.length, netas: r2(netas),
+    desde, hasta, dias: dias.size, valido: ok, tickets: ventas.reduce((s,v) => s + ventaNTickets(v), 0), netas: r2(netas),
     ticketMedio: ok && ventas.length ? r2(brutas / ventas.length) : null,
     foodCostPct: ok && compras > 0 ? r1(compras / netas * 100) : null,
     personalPct: ok && personal > 0 ? r1(personal / netas * 100) : null,
@@ -1418,6 +1440,10 @@ function plan360AvisosDeHoy(){
     if(enArranque && !c.signedAt && c.precio && c.formaPago && typeof plan360CoachDatos === 'function' && plan360CoachDatos()){   // tampoco si el coach aún no ha completado sus datos: no se puede firmar
       out.push({count: 1, icon:'ti-signature', id:'plan360Contrato', campana:true, soloDueno:true, warn:true, label: gl({es:'Firma el contrato del Plan 360º', ca:'Signa el contracte del Pla 360º', en:'Sign the 360º Plan agreement'}), onclick: `navigate('plan360'); renderPlan360Contract()`});
     }
+    // Mantenimiento activo y sin SU acuerdo firmado (el acuerdo del 360º no lo cubre): lo firma el propietario cuando el coach ya tiene sus datos.
+    if(faseSv === 'mant' && !(b.plan360ContratoMant || {}).signedAt && !(typeof plan360SoloLectura === 'function' && plan360SoloLectura()) && typeof plan360CoachDatos === 'function' && plan360CoachDatos()){
+      out.push({count: 1, icon:'ti-signature', id:'plan360ContratoMant', campana:true, soloDueno:true, warn:true, label: gl({es:'Firma el acuerdo de mantenimiento', ca:'Signa l\'acord de manteniment', en:'Sign the maintenance agreement'}), onclick: `navigate('plan360'); renderPlan360ContractMant()`});
+    }
     const secciones = (b.plan360Intake || {}).sections || [];
     let totalQ = 0, contestadas = 0;
     secciones.forEach(s => (s.questions || []).forEach(q => { totalQ++; if((typeof q.a === 'string' && q.a.trim()) || q.fileData) contestadas++; }));
@@ -1461,6 +1487,17 @@ function plan360AvisoEnvioVisto(id){
     v[id] = 1;
     localStorage.setItem(typeof AVISOS_VISTOS_LS !== 'undefined' ? AVISOS_VISTOS_LS : 'gastrogoan_avisos_vistos', JSON.stringify(v));
   }catch(e){}
+}
+function avisoPinCorto(){
+  try{
+    if(typeof isOwnerSession !== 'function' || !isOwnerSession()) return [];
+    if(typeof ownerPinEsCorto !== 'function' || !ownerPinEsCorto()) return [];
+    const vistos = (typeof avisosVistosLeer === 'function') ? avisosVistosLeer() : {};
+    if(vistos.pinCorto === 1) return [];
+    return [{count: 1, icon:'ti-lock-exclamation', id:'pinCorto', campana:true, soloDueno:true, ocultable:true,
+      label: gl({es:'Tu PIN es corto: cámbialo a 6-12 caracteres (letras o números)', ca:'El teu PIN és curt: canvia\'l a 6-12 caràcters (lletres o números)', en:'Your PIN is short: change it to 6-12 characters (letters or numbers)'}),
+      onclick: `promptChangeOwnerPassword()`}];
+  }catch(e){ return []; }
 }
 function avisosDeLaApp(){
   const today = new Date();
@@ -1536,6 +1573,12 @@ function avisosDeLaApp(){
     ...((plan360MantHayAlgo() && plan360EsOwner()) ? [{count: plan360MantPendientesSemana().length, icon:'ti-calendar-repeat', label: t('dash.att.coachTasks'), onclick: `plan360IrAMantenimiento()`, warn:true}] : []),
     // Plan 360º (17/11): lo que toca hoy y lo atrasado, y el informe de cierre cuando está listo. Solo el propietario.
     ...(plan360AvisosDeHoy()),
+    // Hallazgo 4 de la auditoría (25/11): cuentas antiguas con un PIN de propietario de 4 dígitos (hoy se exigen 6-12). Informativo y NO bloqueante:
+    // solo el propietario, solo en un aparato donde acaba de teclear un PIN corto, y «Visto» lo apaga en ese aparato (el PIN no se guarda, así que
+    // la longitud solo se sabe al teclearlo: `ownerPinEsCorto`). Cambiar la contraseña a una larga lo borra solo.
+    ...(avisoPinCorto()),
+    // Auditoría 25/11: alguien intentó bloquear el aforo/pedidos/mesas desde la web pública y la app ya lo corrigió (core.js, repararHoldsAtacados).
+    ...(typeof avisoAforoAtacado === 'function' ? avisoAforoAtacado() : []),
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},

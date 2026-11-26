@@ -145,6 +145,7 @@ Lo que hace falta construir (no es un interruptor, es un proyecto real):
   bloquea la app entera? ¿solo lectura? ¿periodo de gracia?).
 
 ## 8. Notificaciones push de verdad (app cerrada del todo / móvil bloqueado) — HECHO en código (04/08/2026), pendiente de desplegar
+> **HISTÓRICO (26/11/2026):** el despliegue de este punto era en Netlify, que ya no se usa (la app vive en Cloudflare Pages y el servidor de reservas en Hetzner). No es pendiente vigente: conservado como historial.
 
 Construido con el estándar Web Push (no ha hecho falta Firebase Cloud
 Functions al final — una función serverless de Netlify basta):

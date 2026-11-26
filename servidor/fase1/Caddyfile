@@ -10,6 +10,8 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 		Strict-Transport-Security "max-age=31536000"
+		# CSP: la MISMA que deploy/reservas/public/_headers (test/csp.mjs lo exige). frame-ancestors https: = se puede incrustar en la web del restaurante.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://gastro.gastrogoan.workers.dev; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors https:"
 		-Server
 	}
 	# Se puede incrustar en la web del restaurante: SIN X-Frame-Options (igual que _headers).
@@ -18,7 +20,7 @@
 	@fuentes path /fonts/*
 	header @fuentes Cache-Control "public, max-age=31536000, immutable"
 
-	root * /srv/sitios/reservas
+	root * /srv/gastrogoan/sitios/reservas
 	# Enlace corto reservas.gastrogoan.com/casapaco: cualquier ruta que no sea un fichero
 	# devuelve la misma página, como hace el 404.html de Pages.
 	try_files {path} /index.html

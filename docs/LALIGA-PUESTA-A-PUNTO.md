@@ -1,5 +1,7 @@
 # LaLiga: puesta a punto de la web de reservas en IP propia (fase 1)
 
+> **Estado 25/11/2026 (noche): HECHO y funcionando.** `reservas.gastrogoan.com` ya se sirve desde un servidor de Hetzner (IP `5.222.2.92`), con candado y dos reservas de prueba que llegaron a la app. Falta: vigilancia (UptimeRobot), probarlo en un partido real y valorar un segundo servidor en otro proveedor. Los pasos de abajo son el registro de cómo se hizo y sirven para repetirlo.
+
 **Problema:** en los partidos, algunos operadores bloquean IP de Cloudflare y la web de reservas no abre a clientes que nunca la han abierto. **Remedio de la fase 1:** servir SOLO `reservas.gastrogoan.com` desde servidores con IP propia. La app, el panel y los pagos siguen en Cloudflare: no se mueve nada que cobre dinero hasta comprobar que esto funciona.
 
 Todo lo necesario está en `servidor/fase1/`. Probado aquí: la configuración de Caddy valida y sirve la web (raíz, enlace corto y cabeceras), y la actualización automática publica, actualiza y NO borra nada si falla la red o la versión viene rota. **Lo que todavía no se ha probado es el servidor real**, porque no existe.
@@ -16,12 +18,16 @@ Los ficheros de `servidor/fase1/` son la fuente; `cloud-init.yaml` se genera con
 
 ## Pasos (en este orden, uno cada vez)
 1. **Cuenta en Hetzner con verificación en dos pasos** (tú). Hecho el 25/11.
-2. **Crear el servidor** (tú): proyecto nuevo, Ubuntu 24.04, el tipo más barato con 2 GB de RAM, IPv4 activada, SIN llave SSH, y en «Cloud config / User data» se pega el contenido de `servidor/fase1/cloud-init.yaml`.
+2. **Crear el servidor** (tú): proyecto nuevo, Ubuntu 24.04 (la versión nueva 26.04 también vale desde la 2.ª versión del arranque, pero la 24.04 es la que se ha probado), el tipo más barato con 2 GB de RAM, IPv4 activada, SIN llave SSH, y en «Cloud config / User data» se pega el contenido de `servidor/fase1/cloud-init.yaml`.
 3. **Mirar la IP** (juntos): en hayahora.futbol, buscar la IP asignada. Si aparece bloqueada en algún operador, se borra el servidor y se crea otro.
 4. **Probar sin tocar el DNS** (tú desde el móvil o la tablet): el servidor publica además una dirección de prueba con la IP, `x-x-x-x.sslip.io` (con la IP con guiones), con certificado válido. Si la web carga ahí, el servidor funciona. Se prueba una reserva y el enlace corto.
 5. **Cambiar el DNS** (tú, en Cloudflare): borrar el CNAME de `reservas` y crear un registro **A** hacia la IP con la **nube gris** (solo DNS, sin proxy) y TTL bajo (60 s).
 6. **Probar en un partido real.** Con datos móviles de una operadora que bloquee, abrir la web y apuntar día, hora y operador.
 7. **Segundo servidor** (más adelante, si la prueba va bien): repetir 2 a 5 en otro proveedor y añadir un segundo registro A.
+
+## Si el servidor no responde (cómo diagnosticarlo sin entrar en él)
+En Hetzner, abre el servidor y pulsa el icono **`>_` (Console)**. El arranque escribe ahí líneas que empiezan por `GG-ARRANQUE:` con cada paso (1/5 a 5/5) y un `LISTO` o un `FALLO en el paso: …`. Con una captura de esa pantalla se ve dónde se paró. Si falla algo, se arregla el fichero, se regenera `cloud-init.yaml` y se crea otro servidor (céntimos).
+**Primera prueba real (25/11):** el primer intento con Docker y Ubuntu 26.04 no arrancó (la consola no mostraba nada del arranque). Se rehízo SIN Docker y sin depender de nombres de paquetes de Ubuntu: solo `curl`, `git`, `ufw`, `ca-certificates` y `unattended-upgrades`, y Caddy descargado de su web oficial con comprobación de huella SHA-512.
 
 ## Marcha atrás
 Volver a poner el CNAME de `reservas` apuntando al proyecto de Cloudflare Pages. No se pierde nada: los datos viven en Firebase, no en el servidor.

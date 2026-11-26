@@ -423,6 +423,45 @@ const LOG_KEY = 'gg_biz_sales_v3';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
 function saveSales(){ localStorage.setItem(LOG_KEY, JSON.stringify(sales)); }
+/* ⚠️ El PIN del cliente ya NO se guarda en la nube ni en el navegador (auditoría de seguridad 25/11). Se veía en claro en
+   `adminSalesLog` y en localStorage: quien llegara a esos datos (una copia, la consola de Firebase, un navegador compartido) tenía el acceso de
+   propietario de TODOS los clientes. Ahora el PIN se enseña UNA vez al emitirlo —para dárselo al cliente— y vive solo en la memoria de esta
+   pestaña (`pinsRecientes`, se pierde al recargar). En el registro queda:
+     · `authKey`: la ruta de la cuenta en la nube, que SOLO sirve para poder borrar la cuenta (borrarCuenta). No es el PIN y no permite entrar
+       en la app (hace falta el PIN para calcularla), pero sí leer el nodo de esa cuenta: por eso solo la lee el admin (reglas de adminSalesLog).
+     · `pinPista`: las dos últimas cifras, para reconocer de cuál se habla («···56»).
+   Si el cliente pierde el PIN: «Nuevo PIN» (paso 3 de la recuperación) emite uno nuevo con el mismo usuario. */
+const pinsRecientes = {};
+const pinPista = pin => pin ? '···' + String(pin).slice(-2) : '';
+const pinVisible = user => pinsRecientes[user] || null;
+function textoPin(user, ultima){
+  return pinVisible(user) || (ultima && ultima.pinPista) || (ultima && ultima.pin) || '';
+}
+// Entradas antiguas con el PIN en claro: se pasan a authKey + pista y se borra el PIN (de la nube y de aquí).
+const entradasConPin = () => sales.filter(s => s.pin);
+async function limpiarPinsGuardados(){
+  const n = entradasConPin().length;
+  if(!n){ alert('No hay ningún PIN guardado en claro.'); return; }
+  if(!confirm('Hay ' + n + ' PIN guardados en claro en el registro de ventas (nube y este navegador).\n\nSe van a BORRAR. Se conserva la clave de la cuenta para poder borrarla algún día y las dos últimas cifras como pista.\n\nSi un cliente pierde su PIN, «🔁 Nuevo PIN» le da otro. ¿Seguir?')) return;
+  for(const e of entradasConPin()){
+    const parche = {pin: null};
+    if(e.kind === 'cuenta' && e.value && !e.authKey){ try{ parche.authKey = ggOwnerAuthKey(e.value, e.pin); }catch(x){} }
+    parche.pinPista = pinPista(e.pin);
+    const sinPin = Object.assign({}, parche);
+    Object.assign(e, parche); delete e.pin;
+    saveSales();
+    if(adminUser && e.id){
+      try{ await getApp().database().ref('gastrogoan/adminSalesLog/' + e.id).update(sinPin); }
+      catch(x){ console.error('No se pudo limpiar el PIN de una entrada', x); }
+    }
+  }
+  renderFolders();
+  alert('Hecho: ya no queda ningún PIN en claro.');
+}
+function avisoPinsHtml(){
+  const n = entradasConPin().length;
+  return n ? `<div class="warn" style="margin-bottom:10px">🔐 Hay <strong>${n}</strong> PIN de clientes guardados en claro en el registro. <button class="btn btn-sm btn-rojo" onclick="limpiarPinsGuardados()">Borrarlos ahora</button></div>` : '';
+}
 if(sales.some(s => !s.id)){ sales.forEach(s => { if(!s.id) s.id = genUuid(); }); saveSales(); }
 
 async function pushSaleEntry(entry){
@@ -505,7 +544,7 @@ function renderFolders(){
   document.getElementById('folders-vacio').classList.toggle('hidden', agrupar().length > 0);
   document.getElementById('resumen-clientes').textContent = `${agrupar().length} cliente(s) · ${sales.filter(s=>s.kind==='negocio' && !s.anulada).length} licencia(s) activa(s)`;
 
-  document.getElementById('folders').innerHTML = grupos.map(g => {
+  document.getElementById('folders').innerHTML = avisoPinsHtml() + grupos.map(g => {
     const key = g.user || '(sin-cuenta)';
     const abierta = openFolders.has(key);
     const nActivas = g.locales.filter(l => !l.anulada).length;
@@ -519,7 +558,7 @@ function renderFolders(){
           <div class="folder-sub">${g.locales.length} licencia(s), ${nActivas} activa(s)</div>
         </div>
         ${g.user ? (()=>{const a=altaCuenta(g.user);return `<span class="folder-pastilla" title="Alta paso a paso">Alta ${a.ok}/${a.tot}</span>`;})() : ''}
-        <span class="folder-pastilla">PIN: ${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
+        <span class="folder-pastilla">PIN: ${g.ultima ? esc(textoPin(g.user, g.ultima) || '—') : '—'}</span>
         <span class="folder-arrow">${abierta ? '▲' : '▼'}</span>
       </div>
       ${abierta ? renderFolderBody(g) : ''}
@@ -539,8 +578,8 @@ function renderFolderBody(g){
     ${g.user ? `
     <div class="fila-dato">
       <span class="dato-et">Usuario</span><span class="dato-val">${esc(g.user)}</span>
-      <span class="dato-et">PIN</span><span class="dato-val">${g.ultima ? esc(g.ultima.pin || '—') : '—'}</span>
-      <button class="btn btn-sm btn-light" onclick="copiar('Usuario: ${esc(g.user)}  ·  PIN: ${g.ultima ? esc(g.ultima.pin||'') : ''}')">Copiar</button>
+      <span class="dato-et">PIN</span><span class="dato-val" title="El PIN solo se ve al emitirlo; luego queda la pista">${g.ultima ? esc(textoPin(g.user, g.ultima) || '—') : '—'}</span>
+      <button class="btn btn-sm btn-light" onclick="copiarAcceso('${esc(g.user)}')">Copiar</button>
       <button class="btn btn-sm btn-light" onclick="hacerResetPin('${esc(g.user)}')">🔁 Nuevo PIN</button>
       <button class="btn btn-sm btn-rojo" onclick="borrarCuenta('${esc(g.user)}')">Borrar cuenta</button>
     </div>
@@ -730,24 +769,32 @@ async function delSale(id){
   renderFolders(); renderCalendario(); renderHistorial();
 }
 async function borrarCuenta(user){
-  const cuenta = sales.find(s => s.kind === 'cuenta' && s.value === user);
+  const cuentas = sales.filter(s => s.kind === 'cuenta' && s.value === user);
   if(!confirm('¿Borrar la cuenta "' + user + '"?\n\nEsa persona dejará de poder entrar. Sus negocios NO se anulan.')) return;
   const db = getApp().database();
   try{
-    if(cuenta && cuenta.pin){
-      await db.ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, cuenta.pin)).remove();
+    // Cada «PIN restablecido» creó su propio acceso: se borran todos los que se conocen (la clave de la cuenta, o la derivada de un PIN antiguo).
+    let borrados = 0;
+    for(const c of cuentas){
+      const clave = c.authKey || (c.pin ? ggOwnerAuthKey(user, c.pin) : null);
+      if(clave){ await db.ref('gastrogoan/ownerAuth/' + clave).remove(); borrados++; }
     }
     await db.ref('gastrogoan/ownerNames/' + user).remove();
-    if(cuenta) await updateSaleEntry(cuenta, {anulada: todayStr()});
+    for(const c of cuentas) await updateSaleEntry(c, {anulada: todayStr()});
     renderFolders();
-    alert('Cuenta borrada y nombre liberado.' + (cuenta && cuenta.pin ? '' : '\n\nOJO: sin el PIN guardado no se ha podido borrar el acceso, solo el nombre.'));
+    alert('Cuenta borrada y nombre liberado.' + (borrados ? '' : '\n\nOJO: no había clave de la cuenta guardada, así que no se ha podido borrar el acceso, solo el nombre.'));
   }catch(e){ console.error(e); alert('No se ha podido borrar: ' + (e && e.message)); }
+}
+function copiarAcceso(user){
+  const pin = pinVisible(user);
+  copiar('Usuario: ' + user + (pin ? '  ·  PIN: ' + pin : '  ·  (el PIN ya no se guarda: si lo perdió, pulsa «Nuevo PIN»)'));
 }
 async function hacerResetPin(user){
   if(!confirm('¿Darle un PIN nuevo a "' + user + '"? El anterior deja de servir en dispositivos nuevos (los que ya entraron siguen con GGGG).')) return;
   try{
     const pin = await resetOwnerPinFor(user);
-    await pushSaleEntry({ id: genUuid(), date: todayStr(), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
+    pinsRecientes[user] = pin;
+    await pushSaleEntry({ id: genUuid(), date: todayStr(), name: '(PIN restablecido)', kind: 'cuenta', value: user, authKey: ggOwnerAuthKey(user, pin), pinPista: pinPista(pin), owner: user });
     renderFolders();
     const cuenta = sales.find(s => s.kind==='cuenta' && s.value===user);
     const msg = 'Tu nuevo PIN de GastroGoan 🍽\n\nUsuario: ' + user + '\nPIN: ' + pin + '\n\nEntra con estos datos.';
@@ -818,7 +865,8 @@ async function crearNuevoUsuario(){
   const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te enviaré aparte.';
   document.getElementById('nu-wa').href = 'https://wa.me/' + (phone ? phone.replace(/[^0-9]/g,'') : '') + '?text=' + encodeURIComponent(msg);
   document.getElementById('nu-mail').href = 'mailto:' + (email||'') + '?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  await pushSaleEntry({ id: genUuid(), date: todayStr(), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user, email, phone });
+  pinsRecientes[res.user] = res.pin;
+  await pushSaleEntry({ id: genUuid(), date: todayStr(), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, authKey: ggOwnerAuthKey(res.user, res.pin), pinPista: pinPista(res.pin), owner: res.user, email, phone });
   renderFolders();
   const ba = document.getElementById('nu-alta'); ba.classList.remove('hidden'); ba.onclick = () => openAlta(res.user);
   btn.disabled = false;
@@ -1101,7 +1149,7 @@ function altaBienvenidaTexto(user){
   const local = altaNegocioDe(user);
   return 'Bienvenido a GastroGoan 🍽\n\n'
     + 'Tu app: ' + ALTA_APP + '\n'
-    + 'Usuario: ' + user + '\nPIN: ' + (cuenta ? cuenta.pin : '') + '\n'
+    + 'Usuario: ' + user + '\nPIN: ' + (pinVisible(user) || '(el que te envié al crear tu cuenta)') + '\n'
     + (local ? 'Código de tu negocio: ' + local.value + '\n' : '')
     + '\nCómo entrar: abre la app, pulsa «Acceso Propietarios», entra con usuario y PIN, y en la pantalla de negocios pulsa «Canjear negocio» e introduce el código. Después te guiará paso a paso para configurar tu nube (Firebase, gratis); tarda unos 10 minutos.\n\nCualquier duda, escríbeme por aquí.';
 }

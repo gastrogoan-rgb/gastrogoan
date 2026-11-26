@@ -7,7 +7,7 @@
  *    una sesión anónima podía escribir 500 en `aforoHold` de cada turno de
  *    cada día. Efecto: el negocio aparece COMPLETO para siempre y no entra
  *    ni una reserva. No es vandalismo, es cerrarle el negocio a un cliente.
- *    Ahora una escritura no puede subir el contador más de 40 de golpe, que
+ *    Ahora una escritura no puede subir el contador más de lo que suma una reserva real (antes 40; ver reglas/NOTAS.md) de golpe, que
  *    es de sobra para la mesa más grande que existe y cortísimo para un
  *    ataque.
  *
@@ -54,10 +54,13 @@ for(const [quien, reglas] of juegos){
       ? pub.aforoHold.$dateStr.$turnoIdx
       : pub.pedidosHold.$dateStr.$slot;
     const v = hoja['.validate'] || '';
+    // 25/11: el salto máximo baja al tamaño real de una reserva (50 comensales, o «grupos desde N» − 1 si el negocio lo configura) y a 1 por pedido.
+    const salto = nodo === 'aforoHold' ? 'reservaConfirmManualDesde' : null;
+    const ok = !v.includes('+ 40') && v.includes('!data.exists()') && (nodo === 'aforoHold' ? (v.includes(salto) && v.includes(': 50)')) : (v.includes('<= 1)') && v.includes('data.val() + 1)')));
     comprobar(
       `${quien}: ${nodo} no se puede subir de golpe`,
-      v.includes('data.val() + 40') && v.includes('!data.exists()'),
-      v.includes('data.val() + 40') ? 'tope de +40 por escritura' : 'FALTA el tope de incremento',
+      ok,
+      ok ? (nodo === 'aforoHold' ? 'salto = lo que una reserva real puede sumar' : 'de uno en uno') : 'FALTA el tope de incremento ajustado',
     );
     comprobar(
       `${quien}: ${nodo} sigue acotado a 0–500`,

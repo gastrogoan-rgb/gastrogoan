@@ -5779,6 +5779,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--olive);outline-o
 .dp-eq-mal .dp-eq-rell{background:#B4432F} .dp-eq-aviso .dp-eq-rell{background:#B7791F}
 .dp-eq-marca{position:absolute;top:-6px;bottom:-6px;width:0;border-left:2px dashed var(--ink)}
 .dp-eq-marca span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);white-space:nowrap;text-transform:uppercase}
+.dp-eq-marca.is-fin span{left:auto;right:0;transform:none}
+/* Al principio de la barra, centrada se salía por la izquierda (320 px, primeros días del mes) */
+.dp-eq-marca.is-ini span{left:0;transform:none}
 .dp-eq-frase{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;line-height:1.45;margin:0 0 14px}
 .dp-eq-frase i{font-size:18px;color:var(--olive);flex:none;margin-top:1px}
 .dp-eq-mal .dp-eq-frase i{color:#B4432F} .dp-eq-aviso .dp-eq-frase i{color:#B7791F}
@@ -7910,3 +7913,24 @@ textarea{resize:none !important;max-width:100%;box-sizing:border-box;overflow-y:
 /* Comandas Cocina: cuántas hay y cuánto lleva la más antigua (19/11). */
 .kds-resumen{margin:0 0 10px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .kds-resumen b{color:var(--ink);font-weight:600}
+
+/* Plataformas de delivery (25/11): en Mi Negocio (lista) y en el cierre de caja (ventas del día de cada plataforma).
+   Fila = nombre + ⋯ en la primera línea y los chips (que envuelven) debajo: así el ⋯ nunca se queda solo en una línea. Sin letra < 11 px. */
+.dlv-fila{display:block}
+.dlv-cab,.clp-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.dlv-nombre,.clp-nombre{flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;overflow-wrap:break-word}
+.dlv-chips,.clp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-width:0}
+.dlv-chip,.clp-chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);border:1px solid var(--border);padding:3px 8px;border-radius:3px;background:var(--white,#fff);white-space:normal;overflow-wrap:break-word}
+.dlv-chip-off{color:var(--red)}
+.clp-tit{font-size:14px;margin:14px 0 4px}
+.clp-hint{color:var(--muted);margin:0 0 8px}
+.clp-fila{border:1px solid var(--border);border-radius:3px;padding:10px 12px;margin-bottom:8px;min-width:0}
+.clp-chips{margin:0 0 8px}
+.clp-ya{color:var(--ok,#2e7d32);margin:0 0 6px}
+.clp-campos{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px;align-items:end}
+.clp-campos .field{margin-bottom:0;min-width:0}
+.clp-res{color:var(--muted);margin:6px 0 0;overflow-wrap:break-word}
+.clp-res:empty{display:none}
+.clp-total{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;font-size:13px;margin:4px 0 14px;padding-top:8px;border-top:1px dashed var(--border)}
+.clp-total span{min-width:0;overflow-wrap:break-word}
+.clp-total b{font-family:var(--mono)}

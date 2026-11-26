@@ -14,7 +14,7 @@ const esperar = ms => new Promise(r => setTimeout(r, ms));
 
 const SEMBRAR_PEDIDOS = () => {
   const L = (id, q, extra) => Object.assign({ingredientId:id, cantidad:q, cantidadRecibida:null}, extra || {});
-  const f = d => { const x = new Date(); x.setDate(x.getDate() + d); return dateStr(x); };
+  const f = d => { const h = new Date(), x = new Date(); x.setDate(x.getDate() + d); /* Sin cruzar de mes: a final de mes, «dentro de 5 días» caía en el mes siguiente y la prueba fallaba por la fecha, no por la app. */ if(x.getMonth() !== h.getMonth()) return dateStr(d > 0 ? new Date(h.getFullYear(), h.getMonth() + 1, 0) : new Date(h.getFullYear(), h.getMonth(), 1)); return dateStr(x); };
   const hoy = new Date(); const otroMes = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 10);
   DB.purchaseOrders = [
     {id:1, supplier:'Pescados Martínez', date:f(3), estado:'ENVIADO', enviadoEn:f(-1), area:'cocina', items:[L(1,5), L(2,2)], notas:''},
@@ -53,7 +53,7 @@ async function abrir(ancho){
     DB.ingredients = [I(1,'Merluza','kg',14,'Pescados Martínez'), I(2,'Gambas','kg',38,'Pescados Martínez'), I(3,'Calamar','kg',11,'Pescados Martínez'), I(4,'Mejillón','kg',4.5,'Pescados Martínez'), I(5,'Sal gruesa','g',0.002,'Pescados Martínez',1000), I(6,'Lechuga','ud',0.9,'Verduras Ca la Rosa')];
     DB.stock = {1:{qty:2,min:10}, 2:{qty:1,min:3}, 3:{qty:8,min:5}, 4:{qty:0,min:0}, 5:{qty:200,min:2000}, 6:{qty:4,min:12}};
     const L = (id, q, extra) => Object.assign({ingredientId:id, cantidad:q, cantidadRecibida:null}, extra || {});
-    const f = d => { const x = new Date(); x.setDate(x.getDate() + d); return dateStr(x); };
+    const f = d => { const h = new Date(), x = new Date(); x.setDate(x.getDate() + d); /* Sin cruzar de mes: a final de mes, «dentro de 5 días» caía en el mes siguiente y la prueba fallaba por la fecha, no por la app. */ if(x.getMonth() !== h.getMonth()) return dateStr(d > 0 ? new Date(h.getFullYear(), h.getMonth() + 1, 0) : new Date(h.getFullYear(), h.getMonth(), 1)); return dateStr(x); };
     const hoy = new Date(); const otroMes = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 10);
     DB.purchaseOrders = [
       {id:1, supplier:'Pescados Martínez', date:f(3), estado:'ENVIADO', enviadoEn:f(-1), area:'cocina', items:[L(1,5), L(2,2)], notas:''},

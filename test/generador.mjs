@@ -139,8 +139,8 @@ await caso('Sin el PIN, avisa de que solo puede liberar el nombre', async ()=>{
     await borrarCuenta('sinpin');
     return {ops: window.__ops.map(o => o[0] + ' ' + o[1]), avisos};
   });
-  assert.ok(r.avisos.some(a => /sin el pin guardado no se ha podido borrar el acceso/i.test(a)),
-    'tiene que explicar por qué: la cuenta vive en una ruta que se calcula con el PIN');
+  assert.ok(r.avisos.some(a => /no había clave de la cuenta guardada.*no se ha podido borrar el acceso/is.test(a)),
+    'tiene que explicar por qué: sin la clave (authKey) o el PIN no se sabe la ruta de la cuenta');
   assert.ok(!/ownerAuth/.test(r.ops.join(' | ')), 'y no inventarse una ruta');
   assert.ok(/remove gastrogoan\/ownerNames\/sinpin/.test(r.ops.join(' | ')), 'pero sí liberar el nombre');
   return 'dice la verdad de lo que puede y no puede hacer';

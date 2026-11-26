@@ -65,13 +65,34 @@ const llamar = async (metodo, ruta, cuerpo, cabeceras) => {
 const firmar = (cuerpo, secreto = 'whsec_Y', t = Math.floor(Date.now() / 1000)) =>
   `t=${t},v1=${crypto.createHmac('sha256', secreto).update(`${t}.${cuerpo}`).digest('hex')}`;
 
-const TENANT = 'TENANTABCDEF';
+/* El negocio y su dueño se fabrican con las funciones REALES de js/core.js (extraídas del fichero), no con copias: así la prueba también
+   comprueba que el Worker deriva el tenantId, el dueño y su authKey igual que la app. */
+import fs from 'node:fs';
+const core = fs.readFileSync(new URL('../js/core.js', import.meta.url), 'utf8');
+const funcion = nombre => {            // una función de core.js entera, cerrando llaves (no hay llaves en cadenas dentro de estas)
+  const i = core.indexOf('function ' + nombre + '(');
+  let n = 0, j = core.indexOf('{', i);
+  for(let k = j; k < core.length; k++){ if(core[k] === '{') n++; else if(core[k] === '}' && --n === 0) return core.slice(i, k + 1); }
+  throw new Error('no encuentro ' + nombre);
+};
+const alfabeto = core.match(/const GG_ALPHABET = '[A-Z0-9]+';/)[0];
+const app = new Function(`${alfabeto}
+${['ggLicHash', '_ggBizSecret', 'ggBizTenantId', 'ggOwnerUser', '_ggOwnerSecret', 'ggOwnerDerive', 'ggOwnerAuthKey', 'ggOwnerId'].map(funcion).join('\n')}
+return {ggBizTenantId, ggOwnerAuthKey, ggOwnerId, ggOwnerUser};`)();
+const CODE = 'ABCD2345';
+const TENANT = app.ggBizTenantId(CODE);
+const AUTHKEY = app.ggOwnerAuthKey('Casa Paco', '123456');
+const OWNERID = app.ggOwnerId('Casa Paco');
+// La plataforma con la cuenta del dueño (de ella cuelga su lista de negocios) y la reserva de su código.
+const plataformaBase = () => ({ownerAuth: {[AUTHKEY]: {user: 'casapaco', businesses: {[TENANT]: {code: CODE, name: 'Casa Paco'}}}}, codeClaims: {[CODE]: OWNERID}});
+const sembrar = extra => { datos = {gastrogoan: Object.assign(plataformaBase(), extra || {})}; };
+const DUENO = {ownerAuthKey: AUTHKEY};
 const derivado = (() => { let h = 0x811c9dc5 >>> 0; const s = TENANT + '·gastrogoan·public·v1'; for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return (h >>> 0).toString(36).padStart(7, '0'); })();
 const VOLVER = 'https://app.gastrogoan.com/';
 
 await caso('Conectar: crea la cuenta del restaurante (Accounts v2, su panel, sus comisiones) y da el enlace de alta de Stripe', async () => {
-  datos = {}; cuentas = {}; nCuenta = 0;
-  const r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});
+  sembrar(); cuentas = {}; nCuenta = 0;
+  const r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER});
   assert.equal(r.status, 200, JSON.stringify(r.j));
   assert.match(r.j.url, /^https:\/\/connect\.stripe\.com\//);
   const alta = llamadasStripe.find(c => c.ruta === '/v2/core/accounts' && c.m === 'POST');
@@ -80,9 +101,9 @@ await caso('Conectar: crea la cuenta del restaurante (Accounts v2, su panel, sus
   assert.equal(alta.cuerpo.configuration.merchant.capabilities.card_payments.requested, true);
   assert.equal(leer(`gastrogoan/private/${derivado}/stripe/accountId`), 'acct_1');
   // Volver a pulsar no crea otra cuenta.
-  await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});
+  await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER});
   assert.equal(Object.keys(cuentas).length, 1, 'cada vez que se pulsa «Conectar» se crea una cuenta nueva');
-  const mala = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: 'https://phishing.example/'});
+  const mala = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: 'https://phishing.example/'});
   assert.equal(mala.status, 400, 'deja volver a cualquier web');
   return 'cuenta estándar · un solo alta · vuelta solo a la app';
 });
@@ -91,13 +112,13 @@ await caso('Un negocio que ya cobra no abre formularios de alta; y el estado se 
   cuentas.acct_1.configuration.merchant.capabilities.card_payments.status = 'active';
   let r = await llamar('GET', `/stripe/estado?publicId=${derivado}`);
   assert.equal(r.j.activo, false, 'la web ofrece tarjeta antes de que el dueño lo haya comprobado');
-  r = await llamar('GET', `/stripe/estado?tenantId=${TENANT}`);
+  r = await llamar('POST', '/stripe/estado', {tenantId: TENANT, ...DUENO});
   assert.equal(r.j.activo, true);
   assert.equal(r.j.email, 'dueno@bar.es', 'no se ve a nombre de quién está la cuenta');
   r = await llamar('GET', `/stripe/estado?publicId=${derivado}`);
   assert.deepEqual(r.j, {activo: true}, 'la web pública recibe más datos de los necesarios');
   const antes = llamadasStripe.filter(c => c.ruta === '/v2/core/account_links').length;
-  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});
+  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER});
   assert.equal(r.j.yaConectado, true);
   assert.equal(llamadasStripe.filter(c => c.ruta === '/v2/core/account_links').length, antes, 'con el tenantId se ha abierto el alta de una cuenta que ya cobra');
   return 'activo · a nombre del dueño · sin formulario';
@@ -114,10 +135,10 @@ await caso('Pagar: el cobro se crea en la cuenta DEL RESTAURANTE, en céntimos, 
   assert.equal(s.cuerpo['metadata[orderRef]'], 'REFabc12345');
   r = await llamar('POST', '/stripe/pagar', {publicId: derivado, orderRef: 'REFabc12345', amount: 10, urlOk: 'https://malo.example/', urlKo: 'https://malo.example/'});
   assert.equal(r.status, 400, 'deja mandar al cliente a cualquier web tras pagar');
-  await llamar('POST', '/stripe/desconectar', {tenantId: TENANT});
+  await llamar('POST', '/stripe/desconectar', {tenantId: TENANT, ...DUENO});
   r = await llamar('POST', '/stripe/pagar', {publicId: derivado, orderRef: 'REFx1234567', amount: 10, urlOk: 'https://reservas.gastrogoan.com/', urlKo: 'https://reservas.gastrogoan.com/'});
   assert.equal(r.status, 404, 'desconectado sigue cobrando');
-  await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});   // se vuelve a activar
+  await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER});   // se vuelve a activar
   return '19,90 € = 1990 céntimos en acct_1 · desconectar corta';
 });
 
@@ -151,9 +172,9 @@ await caso('Al pasar a modo real, la cuenta de pruebas se olvida: «Conectar» c
   const orig = globalThis.fetch;
   globalThis.fetch = (url, opts = {}) => { if(String(url).startsWith('https://api.stripe.com')) opts.headers.Authorization = 'Bearer sk_test_X'; return orig(url, opts); };
   try{
-    const e = await llamar('GET', '/stripe/estado?tenantId=' + TENANT);
+    const e = await llamar('POST', '/stripe/estado', {tenantId: TENANT, ...DUENO});
     assert.equal(e.j.conectado, false, 'en modo real la cuenta de pruebas sigue saliendo como conectada');
-    const r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});
+    const r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER});
     assert.equal(r.status, 200, JSON.stringify(r.j));
     assert.equal(Object.keys(cuentas).length, antes + 1, 'no se creó una cuenta nueva en modo real');
     const guardada = Object.values(datos.gastrogoan.private)[0].stripe;
@@ -163,18 +184,90 @@ await caso('Al pasar a modo real, la cuenta de pruebas se olvida: «Conectar» c
 });
 
 await caso('Un publicId sorteado solo se acepta si es del negocio (misma nube)', async () => {
-  datos = {gastrogoan: {
+  sembrar({
     tenantLookup: {[TENANT]: {databaseURL: 'https://negocio.firebaseio.com'}},
     publicLookup: {pub_bueno1: {databaseURL: 'https://negocio.firebaseio.com'}, pub_ajeno1: {databaseURL: 'https://otro.firebaseio.com'}},
-  }};
-  let r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, publicId: 'pub_ajeno1', volver: VOLVER});
+  });
+  let r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, publicId: 'pub_ajeno1', volver: VOLVER});
   assert.equal(r.j.code, 'no_vinculado', 'se ha enganchado una cuenta de Stripe a la web de reservas de otro');
-  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, publicId: 'pub_bueno1', volver: VOLVER});
+  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, publicId: 'pub_bueno1', volver: VOLVER});
   assert.equal(r.status, 200, JSON.stringify(r.j));
   assert.ok(leer('gastrogoan/private/pub_bueno1/stripe/accountId'));
-  r = await llamar('POST', '/stripe/conectar', {tenantId: 'x/../y', volver: VOLVER});
+  r = await llamar('POST', '/stripe/conectar', {tenantId: 'x/../y', ...DUENO, volver: VOLVER});
   assert.equal(r.status, 400, 'un tenantId con «/» se ha colado en la ruta');
   return 'ajeno: no · suyo: sí · rutas limpias';
+});
+
+/* ══ Hallazgo 2 de la auditoría (25/11): el tenantId NO prueba que quien llama sea el dueño ══ */
+await caso('Con solo el tenantId (lo conoce cualquier empleado) NO se conecta, ni se desconecta, ni se ve a nombre de quién está la cuenta', async () => {
+  sembrar(); cuentas = {}; nCuenta = 0;
+  const antes = llamadasStripe.length;
+  let r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, volver: VOLVER});
+  assert.equal(r.status, 403); assert.equal(r.j.code, 'no_dueno', 'se ha creado una cuenta de Stripe a nombre de otro con solo el tenantId');
+  assert.equal(llamadasStripe.length, antes, 'se ha llamado a Stripe sin comprobar al dueño');
+  assert.equal(leer(`gastrogoan/private/${derivado}/stripe`), undefined, 'se ha enlazado una cuenta al negocio ajeno');
+  // Dueño real: sí. Y ya con cuenta, el desconocido tampoco la apaga ni la ve.
+  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER}); assert.equal(r.status, 200, JSON.stringify(r.j));
+  cuentas.acct_1.configuration.merchant.capabilities.card_payments.status = 'active';
+  await llamar('GET', `/stripe/estado?tenantId=${TENANT}`);
+  r = await llamar('POST', '/stripe/desconectar', {tenantId: TENANT});
+  assert.equal(r.status, 403, 'un desconocido apagó el cobro con tarjeta de un negocio');
+  assert.equal(leer(`gastrogoan/private/${derivado}/stripe/disabled`), false, 'el cobro quedó apagado');
+  r = await llamar('GET', `/stripe/estado?tenantId=${TENANT}`);
+  assert.equal(r.j.activo, true); assert.equal(r.j.email, undefined, 'el estado sin prueba enseña el correo de la cuenta');
+  assert.equal(r.j.accountId, undefined, 'el estado sin prueba enseña el accountId');
+  r = await llamar('POST', '/stripe/estado', {tenantId: TENANT});
+  assert.equal(r.status, 403, 'POST /estado sin prueba');
+  return 'conectar, desconectar y datos de la cuenta: solo con la prueba del dueño';
+});
+await caso('Un authKey ajeno, una cuenta que se cuelga un negocio con un código inventado y un código reservado por otro NO valen', async () => {
+  const otraClave = app.ggOwnerAuthKey('Bar Pepe', '654321');
+  const intento = async (extra, authKey) => { sembrar(extra); return llamar('POST', '/stripe/conectar', {tenantId: TENANT, ownerAuthKey: authKey, volver: VOLVER}); };
+  // 1. Otro cliente de pago, con SU cuenta, sin el negocio en su lista.
+  let r = await intento({ownerAuth: {[AUTHKEY]: plataformaBase().ownerAuth[AUTHKEY], [otraClave]: {user: 'barpepe', businesses: {}}}}, otraClave);
+  assert.equal(r.j.code, 'no_dueno', 'una cuenta ajena conecta Stripe en un negocio que no es suyo');
+  // 2. Se cuelga el tenantId ajeno en su propia lista (las reglas lo permiten) con un código inventado.
+  r = await intento({ownerAuth: {[otraClave]: {user: 'barpepe', businesses: {[TENANT]: {code: 'ZZZZ9999', name: 'robado'}}}}}, otraClave);
+  assert.equal(r.j.code, 'no_dueno', 'colgarse el tenantId ajeno con un código cualquiera basta');
+  // 3. Con el código verdadero, pero reservado por el dueño legítimo.
+  r = await intento({ownerAuth: {[otraClave]: {user: 'barpepe', businesses: {[TENANT]: {code: CODE, name: 'x'}}}}}, otraClave);
+  assert.equal(r.j.code, 'no_dueno', 'con el código pero siendo otro dueño de la reserva');
+  // 4. Una lápida (negocio dado de baja en esa cuenta) tampoco.
+  r = await intento({ownerAuth: {[AUTHKEY]: {user: 'casapaco', businesses: {[TENANT]: {code: CODE, deleted: true}}}}}, AUTHKEY);
+  assert.equal(r.j.code, 'no_dueno', 'un negocio dado de baja sigue valiendo');
+  // 5. authKeys malformados (la ruta de Firebase no se puede manipular).
+  for(const malo of ['', 'a/../b', 'x'.repeat(200), null, 123]){
+    sembrar(); r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ownerAuthKey: malo, volver: VOLVER});
+    assert.equal(r.j.code, 'no_dueno', 'authKey raro aceptado: ' + JSON.stringify(malo));
+  }
+  return 'cuenta ajena, tenantId colgado, código ajeno, lápida y authKey raro: todos rechazados';
+});
+await caso('Cambiar el PIN no deja al dueño sin gestionar su Stripe, y un negocio anterior a las reservas de código sigue pudiendo', async () => {
+  // changeOwnerAccessPin muda la cuenta a la ruta nueva CON su lista de negocios: el authKey nuevo es otro, la cuenta es la misma.
+  const nueva = app.ggOwnerAuthKey('Casa Paco', 'NUEVOPIN99');
+  assert.notEqual(nueva, AUTHKEY);
+  sembrar(); delete datos.gastrogoan.ownerAuth[AUTHKEY]; datos.gastrogoan.ownerAuth[nueva] = {user: 'casapaco', businesses: {[TENANT]: {code: CODE, name: 'Casa Paco'}}};
+  let r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ownerAuthKey: nueva, volver: VOLVER});
+  assert.equal(r.status, 200, 'tras cambiar el PIN el dueño no puede conectar: ' + JSON.stringify(r.j));
+  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ownerAuthKey: AUTHKEY, volver: VOLVER});
+  assert.equal(r.j.code, 'no_dueno', 'el PIN viejo (ruta ya borrada) sigue valiendo');
+  // Negocio de antes de codeClaims: sin reserva, se acepta (pasar el paso del código ya exige conocerlo).
+  sembrar(); delete datos.gastrogoan.codeClaims;
+  r = await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER});
+  assert.equal(r.status, 200, 'un negocio antiguo sin reserva de código se queda sin poder conectar');
+  return 'PIN nuevo vale, PIN viejo no, negocio antiguo vale';
+});
+await caso('El Worker deriva tenantId y dueño IGUAL que la app (si se separan, ningún dueño pasaría la prueba)', async () => {
+  for(const c of ['ABCD2345', 'ZXCV8765', 'MNBH2468']){
+    sembrar(); datos.gastrogoan.ownerAuth[AUTHKEY].businesses = {[app.ggBizTenantId(c)]: {code: c, name: 'x'}};
+    datos.gastrogoan.codeClaims = {[c]: app.ggOwnerId('Casa Paco')};
+    const r = await llamar('POST', '/stripe/conectar', {tenantId: app.ggBizTenantId(c), ...DUENO, volver: VOLVER});
+    assert.equal(r.status, 200, `con el código ${c}: ${JSON.stringify(r.j)}`);
+  }
+  // El nombre «Casa Paco» con tildes y mayúsculas es el mismo dueño (ggOwnerUser).
+  sembrar(); datos.gastrogoan.codeClaims[CODE] = app.ggOwnerId('CASA PACÓ');
+  assert.equal((await llamar('POST', '/stripe/conectar', {tenantId: TENANT, ...DUENO, volver: VOLVER})).status, 200);
+  return '3 códigos y el nombre con tildes';
 });
 
 console.log('\n' + '═'.repeat(64));

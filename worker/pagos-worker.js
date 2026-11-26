@@ -17,9 +17,10 @@
  * solo se guarda qué cuenta de Stripe es de qué negocio
  * (gastrogoan/private/{publicId}/stripe), nunca una clave del negocio.
  *
- *  - POST /stripe/conectar     alta (o continuar el alta) de la cuenta del negocio.
- *  - GET  /stripe/estado       ¿cobra con tarjeta? (la app ve además a nombre de quién).
- *  - POST /stripe/desconectar  deja de ofrecer el pago con tarjeta.
+ *  - POST /stripe/conectar     alta (o continuar el alta) de la cuenta del negocio. Solo el dueño (ownerAuthKey).
+ *  - GET  /stripe/estado       ¿cobra con tarjeta? (sin datos de la cuenta).
+ *  - POST /stripe/estado       lo mismo, con la prueba de propietario: ve además a nombre de quién.
+ *  - POST /stripe/desconectar  deja de ofrecer el pago con tarjeta. Solo el dueño (ownerAuthKey).
  *  - POST /stripe/pagar        crea el pago (Stripe Checkout) en la cuenta del negocio.
  *  - POST /stripe/webhook      Stripe avisa de que está pagado; se verifica la firma.
  *
@@ -162,6 +163,66 @@ async function stripeV2(env, metodo, ruta, datos){
 }
 const leerCuenta = (env, id) => stripeV2(env, 'GET', `/core/accounts/${id}?include=configuration.merchant&include=requirements`);
 
+/* ===================== ¿Quien llama es el DUEÑO? (auditoría 25/11, hallazgo 2) =====================
+   El tenantId lo conoce cualquier empleado (entra con el código) y todo lo que cuelga de `tenants/{tenantId}` lo lee quien lo sepa, así que
+   NO prueba que quien llama sea el dueño: con él solo se podía crear una cuenta de Stripe a nombre de otro y enlazarla al negocio ajeno, o
+   apagarle el cobro con tarjeta. Lo que solo sabe el dueño es el authKey de su cuenta (ruta derivada de usuario + PIN: ni se puede listar ni
+   se deduce del código). La app lo manda en `ownerAuthKey` y el Worker lo comprueba contra la plataforma con su clave de administrador:
+     1. existe `ownerAuth/{authKey}` y de él cuelga `businesses/{tenantId}` sin lápida (el negocio es de ESA cuenta);
+     2. el código guardado ahí, pasado por el MISMO algoritmo que la app, da exactamente ese tenantId (nadie puede colgarse en su cuenta un
+        negocio ajeno poniendo un código cualquiera: `businesses/*` es escribible por cualquier cuenta, así que lo de 1 solo no vale);
+     3. el código no está reservado por OTRO dueño en `codeClaims` (sin reserva = negocio anterior a las reservas: se acepta, porque pasar el
+        punto 2 ya exige conocer el código, que es la raíz del negocio).
+   Cambiar el PIN NO deja al dueño fuera: la cuenta se muda a la ruta nueva CON su lista de negocios dentro (changeOwnerAccessPin), así que el
+   authKey nuevo pasa igual y no hay nada que migrar en el Worker. No se guarda ninguna credencial aquí (por eso no hay «primera vez gana»,
+   que dejaría a un atacante adelantado con el negocio secuestrado). Los avisos de pago y el cobro del comensal NO pasan por aquí.
+   Las funciones de abajo son una copia de las de js/core.js (ggOwnerUser, ggOwnerDerive, ggOwnerId, ggBizTenantId): test/pagos-worker.mjs
+   las compara con las de la app, para que no se separen. */
+const GG_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const _ggBizSecret = () => [117,117,197,112,119,136,197,64,62,64,68,197,127,65].map(x => String.fromCharCode(x - 14)).join('');
+const _ggOwnerSecret = () => [117,117,197,125,133,124,115,128,197,64,62,64,68,197,121,69].map(x => String.fromCharCode(x - 14)).join('');
+function ggOwnerUser(raw){
+  return String(raw || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function ggOwnerDerive(input, groups){
+  const out = [];
+  let h = ggLicHash(input);
+  for(let g = 0; g < groups; g++){
+    h = ggLicHash(input + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += GG_ALPHABET[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
+}
+function ggOwnerId(user){
+  const u = ggOwnerUser(user);
+  return u ? ggOwnerDerive(u + _ggOwnerSecret() + '·owner', 5) : null;
+}
+function ggBizTenantId(code){
+  const secret = _ggBizSecret() + '·tenant';
+  const out = [];
+  let h = ggLicHash(code + secret);
+  for(let g = 0; g < 5; g++){
+    h = ggLicHash(code + secret + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += GG_ALPHABET[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
+}
+async function esDuenoDelNegocio(env, tenantId, authKey){
+  // El authKey va dentro de una ruta de Firebase: solo letras y números, y de la longitud que fabrica la app (24).
+  if(typeof authKey !== 'string' || !/^[A-Za-z0-9]{16,64}$/.test(authKey)) return false;
+  const cuenta = await fbGet(env, `gastrogoan/ownerAuth/${authKey}`);
+  const negocio = cuenta && cuenta.businesses && cuenta.businesses[tenantId];
+  if(!negocio || negocio.deleted || typeof negocio.code !== 'string' || !/^[A-Za-z0-9]{4,16}$/.test(negocio.code)) return false;
+  if(ggBizTenantId(negocio.code) !== tenantId) return false;
+  const reservado = await fbGet(env, `gastrogoan/codeClaims/${negocio.code}`);
+  if(reservado && reservado !== ggOwnerId(cuenta.user)) return false;
+  return true;
+}
+
 /* ===================== ¿Este publicId es de este negocio? =====================
    Un publicId sorteado no se puede deducir del tenantId, así que se comprueba
    que los dos apuntan a la MISMA nube: tenantLookup/{tenantId} (lo publica la
@@ -178,11 +239,14 @@ async function publicIdDelNegocio(env, tenantId, publicId){
   ]);
   return {ok: !!(tl && pl && tl.databaseURL && tl.databaseURL === pl.databaseURL), publicId};
 }
-async function negocioDesdePeticion(env, tenantId, publicId){
+async function negocioDesdePeticion(env, tenantId, publicId, exigirDueno, ownerAuthKey){
   if(!idValido(tenantId, 4, 60)) return {error: json({ error: 'Falta el tenantId' }, 400)};
   if(publicId && !idValido(publicId, 4, 40)) return {error: json({ error: 'publicId no válido' }, 400)};
   const v = await publicIdDelNegocio(env, tenantId, publicId);
   if(!v.ok) return {error: json({ error: 'Este enlace público no es de este negocio', code: 'no_vinculado' }, 403)};
+  if(exigirDueno && !(await esDuenoDelNegocio(env, tenantId, ownerAuthKey))){
+    return {error: json({ error: 'No se ha podido comprobar que eres el propietario de este negocio', code: 'no_dueno' }, 403)};
+  }
   return {publicId: v.publicId};
 }
 // Lo que se enseña de una cuenta de Stripe: si ya cobra y a nombre de quién,
@@ -204,7 +268,7 @@ function resumenCuenta(acc){
 
 async function handleConectar(req, env){
   const body = await req.json().catch(() => ({}));
-  const n = await negocioDesdePeticion(env, body.tenantId, body.publicId);
+  const n = await negocioDesdePeticion(env, body.tenantId, body.publicId, true, body.ownerAuthKey);
   if(n.error) return n.error;
   if(!urlPermitida(body.volver, ORIGENES_APP)) return json({ error: 'Dirección de vuelta no permitida' }, 400);
 
@@ -239,13 +303,22 @@ async function handleConectar(req, env){
   return json({ ok: true, url: link.url });
 }
 
+/* Estado de la cuenta. Hay dos preguntas distintas:
+   · GET con publicId (la web de reservas) o con tenantId (apps antiguas): SOLO «¿cobra?», sin ningún dato de la cuenta de Stripe.
+   · POST con el authKey del dueño (la app actual): además el accountId, a nombre de quién está y su correo. Con el tenantId pelado ya no
+     se enseña a nombre de quién está la cuenta de un negocio ajeno. */
 async function handleEstado(req, env, url){
-  const tenantId = url.searchParams.get('tenantId');
-  const publicIdParam = url.searchParams.get('publicId');
+  let tenantId = url.searchParams.get('tenantId');
+  let publicIdParam = url.searchParams.get('publicId');
+  let conPrueba = false, authKey = null;
+  if(req.method === 'POST'){
+    const body = await req.json().catch(() => ({}));
+    tenantId = body.tenantId; publicIdParam = body.publicId; authKey = body.ownerAuthKey; conPrueba = true;
+  }
   if(tenantId){
     // Desde la app: se pregunta a Stripe y se guarda si cobra, para que la
     // web de reservas no tenga que preguntarle a Stripe en cada visita.
-    const n = await negocioDesdePeticion(env, tenantId, publicIdParam);
+    const n = await negocioDesdePeticion(env, tenantId, publicIdParam, conPrueba, authKey);
     if(n.error) return n.error;
     const cfg = await leerCfgStripe(env, n.publicId);
     if(!cfg || !cfg.accountId) return json({ conectado: false, publicId: n.publicId });
@@ -253,9 +326,11 @@ async function handleEstado(req, env, url){
     const r = resumenCuenta(acc);
     const activo = r.cobra && !cfg.disabled;
     if(activo !== !!cfg.activo) await fbPatch(env, rutaStripe(n.publicId), { activo });
+    const base = { conectado: true, activo, desconectado: !!cfg.disabled, publicId: n.publicId, cobra: r.cobra };
+    if(!conPrueba) return json(base);
     // accountId: para que el botón de la app abra el panel de ESA cuenta y no
     // la cuenta vacía con la que el dueño se registró en stripe.com.
-    return json(Object.assign({ conectado: true, activo, desconectado: !!cfg.disabled, publicId: n.publicId, accountId: cfg.accountId }, r));
+    return json(Object.assign(base, r, { accountId: cfg.accountId }));
   }
   // Desde la web de reservas: solo si se puede pagar, sin más datos.
   if(!idValido(publicIdParam, 4, 40)) return json({ error: 'Falta tenantId o publicId' }, 400);
@@ -265,7 +340,7 @@ async function handleEstado(req, env, url){
 
 async function handleDesconectar(req, env){
   const body = await req.json().catch(() => ({}));
-  const n = await negocioDesdePeticion(env, body.tenantId, body.publicId);
+  const n = await negocioDesdePeticion(env, body.tenantId, body.publicId, true, body.ownerAuthKey);
   if(n.error) return n.error;
   const cfg = await leerCfgStripe(env, n.publicId);
   // La cuenta de Stripe sigue siendo del restaurante: aquí solo se deja de
@@ -396,7 +471,7 @@ export default {
     if(req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
     try {
       if(url.pathname === '/stripe/conectar' && req.method === 'POST') return await handleConectar(req, env);
-      if(url.pathname === '/stripe/estado' && req.method === 'GET') return await handleEstado(req, env, url);
+      if(url.pathname === '/stripe/estado' && (req.method === 'GET' || req.method === 'POST')) return await handleEstado(req, env, url);
       if(url.pathname === '/stripe/desconectar' && req.method === 'POST') return await handleDesconectar(req, env);
       if(url.pathname === '/stripe/pagar' && req.method === 'POST') return await handlePagar(req, env);
       if(url.pathname === '/stripe/webhook' && req.method === 'POST') return await handleWebhook(req, env);

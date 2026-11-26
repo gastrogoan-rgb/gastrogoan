@@ -1211,8 +1211,13 @@ function promoAnunciar(id){
   const dto = p.menuItemName ? `${p.menuItemName} −${p.discountPct}%` : p.titulo;
   const cond = [];
   if(p.horaInicio && p.horaFin) cond.push(gl({es:`De ${p.horaInicio} a ${p.horaFin} h`, ca:`De ${p.horaInicio} a ${p.horaFin} h`, en:`${p.horaInicio} to ${p.horaFin}`}));
-  if(p.recurrence === 'weekly') cond.push(gl({es:'Cada ' + new Date(p.fecha + 'T00:00:00').toLocaleDateString('es-ES', {weekday:'long'}), ca:'Cada ' + new Date(p.fecha + 'T00:00:00').toLocaleDateString('ca-ES', {weekday:'long'}), en:'Every ' + new Date(p.fecha + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'long'})}));
-  else cond.push(pmFechaLarga(p.fecha, true));
+  if(p.recurrence === 'weekly'){
+    // El día sale en el idioma ACTIVO (localeActual), como en el resto de la app.
+    // Antes cada idioma llevaba su locale escrito a mano: salía bien, pero era
+    // un segundo sitio que mantener a mano al cambiar de idioma.
+    const dia = new Date(p.fecha + 'T00:00:00').toLocaleDateString(localeActual(), {weekday:'long'});
+    cond.push(gl({es:'Cada ' + dia, ca:'Cada ' + dia, en:'Every ' + dia}));
+  } else cond.push(pmFechaLarga(p.fecha, true));
   const c = nvCampanaVacia();
   nvAplicarTema(c, 'promo');
   c.titular = p.titulo;
