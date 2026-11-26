@@ -2184,7 +2184,9 @@ function guardarLocalDB(){
     idbLocal.esperan.push({resolve, reject});
     if(idbLocal.enCurso || idbLocal.timer) return;   // ya hay una escritura en marcha o programada: esta viaja en la siguiente
     const espera = Math.max(0, idbLocal.ultimo + IDB_JUNTAR_MS - Date.now());
-    if(espera === 0) volcarLocalDB(); else idbLocal.timer = setTimeout(volcarLocalDB, espera);
+    /* La copia estructurada de TODA la base (20.000 ventas: ~80 ms en un PC, ~325 ms en un móvil lento) bloqueaba el hilo justo
+       antes de pintar el ticket. Se deja para después del siguiente fotograma; pagehide/hidden la vuelcan en el acto. */
+    idbLocal.timer = setTimeout(volcarLocalDB, Math.max(espera, 40));
   });
 }
 if(typeof window !== 'undefined' && typeof document !== 'undefined'){
@@ -6929,8 +6931,13 @@ function anotarLapidas(){
     if(!Array.isArray(DB[key])) return;
     const ahora = new Set(DB[key].map(claveDeElemento).filter(c => c != null));
     ahora.forEach(c => { if(mapa[key + ':' + c] != null){ delete mapa[key + ':' + c]; cambio = true; } });
-    if(!lastSyncedSnapshot[key]) return;
-    const antes = clavesPreviasLapida(key, lastSyncedSnapshot[key], v => v);
+    let antes;
+    if(key === 'sales' && typeof vnActivo === 'function' && vnActivo()){
+      antes = vnIdsParaLapidas();        // con las ventas una a una, «lo que había» es lo que la nube de ventas tiene
+    }else{
+      if(!lastSyncedSnapshot[key]) return;
+      antes = clavesPreviasLapida(key, lastSyncedSnapshot[key], v => v);
+    }
     if(!antes) return;
     antes.forEach(c => {
       if(!ahora.has(c) && mapa[key + ':' + c] == null){
@@ -8586,7 +8593,11 @@ function cerrarMesaPagadaQr(order){
    notas (alergias) a la vista. Ahora la web cifra esos campos con la clave PÚBLICA del negocio (RSA-OAEP + AES-GCM, WebCrypto) y
    solo la app, que guarda la privada, puede abrirlos. No cambia ninguna regla de Firebase, así que sirve también a los negocios
    que aún tienen las reglas viejas. Sin clave publicada (app antigua) o sin WebCrypto, la web envía en claro como siempre. */
-const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas'];
+const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas', 'date', 'time', 'people', 'items', 'total', 'costeEnvio', 'propina', 'codigoPostal', 'instrucciones', 'referral', 'tableId', 'tipo', 'resToken', 'clientRef', 'token', 'mesaToken'];
+/* 25/11 (auditoría, hallazgo 3): se cifra también lo que revelaba qué vende y cuándo (líneas del pedido, fecha, hora, personas, importes) y los TOKENS que dan
+   acceso a una reserva o pedido ajenos (resToken, clientRef, token, mesaToken). Siguen en claro `type` y `createdAt` (las reglas los exigen) y lo que genera
+   el Worker de pagos. La app abre SIEMPRE la lista ampliada; la web solo la usa si el negocio publica `reqPubV >= 2` (una app anterior no conoce los campos
+   nuevos y los descartaría). Nadie lee la solicitud antes de abrirla (ggDescifrando), así que ni el orden ni el aforo dependen de lo cifrado. */
 function b64aBytes(b64){ const bin = atob(b64), u = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 // Devuelve true si ACABA de crear la clave (para republicar el espejo con ella).
 async function asegurarClaveSolicitudes(){
@@ -9484,7 +9495,7 @@ function negocioParaElEspejoPublico(){
   const b = DB.business || {};
   const out = {};
   CAMPOS_PUBLICOS_DEL_NEGOCIO.forEach(k => { if(b[k] !== undefined) out[k] = b[k]; });
-  if(b.reqPub) out.reqPub = b.reqPub;   // la PÚBLICA, para que la web cifre; la privada (reqPriv) nunca sale
+  if(b.reqPub){ out.reqPub = b.reqPub; out.reqPubV = 2; }   // la PÚBLICA, para que la web cifre; la privada (reqPriv) nunca sale
   return out;
 }
 
@@ -10425,6 +10436,10 @@ function plan360RepararVacios(biz){
   });
 }
 function applyRemoteBlock(key, remoteValue){
+  /* Con las ventas una a una, el bloque antiguo `sales` solo puede traer ventas de un aparato sin actualizar:
+     se AÑADE lo que falte y nada más (js/ventas-nube.js). */
+  if(key === 'sales' && typeof vnActivo === 'function' && vnActivo()){ vnLegacyEntrante(remoteValue); return; }
+  const vnBanderaAntes = (key === 'business' && DB.business) ? !!DB.business.ventasPorMes : false;
   if(key === 'plan360Pruebas') remoteValue = plan360PruebasNormalizar(remoteValue);
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
@@ -10644,6 +10659,7 @@ function applyRemoteBlock(key, remoteValue){
   // DB[key] (el merge) todavía no coincide y lo suba de verdad.
   lastSyncedSnapshot[key] = mergedFromLocal ? remoteOnlyJson : json;
   DB[key] = merged;
+  if(key === 'business' && typeof vnAlCambiarBandera === 'function') vnAlCambiarBandera(vnBanderaAntes, !!(merged && merged.ventasPorMes));
   guardarLocalDB().catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
   if(isStoredLicenseValid(DB.license)){
@@ -10706,10 +10722,12 @@ function attachCloudChildListeners(){
   const onOk = snap => { marcarNubeAlDia({trasProbarNube: true}); applyRemoteBlock(snap.key, snap.val()); };
   cloudRef.on('child_added', onOk, onErr);
   cloudRef.on('child_changed', onOk, onErr);
+  if(typeof vnIniciar === 'function') vnIniciar();   // las ventas sueltas (`ventas`, hermano de `db`) se escuchan siempre
   cloudRef.on('child_removed', snap => {
     // Quitada la ÚLTIMA foto de prueba en otro aparato, el bloque desaparece entero: aquí hay que tratarlo como «vacío», o la foto
     // se quedaría viva en este aparato y al siguiente guardado volvería a subirse a la nube.
     if(snap.key === 'plan360Pruebas'){ applyRemoteBlock(snap.key, {}); return; }
+    if(snap.key === 'sales' && typeof vnActivo === 'function' && vnActivo()) return;   // el bloque antiguo ya no manda
     const def = defaultData();
     if(!def.hasOwnProperty(snap.key)) return;
     applyRemoteBlock(snap.key, def[snap.key]);
@@ -10735,7 +10753,14 @@ function mergeRemoteIntoLocal(val){
   // (applyRemoteBlock, para los listeners incrementales, no tiene este
   // problema porque solo procesa un bloque cada vez).
   if(merged.borrados !== undefined) DB.borrados = mergeLapidas(DB.borrados, merged.borrados);
+  /* Bandera de las ventas una a una: manda la de la nube (si la trae) y, si no, la local. */
+  const vnOn = !!((merged.business && merged.business.ventasPorMes !== undefined) ? merged.business.ventasPorMes : (DB.business && DB.business.ventasPorMes));
   Object.keys(merged).forEach(key => {
+    if(key === 'sales' && vnOn){
+      if(DB.business) DB.business.ventasPorMes = true;
+      vnLegacyEntrante(merged.sales);   // solo añade lo que falte; el resto viene de `ventas`
+      return;
+    }
     // `lastSyncedSnapshot` vive solo en memoria: en cada recarga de página
     // empieza en null, así que sin esto TODA clave se trataba como "sin
     // sincronizar" y se sustituía entera por lo que hubiera en la nube —
@@ -11001,6 +11026,10 @@ function startCloudSync(tenantId){
         const initClaimRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/initClaim');
         initClaimRef.transaction(current => current === null ? {ts: Date.now()} : undefined).then(result => {
           if(result.committed){
+            /* Nube recién creada y sin ventas = negocio nuevo: nace con las ventas una a una (sin aparatos viejos que proteger). */
+            if(DB.business && DB.business.ventasPorMes === undefined && !(DB.sales && DB.sales.length)){
+              DB.business.ventasPorMes = true; DB.business.ventasPorMesDesde = new Date().toISOString();
+            }
             lastSyncedSnapshot = {};
             pushAllToCloud();
             syncPublicMirror();
@@ -13014,6 +13043,7 @@ function pushAllToCloud(){
   const updates = {};
   const pendingJson = {};
   Object.keys(DB).forEach(key => {
+    if(key === 'sales' && typeof vnActivo === 'function' && vnActivo()) return;   // las ventas van una a una (js/ventas-nube.js)
     updates[key] = DB[key];
     pendingJson[key] = canonicalStringify(DB[key]);
   });
@@ -13145,13 +13175,17 @@ function flushCloudSync(){
   anotarLapidas();
   const updates = {};
   const pendingJson = {};
+  /* Con las ventas «una a una» (js/ventas-nube.js) `sales` NO pasa por aquí: ni se convierte a texto ni se sube entera. */
+  const vnOn = typeof vnActivo === 'function' && vnActivo();
   Object.keys(DB).forEach(key => {
+    if(vnOn && key === 'sales') return;
     const json = canonicalStringify(DB[key]);
     if(lastSyncedSnapshot[key] !== json){
       updates[key] = DB[key];
       pendingJson[key] = json;
     }
   });
+  const vn = vnOn ? vnPrepararSubida() : {hay: false};
   /* El bloque `business` NO se sube entero (17/11, Plan 360º): lo escriben a la vez el negocio y el coach. Una tablet que
      vuelve a tener conexión y sube su `business` completo antes de que baje lo que el coach cambió entre tanto lo pisaba.
      Ahora se sube solo cada clave de primer nivel que ha cambiado de verdad aquí (`business/plan360Program`, etc.): lo que el
@@ -13187,7 +13221,7 @@ function flushCloudSync(){
     }catch(e){ /* si el snapshot no se puede leer, se sube entero */ }
   }
   const keys = Object.keys(updates);
-  if(keys.length === 0){ marcarNubeAlDia(); return; }
+  if(keys.length === 0 && !vn.hay){ marcarNubeAlDia(); return; }
   const seqAlSubir = cambiosLocalesSeq;
   const bloquesEnVuelo = Object.keys(pendingJson);
   bloquesEnVuelo.forEach(k => { subidaEnVuelo[k] = pendingJson[k]; });
@@ -13204,7 +13238,8 @@ function flushCloudSync(){
        ni a los demás aparatos. Se limpia el VALOR de cada ruta, no el nombre de la ruta. */
     const aSubir = {};
     Object.keys(updates).forEach(k => { aSubir[k] = sinIndefinidos(updates[k]); });
-    cloudRef.update(aSubir).then(() => {
+    /* Las dos subidas (bloques y ventas sueltas) se confirman juntas: el indicador solo vuelve a verde si ninguna falló. */
+    Promise.all([keys.length ? cloudRef.update(aSubir) : Promise.resolve(), vn.hay ? vn.subir() : Promise.resolve()]).then(() => {
       soltarEnVuelo();
       cloudSyncRetryAttempt = 0; // subida buena: la próxima vez que falle, se vuelve a empezar en 15s
       keys.forEach(key => { const bloque = key.split('/')[0]; lastSyncedSnapshot[bloque] = pendingJson[bloque]; });

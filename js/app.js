@@ -8977,6 +8977,7 @@ function renderDataMaintenanceCard(){
       ${desktopNotificationsEnabled()
         ? `<span class="badge badge-green" style="margin-bottom:8px;display:inline-block"><i class="ti ti-bell-check"></i> ${t('notif.enabledBadge')}</span><br><button class="btn btn-sm" onclick="disableDesktopNotifications()">${t('notif.disable')}</button>`
         : `<button class="btn btn-sm btn-primary" onclick="requestDesktopNotifications()"><i class="ti ti-bell"></i> ${t('notif.enableBtn')}</button>`}
+      ${typeof vnTarjetaHtml === 'function' ? vnTarjetaHtml() : ''}
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-archive"></i> ${t('mn.data.archiveTitle')}</p>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('mn.data.archiveDesc')}</p>
@@ -9211,6 +9212,8 @@ function confirmRestoreBackup(){
     if(!lapidasFusionadas[clave] || lapidasActuales[clave] > lapidasFusionadas[clave]) lapidasFusionadas[clave] = lapidasActuales[clave];
   });
   parsed.borrados = lapidasFusionadas;
+  // La bandera de las ventas una a una es del negocio, no de la copia: restaurar una copia vieja no la apaga (sería marcha atrás sin querer).
+  if(DB && DB.business && DB.business.ventasPorMes !== undefined){ parsed.business.ventasPorMes = DB.business.ventasPorMes; parsed.business.ventasPorMesDesde = DB.business.ventasPorMesDesde; }
   idbSet(DB_KEY, parsed).then(() => {
     delete window._pendingRestoreBackup;
     delete window._pendingRestoreBackupExpectedName;

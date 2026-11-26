@@ -6413,13 +6413,16 @@ function shareTrackUrl(url, isReserva, btnEl){
    publicId, y mientras la app del negocio está cerrada las solicitudes esperan ahí. Mismos campos y mismo formato que
    `descifrarSolicitud` en js/core.js. Sin clave publicada (app antigua) o sin WebCrypto, se envía en claro como siempre. */
 const CAMPOS_PRIVADOS_SOLICITUD = ['clientName', 'clientPhone', 'clientEmail', 'notes', 'clienteNombre', 'clienteTelefono', 'clienteEmail', 'clienteDireccion', 'notas'];
+// Ampliada (reqPubV >= 2, ver js/core.js): lo que revela qué se vende y cuándo, y los tokens de acceso. Una app anterior no la conoce: sin reqPubV, solo la lista corta.
+const CAMPOS_PRIVADOS_SOLICITUD_V2 = CAMPOS_PRIVADOS_SOLICITUD.concat(['date', 'time', 'people', 'items', 'total', 'costeEnvio', 'propina', 'codigoPostal', 'instrucciones', 'referral', 'tableId', 'tipo', 'resToken', 'clientRef', 'token', 'mesaToken']);
 function bytesAb64(buf){ const u = new Uint8Array(buf); let s = ''; for(let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
 async function cifrarSolicitud(req){
   const pub = (DB.business || {}).reqPub;
   if(!pub || typeof crypto === 'undefined' || !crypto.subtle) return req;
   try{
     const priv = {}; let hay = false;
-    CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { if(req[k] !== undefined && req[k] !== '' && req[k] !== null){ priv[k] = req[k]; hay = true; } });
+    const CAMPOS = ((DB.business || {}).reqPubV >= 2) ? CAMPOS_PRIVADOS_SOLICITUD_V2 : CAMPOS_PRIVADOS_SOLICITUD;
+    CAMPOS.forEach(k => { if(req[k] !== undefined && req[k] !== '' && req[k] !== null){ priv[k] = req[k]; hay = true; } });
     if(!hay) return req;
     const aes = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']);
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -6427,7 +6430,7 @@ async function cifrarSolicitud(req){
     const rsa = await crypto.subtle.importKey('jwk', pub, {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
     const llave = await crypto.subtle.encrypt({name: 'RSA-OAEP'}, rsa, await crypto.subtle.exportKey('raw', aes));
     const out = Object.assign({}, req);
-    CAMPOS_PRIVADOS_SOLICITUD.forEach(k => { delete out[k]; });
+    CAMPOS.forEach(k => { delete out[k]; });
     out.enc = {v: 1, k: bytesAb64(llave), iv: bytesAb64(iv), d: bytesAb64(dato)};
     return out;
   }catch(e){ console.error('No se pudo cifrar la solicitud; se envía como siempre', e); return req; }

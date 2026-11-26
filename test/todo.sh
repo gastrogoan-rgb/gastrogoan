@@ -195,6 +195,10 @@ lanzar; node test/sync-negocios.mjs > "$SALIDA/syncnegocios.txt" 2>&1 & P185=$!
 lanzar; node test/economia-real.mjs > "$SALIDA/economiareal.txt" 2>&1 & P186=$!
 lanzar; node test/reglas-asistente.mjs > "$SALIDA/reglasasistente.txt" 2>&1 & P187=$!
 lanzar; node test/alta-generador.mjs > "$SALIDA/altagenerador.txt" 2>&1 & P188=$!
+lanzar; node test/csp.mjs > "$SALIDA/csp.txt" 2>&1 & PSEC1=$!
+lanzar; node test/web-publica-bots.mjs > "$SALIDA/webbots.txt" 2>&1 & PSEC2=$!
+lanzar; node test/generador-pin.mjs > "$SALIDA/generadorpin.txt" 2>&1 & PSEC3=$!
+lanzar; node test/puente-clave.mjs > "$SALIDA/puenteclave.txt" 2>&1 & PSEC4=$!
 lanzar; node test/tpv-menu-pasos.mjs > "$SALIDA/tpvmenupasos.txt" 2>&1 & P189=$!
 lanzar; IMPRESOS_OUT="$SALIDA/impresos" node test/impresos.mjs > "$SALIDA/impresos.txt" 2>&1 & P190=$!
 lanzar; node test/qr-local.mjs > "$SALIDA/qrlocal.txt" 2>&1 & P191=$!
@@ -481,6 +485,10 @@ espera $P185 "Sync de negocios entre aparatos: un negocio ya configurado no pide
 espera $P186 "Cuenta de Resultados › «Lo que te queda de verdad» (cuentas a mano: préstamo 10.000 € a 24 × 450 €), sin tocar el resultado oficial, en móvil y sin inversiones" "$SALIDA/economiareal.txt" "todos los casos pasaron"
 espera $P187 "Asistente «Actualizar mis reglas»: 6 pasos exactos (portada de Firebase, cuenta y proyecto, Realtime Database → Reglas, copiar, borrar todo, pegar, Publicar), comprobación automática, campana solo del propietario, tres idiomas y móvil" "$SALIDA/reglasasistente.txt" "todos los casos pasaron"
 espera $P188 "Generador de licencias: alta de cliente paso a paso (automáticos, manuales, progreso, mensaje de bienvenida, móvil)" "$SALIDA/altagenerador.txt" "^OK alta paso a paso"
+espera $PSEC1 "Content-Security-Policy: app, reservas y admin sirven su cabecera real a un Chromium (sin violaciones; la política muerde)" "$SALIDA/csp.txt" "la CSP está puesta"
+espera $PSEC2 "Web de reservas: filtro anti-bots (campo trampa invisible + tiempo mínimo) sin dañar a clientes" "$SALIDA/webbots.txt" "filtra bots baratos"
+espera $PSEC3 "Generador: el PIN del cliente ya no se guarda en claro (se ve una vez; limpieza de lo antiguo)" "$SALIDA/generadorpin.txt" "ya no se guarda en claro"
+espera $PSEC4 "Puente de pedidos externos: PUENTE_CLAVE obligatoria" "$SALIDA/puenteclave.txt" "ya no acepta pedidos sin clave"
 espera $P189 "TPV · el menú se pide paso a paso (un apartado cada vez, avanza solo salvo con extras, Atrás, total en el botón final y lo guardado no cambia)" "$SALIDA/tpvmenupasos.txt" "el menú por pasos del TPV funciona"
 espera $P190 "Impresos: los 22 documentos (ficha con foto, protocolos, vale, arqueo, pedido, reservas, QR, tickets, manual, I+D, contratos…) se generan en la ventana de impresión con fotos y fuentes cargadas, sin desbordes y a PDF A4" "$SALIDA/impresos.txt" "todos los impresos se generan bien"
 espera $P191 "QR propio (reseña del ticket, VeriFactu, QR de mesas y de reservas): se dibuja en la app, sin servicio externo, y se LEE con un lector real en las 40 versiones, con acentos y con tamaños distintos" "$SALIDA/qrlocal.txt" "el QR propio se genera y se lee"

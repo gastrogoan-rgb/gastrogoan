@@ -34,6 +34,7 @@ await caso('Las tres _headers llevan Content-Security-Policy y las demás cabece
     const c = cabecerasDe(s);
     assert.equal(c['X-Content-Type-Options'], 'nosniff'); assert.ok(c['Strict-Transport-Security']);
   }
+  for(const s of ['app', 'reservas', 'admin']) for(const [k, v] of Object.entries(cabecerasDe(s))) assert.ok((k + ': ' + v).length < 2000, `${s}: la cabecera ${k} pasa del límite de 2.000 caracteres por línea de Cloudflare Pages`);
   assert.equal(cabecerasDe('app')['X-Frame-Options'], 'DENY'); assert.equal(cabecerasDe('admin')['X-Frame-Options'], 'DENY');
   assert.equal(cabecerasDe('reservas')['X-Frame-Options'], undefined, 'reservas se puede incrustar en la web del restaurante');
 });
