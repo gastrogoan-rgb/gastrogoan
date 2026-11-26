@@ -18,10 +18,17 @@ await caso('1 · PLAN360_MANT_CONTRACT_TEXT y PLAN360_CONTRACT_TEXT son idéntic
 await caso('1 · el acuerdo de mantenimiento lleva todos los marcadores y las cláusulas que pide el servicio, y ningún dato personal', () => {
   const t = constante(core, 'PLAN360_MANT_CONTRACT_TEXT');
   assert.ok(/^ACUERDO DE SERVICIO DE MANTENIMIENTO/.test(t));
-  for(const m of ['coachNombre', 'coachDni', 'coachDomicilio', 'coachIban', 'cliente', 'nif', 'direccion', 'precioMantenimiento']) assert.ok(t.includes('{{' + m + '}}'), 'falta {{' + m + '}}');
+  for(const m of ['coachNombre', 'coachDni', 'coachDomicilio', 'cliente', 'nif', 'direccion', 'precioMantenimiento']) assert.ok(t.includes('{{' + m + '}}'), 'falta {{' + m + '}}');
   for(const r of [/WhatsApp/, /videollamada/, /informe del mes/i, /por adelantado/, /15 días/, /no se devuelve/, /aviso previo por escrito/, /no garantiza resultados/, /propiedad de GastroGoan/, /RGPD/, /Juzgados y Tribunales de Barcelona/, /Ley española/, /renueva automáticamente/])
     assert.ok(r.test(t), 'falta ' + r);
+  assert.ok(!/coachIban|transferencia bancaria/i.test(t) && /enlace de pago seguro de Stripe/.test(t), 'el cobro debe ser por Stripe, sin IBAN');
   assert.ok(!/(?<![A-Za-z0-9])\d{8}[A-Z](?![A-Za-z0-9])/.test(t) && !/[A-Z]{2}\d{2}(?: ?[0-9A-Z]{4}){2,}/.test(t), 'hay un dato con forma de DNI o IBAN');
+});
+await caso('1 · la cláusula 3 del acuerdo del 360 cobra por el enlace de Stripe, sin IBAN, y el IBAN ya no es obligatorio para el coach', () => {
+  const t = constante(core, 'PLAN360_CONTRACT_TEXT');
+  assert.ok(/enlace de pago seguro de Stripe[^\n]*Concepto: Programa 360 GastroGoan/.test(t) && !/coachIban|Transferencia bancaria/.test(t));
+  assert.ok(/\{\{coachIban\}\}/.test(core) && /coach\(Nombre\|Dni\|Domicilio\|Iban\)/.test(panelSrc), 'el marcador sigue soportado en plan360FillTemplate');
+  assert.ok(/\{k: 'iban'[^}]*obl: false/.test(panelSrc));
 });
 await caso('1 · la cláusula 11 del acuerdo del 360 remite al acuerdo propio (ya no regula el servicio)', () => {
   const t = constante(core, 'PLAN360_CONTRACT_TEXT');
@@ -65,7 +72,7 @@ await caso('2 · con datos del coach y del cliente el acuerdo sale relleno: sin 
     return document.getElementById('p360-cm-texto').innerText;
   }, COACH);
   assert.ok(!/\{\{|\}\}/.test(r) && !/________/.test(r), 'quedan marcadores o rayas');
-  for(const x of ['Coach de Prueba', '00000000T', 'Calle Falsa 1', 'ES00 0000', 'Casa Paco SL', 'B12345678', 'Calle Mayor 1', '75 € + IVA al mes']) assert.ok(r.includes(x), 'falta ' + x);
+  for(const x of ['Coach de Prueba', '00000000T', 'Calle Falsa 1', 'Stripe', 'Casa Paco SL', 'B12345678', 'Calle Mayor 1', '75 € + IVA al mes']) assert.ok(r.includes(x), 'falta ' + x);
 });
 await caso('2 · sin los datos del coach el acuerdo NO se puede firmar (y no se activa nada)', async () => {
   const r = await page.evaluate(() => {

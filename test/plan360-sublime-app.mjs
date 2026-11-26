@@ -190,7 +190,7 @@ await caso('3 · El contrato se rellena con plan360Coach y la firma queda con es
     const texto = document.getElementById('p360-contrato-texto').innerText;
     return {texto, aviso: !!document.getElementById('p360-coach-pendiente'), boton: document.querySelector('button[onclick="plan360SignContract()"]').disabled};
   });
-  assert.ok(/Coach de Prueba/.test(r.texto) && /00000000T/.test(r.texto) && /Calle Falsa 1/.test(r.texto) && /ES00 0000/.test(r.texto), r.texto.slice(0, 300));
+  assert.ok(/Coach de Prueba/.test(r.texto) && /00000000T/.test(r.texto) && /Calle Falsa 1/.test(r.texto) && /Stripe/.test(r.texto) && !/ES00 0000/.test(r.texto), r.texto.slice(0, 300));
   assert.ok(!r.aviso && !r.boton);
 });
 await caso('3 · Sin plan360Coach el contrato dice que el coach completará sus datos y NO deja firmar', async () => {
@@ -203,7 +203,7 @@ await caso('3 · Sin plan360Coach el contrato dice que el coach completará sus 
     showToast(''); plan360SignContract();
     o.firmado = !!b.plan360Contract.signedAt; o.toast = (document.querySelector('.toast') || {}).textContent || '';
     // datos a medias (sin IBAN) tampoco valen
-    b.plan360Coach = {nombre:'X', dni:'1', domicilio:'Y', iban:''}; o.incompleto = plan360CoachDatos();
+    b.plan360Coach = {nombre:'X', dni:'1', domicilio:'', iban:'ES00 0000'}; o.incompleto = plan360CoachDatos();
     b.plan360Coach = guardado;
     return o;
   });
