@@ -4882,7 +4882,7 @@ En caso de discrepancias, las partes intentarán solucionarlas amistosamente; si
 Ley española.
 
 11. Servicio de mantenimiento (opcional)
-Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Incluye cada mes cuatro contactos (dos por WhatsApp y dos por videollamada) con las entregas y tareas que el coach planifique para ese mes. Se contrata por meses naturales, se renueva automáticamente cada mes y se paga por adelantado. El cliente puede darse de baja en cualquier momento comunicándolo por escrito con al menos 15 días de antelación al inicio del mes siguiente; el mes en curso no se devuelve. Las cláusulas 4 a 10 y el acuerdo de confidencialidad se aplican también a este servicio.
+Al terminar el programa, el cliente podrá contratar el seguimiento mensual de GastroGoan por {{precioMantenimiento}}. Ese servicio se rige por su propio «Acuerdo de servicio de mantenimiento», que el cliente lee y firma en el momento de activarlo: qué incluye, su duración, el pago y la baja se recogen en ese acuerdo. Hasta que se firme, este acuerdo no obliga a contratarlo. El acuerdo de confidencialidad (RGPD) se aplica también a ese servicio.
 
 CONTRATO DE CONFIDENCIALIDAD (RGPD)
 
@@ -4906,6 +4906,61 @@ El incumplimiento da derecho a la parte reveladora a reclamar daños y perjuicio
 
 7. Legislación y jurisdicción
 Ley española. Juzgados y Tribunales de Barcelona.`;
+/* PLAN360_MANT_CONTRACT_TEXT: contrato propio del servicio de MANTENIMIENTO (75 € + IVA al mes), aparte del acuerdo del Plan 360.
+   BORRADOR PENDIENTE DE REVISIÓN POR UN ABOGADO (como el del 360). Mismos marcadores que PLAN360_CONTRACT_TEXT; se rellena con
+   plan360FillTemplate y se firma al ACEPTAR el mantenimiento (DB.business.plan360ContratoMant = {signedAt, signedText, …}).
+   Una COPIA idéntica vive en admin-panel/plan360.html (test/plan360-contrato-mant.mjs lo exige). Sin datos personales reales:
+   los del coach salen de «Mis datos». */
+const PLAN360_MANT_CONTRACT_TEXT =
+`ACUERDO DE SERVICIO DE MANTENIMIENTO
+
+Partes: de una parte, {{coachNombre}} (GastroGoan), con DNI {{coachDni}} y domicilio en {{coachDomicilio}}. De otra parte, {{cliente}}, con NIF {{nif}} y domicilio en {{direccion}}.
+
+Este acuerdo es independiente del Acuerdo de prestación de servicios del programa Plan 360° y se firma al activar el mantenimiento, una vez terminado el programa.
+
+1. Objeto
+GastroGoan se compromete a prestar al cliente un servicio de seguimiento mensual para mantener y consolidar las mejoras conseguidas con el Plan 360° (en adelante, el servicio de mantenimiento).
+
+2. Qué incluye cada mes
+— Cuatro contactos al mes, uno por semana y en lunes: el primero y el tercero por WhatsApp, y el segundo y el cuarto por videollamada.
+— Las entregas que GastroGoan planifique para ese mes (documentos, análisis, plantillas y propuestas).
+— Las tareas que GastroGoan proponga al negocio, que el cliente marca y contesta desde su app.
+— Un informe del mes con los números del negocio calculados en la app, comparados con el mes anterior, y el cierre del mes con el objetivo del siguiente.
+— Cualquier servicio que no figure en esta lista, como el apoyo presencial, se pacta aparte.
+
+3. Obligaciones de GastroGoan
+Aportar su experiencia y herramientas, mantener comunicación fluida, preparar cada mes con antelación y entregar lo planificado.
+
+4. Obligaciones del cliente
+Mantener al día los datos del negocio en la app, marcar y contestar las tareas, atender los contactos acordados, facilitar la información que se le pida y aplicar las medidas que se acuerden.
+
+5. Duración y renovación
+El servicio se contrata por meses naturales, desde el mes en que se activa. Se renueva automáticamente cada mes mientras ninguna de las partes lo dé de baja conforme a la cláusula 8.
+
+6. Precio y forma de pago
+Precio del servicio: {{precioMantenimiento}}.
+El pago se hace por adelantado, al inicio de cada mes, por transferencia bancaria a la cuenta {{coachIban}} — Concepto: Mantenimiento GastroGoan. Cada cobro queda registrado por GastroGoan.
+
+7. Revisión del precio
+El precio solo puede cambiar con un aviso previo por escrito de GastroGoan, antes del inicio del mes al que se aplique. Si el cliente no lo acepta, puede darse de baja conforme a la cláusula 8.
+
+8. Baja
+El cliente puede darse de baja en cualquier momento, por escrito (también desde su app), con al menos 15 días de antelación al inicio del mes siguiente. El mes en curso no se devuelve. GastroGoan puede dar de baja el servicio con el mismo preaviso.
+
+9. Garantías y limitación de responsabilidad
+GastroGoan garantiza la prestación profesional del servicio, pero no garantiza resultados concretos. La responsabilidad total no excederá el importe efectivamente abonado por el servicio.
+
+10. Propiedad intelectual
+Los entregables, metodologías, plantillas y materiales desarrollados permanecen como propiedad de GastroGoan. El cliente recibe una copia exclusiva para uso interno y no comercial.
+
+11. Confidencialidad y protección de datos
+Se aplica a este servicio el contrato de confidencialidad (RGPD) firmado junto con el Acuerdo de prestación de servicios del Plan 360°, que sigue vigente mientras dure la relación.
+
+12. Resolución de conflictos
+Las partes intentarán solucionar amistosamente cualquier discrepancia; si no fuera posible, se someterán a mediación previa y, en última instancia, a los Juzgados y Tribunales de Barcelona.
+
+13. Legislación aplicable
+Ley española.`;
 /* Los datos personales del coach (nombre, DNI, domicilio, IBAN, email y teléfono) NO viven en el código: la app va en un repositorio
    público y se vendía con ellos escritos dentro del contrato. Los escribe el coach en su panel (`DB.business.plan360Coach`, clave
    plan360*) y llegan por la nube del negocio como cualquier otro dato suyo. Sin ellos completos el contrato no se puede firmar

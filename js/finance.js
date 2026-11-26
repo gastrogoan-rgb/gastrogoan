@@ -1440,6 +1440,10 @@ function plan360AvisosDeHoy(){
     if(enArranque && !c.signedAt && c.precio && c.formaPago && typeof plan360CoachDatos === 'function' && plan360CoachDatos()){   // tampoco si el coach aún no ha completado sus datos: no se puede firmar
       out.push({count: 1, icon:'ti-signature', id:'plan360Contrato', campana:true, soloDueno:true, warn:true, label: gl({es:'Firma el contrato del Plan 360º', ca:'Signa el contracte del Pla 360º', en:'Sign the 360º Plan agreement'}), onclick: `navigate('plan360'); renderPlan360Contract()`});
     }
+    // Mantenimiento activo y sin SU acuerdo firmado (el acuerdo del 360º no lo cubre): lo firma el propietario cuando el coach ya tiene sus datos.
+    if(faseSv === 'mant' && !(b.plan360ContratoMant || {}).signedAt && !(typeof plan360SoloLectura === 'function' && plan360SoloLectura()) && typeof plan360CoachDatos === 'function' && plan360CoachDatos()){
+      out.push({count: 1, icon:'ti-signature', id:'plan360ContratoMant', campana:true, soloDueno:true, warn:true, label: gl({es:'Firma el acuerdo de mantenimiento', ca:'Signa l\'acord de manteniment', en:'Sign the maintenance agreement'}), onclick: `navigate('plan360'); renderPlan360ContractMant()`});
+    }
     const secciones = (b.plan360Intake || {}).sections || [];
     let totalQ = 0, contestadas = 0;
     secciones.forEach(s => (s.questions || []).forEach(q => { totalQ++; if((typeof q.a === 'string' && q.a.trim()) || q.fileData) contestadas++; }));

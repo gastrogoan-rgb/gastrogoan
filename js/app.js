@@ -6219,10 +6219,11 @@ function plan360CierreHtml(){
         <div style="font-size:22px;font-weight:800;margin-bottom:12px">${escapeHtml(m.precio && m.precio !== '99€/mes' && m.precio !== '75€/mes' ? m.precio : '75 € + IVA al mes')}</div>
         ${m.respuesta === 'acepta' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px">
             ✓ ${escapeHtml(t('plan360.maintenanceAccepted'))} <strong>${escapeHtml(m.firmaNombre)}</strong> — ${escapeHtml(new Date(m.firmaFecha).toLocaleDateString(localeActual()))}
+            ${(DB.business.plan360ContratoMant || {}).signedAt ? `<div style="margin-top:6px"><button class="btn btn-sm" onclick="renderPlan360ContractMant()"><i class="ti ti-file-text"></i> ${escapeHtml(gl({es:'Ver el acuerdo firmado', ca:'Veure l\'acord signat', en:'View the signed agreement'}))}</button></div>` : ''}
           </div>`
         : esOwner ? `
           ${m.respuesta === 'piensa' ? `<div style="background:rgba(255,255,255,.12);padding:10px;border-radius:8px;font-size:13.5px;margin-bottom:10px">${escapeHtml(t('plan360.maintenanceThinking'))} ${escapeHtml(plan360FechaLegible(m.volverAHablarFecha))}</div>` : ''}
-          <div class="field" style="margin-bottom:8px"><label style="color:#fff">${escapeHtml(t('plan360.signName'))}</label><input id="p360-mant-firma" style="color:var(--text)"></div>
+          <p style="margin:0 0 8px;font-size:12.5px;opacity:.85">${escapeHtml(gl({es:'Al activarlo leerás y firmarás el acuerdo de mantenimiento, que es independiente del acuerdo del Plan 360º.', ca:'En activar-lo llegiràs i signaràs l\'acord de manteniment, que és independent de l\'acord del Pla 360º.', en:'When you activate it you will read and sign the maintenance agreement, which is separate from the 360º Plan agreement.'}))}</p>
           <button class="btn btn-primary btn-sm" onclick="plan360MantenimientoAceptar()" style="margin-right:6px">${escapeHtml(t('plan360.maintenanceAcceptBtn'))}</button>
           <div class="field" style="margin:10px 0 6px"><label style="color:#fff">${escapeHtml(t('plan360.maintenanceThinkDate'))}</label><input id="p360-mant-fecha" type="date" style="color:var(--text);max-width:180px"></div>
           <button class="btn btn-sm" onclick="plan360MantenimientoPensar()">${escapeHtml(t('plan360.maintenanceThinkBtn'))}</button>
@@ -6641,23 +6642,116 @@ function plan360FechaLegible(f){
   const [y, mo, d] = f.split('-').map(Number);
   return new Date(y, mo - 1, d).toLocaleDateString(localeActual(), {day: 'numeric', month: 'long', year: 'numeric'});
 }
+/* Aceptar el mantenimiento = leer y firmar SU acuerdo (PLAN360_MANT_CONTRACT_TEXT), no un nombre suelto: el botón de la oferta abre
+   el acuerdo y es la firma la que activa el servicio (plan360ContratoMantFirmar). Si el acuerdo ya estaba firmado (p. ej. el
+   coach lo recogió en persona) se activa directamente con ese nombre. */
 function plan360MantenimientoAceptar(){
   if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
   if(!plan360EsOwner()) return;
-  const nombre = (document.getElementById('p360-mant-firma').value || '').trim();
-  if(!nombre){ showToast(t('plan360.signMissing')); return; }
+  const cm = DB.business.plan360ContratoMant || {};
+  if(cm.signedAt && cm.signedName){ plan360MantenimientoActivar(cm.signedName); saveDB(); plan360PingActivity(); showToast(t('plan360.saved')); renderPlan360Grid(); return; }
+  renderPlan360ContractMant();
+}
+// El cambio de estado de aceptar (lo hace la firma del acuerdo): el panel del coach lo pasa solo a «Mantenimiento» (6/10).
+function plan360MantenimientoActivar(nombre){
   const c = DB.business.plan360Cierre;
-  if(!c || !c.mantenimiento) return;
-  c.mantenimiento.respuesta = 'acepta';
-  c.mantenimiento.firmaNombre = nombre;
-  c.mantenimiento.firmaFecha = Date.now();
-  c.mantenimiento.respondidoEn = Date.now();
-  // El panel del coach lo pasa solo a «Mantenimiento» (6/10).
-  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {fase: 'mant', mantDesde: plan360MantClave(new Date()), cambiado: Date.now()});   // fusionar: ahí van también los cobros del coach
+  if(c && c.mantenimiento){
+    c.mantenimiento.respuesta = 'acepta';
+    c.mantenimiento.firmaNombre = nombre;
+    c.mantenimiento.firmaFecha = Date.now();
+    c.mantenimiento.respondidoEn = Date.now();
+  }
+  DB.business.plan360Servicio = Object.assign({}, DB.business.plan360Servicio || {}, {fase: 'mant', mantDesde: ((DB.business.plan360Servicio || {}).mantDesde) || plan360MantClave(new Date()), cambiado: Date.now()});   // fusionar: ahí van también los cobros del coach
+}
+/* ---- Acuerdo de servicio de mantenimiento (contrato propio, aparte del acuerdo del Plan 360º) ----
+   DB.business.plan360ContratoMant = {clienteNombre, clienteNIF, clienteDireccion, precioMantenimiento, enviadoEn (lo pone el coach),
+   signedName, signedDNI, signedAt, signedText}. Clave plan360*: la app y el panel ya la fusionan. El texto firmado se guarda
+   (signedText) y es el que se enseña siempre: si el modelo cambia, lo firmado no. */
+function plan360ContratoMantDatos(){
+  const base = DB.business.plan360Contract || {};
+  const cm = DB.business.plan360ContratoMant || {};
+  const m = (DB.business.plan360Cierre || {}).mantenimiento || {};
+  const oferta = m.precio && m.precio !== '99€/mes' && m.precio !== '75€/mes' ? m.precio : '75 € + IVA al mes';
+  return {
+    clienteNombre: cm.clienteNombre || base.clienteNombre || '',
+    clienteNIF: cm.clienteNIF || base.clienteNIF || '',
+    clienteDireccion: cm.clienteDireccion || base.clienteDireccion || '',
+    precioMantenimiento: cm.precioMantenimiento || oferta,
+  };
+}
+function renderPlan360ContractMant(){
+  const el = document.getElementById('plan360-content');
+  if(!el) return;
+  el.innerHTML = `
+    ${plan360PageHeader(gl({es:'Acuerdo de mantenimiento', ca:'Acord de manteniment', en:'Maintenance agreement'}))}
+    ${plan360ContratoMantHtml()}`;
+}
+function plan360ContratoMantHtml(){
+  const cm = DB.business.plan360ContratoMant || {};
+  const d = plan360ContratoMantDatos();
+  const texto = (cm.signedAt && cm.signedText) || plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d);
+  if(cm.signedAt){
+    return `<div class="card" style="margin-top:14px">
+      <div class="p360-txt p360-txt-box" style="margin-bottom:10px">${plan360TextoHtml(texto)}</div>
+      <div class="card" style="background:var(--green-l);border-color:var(--green)">
+        <i class="ti ti-circle-check" style="color:var(--green)"></i>
+        ${escapeHtml(t('plan360.signedBy'))} <strong>${escapeHtml(cm.signedName)}</strong> (${escapeHtml(cm.signedDNI)}) — ${escapeHtml(new Date(cm.signedAt).toLocaleString(localeActual()))}
+      </div>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="plan360PrintContractMant()"><i class="ti ti-printer"></i> ${escapeHtml(t('plan360.contractPrint'))}</button>
+    </div>`;
+  }
+  const coachListo = !!plan360CoachDatos();
+  const puede = coachListo && plan360EsOwner() && !plan360SoloLectura();
+  return `<div class="card" style="margin-top:14px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:200px"><label>${escapeHtml(t('plan360.contractName'))}</label><input id="p360-cm-nombre" value="${escapeHtml(d.clienteNombre)}" oninput="plan360ContratoMantVivo()"></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.contractNIF'))}</label><input id="p360-cm-nif" value="${escapeHtml(d.clienteNIF)}" oninput="plan360ContratoMantVivo()"></div>
+    </div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractAddress'))}</label><input id="p360-cm-direccion" value="${escapeHtml(d.clienteDireccion)}" oninput="plan360ContratoMantVivo()"></div>
+    <div class="field"><label>${escapeHtml(t('plan360.contractPrice'))}</label><div style="min-height:46px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--border);background:var(--cream, #F1EFE9);color:var(--muted)">${escapeHtml(d.precioMantenimiento)}</div></div>
+    <div id="p360-cm-texto" class="p360-txt p360-txt-box" style="margin:10px 0 14px">${plan360TextoHtml(texto)}</div>
+    ${!coachListo ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px"><i class="ti ti-user-edit"></i> ${escapeHtml(gl({es:'Tu coach completará sus datos antes de la firma. Cuando lo haga, podrás firmar aquí mismo.', ca:'El teu coach completarà les seves dades abans de la signatura. Quan ho faci, podràs signar aquí mateix.', en:'Your coach will complete their details before signing. Once done, you will be able to sign right here.'}))}</div>` : ''}
+    ${!plan360EsOwner() ? `<div class="card" style="background:var(--amber-l);border-color:var(--amber);margin-bottom:14px">${escapeHtml(t('plan360.maintenanceOwnerOnly'))}</div>` : ''}
+    <div style="font-weight:600;margin-bottom:6px">${escapeHtml(t('plan360.signHere'))}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:180px"><label>${escapeHtml(t('plan360.signName'))}</label><input id="p360-cm-sign-name" value="${escapeHtml(d.clienteNombre)}" oninput="this.dataset.tocado='1'" ${puede ? '' : 'disabled'}></div>
+      <div class="field" style="flex:1;min-width:140px"><label>${escapeHtml(t('plan360.signDNI'))}</label><input id="p360-cm-sign-dni" value="${escapeHtml(d.clienteNIF)}" oninput="this.dataset.tocado='1'" ${puede ? '' : 'disabled'}></div>
+    </div>
+    <button class="btn btn-primary" onclick="plan360ContratoMantFirmar()" ${puede ? '' : 'disabled'}>${escapeHtml(gl({es:'Firmar y activar el mantenimiento', ca:'Signar i activar el manteniment', en:'Sign and activate maintenance'}))}</button>
+    <p class="view-subtitle" style="margin-top:8px">${escapeHtml(t('plan360.signLegalNote'))}</p>
+  </div>`;
+}
+// El texto se rehace mientras se escribe (como el del acuerdo del 360º); la firma sigue nombre y NIF si no se han tocado a mano.
+function plan360ContratoMantVivo(){
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const d = Object.assign({}, plan360ContratoMantDatos(), {clienteNombre: val('p360-cm-nombre'), clienteNIF: val('p360-cm-nif'), clienteDireccion: val('p360-cm-direccion')});
+  const caja = document.getElementById('p360-cm-texto');
+  if(caja) caja.innerHTML = plan360TextoHtml(plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d));
+  [['p360-cm-sign-name', d.clienteNombre], ['p360-cm-sign-dni', d.clienteNIF]].forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if(el && !el.dataset.tocado) el.value = v;
+  });
+}
+function plan360ContratoMantFirmar(){
+  if(plan360SoloLecturaAviso()) return;
+  if(!plan360EsOwner()) return;
+  if(!plan360CoachDatos()){ showToast(gl({es:'Tu coach completará sus datos antes de la firma.', ca:'El teu coach completarà les seves dades abans de la signatura.', en:'Your coach will complete their details before signing.'})); return; }
+  const val = id => ((document.getElementById(id) || {}).value || '').trim();
+  const name = val('p360-cm-sign-name'), dni = val('p360-cm-sign-dni');
+  if(!name || !dni){ showToast(t('plan360.signMissing')); return; }
+  const prev = DB.business.plan360ContratoMant || {};
+  const d = Object.assign({}, plan360ContratoMantDatos(), {clienteNombre: val('p360-cm-nombre'), clienteNIF: val('p360-cm-nif'), clienteDireccion: val('p360-cm-direccion')});
+  DB.business.plan360ContratoMant = Object.assign({}, prev, d, {signedName: name, signedDNI: dni, signedAt: Date.now(), signedText: plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, d)});
+  plan360MantenimientoActivar(name);
   saveDB();
   plan360PingActivity();
   showToast(t('plan360.saved'));
-  renderPlan360Grid();
+  renderPlan360ContractMant();
+}
+function plan360PrintContractMant(){
+  const cm = DB.business.plan360ContratoMant || {};
+  if(!cm.signedAt) return;
+  plan360ImprimirFirmado(gl({es:'Acuerdo de mantenimiento', ca:'Acord de manteniment', en:'Maintenance agreement'}), cm.signedText || plan360FillTemplate(PLAN360_MANT_CONTRACT_TEXT, plan360ContratoMantDatos()), cm);
 }
 function plan360MantenimientoPensar(){
   if(plan360SoloLecturaAviso()) return;   // servicio terminado: solo se mira
@@ -6817,6 +6911,10 @@ function plan360MantServicioHtml(){
       ${sv.mantHasta ? `<div><div class="txt-xs txt-muted">${escapeHtml(L({es:'Pagado hasta', ca:'Pagat fins', en:'Paid until'}))}</div><b>${escapeHtml(/^\d{4}-\d{2}$/.test(sv.mantHasta) ? (() => { const [y, m] = sv.mantHasta.split('-').map(Number); return plan360Mayus(new Date(y, m - 1, 1).toLocaleDateString(localeActual(), {month: 'long', year: 'numeric'})); })() : plan360FechaLegible(sv.mantHasta))}</b></div>` : ''}
     </div>
     ${ult.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">${ult.map(k => `<span class="badge" style="background:var(--green-bg,#E4EDE6);color:var(--green,#3F6B4A)"><i class="ti ti-check"></i> ${escapeHtml(mesTxt(k))}</span>`).join('')}</div>` : `<p class="txt-xs txt-muted" style="margin:4px 0 8px">${escapeHtml(L({es:'Todavía no hay cobros apuntados.', ca:'Encara no hi ha cobraments apuntats.', en:'No payments recorded yet.'}))}</p>`}
+    ${(() => { const cm = DB.business.plan360ContratoMant || {};
+      return cm.signedAt
+        ? `<div class="txt-xs" style="margin:0 0 8px"><i class="ti ti-circle-check" style="color:var(--green)"></i> ${escapeHtml(L({es:'Acuerdo de mantenimiento firmado el ', ca:'Acord de manteniment signat el ', en:'Maintenance agreement signed on '}))}${escapeHtml(new Date(cm.signedAt).toLocaleDateString(localeActual()))} <button class="btn btn-sm" onclick="renderPlan360ContractMant()">${escapeHtml(L({es:'Ver', ca:'Veure', en:'View'}))}</button></div>`
+        : `<div class="txt-xs" style="margin:0 0 8px"><i class="ti ti-signature"></i> ${escapeHtml(L({es:'Falta firmar el acuerdo de mantenimiento. ', ca:'Falta signar l\'acord de manteniment. ', en:'The maintenance agreement is not signed yet. '}))}${esOwner ? `<button class="btn btn-sm" onclick="renderPlan360ContractMant()">${escapeHtml(L({es:'Leer y firmar', ca:'Llegir i signar', en:'Read and sign'}))}</button>` : ''}</div>`; })()}
     ${baja ? `<div style="background:var(--amber-bg,#F6EBD0);padding:10px;border-radius:6px;font-size:13px">${escapeHtml(L({es:'Has pedido la baja el ', ca:'Has demanat la baixa el ', en:'You asked to cancel on '}))}<b>${escapeHtml(new Date(baja.ts).toLocaleDateString(localeActual()))}</b>${escapeHtml(L({es:': será efectiva a fin de mes.', ca:': serà efectiva a final de mes.', en:': effective at the end of the month.'}))}
         ${esOwner && !plan360SoloLectura() ? ` <button class="btn btn-sm btn-toque" onclick="plan360RetirarBaja()">${escapeHtml(L({es:'Retirar la solicitud', ca:'Retirar la sol·licitud', en:'Withdraw the request'}))}</button>` : ''}</div>`
       : (esOwner && !plan360SoloLectura() ? `<button class="btn btn-sm btn-toque" onclick="plan360SolicitarBaja()"><i class="ti ti-door-exit"></i> ${escapeHtml(L({es:'Solicitar la baja', ca:'Sol·licitar la baixa', en:'Request cancellation'}))}</button>` : '')}
@@ -7111,10 +7209,12 @@ function plan360ContractSectionHtml(){
 function plan360PrintContract(){
   const c = DB.business.plan360Contract || {};
   if(!c.signedAt) return;
-  const texto = c.signedText || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c);
+  plan360ImprimirFirmado(t('plan360.contract'), c.signedText || plan360FillTemplate(PLAN360_CONTRACT_TEXT, c), c);
+}
+function plan360ImprimirFirmado(titulo, texto, c){
   const win = window.open('', '_blank', 'width=700,height=800');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(t('plan360.contract'))}</title>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title>
     <style>${ggFuentesImpresionCss()} ${GG_BARRA_IMPRESION_CSS} @page{margin:18mm 16mm} body{font-family:'Schibsted Grotesk',Arial,sans-serif;color:#1C1A17;white-space:pre-wrap;line-height:1.65;font-size:13px;padding:0 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact} .firma{margin-top:28px;padding:14px 16px;border:1px solid #D5CFC4;border-top:3px solid #1C1A17;background:#FAF8F4;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;white-space:normal;break-inside:avoid}</style>
     </head><body>${ggBarraImpresionHtml()}${escapeHtml(texto)}
     <div class="firma">${escapeHtml(t('plan360.signedBy'))} ${escapeHtml(c.signedName)} (${escapeHtml(c.signedDNI)}) — ${escapeHtml(new Date(c.signedAt).toLocaleString(localeActual()))}</div>
