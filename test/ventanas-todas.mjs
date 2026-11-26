@@ -161,7 +161,12 @@ const pulsar = (c, enModal) => page.evaluate((c, enModal) => {
 const medir = async (nombre, etiqueta, ruta) => {
   await new Promise(r => setTimeout(r, 450));
   // Con la máquina cargada la ventana aún puede estar entrando (escala .97): se mediría 35 px en un botón de 36,5.
-  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => {}))));
+  // Solo las animaciones FINITAS (la entrada de la ventana). Las infinitas (luz de lámpara, flotar de la portada, barra de carga)
+  // no terminan nunca: esperar a todas colgaba la prueba (protocolTimeout) en inicio, Mega Lista e I+D. Con tope de 1,5 s.
+  await page.evaluate(() => Promise.race([
+    Promise.all(document.getAnimations().filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => {}))),
+    new Promise(r => setTimeout(r, 1500)),
+  ]));
   const m = await page.evaluate(MEDIR, ANCHO, MOVIL);
   if(process.env.GG_DEBUG) console.log(`  ${nombre} · ${etiqueta} → ${m ? 'VENTANA «' + m.titulo + '»' : 'nada'}`);
   if(!m) return null;
