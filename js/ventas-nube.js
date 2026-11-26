@@ -158,7 +158,7 @@ async function vnProcesar(){
     const ent = vnEntrantes, qui = vnQuitadas;
     vnEntrantes = new Map(); vnQuitadas = new Set();
     const lista = DB.sales || (DB.sales = []);
-    let huboCambio = false, nuevas = 0, conflictos = 0;
+    let huboCambio = false, nuevas = 0, conflictos = 0, apartadas = false;
     qui.forEach(sid => {
       // Lo que se borró en la nube se borró allí: solo se olvida que «la nube lo tiene». Si aquí sigue y no hay lápida,
       // el siguiente envío lo vuelve a subir (nunca se pierde una venta por un borrado sin lápida). Un «borrado» que es
@@ -187,6 +187,16 @@ async function vnProcesar(){
         if(local === remota || sonIgualesRapido(local, remota)) return;
         const jl = vnCanon(local);
         if(jl === json) return;
+        /* Otro COBRO de la misma mesa (mismo id, distinto createdAt y distinto importe o forma de pago): se conservan
+           los dos. La más antigua se queda el id y la otra pasa a `id~createdAt`, igual en todos los aparatos (ver
+           mergeVentas en core.js). La derivada no está en vnNube, así que el siguiente envío la sube a su propio nodo. */
+        if(ventasSonCobrosDistintos(local, remota)){
+          const derivada = ventaConservaId(local, remota) === local ? ventaConIdDerivado(remota) : ventaConIdDerivado(local);
+          if(ventaConservaId(local, remota) !== local) lista[pos] = remota;
+          const dsid = String(derivada.id), dpos = idx.get(dsid);
+          if(dpos === undefined){ lista.push(derivada); idx.set(dsid, lista.length - 1); }
+          nuevas++; huboCambio = true; apartadas = true; return;
+        }
         if(base !== undefined && jl !== base) conflictos++;   // las dos cosas cambiaron: gana la nube, igual que siempre
         lista[pos] = remota; huboCambio = true;
       });
@@ -204,6 +214,7 @@ async function vnProcesar(){
     if(huboCambio){
       guardarLocalDB().catch(e => console.error('Error guardando datos', e));
       if(nuevas && typeof avisarSiFacturaDuplicada === 'function') avisarSiFacturaDuplicada(DB.sales);
+      if(apartadas){ avisarSiCobroDuplicado(DB.sales); scheduleCloudSync(); }
       refreshAfterRemoteChange();
     }
     marcarNubeAlDia({trasProbarNube: true});
@@ -221,21 +232,33 @@ function vnLegacyEntrante(val){
   const arr = Array.isArray(val) ? val : (val && typeof val === 'object' ? Object.values(val) : []);
   if(!arr.length) return;
   const lista = DB.sales || (DB.sales = []);
-  const conocidas = new Set();
-  for(let i = 0; i < lista.length; i++){ const s = lista[i]; if(s && s.id != null) conocidas.add(String(s.id)); }
+  const conocidas = new Map();
+  for(let i = 0; i < lista.length; i++){ const s = lista[i]; if(s && s.id != null) conocidas.set(String(s.id), i); }
   const desde = (DB.business && DB.business.ventasPorMesDesde) || '';
-  let nuevas = 0, viejo = false;
+  let nuevas = 0, viejo = false, apartadas = false;
   for(let i = 0; i < arr.length; i++){
     const s = arr[i];
     if(!s || typeof s !== 'object' || s.id == null) continue;
     const sid = String(s.id);
-    if(conocidas.has(sid) || hayLapida('sales', sid)) continue;
-    lista.push(s); conocidas.add(sid); nuevas++;
+    if(hayLapida('sales', sid)) continue;
+    if(conocidas.has(sid)){
+      /* Mismo id y OTRO cobro (ver mergeVentas): se conserva también, con su id derivado. */
+      const pos = conocidas.get(sid), local = lista[pos];
+      if(!ventasSonCobrosDistintos(local, s)) continue;
+      const remotaGana = ventaConservaId(local, s) !== local;
+      const derivada = remotaGana ? ventaConIdDerivado(local) : ventaConIdDerivado(s);
+      if(remotaGana) lista[pos] = s;
+      const dsid = String(derivada.id);
+      if(!conocidas.has(dsid)){ lista.push(derivada); conocidas.set(dsid, lista.length - 1); nuevas++; apartadas = true; }
+      continue;
+    }
+    lista.push(s); conocidas.set(sid, lista.length - 1); nuevas++;
     if(vnListo && !vnNube.has(sid) && desde && String(s.createdAt || '') >= desde) viejo = true;
   }
   if(!nuevas) return;
   guardarLocalDB().catch(e => console.error('Error guardando datos', e));
   if(typeof avisarSiFacturaDuplicada === 'function') avisarSiFacturaDuplicada(DB.sales);
+  if(apartadas) avisarSiCobroDuplicado(DB.sales);
   if(viejo && !vnViejoVisto){
     vnViejoVisto = true;
     if(typeof showToast === 'function') showToast(gl({es:'Un aparato con la versión antigua acaba de vender: ábrelo con internet para actualizarlo.', ca:'Un aparell amb la versió antiga acaba de vendre: obre\'l amb internet per actualitzar-lo.', en:'A device on the old version just made a sale: open it online to update it.'}));
