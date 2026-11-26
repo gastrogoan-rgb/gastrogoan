@@ -6,8 +6,10 @@ const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromiu
 const res=[]; const ok=(n,c,d)=>{res.push({n,c:!!c}); console.log((c?'✅':'❌')+' '+n+(d?'  → '+d:''));};
 
 for(const ns of ['demo-gastrogoan','demo-plataforma']){
-  const r=await fetch(`http://127.0.0.1:9000/.json?ns=${ns}`,{method:'DELETE'});
-  if(!r.ok) console.warn('no se pudo vaciar',ns);
+  // Con las reglas REALES cargadas la raíz está cerrada: se vacía con el token de administrador del emulador (sin él, el DELETE da 401 y
+  // los datos de una pasada anterior se quedaban y contaminaban esta).
+  const r=await fetch(`http://127.0.0.1:9000/.json?ns=${ns}`,{method:'DELETE',headers:{Authorization:'Bearer owner'}});
+  if(!r.ok) console.warn('no se pudo vaciar',ns,r.status);
 }
 console.log('→ emulador vaciado\n');
 
@@ -28,12 +30,17 @@ async function dispositivo(){
 }
 async function arrancar(d,code){
   await d.page.goto('http://localhost:8951/index.html',{waitUntil:'domcontentloaded'});
+  // ⚠️ Esperar a que loadDB() termine ANTES de tocar DB: si no, el DB de IndexedDB lo reemplaza y la nube desaparece (ver README, «Dos trampas»).
+  await d.page.evaluate(()=>(typeof dbReadyPromise!=='undefined')?dbReadyPromise:null).catch(()=>{});
   await d.page.evaluate(async ({code,dburl})=>{
     localStorage.setItem('gastrogoan_license_v1',JSON.stringify({code,tenantId:ggBizTenantId(code)}));
     localStorage.setItem('gastrogoan_owner_login',JSON.stringify({user:'jefe',authKey:'k',pinHash:'h'}));
     localStorage.setItem('gastrogoan_access_session',JSON.stringify({type:'owner',ts:Date.now()}));
     localStorage.setItem('gastrogoan_owner_pass_prompted','1');
-    Object.assign(DB.business,{netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true});
+    // El aviso diario de «Copia de seguridad» (js/app.js, checkBackupReminder) abre una ventana, y mientras hay una ventana abierta un cambio
+    // remoto NO repinta la pantalla (a propósito: podría estar escribiéndose en ella). Se da por avisado hoy, como hacen las demás pruebas.
+    localStorage.setItem('gastrogoan_backup_reminder_day',todayStr());
+    Object.assign(DB.business,{backupAvisoDia:todayStr(),netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true});
     DB.business.ownFirebase={apiKey:'fake',databaseURL:dburl};
     await saveDB();
   },{code,dburl:DBURL});
@@ -132,3 +139,5 @@ await browser.close();
 console.log('\n'+'─'.repeat(60));
 const mal=res.filter(r=>!r.c);
 console.log(mal.length?`❌ ${mal.length} de ${res.length} fallaron`:`✅ los ${res.length} escenarios pasaron`);
+// Salir con código distinto de 0 si algo falla (antes salía siempre con 0 y el banco daba por buena una prueba que fallaba).
+process.exit(mal.length?1:0);
