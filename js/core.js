@@ -10795,8 +10795,13 @@ function applyRemoteBlock(key, remoteValue){
     }
   }
   if(mergedFromLocal && typeof scheduleCloudSync === 'function') scheduleCloudSync();
+  /* El espejo público se publicaba al arrancar con la copia LOCAL (que puede ir por detrás) y no se corregía al llegar lo de la nube:
+     la web seguía enseñando una carta o un menú ya retirados hasta el siguiente guardado hecho aquí. Si llega algo que la web lee, se
+     vuelve a publicar (el espejo compara con lo último enviado: si no cambia nada, no escribe). */
+  if(!mergedFromLocal && ESPEJO_BLOQUES_QUE_LEE_LA_WEB.has(key) && typeof schedulePublicMirrorSync === 'function') schedulePublicMirrorSync();
   refreshAfterRemoteChange();
 }
+const ESPEJO_BLOQUES_QUE_LEE_LA_WEB = new Set(['business', 'cartas', 'menus', 'tables', 'promos', 'activeCartaIds', 'activeMenuIds', 'fichas']);
 
 /* Tras la conexión inicial, en vez de re-descargar TODA la base de datos
    del negocio cada vez que algo cambia (lo que multiplicaba el consumo de

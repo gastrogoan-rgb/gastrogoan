@@ -242,6 +242,7 @@ lanzar; node test/fiscal-nomina-extras.mjs > "$SALIDA/fiscal-nomina-extras.txt" 
 lanzar; node test/fiscal-349-347.mjs > "$SALIDA/fiscal-349-347.txt" 2>&1 & PF349=$!
 lanzar; node test/movil-oferta-cocina.mjs > "$SALIDA/movilofco.txt" 2>&1 & PMOFC=$!
 lanzar; node test/cambio-contrasena.mjs > "$SALIDA/cambiocontra.txt" 2>&1 & PCAMPIN=$!
+lanzar; node test/sincronia-global.mjs > "$SALIDA/sincronia-global.txt" 2>&1 & PSINCGLO=$!
 lanzar; node test/pin-h3.mjs > "$SALIDA/pinh3.txt" 2>&1 & PPINH3=$!
 lanzar; node test/tpv-scroll.mjs > "$SALIDA/tpvscroll.txt" 2>&1 & PTPVSC=$!
 lanzar; node test/tpv-tomar-nota-pda.mjs > "$SALIDA/tpvpda.txt" 2>&1 & PTPVPDA=$!
@@ -572,5 +573,6 @@ espera $PFNEX "Fiscal, horas extra y pluses: base de cotización con tope, solid
 espera $PF349 "Fiscal, 349 intracomunitarias, comisiones de delivery en el 347 (con NIF, ISP y umbral) y avisos de módulos, con cuentas a mano" "$SALIDA/fiscal-349-347.txt" "los [0-9]+ casos pasaron"
 espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
+espera $PSINCGLO "Sincronía global (Y6): «Visto» y aviso de archivar por negocio, lápida de negocio no pisada, área de empleado, espejo público tras la nube, huella de nube por negocio" "$SALIDA/sincronia-global.txt" "todos los casos pasaron"
 espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"
 exit $FALLOS
