@@ -14,7 +14,11 @@ function isPastTodayClosingTime(){
     const horarioHoy = horarioDiaDe(todayStr());   // incluye cierres y horario especial de hoy
     if(!horarioHoy || horarioHoy.abierto===false) return false;
     const tramos = horarioHoy.modo==='seguido' ? [horarioHoy.seguido] : (horarioHoy.turnos||[]);
-    const toMin = hhmm => { const [h,m] = (hhmm||'').split(':').map(Number); return isNaN(h)?null:h*60+(m||0); };
+    /* Una hora VACÍA no es medianoche: ''.split(':') da [''] y Number('') es 0,
+       así que un turno sin hora de fin contaba como cierre a las 00:00 y el
+       aviso «cierre de caja pendiente» salía TODO el día. Sin hora, no hay
+       cierre que comparar. */
+    const toMin = hhmm => { if(!hhmm) return null; const [h,m] = String(hhmm).split(':').map(Number); return isNaN(h)?null:h*60+(m||0); };
     const now = new Date();
     const nowMin = now.getHours()*60+now.getMinutes();
     const fins = tramos.map(tr => toMin(tr && tr.fin)).filter(f => f!=null);

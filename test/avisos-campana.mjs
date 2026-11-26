@@ -39,6 +39,12 @@ await caso('Sin nada pendiente: sin número y el panel dice «Todo al día»', a
   assert.match(await page.evaluate(() => document.getElementById('avisos-cuerpo').innerText), /Todo al día/);
   await page.evaluate(() => { window.avisosDeLaApp = window.__avisosReal; });
   // El negocio de prueba trae de serie 3 avisos reales (plagas, facturas vencidas, cierre de caja): de ahí se cuenta.
+  // El de «cierre de caja pendiente» depende de DOS cosas que la prueba fija a mano, para no depender de la hora a la que se corra:
+  //  · que ya haya pasado la hora de cierre (el seed no trae horarios válidos: los turnos salen sin hora de fin);
+  //  · que el seed traiga ventas de HOY (demo/sembrar.js genera «el día de hoy a medias»). Un dist/ggburger.json de otro día no las trae.
+  const ventasHoy = await page.evaluate(() => getSalesForClosure().length);
+  assert.ok(ventasHoy > 0, 'el fixture dist/ggburger.json no tiene ventas de hoy (está viejo): regenerarlo con node demo/generar-ggburger-json.mjs');
+  await page.evaluate(() => { window.isPastTodayClosingTime = () => true; });
   await page.evaluate(() => avisosPintar()); await w(300);
   base = Number(await badge(page)) || 0; assert.equal(base, 3, 'la línea base cambió: ' + base);
 });

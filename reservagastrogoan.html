@@ -11,6 +11,10 @@
 @font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/schibsted-grotesk-500-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/schibsted-grotesk-600-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-mono-400-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
   :root{
     --ink:#1C1A17; --brand2:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
+    /* Oliva FIJO de la marca GastroGoan. --olive lo reescribe aplicarColoresMarca
+       con el color del negocio, y lo «elegido» no puede depender de eso (con una
+       marca roja se confundiría con «no disponible»). Lo elegido es oliva, no negro. */
+    --oliva-gg:#4A5D4E;
     --paper:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
     /* Mismo cambio que en la app: #8A857C se quedaba en 3,67:1 sobre
        blanco, por debajo del 4,5:1 legible, y aquí lo llevan las etiquetas
@@ -3626,14 +3630,12 @@ function renderReservaCalendar(){
         ${slots.map(s => {
           const libre = checkSlotFree(calDate, s, people);
           const selected = calSelectedTime === s;
-          // El color de "elegido" NO puede ser --olive: es el color de marca
-          // del negocio (personalizable), así que en un negocio con marca
-          // naranja/roja se confundía visualmente con "no disponible". El
-          // negro de aquí es el mismo que ya usan las pestañas Día/Semana/Mes
-          // para "esto es lo activo" — no depende de ninguna marca y nunca
-          // se puede confundir con el verde/rojo de disponibilidad.
+          // Lo elegido va en OLIVA (norma de la app: lo marcado o elegido es
+          // oliva, nunca negro), pero con --oliva-gg y no con --olive: --olive
+          // es el color de marca del negocio, y con una marca naranja/roja el
+          // hueco elegido se confundía con «no disponible».
           const estilo = selected
-            ? 'background:var(--olive);color:#fff;border-color:var(--olive)'
+            ? 'background:var(--oliva-gg);color:#fff;border-color:var(--oliva-gg)'
             : libre
               ? 'background:var(--green-l);border-color:var(--green);color:var(--ink)'
               : 'background:var(--red-l);border-color:var(--red);color:var(--red);text-decoration:line-through';
