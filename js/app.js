@@ -5811,6 +5811,11 @@ function plan360TareaReal(tk){
   return !!x && !/^\(?\s*contenido pendiente de definir\s*\)?\.?$/i.test(x);
 }
 function plan360TareasReales(d){ return ((d && d.tasks) || []).filter(plan360TareaReal); }
+// La descripción de una tarea tampoco puede ser el aviso interno: se esconde (el cliente no debe verlo nunca, esté donde esté).
+function plan360DescReal(tk){
+  const x = tk && typeof tk.description === 'string' ? tk.description.trim() : '';
+  return x && !/contenido pendiente de definir/i.test(x) ? x : '';
+}
 // Cuántos días de retraso se cuentan como máximo: pasado el día 28 el programa
 // ya terminó y «53 días de retraso» no dice nada útil, solo entierra el cierre.
 const PLAN360_DIAS_PROGRAMA = 28;
@@ -6475,7 +6480,7 @@ function plan360PlanAccionHtml(){
   prog.filter(d => d.phase === 'trabajo').forEach(d => plan360TareasReales(d).forEach(tk => tareas.push({day: d.day, tk})));
   const fecha = day => { try{ return plan360FechaLegible(plan360DateForDay(day)); }catch(e){ return ''; } };
   const casilla = tk => tk.status === 'hecha' ? '☑' : '☐';
-  const fila = x => `<tr><td class="c">${casilla(x.tk)}</td><td>${escapeHtml(x.tk.title || '')}${x.tk.description ? `<div class="m">${escapeHtml(x.tk.description).slice(0, 220)}</div>` : ''}</td><td class="f">${escapeHtml(fecha(x.day))}</td></tr>`;
+  const fila = x => `<tr><td class="c">${casilla(x.tk)}</td><td>${escapeHtml(x.tk.title || '')}${plan360DescReal(x.tk) ? `<div class="m">${escapeHtml(plan360DescReal(x.tk)).slice(0, 220)}</div>` : ''}</td><td class="f">${escapeHtml(fecha(x.day))}</td></tr>`;
   const orden = {prioritario: 0, esencial: 1, complementario: 2};
   const objs = objetivos.slice().sort((a, c) => (orden[a.prioridad] ?? 1) - (orden[c.prioridad] ?? 1));
   const ids = new Set(objs.map(o => o.id));
@@ -8048,7 +8053,7 @@ function plan360TaskRow(day, tk, i){
     <div class="pl-extra">
     ${obj ? `<div class="p360-tarea-obj"><span style="width:8px;height:8px;border-radius:50%;background:${plan360ObjPriorityColor(obj.prioridad)};flex:none"></span><span class="p360-tarea-obj-t">${escapeHtml(obj.titulo)}</span></div>` : ''}
     ${area ? `<div class="p360-tarea-area">${escapeHtml(gl(area.nombre))}</div>` : ''}
-    ${tk.description ? `<p class="p360-tarea-desc">${escapeHtml(tk.description)}</p>` : ''}
+    ${plan360DescReal(tk) ? `<p class="p360-tarea-desc">${escapeHtml(plan360DescReal(tk))}</p>` : ''}
     ${PLAN360_ENLACES[tk.enlace] ? `<button type="button" class="btn btn-sm btn-toque" style="margin:4px 0 8px" onclick="navigate('${tk.enlace}')"><i class="ti ti-arrow-right"></i> ${escapeHtml(gl({es:'Ir a ', ca:'Anar a ', en:'Go to '}) + gl(PLAN360_ENLACES[tk.enlace]))}</button>` : ''}
     ${tk.fileName ? `<div class="p360-tarea-file"><i class="ti ti-paperclip"></i> ${escapeHtml(tk.fileName)}</div>` : ''}
     ${!soloLec && plan360EsOwner() && (DB.employees || []).length ? `<div class="field" style="margin:4px 0 8px"><label>${escapeHtml(gl({es:'Pasar a un empleado', ca:'Passar a un empleat', en:'Hand to an employee'}))}</label>
