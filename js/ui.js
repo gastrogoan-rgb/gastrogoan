@@ -719,6 +719,14 @@ function finishTour(){
 
 /* ============== Centro de ayuda / Asistente ============== */
 const HELP_FAQS = [
+  { keywords:{es:['grupo','pedir en grupo','dividir la cuenta','cada uno paga','pagar mi parte','qr mesa grupo'],
+      ca:['grup','demanar en grup','dividir el compte','cadascú paga','pagar la meva part','qr taula grup'],
+      en:['group','group order','split the bill','everyone pays','pay my share','table qr group']},
+    answers:{
+      es:'El <strong>pedido en grupo</strong> deja que varios comensales de una mesa pidan desde su móvil (QR de mesa) y que cada uno pague su parte con tarjeta. Se enciende en <strong>Mi Negocio</strong>, en la tarjeta del QR de mesa (casilla «Pedido en grupo»); necesita tu nube propia y las reglas de Firebase al día, y la tarjeta te lo comprueba. En el TPV ves quién ha pedido, pagado o debe, puedes expulsar a alguien y, con todo cobrado, pulsas <strong>Cerrar mesa</strong>: no se cierra sola.',
+      ca:'La <strong>comanda en grup</strong> deixa que diversos comensals d\'una taula demanin des del seu mòbil (QR de taula) i que cadascú pagui la seva part amb targeta. S\'encén a <strong>El Meu Negoci</strong>, a la targeta del QR de taula (casella «Comanda en grup»); necessita el teu núvol propi i les regles de Firebase al dia, i la targeta t\'ho comprova. Al TPV veus qui ha demanat, pagat o deu, pots expulsar algú i, amb tot cobrat, prems <strong>Tancar taula</strong>: no es tanca sola.',
+      en:'<strong>Group ordering</strong> lets several guests at a table order from their phones (table QR) and each pay their own share by card. Turn it on in <strong>My Business</strong>, in the table QR card (the «Group ordering» checkbox); it needs your own cloud and up-to-date Firebase rules, and the card checks it for you. In the POS you see who ordered, paid or owes, you can remove someone and, once everything is collected, press <strong>Close table</strong>: it does not close by itself.'
+    }},
   { keywords:{es:['abrir mesa','abrir una mesa','mesa nueva','nueva mesa','tipo de cliente','cliente de paso'],
       ca:['obrir taula','obrir una taula','taula nova','nova taula','tipus de client','client de pas'],
       en:['open table','open a table','new table','customer type','walk-in']},

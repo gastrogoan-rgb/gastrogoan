@@ -213,6 +213,22 @@ await caso('Un hueco expulsado ya no pide ni paga «como» nadie; el camarero ci
   assert.equal(cierre.ventas, 1, 'cerrar la mesa no la ha cobrado como una venta');
 });
 
+await caso('Mi Negocio: la casilla «Pedido en grupo» existe, el aviso de reglas sale en ámbar y guardar la tarjeta del QR NO borra el grupo', async () => {
+  const r = await app.evaluate(() => {
+    getCloudConfig = () => ({apiKey: 'x', databaseURL: 'https://x'}); getTenantId = () => 'T'; getPublicClientLink = () => 'https://r.test/?neg=p';
+    reglasGrupo = false;
+    const html = renderTableQrCard();
+    saveDB = () => {}; syncPublicMirror = () => {}; renderMiNegocio = () => {};
+    const antes = JSON.stringify(DB.business.qrMesa);
+    saveQrMesaConfig();   // lo que pasa al tocar cualquier otra casilla de la tarjeta
+    return {tiene: html.includes('id="mn-grupo-activo"'), aviso: /paso más en tu Firebase|one more step|pas més/.test(html) && html.includes('abrirAsistenteReglas'), grupo: DB.business.qrMesa.grupo, min: DB.business.qrMesa.grupoMinPago};
+  });
+  assert.ok(r.tiene, 'no hay casilla'); assert.ok(r.aviso, 'no avisa de las reglas ni ofrece el asistente');
+  assert.equal(r.grupo, true); assert.equal(r.min, 5);
+  const apagada = await app.evaluate(() => { const g = grupoMesaConfig(); DB.business.qrMesa = {activo: true, cobroLocal: true}; const x = grupoMesaConfig().activo; return x; });
+  assert.equal(apagada, false, 'un negocio sin la opción la tiene encendida: tiene que venir APAGADA por defecto');
+});
+
 await caso('Sin errores de JavaScript', async () => { assert.deepEqual(errs.filter(e => !/Failed to fetch|NetworkError|firebase is not defined/i.test(e)), []); });
 
 await browser.close(); web.kill();
