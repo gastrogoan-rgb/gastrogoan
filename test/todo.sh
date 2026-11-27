@@ -289,6 +289,8 @@ lanzar; node test/impresion.mjs > "$SALIDA/impresion.txt" 2>&1 & P102=$!
 lanzar; node test/leer-facturas.mjs > "$SALIDA/leer-facturas.txt" 2>&1 & P103=$!
 lanzar; node test/fiscal-rapido.mjs > "$SALIDA/fiscal-rapido.txt" 2>&1 & P120=$!
 lanzar; node test/qr-mesa.mjs > "$SALIDA/qr-mesa.txt" 2>&1 & P104=$!
+lanzar; node test/grupo-cuentas.mjs > "$SALIDA/grupo-cuentas.txt" 2>&1 & PGRUPOA=$!
+lanzar; node test/grupo-web.mjs > "$SALIDA/grupo-web.txt" 2>&1 & PGRUPOW=$!
 lanzar; node test/factura-pedido.mjs > "$SALIDA/factura-pedido.txt" 2>&1 & P111=$!
 lanzar; node test/preguntale.mjs > "$SALIDA/preguntale.txt" 2>&1 & P110=$!
 lanzar; node test/movil-nuevas.mjs > "$SALIDA/movil-nuevas.txt" 2>&1 & P112=$!
@@ -575,4 +577,6 @@ espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Coma
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
 espera $PSINCGLO "Sincronía global (Y6): «Visto» y aviso de archivar por negocio, lápida de negocio no pisada, área de empleado, espejo público tras la nube, huella de nube por negocio" "$SALIDA/sincronia-global.txt" "todos los casos pasaron"
 espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"
+espera $PGRUPOA "Pedido en grupo (app): reparto al céntimo, hueco verificado, precios de la carta, «mi parte» con propina, sobrante y hueco falso a «Pagos sin pedido», la mesa no se cierra sola, degradación" "$SALIDA/grupo-cuentas.txt" "los [0-9]+ casos del grupo"
+espera $PGRUPOW "Pedido en grupo (web): unirse, borradores sin precios, compartir plato, pagar mi parte, expulsado, desconexión a los 3 min y REST, 5 anchos × 3 idiomas" "$SALIDA/grupo-web.txt" "los [0-9]+ casos de la web de grupo"
 exit $FALLOS

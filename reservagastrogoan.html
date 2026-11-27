@@ -6476,7 +6476,7 @@ function grBorradorDe(s){
 }
 
 /* ── Conexión ── */
-let grEventosOn = false, grFirmaMiembros = '';
+let grEventosOn = false, grFirmaMiembros = '', grTimerConexion = null;
 function grEnganchar(){
   if(!grDisponible()) return;
   const ls = grLeerLS();
@@ -6488,7 +6488,7 @@ function grEnganchar(){
   ['click', 'keydown', 'touchstart', 'scroll'].forEach(ev => window.addEventListener(ev, grToque, {passive: true, capture: true}));
   document.addEventListener('visibilitychange', () => { if(document.hidden) grDormir(); else grDespertar(); });
   grTemporizador = setInterval(grVigilar, 15000);
-  setTimeout(() => { if(grConectado !== true && !grRestOn) grPasarARest(); }, 8000);
+  grTimerConexion = setTimeout(() => { if(grConectado !== true && !grRestOn) grPasarARest(); }, 8000);
 }
 // Si las reglas cortan la lectura (el grupo se está reiniciando: `grupo` pasa un instante a false), el oyente se cancela solo; se vuelve a poner.
 function grEscuchar(){
