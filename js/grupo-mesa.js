@@ -86,7 +86,7 @@ async function grupoVerificarSolicitud(req){
   if(!grupoMesaDisponible()) return false;
   const tbl = mesaPorTokenQr(req.mesaToken);
   if(!tbl || Number(slot.slice(1)) >= grupoMesaConfig().max) return false;
-  if(tbl.grupo && tbl.grupo.expulsados && tbl.grupo.expulsados[slot]) return false;
+  if(tbl.grupo && tbl.grupo.expulsados && (tbl.grupo.expulsados[slot] || Object.values(tbl.grupo.expulsados).includes(uid))) return false;
   const publicId = getPublicId();
   let m = null;
   for(let i = 0; i < 2 && !m; i++){
@@ -260,7 +260,8 @@ function grupoExpulsar(tableId, slot){
   if(!tbl || !GRUPO_SLOT_RE.test(slot)) return;
   if(!tbl.grupo) tbl.grupo = {sesion: Date.now(), comensales: {}, expulsados: {}};
   if(!tbl.grupo.expulsados) tbl.grupo.expulsados = {};
-  tbl.grupo.expulsados[slot] = true;
+  // Se guarda el uid del expulsado (opaco): así la web le impide reclamar OTRO hueco con la misma sesión, y la app rechaza sus pedidos y pagos.
+  tbl.grupo.expulsados[slot] = (tbl.grupo.comensales && tbl.grupo.comensales[slot] && tbl.grupo.comensales[slot].uid) || true;
   if(typeof logAudit === 'function') logAudit('edit', gl({es:'Grupo de mesa: se expulsa a ' + grupoNombreDe(tbl, slot) + ' (' + (tbl.name || '') + ')', ca:'Grup de taula: s\'expulsa ' + grupoNombreDe(tbl, slot) + ' (' + (tbl.name || '') + ')', en:'Table group: ' + grupoNombreDe(tbl, slot) + ' removed (' + (tbl.name || '') + ')'}));
   saveDB();
   if(typeof syncPublicMirror === 'function') syncPublicMirror();

@@ -8379,6 +8379,7 @@ function qrMesaLocalDisponible(){
   const c = qrMesaConfig();
   return c.local || c.sinElegir || !qrMesaTarjetaDisponible();
 }
+// Un comensal de un grupo YA verificado puede pedir sin pagar aunque el negocio solo cobre con tarjeta: pagará su parte al final (js/grupo-mesa.js).
 function asegurarTokenMesa(tbl){
   if(!tbl) return null;
   if(typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) tbl.qrToken = nuevoTokenMesaQr();
@@ -8544,7 +8545,7 @@ function recibirPedidoMesaQr(req){
     // Llegó SIN pagar. Si el negocio también cobra en el local, es un pedido normal (el comensal eligió pagar al camarero).
     // Si SOLO cobra con tarjeta (una página antigua guardada en el móvil, o alguien saltándose la web): nunca entra solo en cocina;
     // queda para que el camarero lo mire y, si lo acepta, cobre en la mesa.
-    if(!qrMesaLocalDisponible()){
+    if(!qrMesaLocalDisponible() && !gv){
       p.sinPago = true;
       DB.pedidosMesaQr.push(p);
       return p;
