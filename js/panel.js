@@ -666,6 +666,14 @@ function avisosLista(){
   if(dueno && typeof reglasAntiguas !== 'undefined' && reglasAntiguas) filas.push({id: 'reglas', icon: 'ti-shield-exclamation', warn: true,
     html: gl({es: 'Las reglas de seguridad de tu Firebase están desactualizadas', ca: 'Les regles de seguretat del teu Firebase estan desactualitzades', en: 'Your Firebase security rules are out of date'}),
     acciones: [[gl({es: 'Actualizar (2 min)', ca: 'Actualitzar (2 min)', en: 'Update (2 min)'}), 'cerrarAvisos(); abrirAsistenteReglas()', true]]});
+  /* Reglas que funcionan pero son más permisivas de lo debido (sin los topes de seguridad del aforo): informativo, solo propietario. «Visto» lo
+     oculta una semana POR NEGOCIO (el contador es el nº de semana: al cambiar, vuelve a salir). No aparece si ya hay el aviso rojo de reglas antiguas. */
+  if(dueno && typeof reglasSinTopes !== 'undefined' && reglasSinTopes === true && !(typeof reglasAntiguas !== 'undefined' && reglasAntiguas)){
+    const semana = Math.floor(Date.now() / (7 * 86400000));
+    if(vistos.reglasTopes !== semana) filas.push({id: 'reglasTopes', icon: 'ti-shield-exclamation', warn: false, count: semana, ocultable: true,
+      html: gl({es: 'Tu Firebase todavía no tiene los topes de seguridad nuevos (protegen tu aforo de abusos): actualiza las reglas', ca: 'El teu Firebase encara no té els topalls de seguretat nous (protegeixen el teu aforament d\'abusos): actualitza les regles', en: 'Your Firebase does not have the new safety limits yet (they protect your capacity from abuse): update your rules'}),
+      acciones: [[gl({es: 'Actualizar (2 min)', ca: 'Actualitzar (2 min)', en: 'Update (2 min)'}), 'cerrarAvisos(); abrirAsistenteReglas()', true]]});
+  }
   avisosDeLaApp().filter(i => i.campana && i.count > 0 && (dueno || (!i.soloDueno && !(AVISOS_SOLO_SALA.has(i.id) && areaEmp !== 'sala')))).forEach(i => {
     if(i.ocultable && vistos[i.id] === i.count) return;
     filas.push({id: i.id, icon: i.icon, warn: !!i.warn, html: '<strong>' + i.count + '</strong> · ' + i.label, ir: i.onclick, ocultable: i.ocultable, count: i.count});

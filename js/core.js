@@ -5656,8 +5656,9 @@ async function reglasComprobar(auto){
   espejoEnNubePropia = null; esperandoVeredictoDelEspejo = false;
   let resultado = 'error';
   try{
+    topesForzar = true;
     await comprobarEspejoEnNubePropia();
-    if(!reglasAntiguas && espejoEnNubePropia === true) resultado = 'ok';
+    if(!reglasAntiguas && espejoEnNubePropia === true) resultado = reglasSinTopes === true ? 'viejas' : 'ok';   // pegó unas reglas que aún no llevan los topes: no es «Listo»
     else if(espejoEnNubePropia === false || reglasAntiguas) resultado = lastSyncErrorCode && !/PERMISSION/i.test(String(lastSyncErrorCode)) ? 'error' : 'viejas';
   }catch(e){ resultado = 'error'; }
   reglasVeredicto = resultado;
@@ -7727,6 +7728,56 @@ let reglasAntiguas = false;
    Con las reglas del repositorio la sonda pasa entera contra el emulador, así que si falla en una nube real es que lo PUBLICADO allí no es
    lo mismo: ver este dato en el asistente dice cuál de los nodos no tiene permiso. */
 let reglasFallo = null;
+/* Reglas demasiado PERMISIVAS (26/11): la sonda de arriba solo veía las que se quedan cortas (falta un permiso). Un negocio con las reglas de
+   antes del endurecimiento (14/09 y 25/11: topes del aforo y de los pedidos, que impiden bloquear la agenda desde fuera) lo tiene todo
+   funcionando y no se enteraba de nada.
+   ⚠️ Es una variable APARTE de `reglasAntiguas` a propósito: `reglasAntiguas` devuelve el espejo a la nube compartida, y un negocio con
+   reglas de septiembre que hoy va bien en su propia nube NO debe degradarse por esto. Solo avisa; no bloquea ni cambia el espejo.
+   null = no se sabe · true = la nube ACEPTÓ una escritura que unas reglas con topes rechazan · false = rechazadas (con topes). */
+let reglasSinTopes = null;
+let reglasSinTopesFallo = null;   // {paso, msg} de la escritura que Firebase aceptó
+let topesForzar = false;          // lo pone el asistente de reglas: la próxima sonda salta el «una vez al día»
+let TOPES_ESPERA_MS = 8000;       // sin respuesta en este tiempo = «no se sabe» (Firebase no rechaza al estar sin red: se queda esperando)
+const TOPES_LS = 'gastrogoan_reglas_topes';   // por negocio (lsClaveDeNegocio): {dia, sinTopes}
+function topesGuardado(){
+  try{ const v = JSON.parse(localStorage.getItem(lsClaveDeNegocio(TOPES_LS)) || 'null'); return v && typeof v === 'object' ? v : null; }catch(e){ return null; }
+}
+/* Escribe valores que unas reglas CON topes rechazan, en claves de sonda propias (`_sondatopes_<aparato>`: nunca una fecha ni un turno
+   reales) y lo limpia SIEMPRE. Como mucho una vez al día por negocio (el resultado se recuerda); `forzar` lo salta (el asistente
+   «Actualizar mis reglas» lo usa tras pegar las nuevas).
+   Solo cuenta como «sin topes» cuando la escritura se ACEPTA. Un fallo que no es «permiso denegado» (red, tiempo agotado) no dice nada.
+   No se comprueba `tenantLookup` (reglas de la PLATAFORMA): reescribir una referencia de sonda con otra URL no se puede deshacer desde la
+   app —con las reglas nuevas ni el borrado se permite a un cliente— y dejaría basura permanente en la nube compartida por cada negocio. */
+async function ggComprobarTopesDeReglas(base, forzar){
+  const hoy = new Date().toISOString().slice(0, 10);
+  const g = topesGuardado();
+  if(reglasSinTopes === null && g) reglasSinTopes = !!g.sinTopes;
+  if(!forzar && g && g.dia === hoy) return;
+  const id = getOrCreateDeviceId();
+  const pruebas = [
+    ['aforoHold (tope del aforo)', base.child('aforoHold/_sondatopes_' + id + '/_prueba'), 60],   // por encima del tope de 50 de las reglas actuales
+    ['pedidosHold (tope de pedidos)', base.child('pedidosHold/_sondatopes_' + id + '/_prueba'), 2],   // las actuales solo dejan subir de 1 en 1
+  ];
+  const limite = p => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('tiempo agotado')), TOPES_ESPERA_MS))]);
+  const res = [];
+  try{
+    for(const [paso, ref, valor] of pruebas){
+      try{ await limite(ref.set(valor)); res.push({paso, aceptada: true}); }
+      catch(e){ res.push({paso, aceptada: false, permiso: ggEsPermisoDenegado(e), msg: String((e && e.message) || e)}); }
+    }
+  }finally{
+    for(const [, ref] of pruebas){ try{ await limite(ref.remove()); }catch(e){} }
+  }
+  const aceptada = res.find(r => r.aceptada);
+  let veredicto = null;
+  if(aceptada) veredicto = true;
+  else if(res.every(r => r.permiso)) veredicto = false;
+  if(veredicto === null) return;   // no se sabe: se queda como estaba y se vuelve a intentar en el próximo arranque
+  reglasSinTopes = veredicto;
+  reglasSinTopesFallo = veredicto ? {paso: aceptada.paso, msg: 'aceptada sin tope'} : null;
+  try{ localStorage.setItem(lsClaveDeNegocio(TOPES_LS), JSON.stringify({dia: hoy, sinTopes: veredicto})); }catch(e){}
+  if(typeof avisosProgramar === 'function') avisosProgramar();
+}
 // La web pública (reservagastrogoan.html) anota aquí, en la propia nube del
 // negocio, cuando algún cliente se quedó sin poder cargar la carta durante
 // más de 8 segundos: puede ser un pico real de gente mirándola a la vez
@@ -7880,6 +7931,8 @@ async function comprobarEspejoEnNubePropia(){
       try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
       await ggLimpiarSondaRequest(base.child('requests/_sondamesa_' + sondaId));
     }
+    // Reglas permisivas (sin topes): solo si lo demás pasó, y NUNCA toca `reglasAntiguas` ni el espejo. Un fallo aquí no cuenta como nada.
+    if(!reglasAntiguas){ try{ const forzar = topesForzar; topesForzar = false; await ggComprobarTopesDeReglas(base, forzar); }catch(e){ console.warn('No se pudieron comprobar los topes de las reglas', e && e.message); } }
     return true;
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
