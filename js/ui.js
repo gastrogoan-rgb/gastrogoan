@@ -2813,8 +2813,22 @@ function ggRutaPagina(fn){
   fn();
   if(ggRutaId != null) ggRutaMarca(ggRutaVista(), true);
 }
+// Paneles y menús que se abren ENCIMA de una pantalla sin ser ventana (chat, ayuda, campana de avisos, menú «⋯»): «atrás» los
+// cierra en vez de sacar de la pantalla (26/11; `test/atras-paneles.mjs`). Devuelve true si cerró alguno.
+function ggRutaCerrarCapaAbierta(){
+  const abierto = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('active')); };
+  if(typeof ggMenuAbierto !== 'undefined' && ggMenuAbierto){ ggCerrarMenuAcciones(); return true; }
+  if(abierto('avisos-panel')){ cerrarAvisos(); return true; }
+  if(abierto('chat-panel')){ toggleChatPanel(); return true; }
+  if(abierto('help-panel')){ toggleHelpPanel(); return true; }
+  return false;
+}
 if(typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('popstate', ev => {
+    if(!document.getElementById('gg-salida-sobre') && ggRutaCerrarCapaAbierta()){
+      try{ history.pushState(ggRutaEstado(), '', '#' + ggRutaVista()); }catch(e){}
+      return;
+    }
     // «Atrás» con una ventana abierta (18/11): cierra la ventana en vez de sacar de la pantalla. Sin tocar openModal/closeModal (un
     // intento anterior que añadía una entrada al historial por ventana rompía el aviso de «cambios sin guardar» en la ventana
     // siguiente): el navegador ya retrocedió, así que se vuelve a poner la entrada de ESTA pantalla y se cierra la ventana por el
