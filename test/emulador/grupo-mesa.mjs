@@ -18,7 +18,7 @@ const w = ms => new Promise(r => setTimeout(r, ms));
 async function nueva(){
   const ctx = await (browser.createBrowserContext ? browser.createBrowserContext() : browser.createIncognitoBrowserContext());
   const p = await ctx.newPage(); await p.setViewport({width: 390, height: 900}); await p.setCacheEnabled(false);
-  p.errs = []; p.on('pageerror', e => p.errs.push(e.message));
+  p.errs = []; p.avisos = []; p.on('pageerror', e => p.errs.push(e.message)); p.on('console', m => { if(m.type() === 'warning' || m.type() === 'error') p.avisos.push(m.text().slice(0, 200)); });
   await p.setRequestInterception(true);
   p.on('request', req => {
     const m = req.url().match(/gstatic\.com\/firebasejs\/[\d.]+\/(firebase-[a-z-]+\.js)/);
@@ -46,6 +46,9 @@ await app.evaluate(async ([code, dburl]) => {
   DB.business.qrMesa = {activo: true, cobroLocal: true, aceptaCamarero: false, grupo: true, grupoMinPago: 5};
   await saveDB();
 }, [CODE, DB_NEGOCIO]);
+// Un emulador que sobrevivió a una pasada anterior conserva sus datos: se parte siempre de la mesa vacía (ANTES de que la app publique).
+await fetch(`http://127.0.0.1:9000/gastrogoan/public/${await app.evaluate(() => getPublicId())}.json?ns=${NS}`, {method: 'DELETE', headers: {Authorization: 'Bearer owner'}});
+await fetch(`http://127.0.0.1:9000/gastrogoan/tenants/${await app.evaluate(() => getTenantId())}.json?ns=${NS}`, {method: 'DELETE', headers: {Authorization: 'Bearer owner'}});
 await app.reload({waitUntil: 'domcontentloaded'}); await w(9000);
 const publicId = await app.evaluate(() => getPublicId());
 const TOKEN = await app.evaluate(() => { DB.tables.forEach(asegurarTokenMesa); saveDB(); return DB.tables[0].qrToken; });
@@ -115,17 +118,19 @@ await caso('«Pagar mi parte»: Ana anuncia su pago por el buzón real; al confi
   await app.evaluate(r => { aplicarPagoMesaQr({orderRef: r, createdAt: new Date().toISOString()}, 21, () => {}); saveDB(); syncPublicMirror(); }, ref);
   await w(3500);
   const o = await app.evaluate(() => { const o = getOpenOrderForTable(1); return {abierta: !!o, pend: cuentaMesaQr(o).pendiente, propina: o.propinaPagadaOnline, ventas: DB.sales.length}; });
-  assert.deepEqual(o, {abierta: true, pend: 0, propina: 1, ventas: 0});
+  // Quedan 9 € de la ensalada del ajeno (sin dueño): no se reparte, la cobra el camarero en caja.
+  assert.deepEqual(o, {abierta: true, pend: 9, propina: 1, ventas: 0});
   const t = await ana.evaluate(() => document.getElementById('gr-pago').innerText);
   assert.match(t, /pagada|Gracias/i, 'Ana no ve que su parte está pagada: ' + t);
 });
 
 await caso('Al cerrar la mesa la tablet limpia el grupo: ni miembros ni borradores de la cuadrilla anterior', async () => {
+  await app.evaluate(() => { const o = getOpenOrderForTable(1); o.items = o.items.filter(l => l.comensal); });   // el camarero anula lo del ajeno
   await app.evaluate(() => grupoCerrarMesa(getOpenOrderForTable(1).id)); await w(500);
   await app.evaluate(() => { saveDB(); syncPublicMirror(); }); await w(6000);
   assert.equal(await app.evaluate(() => !!getOpenOrderForTable(1)), false, 'la mesa no se ha cerrado');
   const g = await admin('mesaGrupo/' + TOKEN);
-  assert.equal(g, null, 'quedan datos del grupo anterior: ' + JSON.stringify(g));
+  assert.equal(g, null, 'quedan datos del grupo anterior: ' + JSON.stringify(g) + ' · tbl.grupo=' + JSON.stringify(await app.evaluate(() => DB.tables[0].grupo)) + ' · avisos=' + app.avisos.slice(-3).join(' | '));
   const n = await admin('mesaQr/' + TOKEN);
   assert.equal(n && n.grupo, true, 'tras limpiar, la mesa tiene que volver a ofrecer el grupo (la siguiente cuadrilla)');
 });

@@ -8452,7 +8452,12 @@ function publicarMesasQr(espejoApp, publicId){
   if(cfg.activo){
     (DB.tables || []).forEach(tbl => {
       if(!tbl || typeof tbl.qrToken !== 'string' || tbl.qrToken.length < 16) return;
-      if(typeof grupoMantenerMesa === 'function') grupoMantenerMesa(tbl, espejoApp, publicId);
+      // Si el grupo de esta mesa se está limpiando, NO se republica la mesa en esta pasada: un `grupo:true` que llegara entre medias haría que las
+      // reglas rechazaran el borrado. Se republica sola al terminar (grupoMantenerMesa llama a syncPublicMirror).
+      if(typeof grupoMantenerMesa === 'function' && grupoMantenerMesa(tbl, espejoApp, publicId)){
+        [tbl.qrToken].concat(Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(tok => { if(typeof tok === 'string' && tok.length >= 16) vivos.add(tok); });
+        return;
+      }
       const data = cuentaPublicaMesa(tbl);
       const firma = JSON.stringify(Object.assign({}, data, {updatedAt: 0}));
       [tbl.qrToken].concat(Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).forEach(tok => {

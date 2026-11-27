@@ -185,14 +185,14 @@ async function grupoLimpiarToken(app, publicId, tok){
 }
 let grupoRepublicarT = null;
 function grupoMantenerMesa(tbl, espejoApp, publicId){
-  if(!tbl || !tbl.grupo) return;
+  if(!tbl || !tbl.grupo) return false;
   const order = typeof getOpenOrderForTable === 'function' ? getOpenOrderForTable(tbl.id) : null;
   if(order && order.grupo) tbl.grupo.conPedido = true;
   const caducado = !order && Date.now() - (tbl.grupo.sesion || 0) > 12 * 3600 * 1000;
   const cerrada = !order && tbl.grupo.conPedido === true;
   // «Apagado» es una decisión del negocio (casilla o QR), no un «todavía no sé»: mientras la sonda no ha contestado no se toca nada.
   const apagado = !grupoMesaConfig().activo || !qrMesaConfig().activo;
-  if(!(cerrada || caducado || apagado)) return;
+  if(!(cerrada || caducado || apagado)) return false;
   delete tbl.grupo;
   const tokens = [tbl.qrToken].concat(Array.isArray(tbl.qrAlias) ? tbl.qrAlias : []).filter(x => typeof x === 'string' && x.length >= 16);
   Promise.all(tokens.map(tok => grupoLimpiarToken(espejoApp, publicId, tok))).then(() => {
@@ -200,6 +200,7 @@ function grupoMantenerMesa(tbl, espejoApp, publicId){
     grupoRepublicarT = setTimeout(() => { if(typeof syncPublicMirror === 'function') syncPublicMirror(); }, 300);
   });
   if(typeof saveDB === 'function') saveDB();
+  return true;
 }
 
 /* ── El camarero ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
