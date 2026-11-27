@@ -124,6 +124,9 @@ for(const [quien, ns] of [['nube del negocio', NS_NEG], ['plataforma', NS_PLAT]]
     assert.equal(await put(ns, R('r1'), A.tok, Object.assign({uid: B.uid, slot: 'm0'}, base)), 401, 'pedir «como» el uid de otro');
     assert.equal(await put(ns, R('r2'), A.tok, Object.assign({uid: A.uid, slot: 'm0'}, base)), 200, 'el propio uid');
     assert.equal(await put(ns, R('r3'), A.tok, base), 200, 'sin uid: una web anterior sigue pudiendo pedir');
+    // La app (otra sesión, otro uid) RECLAMA y borra la solicitud de un comensal: el uid solo se exige al crearla.
+    assert.equal(await put(ns, R('r2') + '/_claimedAt', B.tok, Date.now()), 200, 'la app no puede reclamar el pedido de un comensal (su uid no es el de la solicitud)');
+    assert.equal(await del(ns, R('r2'), B.tok), 200, 'la app no puede borrar la solicitud ya reclamada');
     assert.equal(await put(ns, R('r4'), A.tok, Object.assign({uid: A.uid, slot: 'm99'}, base)), 401, 'slot que no existe');
     assert.equal(await put(ns, R('r5'), A.tok, {type: 'pago_confirmado', createdAt: Date.now()}), 401, 'declararse pagado');
     assert.equal(await put(ns, R('r6'), A.tok, {type: 'pago_mesa', createdAt: Date.now(), uid: A.uid, slot: 'm1', importe: 5}), 200, 'anunciar un pago propio');
