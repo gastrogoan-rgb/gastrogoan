@@ -32,3 +32,7 @@ autoconsumo del titular a valor de mercado, IVA por canal (bebidas para llevar a
 ## Descartado por decisión del dueño (26/11)
 
 - **Finiquito/liquidación de temporales: DESCARTADO por decisión del dueño, es trabajo de gestoría.** No se implementa en la app ni se le plantean preguntas al gestor.
+
+## Fuente oficial consultada el 27/11 (sin gestor)
+- País Vasco, escala del IRPF 2025: coincide con la de Álava (Hacienda Foral de Álava, «Renta 2025») y de Gipuzkoa (tabla de gravamen del modelo 109 de 2025). Bizkaia no se pudo abrir (error 503): pendiente. Para el gestor: confirmar que la de Bizkaia 2025 es la misma y cómo se aplica la minoración de cuota de 1.583 € y las deducciones forales (la app aún las aproxima con los mínimos estatales).
+- Sin cerrar por no haber dato en la app o por ser trabajo grande: ejercicios 2022 y anteriores (15 escalas autonómicas), mínimos de ascendientes/discapacidad/mayores de 65 (la app no recoge esos datos del titular) y resultados extracooperativos de las cooperativas (hay que separarlos en la contabilidad).
