@@ -209,6 +209,28 @@ caso('Carta por QR: la cuenta de una mesa solo se lee sabiendo su token', () => 
   return 'por token, nunca el padre';
 });
 
+caso('Pedido en grupo: mesaGrupo y el uid de requests, ADITIVOS y en las cuatro copias idénticas', () => {
+  /* El grupo vive en `mesaGrupo/$token` con huecos de nombre fijo (m0…m11, l0…l29) porque las reglas no pueden contar hijos pero sí validar
+     el nombre de la clave. Nada de precios en el nodo, solo se lee con el grupo activado en `mesaQr/$token/grupo`, y un comensal no puede
+     pedir «como» el uid de otro. Sin tocar nada de lo anterior: un negocio SIN estas reglas sigue funcionando como siempre. */
+  const ramas = [negocio, plataforma, incrustadas, database].map(r => JSON.parse(r).rules.gastrogoan.public.$publicId);
+  ramas.forEach(pub => {
+    const g = pub.mesaGrupo && pub.mesaGrupo.$token;
+    assert.ok(g, 'falta mesaGrupo');
+    assert.equal(pub.mesaGrupo['.read'], undefined, 'mesaGrupo se puede listar entero');
+    assert.ok(g['.read'].includes("/grupo').val() === true") && g['.read'].includes('$token.length >= 16'), 'la lectura no exige el grupo activado y un token largo');
+    assert.ok(g.miembros.$slot['.validate'].includes('m([0-9]|1[01])') && g.miembros.$slot['.write'].includes('auth.uid'), 'el hueco no es de su dueño');
+    assert.ok(g.carritos.$slot.$linea['.validate'].includes('l([0-9]|[12][0-9])'), 'las líneas no tienen huecos fijos');
+    assert.ok(!JSON.stringify(g).includes('price') && !JSON.stringify(g).includes('precio'), 'el nodo compartido no puede llevar precios');
+    const v = pub.requests.$requestId['.validate'];
+    assert.ok(v.includes("newData.child('uid').val() === auth.uid"), 'requests no comprueba el uid');
+    assert.ok(!v.includes('pago_confirmado'), 'requests acepta pago_confirmado');
+  });
+  const base = JSON.stringify(ramas[0].mesaGrupo);
+  ramas.forEach(pub => assert.equal(JSON.stringify(pub.mesaGrupo), base, 'mesaGrupo difiere entre copias'));
+  return '4 copias iguales';
+});
+
 console.log('\n' + '═'.repeat(64));
-console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 13 casos pasaron`);
+console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 14 casos pasaron`);
 process.exit(fallos ? 1 : 0);
