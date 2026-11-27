@@ -5656,7 +5656,8 @@ async function reglasComprobar(auto){
   espejoEnNubePropia = null; esperandoVeredictoDelEspejo = false;
   let resultado = 'error';
   try{
-    await comprobarEspejoEnNubePropia({forzarTopes: true});
+    topesForzar = true;
+    await comprobarEspejoEnNubePropia();
     if(!reglasAntiguas && espejoEnNubePropia === true) resultado = reglasSinTopes === true ? 'viejas' : 'ok';   // pegó unas reglas que aún no llevan los topes: no es «Listo»
     else if(espejoEnNubePropia === false || reglasAntiguas) resultado = lastSyncErrorCode && !/PERMISSION/i.test(String(lastSyncErrorCode)) ? 'error' : 'viejas';
   }catch(e){ resultado = 'error'; }
@@ -7672,6 +7673,7 @@ let reglasFallo = null;
    null = no se sabe · true = la nube ACEPTÓ una escritura que unas reglas con topes rechazan · false = rechazadas (con topes). */
 let reglasSinTopes = null;
 let reglasSinTopesFallo = null;   // {paso, msg} de la escritura que Firebase aceptó
+let topesForzar = false;          // lo pone el asistente de reglas: la próxima sonda salta el «una vez al día»
 let TOPES_ESPERA_MS = 8000;       // sin respuesta en este tiempo = «no se sabe» (Firebase no rechaza al estar sin red: se queda esperando)
 const TOPES_LS = 'gastrogoan_reglas_topes';   // por negocio (lsClaveDeNegocio): {dia, sinTopes}
 function topesGuardado(){
@@ -7766,7 +7768,7 @@ function ggEsperarSesionNegocio(app, ms){
   });
 }
 const ggEsPermisoDenegado = e => /permission[_ ]denied/i.test(String((e && (e.code || e.message)) || e));
-async function comprobarEspejoEnNubePropia(opts){
+async function comprobarEspejoEnNubePropia(){
   const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
   const publicId = getPublicId();
   if(!cfg || !cfg.apiKey || !cfg.databaseURL || !publicId) return false;
@@ -7867,7 +7869,7 @@ async function comprobarEspejoEnNubePropia(opts){
       await ggLimpiarSondaRequest(base.child('requests/_sondamesa_' + sondaId));
     }
     // Reglas permisivas (sin topes): solo si lo demás pasó, y NUNCA toca `reglasAntiguas` ni el espejo. Un fallo aquí no cuenta como nada.
-    if(!reglasAntiguas){ try{ await ggComprobarTopesDeReglas(base, !!(opts && opts.forzarTopes)); }catch(e){ console.warn('No se pudieron comprobar los topes de las reglas', e && e.message); } }
+    if(!reglasAntiguas){ try{ const forzar = topesForzar; topesForzar = false; await ggComprobarTopesDeReglas(base, forzar); }catch(e){ console.warn('No se pudieron comprobar los topes de las reglas', e && e.message); } }
     return true;
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el

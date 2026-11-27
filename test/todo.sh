@@ -265,6 +265,7 @@ lanzar; node test/cocina-movil-1811b.mjs > "$SALIDA/cocinamovil1811b.txt" 2>&1 &
 lanzar; node test/buscadores-lupa.mjs > "$SALIDA/buscadoreslupa.txt" 2>&1 & P205=$!
 lanzar; node test/cierre-plataformas.mjs > "$SALIDA/cierreplataformas.txt" 2>&1 & P206=$!
 lanzar; node test/rendimiento-cobro.mjs > "$SALIDA/rendcobro.txt" 2>&1 & P207=$!
+lanzar; bash test/emulador/topes-reglas.sh > "$SALIDA/topesreglas.txt" 2>&1 & PTOPES=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -574,5 +575,6 @@ espera $PF349 "Fiscal, 349 intracomunitarias, comisiones de delivery en el 347 (
 espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
 espera $PSINCGLO "Sincronía global (Y6): «Visto» y aviso de archivar por negocio, lápida de negocio no pisada, área de empleado, espejo público tras la nube, huella de nube por negocio" "$SALIDA/sincronia-global.txt" "todos los casos pasaron"
+espera $PTOPES "Reglas permisivas (sonda de topes, emulador): con las reglas actuales no avisa; con las de antes del endurecimiento avisa sin degradar el espejo; sin residuos; red caída y fallos que no son permiso no avisan" "$SALIDA/topesreglas.txt" "las tres variantes en orden"
 espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"
 exit $FALLOS

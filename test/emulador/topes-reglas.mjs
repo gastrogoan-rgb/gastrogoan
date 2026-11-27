@@ -59,7 +59,7 @@ await caso('no queda ningún residuo en aforoHold ni pedidosHold', async () => {
 });
 await caso('forzada: el mismo veredicto, sin residuo y sin tocar reglasAntiguas ni el espejo', async () => {
   await quitarGuardado();
-  await p.evaluate(() => comprobarEspejoEnNubePropia({forzarTopes: true}));
+  await p.evaluate(() => { topesForzar = true; return comprobarEspejoEnNubePropia(); });
   const e = await estado();
   assert.equal(e.sinTopes, ESPERADO === 'sin'); assert.equal(e.antiguas, false); assert.equal(e.propia, true);
   assert.deepEqual(await residuo(), []);
@@ -123,7 +123,7 @@ await caso('con la red caída: no avisa, no guarda y al volver no queda residuo'
 });
 await caso('campana: ' + (ESPERADO === 'sin' ? 'sale la fila informativa con su botón, «Visto» la oculta y el aviso rojo de reglas antiguas NO sale' : 'no hay fila de topes'), async () => {
   await quitarGuardado();
-  await p.evaluate(() => comprobarEspejoEnNubePropia({forzarTopes: true}));
+  await p.evaluate(() => { topesForzar = true; return comprobarEspejoEnNubePropia(); });
   const f = await p.evaluate(() => avisosLista().filter(x => x.id === 'reglasTopes' || x.id === 'reglas'));
   if(ESPERADO === 'con'){ assert.equal(f.length, 0); return; }
   assert.equal(f.length, 1, JSON.stringify(f)); assert.equal(f[0].id, 'reglasTopes'); assert.equal(f[0].ocultable, true); assert.equal(f[0].warn, false);

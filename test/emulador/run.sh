@@ -149,6 +149,7 @@ echo
 node "$RAIZ/test/emulador/aparato-nuevo.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/qr-mesa-nube.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/sonda-reglas.mjs" || SALIDA=1
+node "$RAIZ/test/emulador/topes-reglas.mjs" || SALIDA=1   # con las reglas cargadas (por defecto las actuales); las variantes antiguas: topes-reglas.sh
 node "$RAIZ/test/emulador/espejo-sesion.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/plan360-sync.mjs" || SALIDA=1
 node "$RAIZ/test/emulador/holds-atacados.mjs" || SALIDA=1
