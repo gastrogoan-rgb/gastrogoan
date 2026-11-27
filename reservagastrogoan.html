@@ -1088,6 +1088,30 @@
     .tray-r{display:none}
     .tray-t{margin-left:auto}
   }
+  /* Pedido en grupo en la mesa (27/11): una fila por comensal, el nombre no se parte a media palabra, el estado se lee con texto (no solo con color). */
+  .gr-intro{margin:0 0 10px;font-size:14px;color:var(--body)}
+  .gr-peq{font-size:12px;color:var(--muted)}
+  .gr-lbl{margin:0 0 4px;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .gr-lista{list-style:none;margin:0 0 12px;padding:0}
+  .gr-m{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 0;border-top:1px solid var(--border)}
+  .gr-mn{font-weight:700;color:var(--ink);overflow-wrap:break-word;min-width:0}
+  .gr-tu{font-weight:400;color:var(--muted)}
+  .gr-me{font-size:13px;color:var(--body);text-align:right}
+  .gr-bor{grid-column:1/-1;list-style:none;margin:2px 0 0;padding:0 0 0 12px;border-left:2px solid var(--border);font-size:13px;color:var(--body)}
+  .gr-con{color:var(--muted)}
+  .gr-aviso{background:var(--red-l);color:var(--red);border:1px solid var(--red);padding:10px 12px;margin:0 0 12px;font-size:14px}
+  .gr-h3{margin:14px 0 6px;font-size:16px;color:var(--ink)}
+  .gr-parte{margin:0 0 8px;font-size:16px}
+  .gr-nota{font-size:13px;color:var(--muted);margin:8px 0}
+  .gr-salir,.gr-rec{min-height:44px;margin-top:12px}
+  .gr-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .gr-comp{margin:12px 0 0;border-top:1px solid var(--border);padding-top:8px}
+  .gr-comp summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:600;color:var(--ink)}
+  .gr-comp-l{padding:6px 0;border-top:1px solid var(--border)}
+  .gr-comp-n{display:block;font-size:14px;font-weight:600;margin-bottom:6px;overflow-wrap:break-word}
+  .gr-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .gr-chip{min-height:44px;padding:0 14px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);font:600 14px/1.2 inherit;font-family:inherit;cursor:pointer;overflow-wrap:break-word}
+  .gr-chip.on{background:var(--olive);color:#fff;border-color:var(--olive)}
 </style>
 </head>
 <body>
@@ -1649,6 +1673,70 @@ const I18N_ENT = {
   }
 };
 Object.keys(I18N_ENT).forEach(l => Object.assign(I18N[l], I18N_ENT[l]));
+/* Pedido en grupo en la mesa (27/11): textos de la web. Claves `gr.*` en es/ca/en (test/grupo-web.mjs exige las tres). Sin iconos de la fuente de la app. */
+const I18N_GR = {
+  es:{
+    'gr.titulo':'Pedir en grupo','gr.intro':'Cada uno pide desde su móvil y paga lo suyo. Veis lo que van eligiendo los demás.',
+    'gr.nombre':'Tu nombre (lo verán los demás de la mesa)','gr.nombre.ph':'Solo tu nombre de pila','gr.unirme':'Unirme a la mesa',
+    'gr.nombreFalta':'Escribe tu nombre (hasta 30 letras).','gr.yaEstan':'Ya están en la mesa:','gr.nadie':'Todavía no hay nadie. Sé el primero.',
+    'gr.tu':'tú','gr.pidiendo':'Eligiendo','gr.sinPedir':'Sin pedir todavía','gr.pagado':'Pagado','gr.debe':'Debe %s','gr.pagando':'Pagando…','gr.alDia':'Al día',
+    'gr.lleno':'La mesa está completa (máximo %s personas). Avisa al camarero.','gr.expulsado':'El camarero te ha sacado del grupo. Si es un error, díselo.',
+    'gr.reiniciado':'El grupo se ha reiniciado porque la mesa se ha cerrado. Vuelve a unirte para pedir.',
+    'gr.salir':'Salir del grupo','gr.borrador':'Eligiendo ahora (aún sin enviar)','gr.nada':'nada todavía',
+    'gr.compartir':'Compartir un plato','gr.compartirAy':'Marca con quién lo compartes: se divide a partes iguales. Los platos compartidos se pagan al final.',
+    'gr.conmigo':'yo','gr.compartidoCon':'Compartido con %s','gr.noCompartir':'Quitar',
+    'gr.pagarDespues':'Pagar mi parte al final (con tarjeta aquí o en el local)','gr.compartidoSinPagoAhora':'Con platos compartidos, tu parte se paga al final.',
+    'gr.tuParte':'Tu parte de la cuenta','gr.tuParteImp':'Tu parte: %s','gr.propina':'Propina','gr.sinPropina':'Sin propina','gr.otra':'Otra',
+    'gr.pagarParte':'Pagar mi parte · %s','gr.minimo':'El pago con tarjeta pide un mínimo de %s. Paga esta parte al camarero.',
+    'gr.pagoCurso':'Tienes un pago en curso: en unos segundos se confirma aquí.','gr.todoPagado':'Tu parte está pagada. ¡Gracias!',
+    'gr.sinParte':'Todavía no tienes nada que pagar.','gr.sinTarjeta':'Tu parte se paga al camarero.',
+    'gr.pagoOk':'Pago recibido. Tu parte se actualizará aquí en unos segundos.','gr.descPago':'Mesa %s · %s',
+    'gr.conexion':'Conexión limitada: se actualiza cada pocos segundos.','gr.dormido':'Te hemos desconectado por inactividad para ahorrar conexión.',
+    'gr.reconectar':'Volver a conectar','gr.errorUnir':'No hemos podido unirte a la mesa. Inténtalo de nuevo.','gr.vivo':'%s ha cambiado lo que elige.',
+    'gr.privacidad':'Los demás de la mesa verán tu nombre y lo que eliges antes de enviarlo.','gr.cuentaTitulo':'Cuenta por persona','gr.propinaImp':'Propina: %s'
+  },
+  ca:{
+    'gr.titulo':'Demanar en grup','gr.intro':'Cadascú demana des del seu mòbil i paga el seu. Veieu el que van triant els altres.',
+    'gr.nombre':'El teu nom (el veuran els altres de la taula)','gr.nombre.ph':'Només el teu nom de pila','gr.unirme':'Unir-me a la taula',
+    'gr.nombreFalta':'Escriu el teu nom (fins a 30 lletres).','gr.yaEstan':'Ja són a la taula:','gr.nadie':'Encara no hi ha ningú. Sigues el primer.',
+    'gr.tu':'tu','gr.pidiendo':'Triant','gr.sinPedir':'Encara sense demanar','gr.pagado':'Pagat','gr.debe':'Deu %s','gr.pagando':'Pagant…','gr.alDia':'Al dia',
+    'gr.lleno':'La taula és plena (màxim %s persones). Avisa el cambrer.','gr.expulsado':'El cambrer t\'ha tret del grup. Si és un error, digues-li.',
+    'gr.reiniciado':'El grup s\'ha reiniciat perquè la taula s\'ha tancat. Torna a unir-te per demanar.',
+    'gr.salir':'Sortir del grup','gr.borrador':'Triant ara (encara sense enviar)','gr.nada':'res encara',
+    'gr.compartir':'Compartir un plat','gr.compartirAy':'Marca amb qui el comparteixes: es divideix a parts iguals. Els plats compartits es paguen al final.',
+    'gr.conmigo':'jo','gr.compartidoCon':'Compartit amb %s','gr.noCompartir':'Treure',
+    'gr.pagarDespues':'Pagar la meva part al final (amb targeta aquí o al local)','gr.compartidoSinPagoAhora':'Amb plats compartits, la teva part es paga al final.',
+    'gr.tuParte':'La teva part del compte','gr.tuParteImp':'La teva part: %s','gr.propina':'Propina','gr.sinPropina':'Sense propina','gr.otra':'Una altra',
+    'gr.pagarParte':'Pagar la meva part · %s','gr.minimo':'El pagament amb targeta té un mínim de %s. Paga aquesta part al cambrer.',
+    'gr.pagoCurso':'Tens un pagament en curs: en uns segons es confirma aquí.','gr.todoPagado':'La teva part és pagada. Gràcies!',
+    'gr.sinParte':'Encara no tens res a pagar.','gr.sinTarjeta':'La teva part es paga al cambrer.',
+    'gr.pagoOk':'Pagament rebut. La teva part s\'actualitzarà aquí en uns segons.','gr.descPago':'Taula %s · %s',
+    'gr.conexion':'Connexió limitada: s\'actualitza cada pocs segons.','gr.dormido':'T\'hem desconnectat per inactivitat per estalviar connexió.',
+    'gr.reconectar':'Tornar a connectar','gr.errorUnir':'No t\'hem pogut unir a la taula. Torna-ho a provar.','gr.vivo':'%s ha canviat el que tria.',
+    'gr.privacidad':'Els altres de la taula veuran el teu nom i el que tries abans d\'enviar-ho.','gr.cuentaTitulo':'Compte per persona','gr.propinaImp':'Propina: %s'
+  },
+  en:{
+    'gr.titulo':'Order as a group','gr.intro':'Everyone orders from their own phone and pays their own share. You can see what the others pick.',
+    'gr.nombre':'Your name (the others at the table will see it)','gr.nombre.ph':'Just your first name','gr.unirme':'Join the table',
+    'gr.nombreFalta':'Enter your name (up to 30 letters).','gr.yaEstan':'Already at the table:','gr.nadie':'Nobody yet. Be the first.',
+    'gr.tu':'you','gr.pidiendo':'Choosing','gr.sinPedir':'Nothing ordered yet','gr.pagado':'Paid','gr.debe':'Owes %s','gr.pagando':'Paying…','gr.alDia':'All settled',
+    'gr.lleno':'The table is full (maximum %s people). Please tell the waiter.','gr.expulsado':'The waiter has removed you from the group. If it is a mistake, tell them.',
+    'gr.reiniciado':'The group was reset because the table was closed. Join again to order.',
+    'gr.salir':'Leave the group','gr.borrador':'Choosing now (not sent yet)','gr.nada':'nothing yet',
+    'gr.compartir':'Share a dish','gr.compartirAy':'Tick who you share it with: it is split equally. Shared dishes are paid at the end.',
+    'gr.conmigo':'me','gr.compartidoCon':'Shared with %s','gr.noCompartir':'Remove',
+    'gr.pagarDespues':'Pay my share at the end (by card here or at the venue)','gr.compartidoSinPagoAhora':'With shared dishes, your share is paid at the end.',
+    'gr.tuParte':'Your share of the bill','gr.tuParteImp':'Your share: %s','gr.propina':'Tip','gr.sinPropina':'No tip','gr.otra':'Other',
+    'gr.pagarParte':'Pay my share · %s','gr.minimo':'Card payments have a minimum of %s. Pay this share to the waiter.',
+    'gr.pagoCurso':'You have a payment in progress: it will be confirmed here in a few seconds.','gr.todoPagado':'Your share is paid. Thank you!',
+    'gr.sinParte':'You have nothing to pay yet.','gr.sinTarjeta':'Your share is paid to the waiter.',
+    'gr.pagoOk':'Payment received. Your share will update here in a few seconds.','gr.descPago':'Table %s · %s',
+    'gr.conexion':'Limited connection: it refreshes every few seconds.','gr.dormido':'You were disconnected for inactivity to save connection.',
+    'gr.reconectar':'Reconnect','gr.errorUnir':'We could not join you to the table. Please try again.','gr.vivo':'%s changed their choices.',
+    'gr.privacidad':'The others at the table will see your name and what you choose before sending it.','gr.cuentaTitulo':'Bill by person','gr.propinaImp':'Tip: %s'
+  }
+};
+Object.keys(I18N_GR).forEach(l => Object.assign(I18N[l], I18N_GR[l]));
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
 
 function setLang(lang){
@@ -1995,8 +2083,9 @@ function init(){
   }else if(pago === 'ok' && qrMesaToken){
     // Vuelta del banco tras pagar la cuenta de la mesa: se vuelve a la mesa,
     // donde la cuenta se actualiza sola en cuanto el banco lo confirma.
-    try{ const u = new URL(location.href); u.searchParams.delete('pago'); history.replaceState(null, '', u.toString()); }catch(e){}
-    qrMesaAviso = t('mesaqr.pagoOkPedido');
+    const eraParte = new URLSearchParams(location.search).get('gp') === '1';
+    try{ const u = new URL(location.href); u.searchParams.delete('pago'); u.searchParams.delete('gp'); history.replaceState(null, '', u.toString()); }catch(e){}
+    qrMesaAviso = t(eraParte ? 'gr.pagoOk' : 'mesaqr.pagoOkPedido');
   }else if(pago === 'ok'){
     document.getElementById('app').innerHTML = `
       <div class="success">
@@ -5285,11 +5374,13 @@ function mesaQrBotonActualizar(total){
   if(!b || b.getAttribute('onclick') !== 'submitMesaQrOrder()') return;
   mesaQrUltimoTotal = total;
   b.textContent = (qrMesaPagaConTarjeta() && total > 0) ? t('mesaqr.submitPagar').replace('%s', fmtMoney(total)) : t('mesaqr.submit');
+  const nc = document.getElementById('gr-nota-comp'); if(nc) nc.hidden = !grHayCompartidos();
 }
 function renderCartSummary(){
   // Lo que cambia con el carrito, esté donde esté el cliente: los controles de cada plato y el botón «Continuar».
   dishCtlRefreshAll();
   wzNavActualizar();
+  if(qrMesaToken) grSubirBorrador();   // en un grupo, lo que eliges lo ven los demás (sin precios); todo cambio del carrito pasa por aquí
   const box = document.getElementById('cart-summary');
   if(!box) return;
   const submitBtn = document.getElementById('o-submit');
@@ -5320,7 +5411,7 @@ function renderCartSummary(){
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p class="cl-warn">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
     ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
-    ${qrMesaToken && currentTab === 'mesa' ? '' : tipSelectorHtml()}
+    ${qrMesaToken && currentTab === 'mesa' ? grCompartirHtml() : tipSelectorHtml()}
   `;
   mesaQrBotonActualizar(total);
 }
@@ -6018,8 +6109,11 @@ function payWithCard(req, amount, description, refField, submitBtnId){
     headers: {'content-type':'application/json'},
     body: JSON.stringify({
       publicId, orderRef: ref, amount, description,
-      urlOk: base + seguimiento + '&pago=ok',
-      urlKo: base + '&pago=ko'
+      urlOk: base + seguimiento + '&pago=ok' + (req.type === 'pago_mesa' ? '&gp=1' : ''),
+      urlKo: base + '&pago=ko',
+      // En la mesa la sesión de pago caduca (30 min): el importe se fijó con la cuenta de ese momento y no debe poder pagarse horas después.
+      ...((req.type === 'pago_mesa' || req.type === 'pedido_mesa') ? {expiraMin: 30} : {}),
+      ...(req.slot ? {slot: req.slot} : {})
     })
   }).then(r => r.json()).then(data => {
     if(!data || !data.url || data.error){
@@ -6183,8 +6277,8 @@ function engancharCuentaMesaQr(){
     qrMesaCuenta = snap.val() || null;
     // Primera respuesta (o QR que deja de valer o vuelve): se pinta todo.
     // Después, solo la cuenta, para no borrar lo que el comensal pide.
-    if(antes === undefined || antes === null || !qrMesaCuenta){ if(currentTab === 'mesa') renderMesaQrForm(); }
-    else pintarCuentaMesaQr();
+    if(antes === undefined || antes === null || !qrMesaCuenta || (!!antes.grupo !== !!qrMesaCuenta.grupo)){ if(currentTab === 'mesa') renderMesaQrForm(); }
+    else{ pintarCuentaMesaQr(); grPintar(); grPintarPago(); }
   }, () => { qrMesaCuenta = null; if(currentTab === 'mesa') renderMesaQrForm(); });
 }
 // ¿Se paga al enviar el pedido? Lo decide el negocio; sin Stripe conectado no hay con qué cobrar y el QR solo sirve para pedir.
@@ -6198,11 +6292,11 @@ function qrMesaCobrosElegidos(){
 // ¿Se puede pagar con tarjeta al pedir? Marcado por el negocio Y Stripe conectado.
 function qrMesaTarjetaDisponible(){ return qrMesaCobrosElegidos().tarjeta && pagoOnlineActivo === true; }
 // ¿Se puede pedir sin pagar ahora (cobro en el local)? Si el negocio solo marcó tarjeta pero no hay Stripe, también: el QR no se queda sin servicio.
-function qrMesaLocalDisponible(){ const c = qrMesaCobrosElegidos(); return c.local || !qrMesaTarjetaDisponible(); }
+function qrMesaLocalDisponible(){ const c = qrMesaCobrosElegidos(); return c.local || !qrMesaTarjetaDisponible() || !!(grSlot && grDisponible()); }   // en un grupo siempre se puede pedir y pagar tu parte al final
 // Con las dos formas, el comensal elige (por defecto, tarjeta).
 let qrMesaPagoElegido = 'tarjeta', mesaQrUltimoTotal = 0;
 function qrMesaHayEleccion(){ return qrMesaTarjetaDisponible() && qrMesaLocalDisponible(); }
-function qrMesaPagaConTarjeta(){ return qrMesaTarjetaDisponible() && (!qrMesaLocalDisponible() || qrMesaPagoElegido === 'tarjeta'); }
+function qrMesaPagaConTarjeta(){ return qrMesaTarjetaDisponible() && !grHayCompartidos() && (!qrMesaLocalDisponible() || qrMesaPagoElegido === 'tarjeta'); }   // con platos compartidos, tu parte se paga al final
 function mesaQrElegirPago(v){ qrMesaPagoElegido = v === 'local' ? 'local' : 'tarjeta'; mesaQrBotonActualizar(mesaQrUltimoTotal); }
 function qrMesaActivo(){ return !!(DB.business && DB.business.qrMesa && DB.business.qrMesa.activo); }
 function renderMesaQrForm(){
@@ -6213,10 +6307,12 @@ function renderMesaQrForm(){
   engancharCuentaMesaQr();
   if(qrMesaCuenta === undefined){ box.innerHTML = `<div class="card"><div class="empty"><div class="spinner"></div>${t('mesaqr.cargando')}</div></div>`; return; }
   if(qrMesaCuenta === null){ box.innerHTML = `<div class="card"><div class="empty">${t('mesaqr.invalido')}</div></div>`; return; }
+  if(grDisponible()) grEnganchar();   // antes de pintar: recupera mi hueco guardado, para que los textos y el nombre salgan ya bien
   const cartas = getActiveCartasConPlatos();
   const hayCarta = cartas.length || getActiveMenusPublic().length;
   box.innerHTML = `
     ${qrMesaAviso ? `<div class="card" role="status" id="mesaqr-aviso" style="border:2px solid var(--green)"><strong>${escapeHtml(qrMesaAviso)}</strong></div>` : ''}
+    ${grDisponible() ? '<div class="card" id="gr-card"></div>' : ''}
     <div class="card">
       <h2>${escapeHtml(t('mesaqr.titulo').replace('%s', qrMesaCuenta.mesa || ''))}</h2>
       <p style="font-size:13px;color:var(--muted);margin-top:-6px">${t(qrMesaHayEleccion() ? 'mesaqr.introAmbos' : (qrMesaTarjetaDisponible() ? 'mesaqr.introPedido' : 'mesaqr.intro'))}</p>
@@ -6236,7 +6332,8 @@ function renderMesaQrForm(){
       ${qrMesaHayEleccion() ? `<div class="field" role="radiogroup" aria-labelledby="mq-como-pagas">
         <label id="mq-como-pagas">${t('mesaqr.comoPagas')}</label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0;min-height:44px"><input type="radio" name="m-pago-qr" value="tarjeta" ${qrMesaPagoElegido === 'tarjeta' ? 'checked' : ''} onchange="mesaQrElegirPago(this.value)"> <span>${t('mesaqr.pagarAhora')}</span></label>
-        <label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0;min-height:44px"><input type="radio" name="m-pago-qr" value="local" ${qrMesaPagoElegido === 'local' ? 'checked' : ''} onchange="mesaQrElegirPago(this.value)"> <span>${t('mesaqr.pagarLocal')}</span></label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0;min-height:44px"><input type="radio" name="m-pago-qr" value="local" ${qrMesaPagoElegido === 'local' ? 'checked' : ''} onchange="mesaQrElegirPago(this.value)"> <span>${escapeHtml(qrLabelLocal())}</span></label>
+        <p class="cl-hint" id="gr-nota-comp" hidden>${escapeHtml(t('gr.compartidoSinPagoAhora'))}</p>
       </div>` : ''}
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
         <input type="checkbox" id="o-privacy-consent" class="consent-check">
@@ -6247,8 +6344,11 @@ function renderMesaQrForm(){
     <div class="card" id="mesaqr-cuenta"></div>
   `;
   qrMesaAviso = '';
+  const nm = document.getElementById('m-name');
+  if(nm && grSlot && grMiembros()[grSlot]){ nm.value = grMiembros()[grSlot].n; nm.readOnly = true; }
   if(hayCarta) renderCartSummary();
   pintarCuentaMesaQr();
+  grPintar();
 }
 function pintarCuentaMesaQr(){
   const box = document.getElementById('mesaqr-cuenta');
@@ -6281,6 +6381,8 @@ function submitMesaQrOrder(){
   if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
   if(submittingRequest) return;
   if(!document.getElementById('o-privacy-consent').checked){ showInlineError(t('privacy.mustAccept')); return; }
+  const enGrupo = !!(grSlot && grDisponible() && grMiembros()[grSlot]);
+  if(grSlot && grExpulsado(grSlot)){ showInlineError(t('gr.expulsado')); return; }
   const alPedir = qrMesaPagaConTarjeta();
   const totalQr = Math.round(cart.reduce((s, l) => s + l.price * l.qty, 0) * 100) / 100;
   // Stripe no cobra menos de 0,50 €.
@@ -6293,10 +6395,12 @@ function submitMesaQrOrder(){
     notas: document.getElementById('m-notes').value.trim().slice(0, 300),
     // El precio que viaja es solo lo que vio el comensal: la app del negocio
     // lo vuelve a poner con su carta (revisarPreciosPedidoPublico).
-    items: cart.map(l => ({platoId: l.recipeId, name: l.name, price: l.price, qty: l.qty, modificadores: l.modificadores || undefined})),
+    items: cart.map(l => ({platoId: l.recipeId, name: l.name, price: l.price, qty: l.qty, modificadores: l.modificadores || undefined, reparto: (enGrupo && l.reparto && l.reparto.length) ? l.reparto : undefined})),
     total: cart.reduce((s, l) => s + l.price * l.qty, 0),
     createdAt: new Date().toISOString()
   };
+  // En un grupo el pedido dice de quién es: la app comprueba que ese uid es el dueño de ese hueco (nunca se fía de un nombre).
+  if(enGrupo){ req.slot = grSlot; req.uid = grUid(); req.clienteNombre = grMiembros()[grSlot].n; }
   // COBRO AL PEDIR: primero se pide el pago al Worker y SOLO si Stripe lo acepta se registra el pedido (con su referencia de
   // pago). La app del negocio no lo mete en cocina hasta que el banco confirme el cobro, y comprueba el importe contra su carta.
   if(alPedir){
@@ -6321,6 +6425,343 @@ function submitMesaQrOrder(){
     setBtnLoading('o-submit', false);
   });
 }
+
+/* ============ PEDIDO EN GRUPO EN LA MESA (27/11) ============
+   Solo se ofrece si la app del negocio lo publica en SU nodo de la mesa (`mesaQr/{token}.grupo === true`): ella solo lo hace con el grupo activado,
+   en su nube propia y con las reglas nuevas ya comprobadas escribiendo. Sin eso esta pantalla no existe y todo sigue como pedido normal.
+   · Estado compartido en `mesaGrupo/{token}`: un hueco por comensal (m0…m11) que solo escribe su dueño (su sesión anónima), con BORRADORES sin precios.
+   · Lo que se envía a cocina y lo que se cobra va por el buzón `requests` de siempre (pedido_mesa / pago_mesa), con `uid` y `slot` en claro: la app
+     comprueba que ese uid es el dueño de ese hueco y recalcula todo con su carta. Aquí NO se calcula ningún importe: «tu parte» se lee de lo que publica la app.
+   · Conexiones (el plan gratuito de Firebase aguanta ~100 a la vez): se escucha por socket solo mientras la pantalla esté visible y se toque; a los 3 minutos
+     sin tocar, o al ocultarse, se desconecta; si el socket no llega en 8 s, se consulta por REST cada 7 s. */
+const GR_SLOT_RE = /^m([0-9]|1[01])$/;
+const GR_INACTIVO_MS = 3 * 60 * 1000, GR_VIEJO_MS = 8 * 3600 * 1000, GR_REST_MS = 7000;
+let grSlot = null, grData = null, grListenerOn = false, grConectado = null, grOffline = false, grRestOn = false;
+let grUltimoToque = Date.now(), grTemporizador = null, grRestTimer = null, grSubSig = '', grSubT = null, grPulso = 0;
+let grNombreTmp = '', grTip = 0, grTipX = '', grAvisoUnir = '', grAvisoSesion = '', grCompAbierto = false, grFirmas = {};
+
+function grUid(){ try{ const u = firebase.auth().currentUser; return u ? u.uid : null; }catch(e){ return null; } }
+function grDisponible(){ return !!(qrMesaToken && qrMesaCuenta && qrMesaCuenta.grupo === true && qrMesaActivo() && grUid()); }
+function grMax(){ return Math.max(2, Math.min(12, Number(qrMesaCuenta && qrMesaCuenta.grupoMax) || 12)); }
+function grMin(){ const m = Number(qrMesaCuenta && qrMesaCuenta.grupoMin); return isFinite(m) && m >= 0 ? m : 5; }
+function grClaveLS(){ return 'gastrogoan_grupo_' + publicId + '_' + qrMesaToken; }
+function grLeerLS(){ try{ return JSON.parse(localStorage.getItem(grClaveLS()) || 'null'); }catch(e){ return null; } }
+function grGuardarLS(v){ try{ if(v) localStorage.setItem(grClaveLS(), JSON.stringify(v)); else localStorage.removeItem(grClaveLS()); }catch(e){} }
+function grBase(){ return 'gastrogoan/public/' + publicId + '/mesaGrupo/' + qrMesaToken; }
+const grNum = s => parseInt(String(s).slice(1)) || 0;
+// Los huecos con vida: uno sin latido en 8 h es de una cuadrilla anterior y cualquiera puede reclamarlo (las reglas lo permiten igual).
+function grMiembros(){
+  const m = (grData && grData.miembros) || {}, out = {}, ahora = Date.now();
+  Object.keys(m).forEach(s => { if(GR_SLOT_RE.test(s) && m[s] && typeof m[s].n === 'string' && ahora - (Number(m[s].ts) || 0) < GR_VIEJO_MS) out[s] = m[s]; });
+  return out;
+}
+function grExpulsado(s){ return !!(qrMesaCuenta && qrMesaCuenta.expulsados && qrMesaCuenta.expulsados[s]); }
+// Si el camarero me sacó, no puedo volver a entrar con la misma sesión por otro hueco (la app guarda el uid del expulsado en su hueco).
+function grSoyExpulsado(){
+  const e = (qrMesaCuenta && qrMesaCuenta.expulsados) || {}, uid = grUid();
+  return Object.keys(e).some(s => e[s] === uid || (s === grSlot));
+}
+function grPlatoNombre(p){
+  for(const c of (DB.cartas || [])) for(const sec of (c.secciones || [])){ const x = (sec.platos || []).find(y => String(y.id) === String(p)); if(x) return x.nombre; }
+  return '';
+}
+function grBorradorDe(s){
+  const c = (grData && grData.carritos && grData.carritos[s]) || {}, m = grMiembros();
+  return Object.keys(c).filter(k => /^l([0-9]|[12][0-9])$/.test(k)).sort((a, b) => grNum(a) - grNum(b)).map(k => {
+    const l = c[k]; if(!l) return null;
+    const nombre = grPlatoNombre(l.p); if(!nombre) return null;
+    const r = typeof l.r === 'string' ? l.r.split(',').filter(x => GR_SLOT_RE.test(x) && x !== s && m[x]).map(x => m[x].n) : [];
+    return {txt: (Number(l.q) || 1) + '× ' + nombre, con: r};
+  }).filter(Boolean);
+}
+
+/* ── Conexión ── */
+let grEventosOn = false, grFirmaMiembros = '';
+function grEnganchar(){
+  if(!grDisponible()) return;
+  const ls = grLeerLS();
+  if(!grListenerOn && ls && GR_SLOT_RE.test(ls.slot)){ grSlot = ls.slot; grNombreTmp = ls.n || ''; }
+  grEscuchar();
+  if(grEventosOn) return;
+  grEventosOn = true;
+  db.ref('.info/connected').on('value', s => { grConectado = s.val() === true; });
+  ['click', 'keydown', 'touchstart', 'scroll'].forEach(ev => window.addEventListener(ev, grToque, {passive: true, capture: true}));
+  document.addEventListener('visibilitychange', () => { if(document.hidden) grDormir(); else grDespertar(); });
+  grTemporizador = setInterval(grVigilar, 15000);
+  setTimeout(() => { if(grConectado !== true && !grRestOn) grPasarARest(); }, 8000);
+}
+// Si las reglas cortan la lectura (el grupo se está reiniciando: `grupo` pasa un instante a false), el oyente se cancela solo; se vuelve a poner.
+function grEscuchar(){
+  if(grListenerOn) return;
+  grListenerOn = true;
+  db.ref(grBase()).on('value', snap => { grData = snap.val() || {}; grAlRecibir(); }, () => {
+    grListenerOn = false; if(!grData) grData = {};
+    setTimeout(() => { if(grDisponible() && !grRestOn) grEscuchar(); }, 4000);
+  });
+}
+function grToque(){ grUltimoToque = Date.now(); if(grOffline) grDespertar(); }
+function grDormir(){
+  if(grOffline || grRestOn || submittingRequest) return;
+  try{ db.goOffline(); }catch(e){}
+  grOffline = true; grPintar();
+}
+function grDespertar(){
+  if(grRestOn){ grPoll(); return; }
+  if(!grOffline) return;
+  try{ db.goOnline(); }catch(e){}
+  grOffline = false; grUltimoToque = Date.now(); grPintar();
+}
+// Tras pagar y confirmarse, o con 3 minutos sin tocar, o con la pantalla oculta: se suelta la conexión. Al volver (un toque) se recupera sola.
+function grVigilar(){
+  if(grRestOn || grOffline) return;
+  const yo = grSlot && qrMesaCuenta && qrMesaCuenta.comensales && qrMesaCuenta.comensales[grSlot];
+  const liquidado = yo && Number(yo.pagado) > 0 && !(Number(yo.debe) > 0.009) && !(Number(yo.enCurso) > 0) && !cart.length;
+  if(document.hidden || Date.now() - grUltimoToque > (liquidado ? 20000 : GR_INACTIVO_MS)){ grDormir(); return; }
+  // Latido: sin él, a las 8 h otro puede reclamar el hueco. Cada 30 min, solo con la pantalla viva.
+  if(grSlot && Date.now() - grPulso > 30 * 60 * 1000){ grPulso = Date.now(); grEscribir(grBase() + '/miembros/' + grSlot + '/ts', Date.now()).catch(() => {}); }
+}
+function grPasarARest(){
+  if(grRestOn) return;
+  grRestOn = true;
+  try{ db.goOffline(); }catch(e){}
+  grOffline = false;
+  grPoll(); grRestTimer = setInterval(grPoll, GR_REST_MS);
+  grPintar();
+}
+async function grRest(metodo, path, cuerpo){
+  const tok = await firebase.auth().currentUser.getIdToken();
+  const u = new URL(db.app.options.databaseURL);
+  u.pathname = '/' + path + '.json'; u.searchParams.set('auth', tok);
+  const r = await fetch(u.toString(), {method: metodo, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo), cache: 'no-store'});
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function grPoll(){
+  try{
+    const [g, q] = await Promise.all([grRest('GET', grBase()), grRest('GET', 'gastrogoan/public/' + publicId + '/mesaQr/' + qrMesaToken)]);
+    grData = g || {};
+    if(q){ qrMesaCuenta = q; pintarCuentaMesaQr(); }
+    grAlRecibir();
+  }catch(e){ /* sin red: se vuelve a intentar en el siguiente ciclo */ }
+}
+function grEscribir(path, valor){
+  if(grRestOn) return grRest('PUT', path, valor);
+  if(grOffline){ try{ db.goOnline(); }catch(e){} grOffline = false; }
+  return db.ref(path).set(valor);
+}
+
+/* ── Qué pasa cuando llega algo ── */
+function grAlRecibir(){
+  const miembros = (grData && grData.miembros) || {};
+  if(grSlot){
+    const yo = miembros[grSlot];
+    if(!yo || yo.uid !== grUid()){
+      grAvisoSesion = (qrMesaCuenta && qrMesaCuenta.expulsados && qrMesaCuenta.expulsados[grSlot]) ? 'expulsado' : 'reiniciado';
+      grSlot = null; grGuardarLS(null);
+      if(currentTab === 'mesa') renderMesaQrForm();
+      return;
+    }
+    if(grExpulsado(grSlot)){
+      grAvisoSesion = 'expulsado'; grSlot = null; grGuardarLS(null);
+      if(currentTab === 'mesa') renderMesaQrForm();
+      return;
+    }
+  }
+  // Aviso para lectores de pantalla: alguien ha cambiado lo que elige (sin tocar el scroll ni repintar la carta).
+  let aviso = '';
+  const m = grMiembros();
+  Object.keys(m).forEach(s => {
+    const f = JSON.stringify((grData.carritos || {})[s] || null);
+    if(s !== grSlot && grFirmas[s] !== undefined && grFirmas[s] !== f) aviso = t('gr.vivo').replace('%s', m[s].n);
+    grFirmas[s] = f;
+  });
+  grPintar();
+  if(aviso){ const v = document.getElementById('gr-vivo'); if(v) v.textContent = aviso; }
+  // El selector de «compartir un plato» lista a los presentes: solo se repinta la cuenta si ha cambiado QUIÉN está (no en cada borrador).
+  const fm = Object.keys(m).map(s => s + m[s].n).join('|');
+  if(fm !== grFirmaMiembros){
+    grFirmaMiembros = fm;
+    if(document.getElementById('cart-summary') && !document.activeElement?.closest?.('#cart-summary')) renderCartSummary();
+  }
+}
+
+/* ── La tarjeta del grupo ── */
+function grEstadoTexto(s, tieneBorrador){
+  const c = qrMesaCuenta && qrMesaCuenta.comensales && qrMesaCuenta.comensales[s];
+  if(c && Number(c.enCurso) > 0) return t('gr.pagando');
+  if(c && Number(c.debe) > 0.009) return t('gr.debe').replace('%s', fmtMoney(Number(c.debe)));
+  if(c && Number(c.pagado) > 0) return t('gr.pagado');
+  return tieneBorrador ? t('gr.pidiendo') : t('gr.sinPedir');
+}
+function grHtml(){
+  const m = grMiembros(), yo = grSlot && m[grSlot];
+  const slots = Object.keys(m).sort((a, b) => grNum(a) - grNum(b));
+  let h = `<h2>${escapeHtml(t('gr.titulo'))}</h2>`;
+  if(grAvisoSesion === 'expulsado') h += `<p class="gr-aviso" role="alert">${escapeHtml(t('gr.expulsado'))}</p>`;
+  else if(grAvisoSesion === 'reiniciado') h += `<p class="gr-aviso" role="status">${escapeHtml(t('gr.reiniciado'))}</p>`;
+  if(!yo){
+    h += `<p class="gr-intro">${escapeHtml(t('gr.intro'))}</p>`;
+    h += slots.length ? `<p class="gr-lbl">${escapeHtml(t('gr.yaEstan'))}</p><ul class="gr-lista">${slots.map(s => `<li class="gr-m"><span class="gr-mn">${escapeHtml(m[s].n)}</span></li>`).join('')}</ul>` : `<p class="gr-intro">${escapeHtml(t('gr.nadie'))}</p>`;
+    const lleno = slots.length >= grMax() || grSoyExpulsado();
+    if(lleno){ h += `<p class="gr-aviso" role="status">${escapeHtml(grSoyExpulsado() ? t('gr.expulsado') : t('gr.lleno').replace('%s', grMax()))}</p>`; }
+    else h += `<div class="field"><label for="gr-nombre">${escapeHtml(t('gr.nombre'))}</label><input type="text" id="gr-nombre" maxlength="30" autocomplete="given-name" placeholder="${escapeHtml(t('gr.nombre.ph'))}" value="${escapeHtml(grNombreTmp)}" oninput="grNombreTmp=this.value"></div>
+      <p class="gr-intro gr-peq">${escapeHtml(t('gr.privacidad'))}</p>
+      ${grAvisoUnir ? `<p class="gr-aviso" role="alert">${escapeHtml(grAvisoUnir)}</p>` : ''}
+      <button type="button" class="btn btn-primary" id="gr-unirme" onclick="grUnirme()">${escapeHtml(t('gr.unirme'))}</button>`;
+  }else{
+    h += `<ul class="gr-lista">${slots.map(s => {
+      const b = s === grSlot ? [] : grBorradorDe(s);
+      return `<li class="gr-m"><span class="gr-mn">${escapeHtml(m[s].n)}${s === grSlot ? ` <span class="gr-tu">(${escapeHtml(t('gr.tu'))})</span>` : ''}</span>
+        <span class="gr-me">${escapeHtml(grEstadoTexto(s, s === grSlot ? cart.length > 0 : b.length > 0))}</span>
+        ${b.length ? `<ul class="gr-bor" aria-label="${escapeHtml(t('gr.borrador'))}">${b.map(x => `<li>${escapeHtml(x.txt)}${x.con.length ? ` <span class="gr-con">· ${escapeHtml(t('gr.compartidoCon').replace('%s', x.con.join(', ')))}</span>` : ''}</li>`).join('')}</ul>` : ''}
+      </li>`;
+    }).join('')}</ul>
+    <div id="gr-pago">${grPagoHtml()}</div>
+    <button type="button" class="btn gr-salir" onclick="grSalir()">${escapeHtml(t('gr.salir'))}</button>`;
+  }
+  if(grRestOn) h += `<p class="gr-peq gr-nota" role="status">${escapeHtml(t('gr.conexion'))}</p>`;
+  else if(grOffline) h += `<p class="gr-peq gr-nota" role="status">${escapeHtml(t('gr.dormido'))} <button type="button" class="btn gr-rec" onclick="grDespertar()">${escapeHtml(t('gr.reconectar'))}</button></p>`;
+  h += `<div class="gr-sr" id="gr-vivo" role="status" aria-live="polite"></div>`;
+  return h;
+}
+function grPintar(){
+  const box = document.getElementById('gr-card');
+  if(!box) return;
+  // Sin repintar mientras se teclea en la tarjeta (nombre o propina): el cursor no puede saltar.
+  const a = document.activeElement;
+  if(a && box.contains(a) && (a.id === 'gr-nombre' || a.id === 'gr-tip-x')){ if(a.id === 'gr-tip-x') return; grNombreTmp = a.value; return; }
+  const vivo = document.getElementById('gr-vivo'), msg = vivo ? vivo.textContent : '';
+  box.innerHTML = grHtml();
+  const nv = document.getElementById('gr-vivo'); if(nv && msg) nv.textContent = msg;
+}
+function grPintarPago(){ const b = document.getElementById('gr-pago'); if(b) b.innerHTML = grPagoHtml(); }
+
+/* ── Unirse y salir ── */
+async function grUnirme(){
+  const el = document.getElementById('gr-nombre');
+  const n = String(el ? el.value : grNombreTmp).trim().slice(0, 30);
+  grNombreTmp = n; grAvisoUnir = '';
+  if(!n){ grAvisoUnir = t('gr.nombreFalta'); grPintar(); return; }
+  if(!grDisponible() || grSoyExpulsado()) return;
+  setBtnLoading('gr-unirme', true);
+  if(grOffline) grDespertar();
+  const uid = grUid(), m = grMiembros(), max = grMax();
+  const libres = [];
+  for(let i = 0; i < max; i++){ const s = 'm' + i; if((!m[s] || m[s].uid === uid) && !grExpulsado(s)) libres.push(s); }
+  let ok = null;
+  for(const s of libres){
+    try{ await grEscribir(grBase() + '/miembros/' + s, {uid, n, ts: Date.now()}); ok = s; break; }
+    catch(e){ /* otro lo cogió justo a la vez: se prueba el siguiente */ }
+  }
+  if(!ok){ grAvisoUnir = libres.length ? t('gr.errorUnir') : t('gr.lleno').replace('%s', max); setBtnLoading('gr-unirme', false); grPintar(); return; }
+  grSlot = ok; grAvisoSesion = ''; grPulso = Date.now(); grGuardarLS({slot: ok, n});
+  try{ await grEscribir(grBase() + '/carritos/' + ok, null); }catch(e){}
+  grSubSig = '';
+  if(grRestOn){ grData = grData || {}; grData.miembros = Object.assign({}, grData.miembros, {[ok]: {uid, n, ts: Date.now()}}); }
+  renderMesaQrForm();
+  grSubirBorrador(true);
+}
+async function grSalir(){
+  const s = grSlot; if(!s) return;
+  grSlot = null; grGuardarLS(null); grSubSig = '';
+  try{ await grEscribir(grBase() + '/carritos/' + s, null); await grEscribir(grBase() + '/miembros/' + s, null); }catch(e){}
+  cart.forEach(l => { delete l.reparto; });
+  renderMesaQrForm();
+}
+
+/* ── Mi borrador (sin precios) ── */
+function grSubirBorrador(ya){
+  if(!grSlot || !grDisponible()) return;
+  clearTimeout(grSubT);
+  grSubT = setTimeout(grSubirYa, ya ? 0 : 700);
+}
+function grMiBorrador(){
+  const o = {};
+  cart.slice(0, 30).forEach((l, i) => {
+    const x = {p: String(l.recipeId).slice(0, 60), q: Math.max(1, Math.min(20, Number(l.qty) || 1))};
+    const mods = (l.modificadores || []).map(mm => mm && mm.id).filter(v => v != null).join(',').slice(0, 120);
+    if(mods) x.m = mods;
+    const r = (l.reparto || []).filter(s => GR_SLOT_RE.test(s)).join(',').slice(0, 60);
+    if(r) x.r = r;
+    o['l' + i] = x;
+  });
+  return o;
+}
+function grSubirYa(){
+  if(!grSlot) return;
+  const o = grMiBorrador(), sig = JSON.stringify(o);
+  if(sig === grSubSig) return;
+  grSubSig = sig;
+  grEscribir(grBase() + '/carritos/' + grSlot, Object.keys(o).length ? o : null).catch(() => { grSubSig = ''; });
+}
+
+/* ── Compartir un plato ── */
+function grHayCompartidos(){ return !!(grSlot && cart.some(l => Array.isArray(l.reparto) && l.reparto.length > 0)); }
+function grCompartirHtml(){
+  if(!grSlot || !grDisponible() || !cart.length) return '';
+  const m = grMiembros(), otros = Object.keys(m).filter(s => s !== grSlot).sort((a, b) => grNum(a) - grNum(b));
+  if(!otros.length) return '';
+  return `<details class="gr-comp" ${grCompAbierto ? 'open' : ''} ontoggle="grCompAbierto=this.open">
+    <summary>${escapeHtml(t('gr.compartir'))}</summary>
+    <p class="cl-hint">${escapeHtml(t('gr.compartirAy'))}</p>
+    ${cart.map(l => `<div class="gr-comp-l" role="group" aria-label="${escapeHtml(l.name)}"><span class="gr-comp-n">${escapeHtml(l.name)}</span>
+      <span class="gr-chips">${otros.map(s => { const on = (l.reparto || []).includes(s); return `<button type="button" class="gr-chip${on ? ' on' : ''}" aria-pressed="${on}" onclick="grToggleReparto('${escapeJsAttr(l.key)}','${s}')">${escapeHtml(m[s].n)}</button>`; }).join('')}</span></div>`).join('')}
+  </details>`;
+}
+function grToggleReparto(key, s){
+  const l = cart.find(x => x.key === key); if(!l || !GR_SLOT_RE.test(s)) return;
+  const r = new Set(l.reparto || []);
+  if(r.has(s)) r.delete(s); else r.add(s);
+  if(r.size) l.reparto = [...r]; else delete l.reparto;
+  grCompAbierto = true;
+  renderCartSummary();
+  grSubirBorrador();
+}
+
+/* ── Pagar mi parte (lo que debo lo calcula y publica la app) ── */
+function grTipImporte(debe){
+  if(grTip === 'x'){ const v = Math.max(0, Number(String(grTipX).replace(',', '.')) || 0); return Math.round(Math.min(v, debe * 0.5) * 100) / 100; }   // tope: la mitad de tu parte (más es casi seguro un error de tecla)
+  return Math.round(debe * (Number(grTip) || 0)) / 100;
+}
+function grPagoHtml(){
+  if(!grSlot) return '';
+  const c = (qrMesaCuenta && qrMesaCuenta.comensales && qrMesaCuenta.comensales[grSlot]) || {};
+  const debe = Number(c.debe) || 0, pagado = Number(c.pagado) || 0, enCurso = Number(c.enCurso) || 0;
+  let h = `<h3 class="gr-h3">${escapeHtml(t('gr.tuParte'))}</h3>`;
+  if(enCurso > 0) h += `<p class="gr-nota" role="status">${escapeHtml(t('gr.pagoCurso'))}</p>`;
+  if(debe <= 0.009) return h + `<p>${escapeHtml(pagado > 0 ? t('gr.todoPagado') : t('gr.sinParte'))}</p>`;
+  h += `<p class="gr-parte"><b>${escapeHtml(t('gr.tuParteImp').replace('%s', fmtMoney(debe)))}</b></p>`;
+  if(!qrMesaTarjetaDisponible()) return h + `<p class="gr-nota">${escapeHtml(t('gr.sinTarjeta'))}</p>`;
+  const min = Math.max(0.5, grMin());
+  if(debe + 0.009 < min) return h + `<p class="gr-nota">${escapeHtml(t('gr.minimo').replace('%s', fmtMoney(min)))}</p>`;
+  const opciones = [[0, t('gr.sinPropina')], [5, '5%'], [10, '10%'], ['x', t('gr.otra')]];
+  h += `<div class="field"><label>${escapeHtml(t('gr.propina'))}</label><div class="seg" style="margin:0">${opciones.map(([v, et]) => `<button type="button" class="${grTip === v ? 'on' : ''}" aria-pressed="${grTip === v}" onclick="grElegirPropina('${v}')">${escapeHtml(et)}</button>`).join('')}</div>
+    ${grTip === 'x' ? `<input type="number" id="gr-tip-x" min="0" step="0.5" inputmode="decimal" value="${escapeHtml(grTipX)}" style="margin-top:8px" oninput="grTipX=this.value;grActualizarBoton()">` : ''}</div>`;
+  const total = Math.round((debe + grTipImporte(debe)) * 100) / 100;
+  h += `<button type="button" class="btn btn-primary" id="gr-pagar" onclick="grPagarParte()" ${enCurso > 0 ? 'disabled' : ''}>${escapeHtml(t('gr.pagarParte').replace('%s', fmtMoney(total)))}</button>`;
+  return h;
+}
+function grElegirPropina(v){ grTip = v === 'x' ? 'x' : Number(v); grPintarPago(); }
+function grActualizarBoton(){
+  const c = (qrMesaCuenta && qrMesaCuenta.comensales && qrMesaCuenta.comensales[grSlot]) || {}, debe = Number(c.debe) || 0;
+  const b = document.getElementById('gr-pagar'); if(b) b.textContent = t('gr.pagarParte').replace('%s', fmtMoney(Math.round((debe + grTipImporte(debe)) * 100) / 100));
+}
+function grPagarParte(){
+  if(submittingRequest || !grSlot || !grDisponible()) return;
+  const c = (qrMesaCuenta && qrMesaCuenta.comensales && qrMesaCuenta.comensales[grSlot]) || {};
+  const debe = Number(c.debe) || 0;
+  if(!(debe > 0.009) || Number(c.enCurso) > 0 || !qrMesaTarjetaDisponible()) return;
+  if(debe + 0.009 < Math.max(0.5, grMin())) return;
+  const tip = grTipImporte(debe), total = Math.round((debe + tip) * 100) / 100;
+  if(grOffline) grDespertar();
+  const yo = grMiembros()[grSlot];
+  submittingRequest = true; setBtnLoading('gr-pagar', true);
+  const req = {type: 'pago_mesa', mesaToken: qrMesaToken, clientRef: genClientRef(), importe: total, propina: tip, slot: grSlot, uid: grUid(), createdAt: new Date().toISOString()};
+  payWithCard(req, total, t('gr.descPago').replace('%s', (qrMesaCuenta && qrMesaCuenta.mesa) || '').replace('%s', yo ? yo.n : ''), 'clientRef', 'gr-pagar');
+}
+
+// Etiqueta de la segunda forma de pago: en un grupo con tarjeta, «pagar mi parte al final» (la cuenta de cada uno la calcula la app).
+function qrLabelLocal(){ return (grSlot && grDisponible() && qrMesaTarjetaDisponible()) ? t('gr.pagarDespues') : t('mesaqr.pagarLocal'); }
 
 function submitMesaOrder(){
   if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
@@ -6438,7 +6879,9 @@ async function cifrarSolicitud(req){
   }catch(e){ console.error('No se pudo cifrar la solicitud; se envía como siempre', e); return req; }
 }
 function pushSolicitud(req){
-  return cifrarSolicitud(req).then(r => db.ref('gastrogoan/public/' + publicId + '/requests').push(r));
+  // Si el grupo está en modo REST (sin socket) la solicitud se envía igualmente, por REST; si se había desconectado por inactividad, se reconecta.
+  if(grOffline){ try{ db.goOnline(); }catch(e){} grOffline = false; }
+  return cifrarSolicitud(req).then(r => grRestOn ? grRest('POST', 'gastrogoan/public/' + publicId + '/requests', r) : db.ref('gastrogoan/public/' + publicId + '/requests').push(r));
 }
 
 /* ============ ENVÍO ============ */
