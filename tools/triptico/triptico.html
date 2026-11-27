@@ -53,7 +53,7 @@ p.lead{font-size:8.6pt;line-height:1.5;color:var(--body);margin-top:2.6mm}
 
 ul.check{list-style:none;margin-top:3mm}
 ul.check li{font-size:8.5pt;line-height:1.4;padding:1.7mm 0 1.7mm 5mm;border-bottom:.2mm solid var(--line);position:relative}
-ul.check li:before{content:"";position:absolute;left:0;top:2.9mm;width:2.4mm;height:1.3mm;border-left:.45mm solid var(--olive);border-bottom:.45mm solid var(--olive);transform:rotate(-45deg);}
+ul.check li:before{content:"";position:absolute;left:0;top:2.2mm;width:2.4mm;height:1.3mm;border-left:.45mm solid var(--olive);border-bottom:.45mm solid var(--olive);transform:rotate(-45deg);}
 ul.check li:last-child{border-bottom:none}
 
 .steps{margin-top:auto;padding-top:3mm}
@@ -94,6 +94,8 @@ ul.check li:last-child{border-bottom:none}
 .inside .panel{padding:10mm 8.5mm 9mm}
 .inside .shot{margin-top:4mm;border:.3mm solid var(--ink);background:#fff;overflow:hidden;aspect-ratio:1440/900}
 .inside .shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top left}
+.area-row .ex{font-size:7.6pt;line-height:1.42;color:var(--muted);margin-top:1.6mm}
+.area-row .ex b{font-weight:600;color:var(--ink)}
 .mods{margin-top:4mm;border-top:.5mm solid var(--ink)}
 .mod{display:grid;grid-template-columns:27mm 1fr;gap:2.2mm;padding:1.7mm 0;border-bottom:.2mm solid var(--line)}
 .mod:last-child{border-bottom:none}
@@ -121,7 +123,7 @@ ul.check li:last-child{border-bottom:none}
     <div class="price">
       <div class="big">300 €<small>+ IVA</small></div>
       <div class="after">el primer año · después 240 € + IVA al año</div>
-      <div class="note">El primer año incluye la puesta en marcha. Sin cuotas por cada cliente ni por cada venta.</div>
+      <div class="note">El primer año incluye la puesta en marcha. Una cuota anual: GastroGoan no cobra comisión por venta.</div>
     </div>
     <ul class="check">
       <li>Cocina, sala y gestión en la misma app</li>
@@ -151,14 +153,17 @@ ul.check li:last-child{border-bottom:none}
     <div class="area-row first">
       <div class="name">Cocina</div>
       <div class="what">Escandallos, fichas técnicas, proveedores, pedidos, stock, comandas, limpieza y horarios.</div>
+      <div class="ex"><b>Por ejemplo:</b> sube la carne y el escandallo de la hamburguesa se recalcula solo.</div>
     </div>
     <div class="area-row">
       <div class="name">Sala</div>
       <div class="what">TPV con mesas y cobro, reservas, pedidos online y para llevar, clientes y promociones.</div>
+      <div class="ex"><b>Por ejemplo:</b> la comanda sale a cocina con su mesa y sus alérgenos.</div>
     </div>
     <div class="area-row">
       <div class="name">Gestión</div>
       <div class="what">Panel de control, gastos, tesorería, cuenta de resultados, previsión fiscal y paquete para tu gestoría.</div>
+      <div class="ex"><b>Por ejemplo:</b> el cierre de caja cuadra efectivo, tarjeta y plataformas de reparto.</div>
     </div>
 
     <div class="badges" style="margin-top:auto">
@@ -172,8 +177,8 @@ ul.check li:last-child{border-bottom:none}
     <h1>Todo el restaurante, en una sola app.</h1>
     <p>Cocina, sala y gestión conectadas: escandallos, comandas, reservas, pedidos online y tus números al día.</p>
     <div class="foot">
-      <div class="url"><small>Entra y mira la app</small>gastrogoan.com</div>
-      <div class="qr" id="qr-portada" aria-label="Código QR a gastrogoan.com"></div>
+      <div class="url"><small>Entra y mira la app</small>gastrogoan.com/app</div>
+      <div class="qr" id="qr-portada" aria-label="Código QR a gastrogoan.com/app"></div>
     </div>
   </article>
 </section>
@@ -184,7 +189,7 @@ ul.check li:last-child{border-bottom:none}
   <article class="panel">
     <div class="kicker">Cocina</div>
     <h3>Del pedido al plato, sin papeles.</h3>
-    <div class="shot"><img src="img/cocina.jpg" alt="Pantalla de Cocina de GastroGoan"></div>
+    <div class="shot" style="aspect-ratio:1440/620"><img src="img/cocina.jpg" alt="Pantalla de Cocina de GastroGoan"></div>
     <div class="mods">
       <div class="mod"><div class="k">Escandallo</div><div class="d">El coste de cada plato al céntimo y su food cost frente al objetivo de tu negocio.</div></div>
       <div class="mod"><div class="k">Mega Lista</div><div class="d">Materia prima con proveedor, precio sin IVA e IVA. Ya trae 275 artículos cargados.</div></div>
@@ -192,19 +197,19 @@ ul.check li:last-child{border-bottom:none}
       <div class="mod"><div class="k">Fichas técnicas</div><div class="d">Paso a paso, foto e ingredientes escalados a tu producción. Se imprimen.</div></div>
       <div class="mod"><div class="k">Pedidos</div><div class="d">Lista de la compra con mínimos, pedido sugerido por lo que falta y recepción que verifica.</div></div>
       <div class="mod"><div class="k">Stock</div><div class="d">Existencias con mínimo, alertas y mermas.</div></div>
-      <div class="mod"><div class="k">Comandas</div><div class="d">Pantalla de cocina por bloques, con aviso cuando una mesa vuelve a pedir.</div></div>
+      <div class="mod"><div class="k">Comandas</div><div class="d">Pantalla de cocina por bloques: cada pedido de cada mesa sale en su propio vale.</div></div>
       <div class="mod"><div class="k">Limpieza y APPCC</div><div class="d">Protocolos, temperaturas, alérgenos y mantenimiento de equipos.</div></div>
       <div class="mod"><div class="k">Horarios</div><div class="d">Turnos, calendario, vacaciones y cambios que aprueba el dueño.</div></div>
       <div class="mod"><div class="k">Distribución</div><div class="d">Tareas del día por empleado y manual del puesto.</div></div>
       <div class="mod"><div class="k">I+D</div><div class="d">Asistente de IA que propone platos y cartas con tus ingredientes, tus precios y tu criterio.</div></div>
     </div>
-    <div class="sig"><span>gastrogoan.com</span><span>Cocina</span></div>
+    <div class="sig"><span>gastrogoan.com/app</span><span>Cocina</span></div>
   </article>
 
   <article class="panel">
     <div class="kicker">Sala</div>
     <h3>Cada mesa, cada pedido, cada cobro.</h3>
-    <div class="shot"><img src="img/tpv.jpg" alt="TPV de GastroGoan con mesas, cifras de caja y pedidos para llevar"></div>
+    <div class="shot" style="aspect-ratio:1440/760"><img src="img/tpv.jpg" alt="TPV de GastroGoan con mesas, cifras de caja y pedidos para llevar"></div>
     <div class="mods">
       <div class="mod"><div class="k">TPV</div><div class="d">Mesas por estado, comandas que marchan a cocina, cobro con cuenta dividida, vales regalo y arqueo.</div></div>
       <div class="mod"><div class="k">Reservas</div><div class="d">Turnos con barra de aforo, confirmación, lista de espera y recordatorios.</div></div>
@@ -214,31 +219,31 @@ ul.check li:last-child{border-bottom:none}
       <div class="mod"><div class="k">Promoción</div><div class="d">Promociones por día, semana o mes, y novedades por email y WhatsApp con guía paso a paso.</div></div>
       <div class="mod"><div class="k">I+D de sala</div><div class="d">Cócteles, maridajes y carta de bebidas, con tu propio criterio.</div></div>
     </div>
-    <div class="sig"><span>gastrogoan.com</span><span>Sala</span></div>
+    <div class="sig"><span>gastrogoan.com/app</span><span>Sala</span></div>
   </article>
 
   <article class="panel">
     <div class="kicker">Gestión</div>
     <h3>Tus números, sin hojas de cálculo.</h3>
-    <div class="shot"><img src="img/panel.jpg" alt="Panel de control con punto de equilibrio y previsión de fin de mes"></div>
+    <div class="shot" style="aspect-ratio:1440/640"><img src="img/panel.jpg" alt="Panel de control con punto de equilibrio y previsión de fin de mes"></div>
     <div class="mods">
       <div class="mod"><div class="k">Panel de control</div><div class="d">Punto de equilibrio del mes, ventas, gastos y resultado, frente al mes anterior.</div></div>
       <div class="mod"><div class="k">Gestión económica</div><div class="d">Ventas, gastos fijos y variables, tesorería, inversiones y escenarios.</div></div>
       <div class="mod"><div class="k">Cuenta de resultados</div><div class="d">Mes a mes, con la forma jurídica de tu negocio y lo que te queda de verdad.</div></div>
-      <div class="mod"><div class="k">Previsión fiscal</div><div class="d">IVA, IRPF y pagos a cuenta, con lo que toca pagar y cuándo.</div></div>
+      <div class="mod"><div class="k">Previsión fiscal</div><div class="d">Estimación de IVA, IRPF y pagos a cuenta, con lo que toca pagar y cuándo.</div></div>
       <div class="mod"><div class="k">Para tu gestor</div><div class="d">Paquete con Excel y CSV: libros de ingresos y gastos y las facturas adjuntas.</div></div>
-      <div class="mod"><div class="k">Pregúntale a tus números</div><div class="d">Explica tus cifras en lenguaje normal. La app calcula, la IA solo lo cuenta.</div></div>
+      <div class="mod"><div class="k">Pregúntale a tus números</div><div class="d">Explica tus cifras en lenguaje normal. La app calcula; la IA solo lo explica.</div></div>
       <div class="mod"><div class="k">Mi negocio</div><div class="d">Datos, impresoras, pantallas, plataformas de reparto, permisos y copias de seguridad.</div></div>
       <div class="mod"><div class="k">Tickets y facturas</div><div class="d">Numeración por aparato, factura completa y rectificativa al anular una venta.</div></div>
     </div>
-    <div class="sig"><span>gastrogoan.com</span><span>Gestión</span></div>
+    <div class="sig"><span>gastrogoan.com/app</span><span>Gestión</span></div>
   </article>
 </section>
 
 <script src="../../js/qr.js"></script>
 <script>
   // El QR se dibuja con el generador propio de la app (sin servicios externos).
-  document.getElementById('qr-portada').innerHTML = GGQR.svg('https://gastrogoan.com');
+  document.getElementById('qr-portada').innerHTML = GGQR.svg('https://gastrogoan.com/app');
 </script>
 </body>
 </html>

@@ -24,6 +24,13 @@ const VISTAS = [
   ['promocion',      "navigate('promocion')"],
 ];
 
+// Recorte en píxeles CSS (1440x900) para el tríptico: quita la barra superior y deja la zona de trabajo.
+const RECORTE = {
+  cocina: {x: 0, y: 84, width: 1440, height: 620},
+  tpv:    {x: 0, y: 84, width: 1440, height: 760},
+  panel:  {x: 0, y: 84, width: 1440, height: 640},
+};
+
 const browser = await puppeteer.launch({executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'], headless: true});
 const page = await browser.newPage();
 await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 2});
@@ -42,7 +49,7 @@ for (const [nombre, js] of VISTAS) {
   await page.evaluate(js => { try { eval(js); } catch (e) {} }, js);
   await new Promise(r => setTimeout(r, 1800));
   const ruta = path.join(SALIDA, nombre + '.jpg');
-  await page.screenshot({path: ruta, type: 'jpeg', quality: 90});
+  await page.screenshot({path: ruta, type: 'jpeg', quality: 92, ...(RECORTE[nombre] ? {clip: RECORTE[nombre]} : {})});
   console.log('ok', nombre, fs.statSync(ruta).size >> 10, 'KB');
 }
 await browser.close();
