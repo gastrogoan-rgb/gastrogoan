@@ -142,6 +142,32 @@ await caso('Pagar: el cobro se crea en la cuenta DEL RESTAURANTE, en céntimos, 
   return '19,90 € = 1990 céntimos en acct_1 · desconectar corta';
 });
 
+await caso('Pedido en grupo: la sesión de cada comensal CADUCA (30-120 min) y lleva su hueco; sin pedirlo, nada cambia', async () => {
+  const ok = 'https://reservas.gastrogoan.com/?neg=x&mesa=T&pago=ok', ko = 'https://reservas.gastrogoan.com/?neg=x&mesa=T&pago=ko';
+  let r = await llamar('POST', '/stripe/pagar', {publicId: derivado, orderRef: 'REFgrupo0001', amount: 12.4, description: 'Mesa 3 · Ana', urlOk: ok, urlKo: ko});
+  assert.equal(r.status, 200);
+  let s = sesiones[sesiones.length - 1];
+  assert.equal(s.cuerpo.expires_at, undefined, 'sin expiraMin la sesión tiene que seguir como antes (24 h de Stripe)');
+  assert.equal(s.cuerpo['metadata[slot]'], undefined);
+  const ahora = Math.floor(Date.now() / 1000);
+  const casos = [[30, 30], [5, 30], [60, 60], [9999, 120], ['x', null], [-4, null]];
+  for(const [pide, minutos] of casos){
+    r = await llamar('POST', '/stripe/pagar', {publicId: derivado, orderRef: 'REFgrupo0002', amount: 12.4, description: 'Mesa 3 · Ana', urlOk: ok, urlKo: ko, expiraMin: pide, slot: 'm3'});
+    assert.equal(r.status, 200, JSON.stringify(r.j));
+    s = sesiones[sesiones.length - 1];
+    if(minutos == null){ assert.equal(s.cuerpo.expires_at, undefined, 'expiraMin ' + pide + ' no es un número válido: no se inventa una caducidad'); continue; }
+    const dentro = Number(s.cuerpo.expires_at) - ahora;
+    assert.ok(dentro >= minutos * 60 + 60 - 5 && dentro <= minutos * 60 + 60 + 5, `expiraMin ${pide}: caduca a ${dentro} s, esperado ≈ ${minutos * 60 + 60}`);
+    assert.ok(dentro >= 30 * 60, 'Stripe rechaza caducidades de menos de 30 minutos');
+    assert.equal(s.cuerpo['metadata[slot]'], 'm3');
+  }
+  r = await llamar('POST', '/stripe/pagar', {publicId: derivado, orderRef: 'REFgrupo0003', amount: 12.4, urlOk: ok, urlKo: ko, expiraMin: 30, slot: 'm99; DROP'});
+  assert.equal(sesiones[sesiones.length - 1].cuerpo['metadata[slot]'], undefined, 'un hueco que no existe no se escribe en Stripe');
+  r = await llamar('POST', '/stripe/pagar', {publicId: derivado, orderRef: 'REFgrupo0004', amount: 0.2, urlOk: ok, urlKo: ko, expiraMin: 30});
+  assert.equal(r.status, 400, 'el importe mínimo sigue siendo el de siempre');
+  return 'expires_at acotado a 30-120 min';
+});
+
 await caso('El aviso de pago solo vale con la firma de Stripe, de la cuenta correcta, y no se duplica', async () => {
   const evento = (cuenta, orderRef = 'REFabc12345') => JSON.stringify({type: 'checkout.session.completed', account: cuenta,
     data: {object: {id: 'cs_0', payment_status: 'paid', amount_total: 1990, payment_intent: 'pi_1', metadata: {publicId: derivado, orderRef}}}});

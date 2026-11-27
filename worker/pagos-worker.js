@@ -395,7 +395,7 @@ async function handleDesconectar(req, env){
 
 async function handlePagar(req, env){
   const body = await req.json().catch(() => ({}));
-  const { publicId, orderRef, amount, description, urlOk, urlKo } = body || {};
+  const { publicId, orderRef, amount, description, urlOk, urlKo, expiraMin, slot } = body || {};
   if(!idValido(publicId, 4, 40) || !orderRef || !(amount > 0)){
     return json({ error: 'Faltan datos (publicId, orderRef, amount)' }, 400);
   }
@@ -416,6 +416,13 @@ async function handlePagar(req, env){
     return json({ error: 'Este negocio no tiene activado el pago con tarjeta' }, 404);
   }
   const ref = String(orderRef).slice(0, 120);
+  /* Pedido en grupo (27/11): cada comensal paga SU parte con su propia sesión, y el importe se fijó con la cuenta de ese momento. Una pestaña de
+     Stripe abierta horas después se podría pagar con un importe ya viejo. Con `expiraMin` (opcional, y solo lo manda la web en la mesa) la sesión
+     caduca: Stripe exige entre 30 minutos y 24 horas desde que se crea, así que se acota a 30-120 y se suma un minuto de margen para no cruzar
+     el mínimo por una diferencia de reloj. Sin `expiraMin` todo sigue exactamente igual que antes. `slot` solo sirve para rastrear el pago. */
+  const minExp = Number(expiraMin);
+  const expiresAt = isFinite(minExp) && minExp > 0 ? Math.floor(Date.now() / 1000) + Math.round(Math.min(120, Math.max(30, minExp))) * 60 + 60 : null;
+  const slotOk = typeof slot === 'string' && /^m([0-9]|1[01])$/.test(slot) ? slot : null;
   // Cobro DIRECTO en la cuenta del restaurante (cabecera Stripe-Account):
   // el dinero es suyo desde el primer momento. Sin payment_method_types, el
   // cliente ve los métodos que el restaurante tenga activos en su Stripe
@@ -427,8 +434,9 @@ async function handlePagar(req, env){
     success_url: urlOk,
     cancel_url: urlKo,
     client_reference_id: claveRefPago(ref),
-    metadata: { publicId, orderRef: ref },
-    payment_intent_data: { metadata: { publicId, orderRef: ref } }
+    ...(expiresAt ? { expires_at: expiresAt } : {}),
+    metadata: Object.assign({ publicId, orderRef: ref }, slotOk ? { slot: slotOk } : {}),
+    payment_intent_data: { metadata: Object.assign({ publicId, orderRef: ref }, slotOk ? { slot: slotOk } : {}) }
   }, cfg.accountId);
   try {
     await fbPush(env, `gastrogoan/private/${publicId}/pagosLog`, { orderRef: ref, sesion: sesion.id, amount: amountNum, createdAt: new Date().toISOString() });

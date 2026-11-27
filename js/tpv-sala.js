@@ -135,7 +135,7 @@ function renderQrMesaPendientes(){
         ${lista.map(p => `
           <article class="pm-card" style="border-color:var(--ink)">
             <div class="pm-card-cab"><span class="pm-card-tit is-texto"><i class="ti ti-armchair"></i> ${escapeHtml(p.mesaNombre || '')}</span><span class="pm-et is-dto">${escapeHtml(t('badge.newF'))}</span></div>
-            ${p.clienteNombre ? `<p class="pm-desc">${escapeHtml(p.clienteNombre)}</p>` : ''}
+            ${p.comensalNombre ? `<p class="pm-desc"><i class="ti ti-users"></i> ${escapeHtml(p.comensalNombre)}${p.items && p.items.some(l => Array.isArray(l.reparto) && l.reparto.length > 1) ? ' · ' + escapeHtml(gl({es:'con platos compartidos', ca:'amb plats compartits', en:'with shared dishes'})) : ''}</p>` : (p.clienteNombre ? `<p class="pm-desc">${escapeHtml(p.clienteNombre)}</p>` : '')}
             <ul class="tp-mini">${(p.items || []).map(l => `<li><b>${l.qty}×</b> ${escapeHtml(l.name)}</li>`).join('')}</ul>
             ${p.notas ? `<p class="pm-desc"><i class="ti ti-note"></i> ${escapeHtml(p.notas)}</p>` : ''}
             ${p.preciosCorregidos ? `<p class="pm-desc"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('qrMesa.tpv.preciosCorregidos'))}</p>` : ''}
@@ -571,12 +571,13 @@ function renderOrderComandaPanel(order){
   const unidades = (order.items || []).reduce((s, l) => s + l.qty, 0);
   const total = orderTotal(order);
   const cab = `<div class="tp-com-cab"><span class="tp-com-tit">${escapeHtml(t('label.order'))}${unidades ? ` <b class="tp-com-uds">${unidades}</b>` : ''}${unidades ? ` <button type="button" class="btn btn-sm btn-fino tp-com-cuenta" onclick="printCuenta(${order.id})" data-tip="${escapeHtml(gl({es:'Imprimir la cuenta (sin cobrar)', ca:'Imprimir el compte (sense cobrar)', en:'Print the bill (without charging)'}))}" aria-label="${escapeHtml(gl({es:'Imprimir la cuenta', ca:'Imprimir el compte', en:'Print the bill'}))}"><i class="ti ti-printer"></i><span class="tp-largo"> ${escapeHtml(gl({es:'Cuenta', ca:'Compte', en:'Bill'}))}</span></button>` : ''}</span><span class="tp-com-total">${fmtMoney(total)}</span></div>`;
+  const gr = typeof grupoPanelHtml === 'function' ? grupoPanelHtml(order) : '';
   if(!(order.items || []).length){
-    return `${cab}<div class="empty es-vacio tp-com-vacia"><i class="ti ti-clipboard-list"></i>${escapeHtml(t('empty.orderEmpty'))}<small>${escapeHtml(t('label.selectFromMenu'))}</small></div>`;
+    return `${cab}${gr}<div class="empty es-vacio tp-com-vacia"><i class="ti ti-clipboard-list"></i>${escapeHtml(t('empty.orderEmpty'))}<small>${escapeHtml(t('label.selectFromMenu'))}</small></div>`;
   }
   // 18/11 (dueño): TODA la carta arriba y TODOS los menús debajo, aunque se hayan pedido intercalados («no puede ser carta, menú, carta…»).
   // Ya no hay bloques «Pedido 1 / Añadido ahora»: cada tanda lleva su propio «Marchar» y las líneas ya marchadas se ven apagadas.
-  return cab + renderComandaItemsHtml(order, (order.items || []).map((line, idx) => ({line, idx})));
+  return cab + gr + renderComandaItemsHtml(order, (order.items || []).map((line, idx) => ({line, idx})));
 }
 
 
