@@ -69,13 +69,14 @@ async function arrancar(d,code){
     A.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===7000); o.status='pagada';
       DB.sales.push({id:7000,date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Efectivo',orderId:7000,items:o.items}); saveDB(); }),
     B.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===7000); o.status='pagada';
-      DB.sales.push({id:7000,date:todayStr(),createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Tarjeta',orderId:7000,items:o.items}); saveDB(); }),
+      DB.sales.push({id:7000,date:todayStr(),createdAt:new Date(Date.now()+7).toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Tarjeta',orderId:7000,items:o.items}); saveDB(); }),
   ]);
   await new Promise(r=>setTimeout(r,6000));
   const r = await A.page.evaluate(()=>({
     ventas:(DB.sales||[]).map(s=>s.id+':'+s.metodoPago).sort(),
     delMismoPedido:(DB.sales||[]).filter(s=>s.orderId===7000).length,
   }));
+  // (26/11) Con el id REAL de la venta (el del pedido, el mismo en los dos aparatos): antes se fundían en una y se perdía un cobro.
   // Lo importante: que NINGUNA de las dos ventas desaparezca. Un cobro
   // duplicado se ve y se anula; uno perdido no lo detecta nadie.
   // Cada cobro es dinero distinto (Efectivo y Tarjeta): tienen que quedar los dos métodos. Si queda uno solo, el otro cobro se perdió.

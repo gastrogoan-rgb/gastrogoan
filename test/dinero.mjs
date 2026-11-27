@@ -199,9 +199,12 @@ await caso('Un cobro duplicado se detecta y se anota una sola vez', async ()=>{
        sembraba un `orderId` que NINGUNA venta real lleva, así que pasaba por
        el motivo equivocado: el detector funcionaba aquí y en producción no
        saltaba jamás. Se siembra ahora como se guarda de verdad. */
+    /* Desde el arreglo de cobros dobles (26/11) un cobro DISTINTO del mismo pedido se conserva con id derivado
+       (`99~<createdAt>`, ver mergeVentas), y es ESO lo que avisa. Dos ventas IDÉNTICAS no llegan a la lista: la fusión
+       las junta en una, así que ya no se avisa de ellas (no hay nada que el dueño pueda arreglar). */
     const dosIguales = [
-      {id:99, total:42.5, createdAt:ahora, items:[{name:'X',qty:1,price:42.5}]},
-      {id:99, total:42.5, createdAt:ahora, items:[{name:'X',qty:1,price:42.5}]},
+      {id:99, total:42.5, createdAt:ahora, pagos:[{metodoPago:'Efectivo', amount:42.5}], items:[{name:'X',qty:1,price:42.5}]},
+      {id:'99~'+ahora, total:30, createdAt:ahora, pagos:[{metodoPago:'Tarjeta', amount:30}], items:[{name:'X',qty:1,price:30}]},
     ];
     avisarSiCobroDuplicado(dosIguales);
     const tras1 = (DB.auditLog||[]).length;

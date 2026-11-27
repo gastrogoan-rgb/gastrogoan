@@ -5656,8 +5656,9 @@ async function reglasComprobar(auto){
   espejoEnNubePropia = null; esperandoVeredictoDelEspejo = false;
   let resultado = 'error';
   try{
+    topesForzar = true;
     await comprobarEspejoEnNubePropia();
-    if(!reglasAntiguas && espejoEnNubePropia === true) resultado = 'ok';
+    if(!reglasAntiguas && espejoEnNubePropia === true) resultado = reglasSinTopes === true ? 'viejas' : 'ok';   // pegó unas reglas que aún no llevan los topes: no es «Listo»
     else if(espejoEnNubePropia === false || reglasAntiguas) resultado = lastSyncErrorCode && !/PERMISSION/i.test(String(lastSyncErrorCode)) ? 'error' : 'viejas';
   }catch(e){ resultado = 'error'; }
   reglasVeredicto = resultado;
@@ -6437,6 +6438,69 @@ function mergeArraysById(local, remote){
     if(item && item.id != null && !seen.has(item.id)) merged.push(item);
   });
   return merged;
+}
+
+/* ============================================================
+   DOS COBROS DE LA MISMA MESA NO SE FUNDEN EN UNO (26/11, decisión del dueño: «conservar las dos»)
+
+   La venta de un pedido lleva `id: order.id` A PROPÓSITO (js/tpv.js, finalizeCharge): así un doble toque o una
+   sincronización repetida no duplican. Pero si dos aparatos cobran la MISMA mesa casi a la vez (efectivo en uno,
+   tarjeta en otro), las dos ventas comparten id y mergeArraysById / la subida por venta se quedaban con UNA: el
+   otro cobro se perdía en silencio y el cierre de caja no cuadraba. Y avisarSiCobroDuplicado, que busca ids
+   repetidos, no podía saltar jamás.
+
+   Qué es «otro cobro» y qué «la misma venta modificada»: una venta que se modifica (anulada, factura completa,
+   cierre de caja, corrección de plataforma) conserva su `createdAt`; un cobro distinto nace en otro instante y
+   además no coincide en total, forma de pago o importes. Dos ventas con el mismo contenido (doble toque, eco de
+   una sincronización) se siguen fundiendo en una.
+
+   Cuál conserva el id: la MÁS ANTIGUA (createdAt; a igualdad, el texto menor). Es la misma respuesta en todos los
+   aparatos, y por eso no se vuelve a duplicar en cada sincronización. La otra pasa a `id~createdAt`, un id
+   derivado y estable. Nada del formato guardado cambia: la venta derivada es una venta normal con otro id y su
+   propio número de ticket (cada aparato numera en su serie). */
+const VENTA_ID_DERIVADO_RE = /~\d{4}-\d\d-\d\dT[^~]*$/;
+function ventaIdBase(id){ const x = String(id); return x.indexOf('~') < 0 ? x : x.replace(VENTA_ID_DERIVADO_RE, ''); }
+function ventaPagosHuella(v){
+  if(!Array.isArray(v.pagos)) return '';
+  return v.pagos.filter(Boolean).map(p => String(p.metodoPago) + ':' + (Math.round((parseFloat(p.amount) || 0) * 100) / 100)).sort().join('|');
+}
+function ventasSonCobrosDistintos(a, b){
+  if(!a || !b || a === b) return false;
+  if(!a.createdAt || !b.createdAt || a.createdAt === b.createdAt) return false;   // la misma venta, modificada
+  /* Un pedido pagado por internet apunta su venta al llegar el pago, y al recogerlo con algo más (propina, extra) la
+     REHACE con el mismo id (finalizeCharge): eso es una sustitución, no dos cobros. Como siempre, gana la última. */
+  if(!!a.pagoOnlineAnticipado !== !!b.pagoOnlineAnticipado) return false;
+  if((Math.round((parseFloat(a.total) || 0) * 100)) !== (Math.round((parseFloat(b.total) || 0) * 100))) return true;
+  if(String(a.metodoPago || '') !== String(b.metodoPago || '')) return true;
+  return ventaPagosHuella(a) !== ventaPagosHuella(b);
+}
+/* ¿Quién conserva el id: a o b? Devuelve el que lo CONSERVA. */
+function ventaConservaId(a, b){
+  if(a.createdAt !== b.createdAt) return String(a.createdAt) < String(b.createdAt) ? a : b;
+  return canonicalStringify(a) <= canonicalStringify(b) ? a : b;
+}
+function ventaConIdDerivado(v){ return Object.assign({}, v, {id: String(v.id) + '~' + String(v.createdAt)}); }
+/* Fusión de `sales`: lo de siempre (mergeArraysById) tras apartar los cobros distintos que comparten id. */
+function mergeVentas(local, remote){
+  if(!Array.isArray(local) || !Array.isArray(remote)) return mergeArraysById(local, remote);
+  let remoteMap = null, cambioLocal = null, cambioRemoto = null;
+  for(let i = 0; i < local.length; i++){
+    const l = local[i];
+    if(!l || l.id == null) continue;
+    if(remoteMap === null){ remoteMap = new Map(); remote.forEach((r, j) => { if(r && r.id != null) remoteMap.set(r.id, j); }); }
+    const j = remoteMap.get(l.id);
+    if(j === undefined) continue;
+    const r = remote[j];
+    if(l === r || !ventasSonCobrosDistintos(l, r)) continue;
+    if(ventaConservaId(l, r) === l){
+      if(!cambioRemoto){ cambioRemoto = remote.slice(); }
+      cambioRemoto[j] = ventaConIdDerivado(r);
+    }else{
+      if(!cambioLocal){ cambioLocal = local.slice(); }
+      cambioLocal[i] = ventaConIdDerivado(l);
+    }
+  }
+  return mergeArraysById(cambioLocal || local, cambioRemoto || remote);
 }
 
 /* Listas de NOMBRES sin id: las carpetas de ingredientes (texto suelto) y las
@@ -7664,6 +7728,56 @@ let reglasAntiguas = false;
    Con las reglas del repositorio la sonda pasa entera contra el emulador, así que si falla en una nube real es que lo PUBLICADO allí no es
    lo mismo: ver este dato en el asistente dice cuál de los nodos no tiene permiso. */
 let reglasFallo = null;
+/* Reglas demasiado PERMISIVAS (26/11): la sonda de arriba solo veía las que se quedan cortas (falta un permiso). Un negocio con las reglas de
+   antes del endurecimiento (14/09 y 25/11: topes del aforo y de los pedidos, que impiden bloquear la agenda desde fuera) lo tiene todo
+   funcionando y no se enteraba de nada.
+   ⚠️ Es una variable APARTE de `reglasAntiguas` a propósito: `reglasAntiguas` devuelve el espejo a la nube compartida, y un negocio con
+   reglas de septiembre que hoy va bien en su propia nube NO debe degradarse por esto. Solo avisa; no bloquea ni cambia el espejo.
+   null = no se sabe · true = la nube ACEPTÓ una escritura que unas reglas con topes rechazan · false = rechazadas (con topes). */
+let reglasSinTopes = null;
+let reglasSinTopesFallo = null;   // {paso, msg} de la escritura que Firebase aceptó
+let topesForzar = false;          // lo pone el asistente de reglas: la próxima sonda salta el «una vez al día»
+let TOPES_ESPERA_MS = 8000;       // sin respuesta en este tiempo = «no se sabe» (Firebase no rechaza al estar sin red: se queda esperando)
+const TOPES_LS = 'gastrogoan_reglas_topes';   // por negocio (lsClaveDeNegocio): {dia, sinTopes}
+function topesGuardado(){
+  try{ const v = JSON.parse(localStorage.getItem(lsClaveDeNegocio(TOPES_LS)) || 'null'); return v && typeof v === 'object' ? v : null; }catch(e){ return null; }
+}
+/* Escribe valores que unas reglas CON topes rechazan, en claves de sonda propias (`_sondatopes_<aparato>`: nunca una fecha ni un turno
+   reales) y lo limpia SIEMPRE. Como mucho una vez al día por negocio (el resultado se recuerda); `forzar` lo salta (el asistente
+   «Actualizar mis reglas» lo usa tras pegar las nuevas).
+   Solo cuenta como «sin topes» cuando la escritura se ACEPTA. Un fallo que no es «permiso denegado» (red, tiempo agotado) no dice nada.
+   No se comprueba `tenantLookup` (reglas de la PLATAFORMA): reescribir una referencia de sonda con otra URL no se puede deshacer desde la
+   app —con las reglas nuevas ni el borrado se permite a un cliente— y dejaría basura permanente en la nube compartida por cada negocio. */
+async function ggComprobarTopesDeReglas(base, forzar){
+  const hoy = new Date().toISOString().slice(0, 10);
+  const g = topesGuardado();
+  if(reglasSinTopes === null && g) reglasSinTopes = !!g.sinTopes;
+  if(!forzar && g && g.dia === hoy) return;
+  const id = getOrCreateDeviceId();
+  const pruebas = [
+    ['aforoHold (tope del aforo)', base.child('aforoHold/_sondatopes_' + id + '/_prueba'), 60],   // por encima del tope de 50 de las reglas actuales
+    ['pedidosHold (tope de pedidos)', base.child('pedidosHold/_sondatopes_' + id + '/_prueba'), 2],   // las actuales solo dejan subir de 1 en 1
+  ];
+  const limite = p => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('tiempo agotado')), TOPES_ESPERA_MS))]);
+  const res = [];
+  try{
+    for(const [paso, ref, valor] of pruebas){
+      try{ await limite(ref.set(valor)); res.push({paso, aceptada: true}); }
+      catch(e){ res.push({paso, aceptada: false, permiso: ggEsPermisoDenegado(e), msg: String((e && e.message) || e)}); }
+    }
+  }finally{
+    for(const [, ref] of pruebas){ try{ await limite(ref.remove()); }catch(e){} }
+  }
+  const aceptada = res.find(r => r.aceptada);
+  let veredicto = null;
+  if(aceptada) veredicto = true;
+  else if(res.every(r => r.permiso)) veredicto = false;
+  if(veredicto === null) return;   // no se sabe: se queda como estaba y se vuelve a intentar en el próximo arranque
+  reglasSinTopes = veredicto;
+  reglasSinTopesFallo = veredicto ? {paso: aceptada.paso, msg: 'aceptada sin tope'} : null;
+  try{ localStorage.setItem(lsClaveDeNegocio(TOPES_LS), JSON.stringify({dia: hoy, sinTopes: veredicto})); }catch(e){}
+  if(typeof avisosProgramar === 'function') avisosProgramar();
+}
 // La web pública (reservagastrogoan.html) anota aquí, en la propia nube del
 // negocio, cuando algún cliente se quedó sin poder cargar la carta durante
 // más de 8 segundos: puede ser un pico real de gente mirándola a la vez
@@ -7817,6 +7931,8 @@ async function comprobarEspejoEnNubePropia(){
       try{ await base.child('reservationLookup/_sonda_' + sondaId).remove(); }catch(e4){}
       await ggLimpiarSondaRequest(base.child('requests/_sondamesa_' + sondaId));
     }
+    // Reglas permisivas (sin topes): solo si lo demás pasó, y NUNCA toca `reglasAntiguas` ni el espejo. Un fallo aquí no cuenta como nada.
+    if(!reglasAntiguas){ try{ const forzar = topesForzar; topesForzar = false; await ggComprobarTopesDeReglas(base, forzar); }catch(e){ console.warn('No se pudieron comprobar los topes de las reglas', e && e.message); } }
     return true;
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
@@ -10319,27 +10435,37 @@ function avisarSiCobroDuplicado(ventas){
        lleva `orderId` (se guardan con `id`, que ya ES el id del pedido) ni
        `anulada` (la anulación pone `status:'anulada'`), así que el bucle salía
        en la primera línea SIEMPRE y no avisaba jamás.
-       Importa porque CLAUDE.md acepta a conciencia el riesgo de cobro
-       duplicado precisamente por esta red — que no existía. */
+       Y aun arreglado eso, seguía sin poder saltar: la fusión juntaba las dos
+       ventas en UNA. Desde el 26/11 el segundo cobro se conserva con un id
+       derivado (`id~createdAt`, ver mergeVentas), así que se agrupa por el id
+       BASE del pedido. */
     ventas.forEach(v => {
       if(!v || v.id == null || v.status === 'anulada') return;
-      if(!porPedido.has(v.id)) porPedido.set(v.id, []);
-      porPedido.get(v.id).push(v);
+      const base = ventaIdBase(v.id);
+      if(!porPedido.has(base)) porPedido.set(base, []);
+      porPedido.get(base).push(v);
     });
     porPedido.forEach((lista, orderId) => {
       if(lista.length < 2 || cobrosDuplicadosAvisados.has(orderId)) return;
+      /* Solo si alguna es un cobro apartado por la fusión: dos ventas que comparten id base sin ser derivadas no
+         existen (el id es único), y así no se avisa de nada que el dueño no pueda arreglar. */
+      if(!lista.some(v => VENTA_ID_DERIVADO_RE.test(String(v.id)))) return;
       cobrosDuplicadosAvisados.add(orderId);
+      // Tras recargar la página el Set está vacío: el registro de actividad es la memoria de verdad.
+      if(DB.auditLog.some(e => e && e.action === 'cobro_duplicado' && e.ref === String(orderId))) return;
       const importe = lista.reduce((s,v) => s + (parseFloat(v.total)||0), 0);
+      const resumen = t('msg.duplicateChargeDetected')
+                  .replace('${n}', lista.length)
+                  .replace('${total}', (typeof fmtMoney === 'function' ? fmtMoney(importe) : importe));
       DB.auditLog.unshift({
         id: genId(), ts: new Date().toISOString(),
         actor: (typeof currentActorName === 'function' ? currentActorName() : ''),
-        action: 'cobro_duplicado',
-        summary: t('msg.duplicateChargeDetected')
-                  .replace('${n}', lista.length)
-                  .replace('${total}', (typeof fmtMoney === 'function' ? fmtMoney(importe) : importe)),
+        action: 'cobro_duplicado', ref: String(orderId),
+        summary: resumen,
         severity: 'critical'
       });
       if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
+      if(typeof showToast === 'function'){ try{ showToast(resumen); }catch(e){} }
     });
   }catch(e){ console.error('Error detectando cobro duplicado', e); }
 }
@@ -10547,7 +10673,7 @@ function applyRemoteBlock(key, remoteValue){
   } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     const tokensAntes = key === 'tables' ? qrTokensDeMesas(DB[key]) : null;
-    merged = mergeArraysById(DB[key], merged);
+    merged = key === 'sales' ? mergeVentas(DB[key], merged) : mergeArraysById(DB[key], merged);
     if(tokensAntes) conservarAliasQr(tokensAntes, merged);
     if(PREFER_LOCAL_ARRAYS.has(key)){
       merged = preferLocalWhenRemoteStale(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
@@ -10882,7 +11008,7 @@ function mergeRemoteIntoLocal(val){
     const remoteOnlyJson = canonicalStringify(merged[key]);
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
-      value = mergeArraysById(DB[key], value);
+      value = key === 'sales' ? mergeVentas(DB[key], value) : mergeArraysById(DB[key], value);
       if(PREFER_LOCAL_ARRAYS.has(key)){
         value = preferLocalWhenRemoteStale(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
       }

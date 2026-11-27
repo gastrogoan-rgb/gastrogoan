@@ -181,6 +181,8 @@ lanzar; node test/clientes-filtros.mjs > "$SALIDA/clientesfiltros.txt" 2>&1 & P1
 lanzar; node test/mi-negocio-ronda.mjs > "$SALIDA/minegociorona.txt" 2>&1 & P175=$!
 lanzar; node test/atras.mjs > "$SALIDA/atras.txt" 2>&1 & P176=$!
 lanzar; node test/atras-hojas.mjs > "$SALIDA/atrashojas.txt" 2>&1 & PATRH=$!
+lanzar; node test/atras-paneles.mjs > "$SALIDA/atraspaneles.txt" 2>&1 & PATRP=$!
+lanzar; node test/ajustes-por-aparato.mjs > "$SALIDA/ajustesaparato.txt" 2>&1 & PAJAP=$!
 lanzar; node test/novedades-fecha.mjs > "$SALIDA/novedadesfecha.txt" 2>&1 & PNOVF=$!
 lanzar; node test/plan360-programa-base.mjs > "$SALIDA/plan360prog.txt" 2>&1 & PP360B=$!
 lanzar; node test/frases-dia.mjs > "$SALIDA/frasesdia.txt" 2>&1 & PFRDIA=$!
@@ -265,6 +267,8 @@ lanzar; node test/cocina-movil-1811b.mjs > "$SALIDA/cocinamovil1811b.txt" 2>&1 &
 lanzar; node test/buscadores-lupa.mjs > "$SALIDA/buscadoreslupa.txt" 2>&1 & P205=$!
 lanzar; node test/cierre-plataformas.mjs > "$SALIDA/cierreplataformas.txt" 2>&1 & P206=$!
 lanzar; node test/rendimiento-cobro.mjs > "$SALIDA/rendcobro.txt" 2>&1 & P207=$!
+lanzar; node test/cobro-misma-mesa.mjs > "$SALIDA/cobromisma.txt" 2>&1 & P208=$!
+lanzar; bash test/emulador/topes-reglas.sh > "$SALIDA/topesreglas.txt" 2>&1 & PTOPES=$!
 lanzar; node test/iconos.mjs > "$SALIDA/iconos.txt" 2>&1 & P87=$!
 lanzar; node test/sw-legal.mjs > "$SALIDA/sw-legal.txt" 2>&1 & P88=$!
 lanzar; node test/plan360.mjs > "$SALIDA/plan360.txt" 2>&1 & P89=$!
@@ -489,6 +493,8 @@ espera $P174 "Clientes · nueve filtros (Recurrentes y Ocasionales) y Promoción
 espera $P175 "Mi Negocio · fiscal bloqueado, reservas por grupo desmarcable, plano de sala en rejilla, horario especial, IVA por producto e impresoras con estado" "$SALIDA/minegociorona.txt" "Todo en verde"
 espera $P176 "Atrás en toda la app: cada pantalla y cada página interior (pedido, historial de cliente, tema del manual) es una entrada del historial; vuelve con su pestaña y su scroll" "$SALIDA/atras.txt" "todos los casos pasaron"
 espera $PATRH "Atrás en Escandallo y Fichas: la hoja de un plato o una ficha es una página del historial (atrás la cierra, adelante la reabre, Volver también)" "$SALIDA/atrashojas.txt" "Escandallo y Fichas pasaron"
+espera $PATRP "Atrás cierra el chat, la ayuda, la campana y el menú ⋯ en vez de salir de la pantalla" "$SALIDA/atraspaneles.txt" "todos los casos pasaron"
+espera $PAJAP "Ajustes del aparato (alarma, avisos del navegador, Bluetooth) lo dicen en pantalla; claves secretas solo en localStorage" "$SALIDA/ajustesaparato.txt" "todos los casos pasaron"
 espera $PNOVF "Novedades: el día de una oferta semanal sale en el idioma activo (es, ca, en) y no queda ningún locale fijo" "$SALIDA/novedadesfecha.txt" "fecha de Novedades pasaron"
 espera $PP360B "Plan 360º · semilla del programa del panel: sin texto de relleno y 28 días" "$SALIDA/plan360prog.txt" "semilla del programa pasaron"
 espera $PFRDIA "Frases del día: 365 frases, sin repetir, con autor y fuente en es, ca y en" "$SALIDA/frasesdia.txt" "todas las frases del día pasaron"
@@ -530,6 +536,7 @@ espera $P204 "Cocina en móvil (18/11, datos reales): ningún botón con el text
 espera $P205 "Buscadores con lupa: el texto empieza a la derecha del icono en 7 anchos y 11 pantallas" "$SALIDA/buscadoreslupa.txt" "buscadores con lupa"
 espera $P206 "Cierre de caja con plataformas (Glovo, Uber Eats, Just Eat a mano): venta de Delivery con IVA, comisión en gastos (isp y factura real), fuera de la caja y la conciliación, sin duplicar al reabrir, anulación con rectificativa" "$SALIDA/cierreplataformas.txt" "los [0-9]+ casos pasaron"
 espera $P207 "Cobrar con 20.000 ventas (CPU x4): con las ventas una a una un cobro sube solo la venta nueva (no los 12 MB del historial), la subida y recibir la venta de otro aparato no cuelgan la pantalla, y el ticket sale enseguida" "$SALIDA/rendcobro.txt" "los [0-9]+ casos pasaron"
+espera $P208 "Dos aparatos cobrando la MISMA mesa (efectivo y tarjeta): se conservan las dos ventas con id derivado estable, el cierre de caja cuadra, avisa al dueño una vez, y dos ventas idénticas siguen siendo una (fusión y ventas una a una)" "$SALIDA/cobromisma.txt" "los [0-9]+ casos pasaron"
 
 espera $PVM2 "Vídeo móvil, paquete 2 (TPV, Comandas Cocina, Reservas, Promoción, Clientes): cabecera de comanda, tiempos legibles, columna única en Cocina, calendarios y filtros a 320-430 px" "$SALIDA/videom2.txt" "casos pasaron"
 espera $PVM4 "Vídeo móvil, paquete 4 (Cocina): teclado numérico, cantidades pequeñas, plurales, Stock con etiqueta viva y orden fijo, Personal, Distribución, alérgenos que envuelven y fechas legibles" "$SALIDA/cocina-movil.txt" "Todo en orden"
@@ -574,5 +581,6 @@ espera $PF349 "Fiscal, 349 intracomunitarias, comisiones de delivery en el 347 (
 espera $PMOFC "Vista móvil 18/11: campana por delante del chat, botones de Comandas Cocina que caben (Deshacer compacto), ⋯ de cada carta junto al nombre, horas de los días legibles y cabecera de sección compacta (320-430 y tablet)" "$SALIDA/movilofco.txt" "en orden"
 espera $PCAMPIN "Cambio de contraseña: la antigua deja de valer en todos los aparatos (dueño) y el PIN del trabajador sale de la nube" "$SALIDA/cambiocontra.txt" "todos los casos pasaron"
 espera $PSINCGLO "Sincronía global (Y6): «Visto» y aviso de archivar por negocio, lápida de negocio no pisada, área de empleado, espejo público tras la nube, huella de nube por negocio" "$SALIDA/sincronia-global.txt" "todos los casos pasaron"
+espera $PTOPES "Reglas permisivas (sonda de topes, emulador): con las reglas actuales no avisa; con las de antes del endurecimiento avisa sin degradar el espejo; sin residuos; red caída y fallos que no son permiso no avisan" "$SALIDA/topesreglas.txt" "las tres variantes en orden"
 espera $PPINH3 "PIN con H3 (PBKDF2): migración perezosa y compatible (H2 se queda), versión vieja sigue entrando, sin WebCrypto, GGGG y aviso de PIN corto" "$SALIDA/pinh3.txt" "los [0-9]+ casos pasaron"
 exit $FALLOS

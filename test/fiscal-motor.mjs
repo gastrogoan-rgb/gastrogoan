@@ -135,7 +135,10 @@ await caso('Las 14 comunidades restantes: la cuota autonómica coincide con la �
   // Foral (a mano con la escala cargada): Navarra 30.000 = 4.458×13 % + 5.572×22 % + 11.145×25 % + 8.825×28 % = 579,54 + 1.225,84 + 2.786,25 + 2.471 = 7.062,63;
   // País Vasco 30.000 = 17.720×23 % + 12.280×28 % = 4.075,60 + 3.438,40 = 7.514
   const fo = await page.evaluate(() => [motorIrpfCuotaEscala(30000, 'navarra'), motorIrpfCuotaEscala(30000, 'pais_vasco')]);
-  cerca(fo[0], 7062.63, 'Navarra 30.000'); cerca(fo[1], 7514, 'País Vasco 30.000');  // 2 × (1.182,75 + 930 + 1.470) = 7.165,50
+  cerca(fo[0], 7062.63, 'Navarra 30.000'); cerca(fo[1], 7514, 'País Vasco 30.000');
+  // Columna «cuota íntegra» OFICIAL de las tablas de Álava y Gipuzkoa 2025 (consultadas el 27/11/2026): la escala cargada debe darla en cada límite de tramo.
+  const pv = await page.evaluate(() => [17720, 35440, 53160, 75910, 105130, 140130, 204270].map(b => motorIrpfCuotaEscala(b, 'pais_vasco')));
+  [4075.60, 9037.20, 15239.20, 24339.20, 37488.20, 53588.20, 83734].forEach((v, i) => cerca(pv[i], v, 'País Vasco cuota íntegra oficial, tramo ' + (i + 1)));  // 2 × (1.182,75 + 930 + 1.470) = 7.165,50
 });
 await caso('Cada comunidad tiene su regla verificada y la traza la cita; Ceuta/Melilla avisa de la deducción que no aplica; el régimen foral sale con fiabilidad media y su aviso', async () => {
   const ids = await page.evaluate(() => Object.keys(IRPF_ESCALAS_AUTONOMICAS).map(k => ({k, r: fiscalRegla('IRPF-ESC-' + k.toUpperCase())})));

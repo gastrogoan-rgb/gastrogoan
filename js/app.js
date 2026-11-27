@@ -10244,7 +10244,7 @@ function comandaEstadoHtml(modo, printers){
   }else{
     const sinParear = activas.filter(p => getPrintMode(p.id) === 'bluetooth' && !(thermalPrintingSupported() && getThermalPrinterName(p.id)));
     txt = gl({es:'Se imprime en: ', ca:'S\'imprimeix a: ', en:'Printing on: '}) + activas.map(p => p.nombre).join(', ') + '.';
-    if(sinParear.length){ tipo = 'warn'; txt += ' ' + gl({es:'Falta emparejar por Bluetooth: ', ca:'Falta emparellar per Bluetooth: ', en:'Bluetooth pairing needed: '}) + sinParear.map(p => p.nombre).join(', ') + '. ' + gl({es:'Mientras, sale por el navegador.', ca:'Mentrestant, surt pel navegador.', en:'Meanwhile it prints via the browser.'}); }
+    if(sinParear.length){ tipo = 'warn'; txt += ' ' + gl({es:'Falta emparejar por Bluetooth en ESTE aparato (el emparejado es de cada tablet o móvil): ', ca:'Falta emparellar per Bluetooth en AQUEST aparell (l\'emparellament és de cada tauleta o mòbil): ', en:'Bluetooth pairing needed on THIS device (pairing is per tablet or phone): '}) + sinParear.map(p => p.nombre).join(', ') + '. ' + gl({es:'Mientras, sale por el navegador.', ca:'Mentrestant, surt pel navegador.', en:'Meanwhile it prints via the browser.'}); }
   }
   return `<div class="cp-estado-global ${tipo}" role="status"><i class="ti ${tipo === 'ok' ? 'ti-circle-check' : 'ti-alert-triangle'}"></i><span>${escapeHtml(txt)}</span></div>`;
 }

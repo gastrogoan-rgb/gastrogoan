@@ -26,4 +26,13 @@
 - Módulos: aviso de que el límite de exclusión lo comprueba el gestor y de que las subvenciones no entran en el rendimiento.
 
 # Sin aplicar todavía (y por qué)
-Finiquito de temporales (depende del convenio y de la indemnización del contrato; sin fuente no se inventa), autoconsumo del titular a valor de mercado, IVA por canal (bebidas para llevar al 21 %), bonificación del 50 % a fijos discontinuos, nueva creación por períodos con base positiva, gastos no deducibles y reserva de capitalización, alta en el ROI, escala autonómica del IRPF, límite de exclusión de módulos (cifra sin verificar en el BOE), subvenciones en módulos (tratamiento a confirmar), ejercicios 2022 y anteriores, País Vasco foral.
+autoconsumo del titular a valor de mercado, IVA por canal (bebidas para llevar al 21 %), bonificación del 50 % a fijos discontinuos, nueva creación por períodos con base positiva, gastos no deducibles y reserva de capitalización, alta en el ROI, escala autonómica del IRPF, límite de exclusión de módulos (cifra sin verificar en el BOE), subvenciones en módulos (tratamiento a confirmar), ejercicios 2022 y anteriores, País Vasco foral.
+
+
+## Descartado por decisión del dueño (26/11)
+
+- **Finiquito/liquidación de temporales: DESCARTADO por decisión del dueño, es trabajo de gestoría.** No se implementa en la app ni se le plantean preguntas al gestor.
+
+## Fuente oficial consultada el 27/11 (sin gestor)
+- País Vasco, escala del IRPF 2025: coincide con la de Álava (Hacienda Foral de Álava, «Renta 2025») y de Gipuzkoa (tabla de gravamen del modelo 109 de 2025). Bizkaia no se pudo abrir (error 503): pendiente. Para el gestor: confirmar que la de Bizkaia 2025 es la misma y cómo se aplica la minoración de cuota de 1.583 € y las deducciones forales (la app aún las aproxima con los mínimos estatales).
+- Sin cerrar por no haber dato en la app o por ser trabajo grande: ejercicios 2022 y anteriores (15 escalas autonómicas), mínimos de ascendientes/discapacidad/mayores de 65 (la app no recoge esos datos del titular) y resultados extracooperativos de las cooperativas (hay que separarlos en la contabilidad).
